@@ -286,7 +286,7 @@ def masa(jd, place):
 ahargana = lambda jd: jd - 588465.5
 
 def elapsed_year(jd, maasa_num):
-  sidereal_year = 365.25636
+  sidereal_year = 365.256360417   # From WolframAlpha
   ahar = ahargana(jd)  # or (jd + sunrise(jd, place)[0])
   kali = int((ahar + (4 - maasa_num) * 30) / sidereal_year)
   saka = kali - 3179
