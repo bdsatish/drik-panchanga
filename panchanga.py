@@ -158,6 +158,7 @@ def tithi(jd, place):
     degrees_left = leap_tithi * 12 - moon_phase
     approx_end = inverse_lagrange(x, y, degrees_left)
     ends = (rise + approx_end -jd) * 24 + place.timezone
+    leap_tithi = 1 if today == 30 else today + 1
     answer += [int(leap_tithi), to_dms(ends)]
 
   return answer
@@ -194,6 +195,7 @@ def nakshatra(jd, place):
     leap_nak = nak + 1
     approx_end = inverse_lagrange(offsets, longitudes, leap_nak * 360 / 27)
     ends = (rise - jd + approx_end) * 24 + tz
+    leap_nak = 1 if nak == 27 else nak + 1
     answer += [int(leap_nak), to_dms(ends)]
 
   return answer
@@ -244,6 +246,7 @@ def yoga(jd, place):
     degrees_left = leap_yog * (360 / 27) - total
     approx_end = inverse_lagrange(x, y, degrees_left)
     ends = (rise + approx_end - jd) * 24 + tz
+    leap_yog = 1 if yog == 27 else yog + 1
     answer += [int(leap_yog), to_dms(ends)]
 
   return answer
