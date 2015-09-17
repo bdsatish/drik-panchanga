@@ -105,7 +105,7 @@ class Panchanga(wx.Frame):
         # begin wxGlade: Panchanga.__do_layout
         self.sizer_1_staticbox.Lower()
         sizer_1 = wx.StaticBoxSizer(self.sizer_1_staticbox, wx.HORIZONTAL)
-        grid_sizer_1 = wx.GridSizer(16, 3, 0, 0)
+        grid_sizer_1 = wx.GridSizer(17, 3, 0, 0)
         label_1 = wx.StaticText(self, wx.ID_ANY, "")
         grid_sizer_1.Add(label_1, 0, 0, 0)
         label_2 = wx.StaticText(self, wx.ID_ANY, u"D\u1e5bg-ga\u1e47ita Pa\xf1c\u0101\u1e45ga", style=wx.ALIGN_RIGHT | wx.ALIGN_CENTRE)
@@ -332,8 +332,7 @@ def format_name_hms(nhms, lookup):
 
 
 if __name__ == "__main__":
-    app = wx.PySimpleApp(0)
-    wx.InitAllImageHandlers()
+    app = wx.App(False)
     frame_1 = Panchanga(None, -1, "")
     app.SetTopWindow(frame_1)
     frame_1.Show()

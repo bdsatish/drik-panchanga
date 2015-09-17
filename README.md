@@ -44,7 +44,7 @@ In order to just _run_ the GUI (`gui.py`) you also need python-tz and
 wxPython (interface to wxWidgets):
 ```
     apt-get install python-tz
-    apt-get install python-wxgtk2.8
+    apt-get install python-wxgtk3.0
 ```
 
 If you want to _modify_ the GUI (`Gui.wxg`), you must use wxGlade:
