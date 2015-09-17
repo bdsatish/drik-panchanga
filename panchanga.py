@@ -344,6 +344,27 @@ def day_duration(jd, place):
   diff = (sset - srise) * 24     # In hours
   return [diff, to_dms(diff)]
 
+# The day duration is divided into 8 parts
+# Similarly night duration
+def gauri_panchangam(jd, place):
+  lat, lon, tz = place
+  tz = place.timezone
+  srise = swe.rise_trans(jd - tz/24, swe.SUN, lon, lat, rsmi = _rise_flags + swe.CALC_RISE)[1][0]
+  sset = swe.rise_trans(jd - tz/24, swe.SUN, lon, lat, rsmi = _rise_flags + swe.CALC_SET)[1][0]
+  day_dur = (sset - srise)
+
+  first_half = []
+  for i in range(1, 9):
+    first_half.append(to_dms((srise + (i * day_dur) / 8 - jd) * 24 + tz))
+
+  srise = swe.rise_trans((jd + 1) - tz/24, swe.SUN, lon, lat, rsmi = _rise_flags + swe.CALC_RISE)[1][0]
+  night_dur = (srise - sset)
+  second_half = []
+  for i in range(1, 9):
+    second_half.append(to_dms((sset + (i * night_dur) / 8 - jd) * 24 + tz))
+
+  return [first_half, second_half]
+
 # ----- TESTS ------
 def all_tests():
   print(moonrise(date2, bangalore)) # Expected: 11:32:04
