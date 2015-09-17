@@ -214,10 +214,10 @@ class Panchanga(wx.Frame):
         self.varaTxt.SetLabel("%s" % self.vaaras[str(vara)])
         self.sunriseTxt.SetLabel(format_time(srise))
         self.sunsetTxt.SetLabel(format_time(sset))
-        self.sakaTxt.SetLabel(u"Śālivāhana śaka %d" % (sakayr))
+        self.sakaTxt.SetLabel(u"\u015a\u0101liv\u0101hana \u015baka %d" % (sakayr))
         self.kaliTxt.SetLabel("GataKali %d" % (kyear))
         self.aharTxt.SetLabel("KaliDay %d" % (kday))
-        self.rituTxt.SetLabel(u"%s ṛtu" % (self.ritus[str(rtu)]))
+        self.rituTxt.SetLabel(u"%s \u1e5btu" % (self.ritus[str(rtu)]))
         self.samvatTxt.SetLabel("%s samvatsara" % (self.samvats[str(samvat)]))
         self.duraTxt.SetLabel(format_time(day_dur))
 
@@ -225,7 +225,7 @@ class Panchanga(wx.Frame):
         month_name = self.masas[str(mas[0])]
         is_leap = mas[1]
         if is_leap:  month_name = "Adhika " + month_name.lower()
-        self.masaTxt.SetLabel(month_name + u" māsa")
+        self.masaTxt.SetLabel(month_name + u" m\u0101sa")
 
         name, hms = format_name_hms(yog, self.yogas)
         self.yogaTxt.SetLabel(name)
