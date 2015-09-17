@@ -33,9 +33,12 @@ import swisseph as swe
 Date = struct('Date', ['year', 'month', 'day'])
 Place = struct('Location', ['latitude', 'longitude', 'timezone'])
 
-
 # Convert 23d 30' 30" to 23.508333 degrees
 from_dms = lambda degs, mins, secs: degs + mins/60 + secs/3600
+
+# Hindu sunrise/sunset is calculated w.r.t middle of the sun's disk
+# They are geomretic, i.e. "true sunrise/set", so refraction is not considered
+_rise_flags = swe.BIT_DISC_CENTER + swe.BIT_NO_REFRACTION
 
 # the inverse
 def to_dms(deg):
@@ -93,7 +96,7 @@ def lunar_latitude(jd):
 def sunrise(jd, place):
   """Sunrise when centre of disc is at horizon for given date and place"""
   lat, lon, tz = place
-  result = swe.rise_trans(jd - tz/24, swe.SUN, lon, lat, rsmi=swe.BIT_DISC_CENTER + swe.CALC_RISE)
+  result = swe.rise_trans(jd - tz/24, swe.SUN, lon, lat, rsmi = _rise_flags + swe.CALC_RISE)
   rise = result[1][0]  # julian-day number
   # Convert to local time
   return [rise + tz/24., to_dms((rise - jd) * 24 + tz)]
@@ -101,7 +104,7 @@ def sunrise(jd, place):
 def sunset(jd, place):
   """Sunset when centre of disc is at horizon for given date and place"""
   lat, lon, tz = place
-  result = swe.rise_trans(jd - tz/24, swe.SUN, lon, lat, rsmi=swe.BIT_DISC_CENTER + swe.CALC_SET)
+  result = swe.rise_trans(jd - tz/24, swe.SUN, lon, lat, rsmi = _rise_flags + swe.CALC_SET)
   setting = result[1][0]  # julian-day number
   # Convert to local time
   return [setting + tz/24., to_dms((setting - jd) * 24 + tz)]
@@ -109,7 +112,7 @@ def sunset(jd, place):
 def moonrise(jd, place):
   """Moonrise when centre of disc is at horizon for given date and place"""
   lat, lon, tz = place
-  result = swe.rise_trans(jd - tz/24, swe.MOON, lon, lat, rsmi=swe.BIT_DISC_CENTER + swe.CALC_RISE)
+  result = swe.rise_trans(jd - tz/24, swe.MOON, lon, lat, rsmi = _rise_flags + swe.CALC_RISE)
   rise = result[1][0]  # julian-day number
   # Convert to local time
   return to_dms((rise - jd) * 24 + tz)
@@ -117,7 +120,7 @@ def moonrise(jd, place):
 def moonset(jd, place):
   """Moonset when centre of disc is at horizon for given date and place"""
   lat, lon, tz = place
-  result = swe.rise_trans(jd - tz/24, swe.MOON, lon, lat, rsmi=swe.BIT_DISC_CENTER + swe.CALC_SET)
+  result = swe.rise_trans(jd - tz/24, swe.MOON, lon, lat, rsmi = _rise_flags + swe.CALC_SET)
   setting = result[1][0]  # julian-day number
   # Convert to local time
   return to_dms((setting - jd) * 24 + tz)
@@ -343,10 +346,10 @@ def day_duration(jd, place):
 
 # ----- TESTS ------
 def all_tests():
-  print(moonrise(date2, bangalore)) # Expected: 11:28:06
-  print(moonset(date2, bangalore))  # Expected: 24:12:48
-  print(sunrise(date2, bangalore)[1])  # Expected:  6:47:20
-  print(sunset(date2, bangalore)[1])   # Expected: 18:12:58
+  print(moonrise(date2, bangalore)) # Expected: 11:32:04
+  print(moonset(date2, bangalore))  # Expected: 24:8:47
+  print(sunrise(date2, bangalore)[1])  # Expected:  6:49:47
+  print(sunset(date2, bangalore)[1])   # Expected: 18:10:25
   assert(vaara(date2) == 5)
   print(sunrise(date4, shillong)[1])   # On this day, Nakshatra and Yoga are skipped!
   assert(karana(date2, helsinki) == [14])   # Expected: 14, Vanija
@@ -358,29 +361,29 @@ def tithi_tests():
   apr19 = gregorian_to_jd(Date(2013, 4, 19))
   apr20 = gregorian_to_jd(Date(2013, 4, 20))
   apr21 = gregorian_to_jd(Date(2013, 4, 21))
-  print(tithi(date1, bangalore))  # Expected: krishna ashtami (23), ends at 27:07:09
-  print(tithi(date2, bangalore))  # Expected: Saptami, ends at 16:24:04
-  print(tithi(date3, bangalore))  # Expected: Krishna Saptami, ends at 25:03:22
-  print(tithi(date2, helsinki))   # Expected: Shukla saptami until 12:54:04
-  print(tithi(apr24, bangalore))  # Expected: [10, [6,9,18], 11, [27, 33, 50]]
-  print(tithi(feb3, bangalore))   # Expected: [22, [8,13,52], 23, [30, 33, 6]]
-  print(tithi(apr19, helsinki))   # Expected: [9, [28, 44, 60]]
+  print(tithi(date1, bangalore))  # Expected: krishna ashtami (23), ends at 27:07:39
+  print(tithi(date2, bangalore))  # Expected: Saptami, ends at 16:24:20
+  print(tithi(date3, bangalore))  # Expected: Krishna Saptami, ends at 25:03:29
+  print(tithi(date2, helsinki))   # Expected: Shukla saptami until 12:54:20
+  print(tithi(apr24, bangalore))  # Expected: [10, [6,9,27], 11, [27, 33, 56]]
+  print(tithi(feb3, bangalore))   # Expected: [22, [8,14,6], 23, [30, 33, 16]]
+  print(tithi(apr19, helsinki))   # Expected: [9, [28, 44, 59]]
   print(tithi(apr20, helsinki))   # Expected: [10, - ahoratra -]
-  print(tithi(apr21, helsinki))   # Expected: [10, [5, 22, 6]]
+  print(tithi(apr21, helsinki))   # Expected: [10, [5, 22, 7]]
   return
 
 def nakshatra_tests():
-  print(nakshatra(date1, bangalore))  # Expected: 27 (Revati), ends at 17:06:24
-  print(nakshatra(date2, bangalore))  # Expected: 27 (Revati), ends at 19:22:54
-  print(nakshatra(date3, bangalore))  # Expecred: 24 (Shatabhisha) ends at 26:32:36
-  print(nakshatra(date4, shillong))   # Expected: [3, [5,0,59]] then [4,[26,31,00]]
+  print(nakshatra(date1, bangalore))  # Expected: 27 (Revati), ends at 17:06:09
+  print(nakshatra(date2, bangalore))  # Expected: 27 (Revati), ends at 19:22:41
+  print(nakshatra(date3, bangalore))  # Expecred: 24 (Shatabhisha) ends at 26:33:06
+  print(nakshatra(date4, shillong))   # Expected: [3, [5,0,52]] then [4,[26,30,50]]
   return
 
 def yoga_tests():
   may22 = gregorian_to_jd(Date(2013, 5, 22))
-  print(yoga(date3, bangalore))  # Expected: Vishkambha (1), ends at 22:59:38
-  print(yoga(date2, bangalore))  # Expected: Siddha (21), ends at 29:10:40
-  print(yoga(may22, helsinki))   # [16, [6,20,25], 17, [27,21,53]]
+  print(yoga(date3, bangalore))  # Expected: Vishkambha (1), ends at 23:00:29
+  print(yoga(date2, bangalore))  # Expected: Siddha (21), ends at 29:10:02
+  print(yoga(may22, helsinki))   # [16, [6,19,59], 17, [27,21,26]]
 
 def masa_tests():
   jd = gregorian_to_jd(Date(2013, 2, 10))
