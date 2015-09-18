@@ -207,6 +207,7 @@ class Panchanga(wx.Frame):
         kyear, sakayr = elapsed_year(jd, mas[0])
         samvat = samvatsara(jd, mas[0])
         day_dur = day_duration(jd, place)[1]
+        gauri = self.gauri_panchanga(jd)
 
         # Update GUI one by one. First the easy ones
         self.karanaTxt.SetLabel("%s" % self.karanas[str(kar[0])])
@@ -299,7 +300,7 @@ class Panchanga(wx.Frame):
         self.masas = sktnames["masas"]
         self.samvats = sktnames["samvats"]
         self.ritus = sktnames["ritus"]
-
+        self.gauri = sktnames["gauri"]
 
     def set_place(self, event):  # wxGlade: Panchanga.<event_handler>
         lat = float(self.latTxt.Value)
@@ -316,6 +317,13 @@ class Panchanga(wx.Frame):
         # offset from UTC (in hours). Needed especially for DST countries
         tz_offset = timezone.utcoffset(dt, is_dst = True).total_seconds() / 3600.
         return tz_offset
+
+    def gauri_panchanga(self, jd):
+        times = gauri_chogadiya(jd, self.place)
+        vara = vaara(jd)
+        names = self.gauri[str(vara)]
+
+        return zip(names, times)
 
 # end of class Panchanga
 

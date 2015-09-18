@@ -129,6 +129,20 @@ accurate databases of planetary data for about 10000 years. Hence, this panchang
 is based on the Swiss Ephemeris. Other databases include those published by NASA's
 JPL (DE405) or the Moshier ephemeris.
 
+Śubhāśubha Samaya
+-----------------
+
+Gaurī (Gowri) Panchanga and Chogdhadiya are south Indian and north Indian names
+respectively, for the same mathematical calculation. Basically, day and night
+duration are each divided into eight parts; the difference between N.Indian and
+S.Indian lies in their names and which part is considered
+auspicious/inauspicious. In the S.Indian variant, Tamilians use
+[different order][kowri] and names compared to Kannadigas/Telugus. This program
+provides the latter only. (This inconsitency alone is enough to let you know
+that such concepts of (in-)auspiciousness are all pseudo-science).
+
+
+[kowri]: http://tamilastrology.hosuronline.com/KowriPanchangam/
 
 References
 ----------

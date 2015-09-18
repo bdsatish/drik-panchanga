@@ -247,5 +247,14 @@
             "3": "Śarad",
             "4": "Hemanta",
             "5": "Śiśira"
-           }
+           },
+
+"gauri": { "0": ["udyoga", "lābha", "viṣa", "amṛta", "śubha", "dhana", "amṛta", "viṣa", "śubha", "amṛta", "jvara", "roga", "kalaha", "lābha", "udyoga", "roga"],
+           "1": ["amṛta", "viṣa", "udyoga", "jvara", "lābha", "amṛta", "lābha", "dhana", "roga", "lābha", "udyoga", "dhana", "roga", "amṛta", "viṣa", "jvara"],
+           "2": ["roga", "udyoga", "jvara", "lābha", "amṛta", "udyoga", "viṣa", "lābha", "jvara", "udyoga", "kalaha", "lābha", "roga", "lābha", "udyoga", "dhana"],
+           "3": ["viṣa", "amṛta", "jvara", "udyoga", "roga", "śubha", "dhana", "amṛta", "lābha", "roga", "viṣa", "udyoga", "śubha", "lābha", "dhana", "lābha"],
+           "4": ["udyoga", "viṣa", "jvara", "lābha", "amṛta", "viṣa", "kalaha", "jvara", "sukha", "roga", "kalaha", "lābha", "udyoga", "jvara", "lābha", "udyoga"],
+           "5": ["roga", "jvara", "amṛta", "kalaha", "lābha", "śubha", "dhana", "lābha", "amṛta", "jvara", "kalaha", "lābha", "śubha", "dhana", "amṛta", "viṣa"],
+           "6": ["viṣa", "amṛta", "jvara", "udyoga", "śubha", "lābha", "dhana", "lābha", "viṣa", "udyoga", "śubha", "amṛta", "kalaha", "roga", "amṛta", "lābha"]
+         }
 }
