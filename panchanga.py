@@ -357,12 +357,94 @@ def gauri_chogadiya(jd, place):
   for i in range(1, 9):
     end_times.append(to_dms((srise + (i * day_dur) / 8 - jd) * 24 + tz))
 
+  # Night duration = time from today's sunset to tomorrow's sunrise
   srise = swe.rise_trans((jd + 1) - tz/24, swe.SUN, lon, lat, rsmi = _rise_flags + swe.CALC_RISE)[1][0]
   night_dur = (srise - sset)
   for i in range(1, 9):
     end_times.append(to_dms((sset + (i * night_dur) / 8 - jd) * 24 + tz))
 
   return end_times
+
+def rahu_yamaganda_glulika_kalam(jd, place, option='rahu'):
+  lat, lon, tz = place
+  tz = place.timezone
+  srise = swe.rise_trans(jd - tz/24, swe.SUN, lon, lat, rsmi = _rise_flags + swe.CALC_RISE)[1][0]
+  sset = swe.rise_trans(jd - tz/24, swe.SUN, lon, lat, rsmi = _rise_flags + swe.CALC_SET)[1][0]
+  day_dur = (sset - srise)
+  weekday = vaara(jd)
+
+  # value in each array is for given weekday (0 = sunday, etc.)
+  offsets = { 'rahu': [0.875, 0.125, 0.75, 0.5, 0.625, 0.375, 0.25],
+              'gulika': [0.75, 0.625, 0.5, 0.375, 0.25, 0.125, 0.0],
+              'yamaganda': [0.5, 0.375, 0.25, 0.125, 0.0, 0.75, 0.625] }
+
+  start_time = srise + day_dur * offsets[option][weekday]
+  end_time = start_time + 0.125 * day_dur
+
+  # to local timezone
+  start_time = (start_time - jd) * 24 + tz
+  end_time = (end_time - jd) * 24 + tz
+  return [start_time, end_time]  # in decimal hours
+
+def rahu_kalam(jd, place):
+  start_time, end_time = rahu_yamaganda_glulika_kalam(jd, place, 'rahu')
+  print(to_dms(start_time))
+  print(to_dms(end_time))
+
+def yamaganda_kalam(jd, place):
+  start_time, end_time = rahu_yamaganda_glulika_kalam(jd, place, 'yamaganda')
+  print(to_dms(start_time))
+  print(to_dms(end_time))
+
+def gulika_kalam(jd, place):
+  start_time, end_time = rahu_yamaganda_glulika_kalam(jd, place, 'gulika')
+  print(to_dms(start_time))
+  print(to_dms(end_time))
+
+def durmuhurtam(jd, place):
+  lat, lon, tz = place
+  tz = place.timezone
+
+  # Night = today's sunset to tomorrow's sunrise
+  sset = swe.rise_trans(jd - tz/24, swe.SUN, lon, lat, rsmi = _rise_flags + swe.CALC_SET)[1][0]
+  srise = swe.rise_trans((jd + 1) - tz/24, swe.SUN, lon, lat, rsmi = _rise_flags + swe.CALC_RISE)[1][0]
+  night_dur = (srise - sset)
+
+  # Day = today's sunrise to today's sunset
+  srise = swe.rise_trans(jd - tz/24, swe.SUN, lon, lat, rsmi = _rise_flags + swe.CALC_RISE)[1][0]
+  day_dur = (sset - srise)
+
+  weekday = vaara(jd)
+
+  # There is one durmuhurtam on Sun, Wed, Sat; the rest have two
+  offsets = [[10.4, 0.0],  # Sunday
+             [6.4, 8.8],   # Monday
+             [2.4, 4.8],   # Tuesday, [day_duration , night_duration]
+             [5.6, 0.0],   # Wednesday
+             [4.0, 8.8],   # Thursday
+             [2.4, 6.4],   # Friday
+             [1.6, 0.0]]   # Saturday
+
+  # second durmuhurtam of tuesday uses night_duration instead of day_duration
+  dur = [day_dur, day_dur]
+  base = [srise, srise]
+  if weekday == 2:  dur[1] = night_dur; base[1] = sset
+
+  # compute start and end timings
+  start_times = [0, 0]
+  end_times = [0, 0]
+  for i in range(0, 2):
+    offset = offsets[weekday][i]
+    if offset != 0.0:
+      start_times[i] = base[i] + dur[i] * offsets[weekday][i] / 12
+      end_times[i] = start_times[i] + day_dur * 0.8 / 12
+
+      # convert to local time
+      start_times[i] = (start_times[i] - jd) * 24 + tz
+      end_times[i] = (end_times[i] - jd) * 24 + tz
+
+  return [start_times, end_times]  # in decimal hours
+
 
 # ----- TESTS ------
 def all_tests():
