@@ -199,6 +199,9 @@ def nakshatra(jd, place):
     ends = (rise - jd + approx_end) * 24 + tz
     answer += [int(leap_nak), to_dms(ends)]
 
+  # Restore default ayanamsa
+  swe.set_sid_mode(swe.SIDM_FAGAN_BRADLEY)
+
   return answer
 
 
@@ -248,6 +251,9 @@ def yoga(jd, place):
     approx_end = inverse_lagrange(x, y, degrees_left)
     ends = (rise + approx_end - jd) * 24 + tz
     answer += [int(leap_yog), to_dms(ends)]
+
+  # Restore default ayanamsa
+  swe.set_sid_mode(swe.SIDM_FAGAN_BRADLEY)
 
   return answer
 
@@ -318,6 +324,10 @@ def raasi(jd):
   s = solar_longitude(jd)
   solar_nirayana = (solar_longitude(jd) - swe.get_ayanamsa_ut(jd)) % 360
   # 12 rasis occupy 360 degrees, so each one is 30 degrees
+
+  # Restore default ayanamsa
+  swe.set_sid_mode(swe.SIDM_FAGAN_BRADLEY)
+
   return ceil(solar_nirayana / 30.)
 
 def lunar_phase(jd):
@@ -445,6 +455,20 @@ def durmuhurtam(jd, place):
 
   return [start_times, end_times]  # in decimal hours
 
+# Abhijit muhurta is the 8th muhurta (middle one) of the 15 muhurtas
+# during the day_duration
+def abhijit_muhurta(jd, place):
+  lat, lon, tz = place
+  tz = place.timezone
+  srise = swe.rise_trans(jd - tz/24, swe.SUN, lon, lat, rsmi = _rise_flags + swe.CALC_RISE)[1][0]
+  sset = swe.rise_trans(jd - tz/24, swe.SUN, lon, lat, rsmi = _rise_flags + swe.CALC_SET)[1][0]
+  day_dur = (sset - srise)
+
+  start_time = srise + 7 / 15 * day_dur
+  end_time = srise + 8 / 15 * day_dur
+
+  # to local time
+  return [(start_time - jd) * 24 + tz, (end_time - jd) * 24 + tz]
 
 # ----- TESTS ------
 def all_tests():

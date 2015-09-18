@@ -141,6 +141,9 @@ auspicious/inauspicious. In the S.Indian variant, Tamilians use
 provides the latter only. (This inconsitency alone is enough to let you know
 that such concepts of (in-)auspiciousness are all pseudo-science).
 
+Rāhukāla, Yamagaṇḍakāla, Gulikakāla, Durmuhūrtams and Varjyam are all
+inauspicious. Abhijit muhūrta and Amṛtakāla are considered auspicious.
+
 
 [kowri]: http://tamilastrology.hosuronline.com/KowriPanchangam/
 
