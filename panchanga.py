@@ -476,8 +476,7 @@ def abhijit_muhurta(jd, place):
 # 'jd' can be any time: ex, 2015-09-19 14:20 UTC
 # today = swe.julday(2015, 9, 19, 14 + 20./60)
 def planetary_positions(jd, place):
-  tz = place.timezone
-  jd_utc = jd - tz / 24.
+  jd_utc = jd - place.timezone / 24.
   set_ayanamsa_mode()
 
   # namah suryaya chandraya mangalaya ... rahuve ketuve namah
@@ -500,6 +499,24 @@ def planetary_positions(jd, place):
 
   reset_ayanamsa_mode()
   return positions
+
+# Lagna (=ascendant) calculation at any given time
+def ascendant(jd, place):
+  jd_utc = jd - place.timezone / 24.
+  set_ayanamsa_mode()
+
+  # returns two arrays, cusps and ascmc, where ascmc[0] = Ascendant
+  tropical_ascendant = swe.houses(jd_utc, place.latitude, place.longitude)[1][0]
+  # tropical to sidereal (nirayana) conversion
+  nirayana_lagna = (tropical_ascendant - swe.get_ayanamsa(jd_utc)) % 360
+  # 12 zodiac signs span 360°, so each one takes 30°
+  # 0 = Mesha, 1 = Vrishabha, ..., 11 = Meena
+  constellation = nirayana_lagna // 30
+  coordinates = to_dms(nirayana_lagna % 30)
+
+  reset_ayanamsa_mode()
+  return [int(constellation), coordinates]
+
 
 # ----- TESTS ------
 def all_tests():
