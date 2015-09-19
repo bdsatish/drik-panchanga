@@ -1,4 +1,5 @@
 #! /usr/bin/env python
+# -*- coding: UTF-8 -*-
 
 # panchanga.py -- routines for computing tithi, vara, etc.
 #
@@ -469,6 +470,36 @@ def abhijit_muhurta(jd, place):
 
   # to local time
   return [(start_time - jd) * 24 + tz, (end_time - jd) * 24 + tz]
+
+# Computes instantaneous planetary positions
+# (i.e., which celestial object lies in which constellation)
+# 'jd' can be any time: ex, 2015-09-19 14:20 UTC
+# today = swe.julday(2015, 9, 19, 14 + 20./60)
+def planetary_positions(jd, place):
+  tz = place.timezone
+  jd_utc = jd - tz / 24.
+  set_ayanamsa_mode()
+
+  # namah suryaya chandraya mangalaya ... rahuve ketuve namah
+  planet_list = [swe.SUN, swe.MOON, swe.MARS, swe.MERCURY, swe.JUPITER,
+                 swe.VENUS, swe.SATURN, swe.MEAN_NODE ] # Rahu = MEAN_NODE
+  # Ketu is always 180° off Rahu, so same coordinates but different constellations
+  # i.e if Rahu is in Pisces, Ketu is in Virgo etc
+
+  positions = []
+  for planet in planet_list:
+    longitude = swe.calc_ut(jd_utc, planet, flag = swe.FLG_SWIEPH)[0]
+    # tropical to sidereal (nirayana) longitude
+    nirayana_long = (longitude - swe.get_ayanamsa(jd_utc)) % 360
+
+    # 12 zodiac signs span 360°, so each one takes 30°
+    # 0 = Mesha, 1 = Vrishabha, ..., 11 = Meena
+    constellation = nirayana_long // 30
+    coordinates = to_dms(nirayana_long % 30)
+    positions.append([planet, int(constellation), coordinates])
+
+  reset_ayanamsa_mode()
+  return positions
 
 # ----- TESTS ------
 def all_tests():

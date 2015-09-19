@@ -256,5 +256,32 @@
            "4": ["udyoga", "viṣa", "jvara", "lābha", "amṛta", "viṣa", "kalaha", "jvara", "sukha", "roga", "kalaha", "lābha", "udyoga", "jvara", "lābha", "udyoga"],
            "5": ["roga", "jvara", "amṛta", "kalaha", "lābha", "śubha", "dhana", "lābha", "amṛta", "jvara", "kalaha", "lābha", "śubha", "dhana", "amṛta", "viṣa"],
            "6": ["viṣa", "amṛta", "jvara", "udyoga", "śubha", "lābha", "dhana", "lābha", "viṣa", "udyoga", "śubha", "amṛta", "kalaha", "roga", "amṛta", "lābha"]
-         }
+         },
+
+// Must match the order of SE_SUN, SE_MOON, etc in swephexp.h
+"planets": { "0": "sūrya",
+             "1": "candra",
+             "4": "maṅgala",
+             "2": "budha",
+             "5": "guru",
+             "3": "śukra",
+             "6": "śani",
+             "10": "rāhu",
+             "-10": "ketu"
+           },
+
+// 0 = Aries, 1 = Taurus, etc
+"zodiac": { "0": "meṣa",
+            "1": "vṛṣabha",
+            "2": "mithuna",
+            "3": "karkāṭaka",
+            "4": "siṃha",
+            "5": "kanyā",
+            "6": "tulā",
+            "7": "vṛścika",
+            "8": "dhanus",
+            "9": "makara",
+            "10": "kumbha",
+            "11": "mīna"
+          }
 }
