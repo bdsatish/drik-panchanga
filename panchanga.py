@@ -36,6 +36,9 @@ Place = struct('Location', ['latitude', 'longitude', 'timezone'])
 # Convert 23d 30' 30" to 23.508333 degrees
 from_dms = lambda degs, mins, secs: degs + mins/60 + secs/3600
 
+set_ayanamsa_mode = lambda: swe.set_sid_mode(swe.SIDM_LAHIRI)
+reset_ayanamsa_mode = lambda: swe.set_sid_mode(swe.SIDM_FAGAN_BRADLEY)
+
 # Hindu sunrise/sunset is calculated w.r.t middle of the sun's disk
 # They are geomretic, i.e. "true sunrise/set", so refraction is not considered
 _rise_flags = swe.BIT_DISC_CENTER + swe.BIT_NO_REFRACTION
@@ -170,7 +173,7 @@ def nakshatra(jd, place):
   """Current nakshatra as of julian day (jd)
      1 = Asvini, 2 = Bharani, ..., 27 = Revati
   """
-  swe.set_sid_mode(swe.SIDM_LAHIRI)
+  set_ayanamsa_mode()
   # 1. Find time of sunrise
   lat, lon, tz = place
   rise = sunrise(jd, place)[0] - tz / 24.  # Sunrise at UT 00:00
@@ -199,8 +202,7 @@ def nakshatra(jd, place):
     ends = (rise - jd + approx_end) * 24 + tz
     answer += [int(leap_nak), to_dms(ends)]
 
-  # Restore default ayanamsa
-  swe.set_sid_mode(swe.SIDM_FAGAN_BRADLEY)
+  reset_ayanamsa_mode()
 
   return answer
 
@@ -209,7 +211,7 @@ def yoga(jd, place):
   """Yoga at given jd and place.
      1 = Vishkambha, 2 = Priti, ..., 27 = Vaidhrti
   """
-  swe.set_sid_mode(swe.SIDM_LAHIRI)
+  set_ayanamsa_mode()
   # 1. Find time of sunrise
   lat, lon, tz = place
   rise = sunrise(jd, place)[0] - tz / 24.  # Sunrise at UT 00:00
@@ -252,8 +254,7 @@ def yoga(jd, place):
     ends = (rise + approx_end - jd) * 24 + tz
     answer += [int(leap_yog), to_dms(ends)]
 
-  # Restore default ayanamsa
-  swe.set_sid_mode(swe.SIDM_FAGAN_BRADLEY)
+  reset_ayanamsa_mode()
 
   return answer
 
@@ -320,13 +321,12 @@ def new_moon(jd, tithi_, opt = -1):
 
 def raasi(jd):
   """Zodiac of given jd. 1 = Mesha, ... 12 = Meena"""
-  swe.set_sid_mode(swe.SIDM_LAHIRI)
+  set_ayanamsa_mode()
   s = solar_longitude(jd)
   solar_nirayana = (solar_longitude(jd) - swe.get_ayanamsa_ut(jd)) % 360
   # 12 rasis occupy 360 degrees, so each one is 30 degrees
 
-  # Restore default ayanamsa
-  swe.set_sid_mode(swe.SIDM_FAGAN_BRADLEY)
+  reset_ayanamsa_mode()
 
   return ceil(solar_nirayana / 30.)
 
