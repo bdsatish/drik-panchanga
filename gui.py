@@ -25,6 +25,7 @@
 
 import wx
 import json
+import re
 
 from time import strptime
 from pytz import timezone, utc
@@ -289,9 +290,7 @@ class Panchanga(wx.Frame):
         self.cities = json.load(fp)
         self.all_cities = self.cities.keys()
         fp.close()
-        fp = open("sanskrit_names.json")
-        sktnames = json.load(fp)
-        fp.close()
+        sktnames = load_json_file("sanskrit_names.json")
         self.tithis = sktnames["tithis"]
         self.nakshatras = sktnames["nakshatras"]
         self.vaaras = sktnames["varas"]
@@ -328,6 +327,20 @@ class Panchanga(wx.Frame):
 # end of class Panchanga
 
 # Global functions
+# Load json file ignoring single-line comments (//)
+def load_json_file(filename):
+    comment = re.compile('(^)?[^\S\n]*/(?:\*(.*?)\*/[^\S\n]*|/[^\n]*)($)?',
+                         re.DOTALL | re.MULTILINE)
+    with open(filename) as fp:
+        content = ''.join(fp.readlines())
+        match = comment.search(content)  ## Look for comments
+        while match:
+            # single line comment
+            content = content[:match.start()] + content[match.end():]
+            match = comment.search(content)
+
+        return json.loads(content)
+
 # Converts list [12, [23, 45, 50]] to lookup[12] and 23:45:50
 def format_name_hms(nhms, lookup):
     name_txt = lookup[str(nhms[0])]

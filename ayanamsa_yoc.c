@@ -10,6 +10,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 
 #ifndef SE_SIDM_TRUE_CITRA
 #define SE_SIDM_TRUE_CITRA      27
@@ -40,6 +41,35 @@ void to_dms(double deg)
     printf("%03d:%02d:%02.8lf\n", d, m, s);
 }
 
+void galactic_center(void)
+{
+    swe_set_ephe_path("/opt/packages/swisseph/ephe"); //better setenv SE_EPHE_PATH
+    double julday = swe_julday(550, 3, 9, 14 + 3/60. + 32.45/3600, SE_GREG_CAL);
+    swe_set_sid_mode(SE_SIDM_USER, julday, 0.0);
+
+    double position[10] = {0}; // longitude, latitude, distance, speed, etc
+    char errmsg[512] = {0};
+    char star[50];  strcpy(star, "Gal. Center");
+    int errcode = swe_fixstar_ut(star,
+                                 julday,
+                                 SEFLG_SIDEREAL | SEFLG_SWIEPH,
+                                 position,
+                                 errmsg);
+    to_dms(fmod(position[0], 30)); // prints 006:39:59.99998588 in 2.02
+                                   // prints 006:40:0.00476062 in 1.80
+
+    // As claimed in Swisseph for SS_REVATI
+    julday = swe_julday(499, 3, 21, 7 + 30/60. + 21.57/3600, SE_GREG_CAL);
+    swe_set_sid_mode(SE_SIDM_USER, julday, -0.79167046);
+    strcpy(star, ",zePsc"); // Revati = Zeta Piscium (see fixstars.cat)
+    errcode = swe_fixstar_ut(star,
+                             julday,
+                             SEFLG_SIDEREAL | SEFLG_SWIEPH,
+                             position,
+                             errmsg);
+    printf("%.8lf\n", position[0]);
+    // Surya Siddhanta claims this is 359°50' but returns 359°43'18.4"
+}
 
 // Find 'jd' such that swe_get_ayanamsa_ut(jd) == 0.00
 double bisection_search(int32 sidm_mode, double start, double stop)

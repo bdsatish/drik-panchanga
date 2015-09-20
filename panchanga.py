@@ -34,9 +34,6 @@ import swisseph as swe
 Date = struct('Date', ['year', 'month', 'day'])
 Place = struct('Location', ['latitude', 'longitude', 'timezone'])
 
-# Convert 23d 30' 30" to 23.508333 degrees
-from_dms = lambda degs, mins, secs: degs + mins/60 + secs/3600
-
 set_ayanamsa_mode = lambda: swe.set_sid_mode(swe.SIDM_LAHIRI)
 reset_ayanamsa_mode = lambda: swe.set_sid_mode(swe.SIDM_FAGAN_BRADLEY)
 
@@ -44,13 +41,20 @@ reset_ayanamsa_mode = lambda: swe.set_sid_mode(swe.SIDM_FAGAN_BRADLEY)
 # They are geomretic, i.e. "true sunrise/set", so refraction is not considered
 _rise_flags = swe.BIT_DISC_CENTER + swe.BIT_NO_REFRACTION
 
+# Convert 23d 30' 30" to 23.508333 degrees
+from_dms = lambda degs, mins, secs: degs + mins/60 + secs/3600
+
 # the inverse
-def to_dms(deg):
+def to_dms_prec(deg):
   d = int(deg)
   mins = (deg - d) * 60
   m = int(mins)
-  s = int(round((mins - m) * 60))
+  s = round((mins - m) * 60, 6)
   return [d, m, s]
+
+def to_dms(deg):
+  d, m, s = to_dms_prec(deg)
+  return [d, m, int(s)]
 
 def unwrap_angles(angles):
   """Add 360 to those elements in the input list so that
@@ -61,6 +65,27 @@ def unwrap_angles(angles):
 
   assert(result == sorted(result))
   return result
+
+def bisection_search(start, stop):
+  left = start
+  right = stop
+  epsilon = 1E-7
+
+  while True:
+    middle = (left + right) / 2
+    swe.set_sid_mode(swe.SIDM_USER, middle, 0)
+    midval = swe.fixstar("Revati", middle, flag = swe.FLG_SWIEPH | swe.FLG_SIDEREAL)[0] - (359 + 50/60.)
+    swe.set_sid_mode(swe.SIDM_USER, right, 0)
+    rtval = swe.fixstar("Revati", right, flag = swe.FLG_SWIEPH | swe.FLG_SIDEREAL)[0] - (359 + 50/60.)
+
+    if midval * rtval >= 0:
+      right = middle
+    else:
+      left = middle
+
+    if (right - left) <= epsilon: break
+
+  return (right + left) / 2
 
 def inverse_lagrange(x, y, ya):
   """Given two lists x and y, find the value of x = xa when y = ya, i.e., f(xa) = ya"""

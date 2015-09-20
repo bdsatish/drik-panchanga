@@ -121,3 +121,107 @@ for i in range(0, 29):
 ```
 
 [1]: http://www.astro.com/swisseph/swisseph.htm
+
+## Galactic Center and Mūlā Nakṣatra
+
+We can choose the zero-point of the ayanamsa to coincide exactly with the
+beginning of Sagittarius/Dhanus constallation (which spans from 240° to
+270°). This is what Swiss eph's `swe.SIDM_GALCENT_0SAG` does:
+
+```
+swe.set_sid_mode(swe.SIDM_GALCENT_0SAG)
+julday = 1746447.4042490 # 04 Jul, 69 CE
+swe.fixstar_ut("Gal. Center", julday, flag = swe.FLG_NOABERR | swe.FLG_SIDEREAL)
+    (240.00133698938166, -5.349660021998989, 0.9999999999999999, 0.0, 0.0, 0.0)
+```
+where the longitude is `0° Sag 0’ 4.8132”`. If you get the Ayanamsa on that day,
+it is indeed zero:
+
+```
+swe.get_ayanamsa_ut(julday)
+    2.839101398421917e-09
+```
+
+There are 27 Nakshatras spanning 360° so each occupies 13°20’ exactly. The 30°
+of Sagittarius is spanned by Mūlā Nakṣatra (0° to 13°20’), Pūrvāṣāḍhā (13°20’ to
+26°40’), and Uttārāṣāḍhā 1st pādā (26°40’ to 30°). The above mode puts the
+ayanamsa beginning at 0° Sag = 0° of Mūlā. However, people claim UshaShashi puts
+the galactic center at the _middle_ of Mūlā instead of _beginning_.
+
+```
+swe.set_sid_mode(swe.SIDM_USHASHASHI)
+julday = 1925433.8940655  # Zeropoint of Ayanamsa
+swe.get_ayanamsa_ut(julday)
+    1.5592931390528975e-09
+galc = swe.fixstar_ut("Gal. Center", julday, flag = swe.FLG_NOABERR | swe.FLG_SIDEREAL)
+to_dms_prec(galc[0] % 30)
+[6, 47, 44.2442]
+```
+
+The middle of Mūlā is `6°40’` but the above is off by 7’44” :(
+
+Repeating the procedure for other types of Ayanamsas:
+
+```
+                     Sagittarius         Sagittarius
+                  (with FLG_NOABERR)  (without FLG_NOABERR)
+GALACTIC_CENTER   [0, 0, 4.8132]      [0, 0, 19.7637]
+
+SS_REVATI         [6, 44, 59.5756]    [6, 45, 12.2397]
+USHASHASHI        [6, 47, 44.2442]    [6, 47, 56.4404]
+SASSANIAN         [6, 51, 37.0657]    [6, 51, 44.8046]
+HIPPARCHAN        [6, 36, 19.763]     [6, 35, 59.9548]
+
+LAHIRI            [2, 59, 47.7086]    [2, 59, 44.6748]
+FAGAN_BRADLEY     [2, 6, 48.0358]     [2, 6, 28.4751]
+SS_CITRA          [3, 50, 52.4752]    [3, 50, 43.5064]
+YUKTESHWAR        [4, 22, 28.7773]    [4, 22, 17.8058]
+```
+
+The correct value is `6°40’`, SS_REVATI is the closest.
+
+In fact, we can calculate our own Ayanamsa (by bisection root-finding) to
+coincide with the middle of Mūlā:
+
+```
+julday = swe.julday(550, 3, 9, 14 + 3/60. + 32.45/3600.)
+swe.set_sid_mode(swe.SIDM_USER, julday, 0)  # we assert that ayanamsa(julday) == 0
+galc = swe.fixstar_ut("Gal. Center", julday, flag = swe.FLG_SIDEREAL); to_dms_prec(galc[0] % 30)
+    [6, 40, 0.0]
+```
+
+So, choosing the zero-point of Ayanamsa on 9 Mar 550 CE at 14:03:32.45 UTC
+(JD 1922011.0857922453) results in placing the Galactic Center at the
+middle of Mūlā nakshatra (6°40’).
+
+[This post from Ernst Wilhelm][2] suggests to set the middle-Mula-ayanamsa to
+20°11'11" on 1/1/2000. This also results in 6°39.5’
+
+```
+julday = swe.julday(2000, 1, 1)
+swe.set_sid_mode(swe.SIDM_USER, julday, 20 + 11/60. + 11./3600)
+galc = swe.fixstar_ut("Gal. Center", julday, flag = swe.FLG_SIDEREAL); to_dms_prec(galc[0] % 30)
+   [6, 39, 34.830456]
+```
+
+The Suryasiddhanta also mentions that Revati/zeta-Piscium is exactly at 359°50’
+in polar ecliptic longitude (projection onto the ecliptic along
+meridians). So, according to SS_REVATI:
+
+```
+julday = swe.julday(499, 3, 21, 7 + 30/60. + 21.57/3600)
+swe.set_sid_mode(swe.SIDM_USER, julday, -0.79167046)
+galc = swe.fixstar("Revati", julday, flag = swe.FLG_SIDEREAL)
+to_dms_prec(galc[0])
+    [359, 43, 18.397513]
+```
+
+which is off by 7'18.4".
+
+
+```python
+def galc_center(jd, mode):
+    swe.set_sid_mode(mode)
+    galc = swe.fixstar_ut("Gal. Center", jd, flag = swe.FLG_SIDEREAL | swe.FLG_SWIEPH | swe.FLG_NOABERR)
+    return to_dms_prec(galc[0] % 30)
+```
