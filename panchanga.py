@@ -66,27 +66,6 @@ def unwrap_angles(angles):
   assert(result == sorted(result))
   return result
 
-def bisection_search(start, stop):
-  left = start
-  right = stop
-  epsilon = 1E-7
-
-  while True:
-    middle = (left + right) / 2
-    swe.set_sid_mode(swe.SIDM_USER, middle, 0)
-    midval = swe.fixstar("Revati", middle, flag = swe.FLG_SWIEPH | swe.FLG_SIDEREAL)[0] - (359 + 50/60.)
-    swe.set_sid_mode(swe.SIDM_USER, right, 0)
-    rtval = swe.fixstar("Revati", right, flag = swe.FLG_SWIEPH | swe.FLG_SIDEREAL)[0] - (359 + 50/60.)
-
-    if midval * rtval >= 0:
-      right = middle
-    else:
-      left = middle
-
-    if (right - left) <= epsilon: break
-
-  return (right + left) / 2
-
 def inverse_lagrange(x, y, ya):
   """Given two lists x and y, find the value of x = xa when y = ya, i.e., f(xa) = ya"""
   assert(len(x) == len(y))

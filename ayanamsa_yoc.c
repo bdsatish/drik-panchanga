@@ -72,7 +72,7 @@ void galactic_center(void)
 }
 
 // Find 'jd' such that swe_get_ayanamsa_ut(jd) == 0.00
-double bisection_search(int32 sidm_mode, double start, double stop)
+double bisection_search(double start, double stop)
 {
     double left = start;
     double right = (stop > 0) ? stop : 2500000;  // JD = 31 Aug 2132
@@ -147,7 +147,7 @@ int main(int argc, char* argv[])
         printf("name = %-30s, ", swe_get_ayanamsa_name(ayan));
 
         swe_set_sid_mode(ayan, 0, 0);
-        zero_points[i] = bisection_search(ayan, start, end);
+        zero_points[i] = bisection_search(start, end);
 
         printf("julday = %0.7lf ", zero_points[i]);
 
@@ -166,4 +166,5 @@ int main(int argc, char* argv[])
         double ayan = swe_get_ayanamsa_ut(jd);
         to_dms(ayan);
     }
+    galactic_center();
 }

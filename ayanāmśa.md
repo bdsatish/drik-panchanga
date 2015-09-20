@@ -216,7 +216,8 @@ to_dms_prec(galc[0])
     [359, 43, 18.397513]
 ```
 
-which is off by 7'18.4".
+which is off by 7'18.4". A bisection search proves that it is impossible to
+reach the value 359°50’ no matter which ayanamsa mode you invent.
 
 
 ```python
