@@ -516,7 +516,8 @@ def planetary_positions(jd, place):
 
   # namah suryaya chandraya mangalaya ... rahuve ketuve namah
   planet_list = [swe.SUN, swe.MOON, swe.MARS, swe.MERCURY, swe.JUPITER,
-                 swe.VENUS, swe.SATURN, swe.MEAN_NODE ] # Rahu = MEAN_NODE
+                 swe.VENUS, swe.SATURN, swe.MEAN_NODE, # Rahu = MEAN_NODE
+                 swe.URANUS, swe.NEPTUNE]
   # Ketu is always 180° off Rahu, so same coordinates but different constellations
   # i.e if Rahu is in Pisces, Ketu is in Virgo etc
 
