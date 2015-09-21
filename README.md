@@ -20,6 +20,11 @@ output is the uncertainity in your input values (latitude, longitude).
 
 Also includes computation of sunrise, sunset, moonrise and moonset.
 
+Included in the CLI version (not yet in GUI):
+* Instantaneous planetary positions, including Lagna (Ascendant)
+* Rahu Kala, Yamaganda Kala, Gulika Kala
+* Abhijit muhurta and Durmuhurtams
+
 By default, the month type is Amavasyanta (new moon to new moon) which
 is most prominent type of calendar used in South India.
 
