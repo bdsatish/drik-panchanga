@@ -204,22 +204,78 @@ galc = swe.fixstar_ut("Gal. Center", julday, flag = swe.FLG_SIDEREAL); to_dms_pr
    [6, 39, 34.830456]
 ```
 
+## TRUE_CITRA and TRUE_REVATI
+
+### Revati at 359°50’
+
 The Suryasiddhanta also mentions that Revati/zeta-Piscium is exactly at 359°50’
 in polar ecliptic longitude (projection onto the ecliptic along
 meridians). So, according to SS_REVATI:
 
 ```
-julday = swe.julday(499, 3, 21, 7 + 30/60. + 21.57/3600)
-swe.set_sid_mode(swe.SIDM_USER, julday, -0.79167046)
-galc = swe.fixstar("Revati", julday, flag = swe.FLG_SIDEREAL)
+jd = swe.julday(499, 3, 21, 7 + 30/60. + 21.57/3600)
+swe.set_sid_mode(swe.SIDM_USER, jd, -0.79167046)
+galc = swe.fixstar_ut("Revati", jd, flag = swe.FLG_SIDEREAL)
 to_dms_prec(galc[0])
     [359, 43, 18.397513]
 ```
 
-which is off by 7'18.4". A bisection search proves that it is impossible to
-reach the value 359°50’ no matter which ayanamsa mode you invent.
+which is off by 7'18.4". Once again, we can do bisection search to find the
+zero-point of Revati@359°50’:
+
+```
+jd = swe.julday(563, 7, 20, 19 + 16/60. + 2.17/3600)
+swe.set_sid_mode(swe.SIDM_USER, jd, 0.0)
+galc = swe.fixstar_ut("Revati", jd, flag = swe.FLG_SIDEREAL | swe.FLG_SWIEPH)
+to_dms_prec(galc[0])
+    [359, 49, 60.0]   # == 359°50'00'
+```
+
+This date of 20 Jul 563 is tantalizingly close to Sassanian 20 Mar 564.
+
+Note that selecting `swe.SIDM_TRUE_REVATI` places Revati at exactly 360°(=0°)
+instead of 359°50'.
+
+### True Citra
+
+A similar bisection search for Citra/Spica to be exactly 180° reveals:
+
+```
+julday = swe.julday(285, 1, 30, 11 + 55/60. + 10.92/3600)
+swe.set_sid_mode(swe.SIDM_USER, julday, 0.0)
+galc = swe.fixstar_ut("Citra", julday, flag = swe.FLG_SIDEREAL | swe.FLG_SWIEPH)
+galc[0]
+    179.99999999999895
+```
+
+This date of 30 Jan 285 is very close to `swe.SIDM_TRUE_CITRA`'s 04 Oct 285 and
+`swe.SIDM_LAHIRI`'s 03 Sep 285. It is preferable to use SIDM_TRUE_CITRA because
+it seems to give better precision:
+
+```
+julday = 1825430.71351322  # TRUE_CITRA's zero day
+swe.set_sid_mode(swe.SIDM_TRUE_CITRA)
+galc = swe.fixstar_ut("Citra", julday, flag = swe.FLG_SIDEREAL | swe.FLG_SWIEPH)
+galc[0]
+    179.99999999999994
+```
+
+### True Pushya
+
+Surya Siddhanta mentions that Puṣya Nakṣatra (delta Cancri) is at 106°. This is
+also proposed by P V R Narasimha Rao. Once again, bisection search reveals the
+zero-point ayanamsa in 368 AD:
+
+```
+jd = swe.julday(368, 10, 28, 21 + 49/60. + 15.09/3600) # TRUE_PUSHYA's zero day
+swe.set_sid_mode(swe.SIDM_USER, jd, 0.0)
+galc = swe.fixstar_ut(",deCnc", jd, flag = swe.FLG_SIDEREAL | swe.FLG_SWIEPH)
+to_dms_prec(galc[0])
+    [106, 0, 0.0]
+```
 
 
+#### Misc code
 ```python
 def galc_center(jd, mode):
     swe.set_sid_mode(mode)

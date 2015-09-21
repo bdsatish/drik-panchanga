@@ -66,6 +66,37 @@ def unwrap_angles(angles):
   assert(result == sorted(result))
   return result
 
+# Make angle lie between [-180, 180) instead of [0, 360)
+wrap180 = lambda angle: (angle - 360) if angle >= 180 else angle;
+
+def function(point):
+    swe.set_sid_mode(swe.SIDM_USER, point, 0.0)
+    # Place Revati at 359°50'
+    #fval = wrap180(swe.fixstar_ut("Revati", point, flag = swe.FLG_SWIEPH | swe.FLG_SIDEREAL)[0]) - ((359 + 49/60 + 59/3600) - 360)
+    # Place Citra at 180°
+    #fval = swe.fixstar_ut("Citra", point, flag = swe.FLG_SWIEPH | swe.FLG_SIDEREAL)[0] - (180)
+    # Place Pushya (delta Cancri) at 106°
+    fval = swe.fixstar_ut(",deCnc", point, flag = swe.FLG_SWIEPH | swe.FLG_SIDEREAL)[0] - (106)
+    return fval
+
+def bisection_search(func, start, stop):
+  left = start
+  right = stop
+  epsilon = 5E-10   # Anything better than this puts the loop below infinite
+
+  while True:
+    middle = (left + right) / 2
+    midval =  func(middle)
+    rtval = func(right)
+    if midval * rtval >= 0:
+      right = middle
+    else:
+      left = middle
+
+    if (right - left) <= epsilon: break
+
+  return (right + left) / 2
+
 def inverse_lagrange(x, y, ya):
   """Given two lists x and y, find the value of x = xa when y = ya, i.e., f(xa) = ya"""
   assert(len(x) == len(y))

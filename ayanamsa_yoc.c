@@ -67,8 +67,28 @@ void galactic_center(void)
                              SEFLG_SIDEREAL | SEFLG_SWIEPH,
                              position,
                              errmsg);
-    printf("%.8lf\n", position[0]);
+    printf("SS_REVATI = %.8lf\n", position[0]);
     // Surya Siddhanta claims this is 359°50' but returns 359°43'18.4"
+
+    // True_Revati of Swiss Eph puts it at 0° always
+    swe_set_sid_mode(SE_SIDM_TRUE_REVATI, 0, 0);
+    errcode = swe_fixstar_ut(star,
+                             julday,
+                             SEFLG_SIDEREAL | SEFLG_SWIEPH,
+                             position,
+                             errmsg);
+    printf("True_Revati = %.8lf\n", position[0]);   // prints 0.00000000
+
+    // TRUE_REVATI As discovered by me
+    julday = swe_julday(563, 7, 20, 19 + 16/60. + 2.17/3600, SE_GREG_CAL);
+    swe_set_sid_mode(SE_SIDM_USER, julday, 0.0);
+    errcode = swe_fixstar_ut(star,
+                             julday,
+                             SEFLG_SIDEREAL | SEFLG_SWIEPH,
+                             position,
+                             errmsg);
+    printf("Revati @ 390°50' = %.8lf\n", position[0]);
+    // prints 359.83333333 == 359°50'00' exactly
 }
 
 // Find 'jd' such that swe_get_ayanamsa_ut(jd) == 0.00
