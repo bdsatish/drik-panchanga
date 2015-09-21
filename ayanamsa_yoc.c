@@ -38,7 +38,7 @@ void to_dms(double deg)
     double mins = ((deg - d) * 60);
     int m = mins;
     double s = (mins - m) * 60;
-    printf("%03d:%02d:%02.8lf\n", d, m, s);
+    printf("%03d:%02d:%011.8lf\n", d, m, s);
 }
 
 void galactic_center(void)
@@ -76,7 +76,7 @@ double bisection_search(double start, double stop)
 {
     double left = start;
     double right = (stop > 0) ? stop : 2500000;  // JD = 31 Aug 2132
-    double epsilon = 1E-7;
+    double epsilon = 5E-10;
 
     do {
         register double middle = (left + right) / 2.;
@@ -149,7 +149,7 @@ int main(int argc, char* argv[])
         swe_set_sid_mode(ayan, 0, 0);
         zero_points[i] = bisection_search(start, end);
 
-        printf("julday = %0.7lf ", zero_points[i]);
+        printf("julday = %0.8lf ", zero_points[i]);
 
         swe_revjul(zero_points[i], SE_GREG_CAL, &year, &month, &day, &hours);
         printf("year = %+05d, month = %02d, day = %02d, hour = ", year, month, day);
