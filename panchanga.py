@@ -73,10 +73,12 @@ def function(point):
     swe.set_sid_mode(swe.SIDM_USER, point, 0.0)
     # Place Revati at 359°50'
     #fval = wrap180(swe.fixstar_ut("Revati", point, flag = swe.FLG_SWIEPH | swe.FLG_SIDEREAL)[0]) - ((359 + 49/60 + 59/3600) - 360)
+    # Place Revati at 0°0'0"
+    fval = wrap180(swe.fixstar_ut("Revati", point, flag = swe.FLG_SWIEPH | swe.FLG_SIDEREAL)[0])
     # Place Citra at 180°
     #fval = swe.fixstar_ut("Citra", point, flag = swe.FLG_SWIEPH | swe.FLG_SIDEREAL)[0] - (180)
     # Place Pushya (delta Cancri) at 106°
-    fval = swe.fixstar_ut(",deCnc", point, flag = swe.FLG_SWIEPH | swe.FLG_SIDEREAL)[0] - (106)
+    # fval = swe.fixstar_ut(",deCnc", point, flag = swe.FLG_SWIEPH | swe.FLG_SIDEREAL)[0] - (106)
     return fval
 
 def bisection_search(func, start, stop):

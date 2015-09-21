@@ -234,7 +234,15 @@ to_dms_prec(galc[0])
 This date of 20 Jul 563 is tantalizingly close to Sassanian 20 Mar 564.
 
 Note that selecting `swe.SIDM_TRUE_REVATI` places Revati at exactly 360°(=0°)
-instead of 359°50'.
+(instead of 359°50' like SS wants). It's zero-point is in 575 AD:
+
+```
+jd = swe.julday(575, 7, 18, 12 + 52/60. + 12.87/3600)
+swe.set_sid_mode(swe.SIDM_USER, jd, 0.0)
+galc = swe.fixstar_ut("Revati", jd, flag = swe.FLG_SIDEREAL | swe.FLG_SWIEPH)
+to_dms_prec(galc[0])
+    [359, 59, 60.0]   # == 360°00'00' = 0°
+```
 
 ### True Citra
 
@@ -274,8 +282,27 @@ to_dms_prec(galc[0])
     [106, 0, 0.0]
 ```
 
+## Summary
 
-#### Misc code
+All these methods try to put zero point between 10' and 20' east of zeta
+Piscium:
+
+```
+                                 t0              Position of zeta-Piscium at t0
+Hipparchan                  09 Nov 545
+Gal. Center@mid-Mūlā        09 Mar 550
+SS Revati                   05 Apr 556
+Ushashashi                  23 Jul 559
+Revati@359°50'              20 Jul 563
+Sassanian                   20 Mar 564
+True Revati@0°              18 Jul 575
+```
+
+SS Revati or Ushashashi seems to be a good middle-ground. Everybody seems to
+have become familiar with Ushashashi only due to Swiss Ephemeris.
+
+
+##### Misc code
 ```python
 def galc_center(jd, mode):
     swe.set_sid_mode(mode)
