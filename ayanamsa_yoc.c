@@ -163,13 +163,13 @@ int main(int argc, char* argv[])
 
     for (int i = 0; i < num; i++) {
         int ayan = ayanamsa_list[i];
-        printf("%02d. ", ayan);
+        printf("%02d, ", ayan);
         printf("name = %-30s, ", swe_get_ayanamsa_name(ayan));
 
         swe_set_sid_mode(ayan, 0, 0);
         zero_points[i] = bisection_search(start, end);
 
-        printf("julday = %0.8lf ", zero_points[i]);
+        printf("julday = %0.8lf, ", zero_points[i]);
 
         swe_revjul(zero_points[i], SE_GREG_CAL, &year, &month, &day, &hours);
         printf("year = %+05d, month = %02d, day = %02d, hour = ", year, month, day);

@@ -244,6 +244,8 @@ to_dms_prec(galc[0])
     [359, 59, 60.0]   # == 360°00'00' = 0°
 ```
 
+This Revati-at-zero is also mentioned in Siddhanta Siromani.
+
 ### True Citra
 
 A similar bisection search for Citra/Spica to be exactly 180° reveals:
@@ -284,22 +286,61 @@ to_dms_prec(galc[0])
 
 ## Summary
 
-All these methods try to put zero point between 10' and 20' east of zeta
-Piscium:
+All these methods try to put zero point between 10 minutes and 20 minutes east
+of zeta Piscium:
 
 ```
-                                 t0              Position of zeta-Piscium at t0
-Hipparchan                  09 Nov 545
-Gal. Center@mid-Mūlā        09 Mar 550
-SS Revati                   05 Apr 556
-Ushashashi                  23 Jul 559
-Revati@359°50'              20 Jul 563
-Sassanian                   20 Mar 564
-True Revati@0°              18 Jul 575
+                                 t0              Position of zeta-Piscium
+                                                  on JD 2457288.0
+Hipparchan                  09 Nov 545                [359, 38, 8.060755]
+Gal. Center@mid-Mūlā        09 Mar 550                [359, 41, 44.291252]
+SS Revati                   05 Apr 556                [359, 46, 47.905798]
+Ushashashi                  23 Jul 559                [359, 49, 32.962578]
+Revati@359°50'              20 Jul 563                [359, 52, 52.125081]
+Sassanian                   20 Mar 564                [359, 53, 25.4508901]
+True Revati@0°              18 Jul 575                [0, 2, 51.516834]
 ```
 
 SS Revati or Ushashashi seems to be a good middle-ground. Everybody seems to
 have become familiar with Ushashashi only due to Swiss Ephemeris.
+
+
+### Miscellaneous Dates
+
+(All dates are proleptic Gregorian)
+
+Beginning of Kali Yuga = 23 Jan, -3102 (JD 588466)
+
+#### Krishna
+
+Lord Krishna's birthday is on śrāvaṇa-māsa-kṛṣṇa-pakṣa-aṣṭamī with Rohiṇī
+nakṣatra, born at midnight. 23(24) Jun, -3227 (JD 542596.54167). Location:
+Mathura (27.502°N, 77.683°E) -- this is using any Citra-pakṣa ayanāmśa
+(Lahiri/Raman/`SS_CITRA`/`TRUE_CITRA`) but also with Yukteshwar and
+GalCent_0SAG. Kali-Ahargana = -45869 days ~ 125.58 yrs.
+
+If you use a Revati-pakṣa (`SS_REVATI`/`TRUE_REVATI`/`USHASHASHI`/`SASSANIAN`)
+you get adhika-bhādrapada instead of śrāvaṇa. But it is still rohiṇī and
+kṛṣṇa-pakṣa-aṣṭamī. However, changing the date to 13 Jun, -3226 we get an exact
+match with these ayanāmśas as well. Kali-Ahargana = -45515 days ~ 124.61 yrs.
+
+If you use Krishnamurti ayanāmśa, you get Ārdrā instead of Rohiṇī.
+
+#### Buddha
+
+Lord Gautama Buddha's birthday is claimed as Vaishakha Masa Purnima, Tuesday, at
+about mid-day near Lumbini (27.484N, 83.276E). Modern historians place him in
+563 BCE. Some (ex UNESCO) place him in 623 BCE.
+
+Using `SS_REVATI` or `TRUE_REVATI` gives the date as 23 Mar -561 which matches
+the above exactly. Taking -562 gives Thursday and -563 gives Sunday :(
+It's interesting that 20 Mar -623 is adhika-vaishaka-masa but Thursday. 18 Apr
+-623 is "normal" Vaishakha but Friday.
+-624 gives Saturday, 8 Apr -622 gives Wednesday. 28 Mar -621 gives Sunday.
+
+`SS_REVATI`: 7 Apr -622, Tuesday, Caturdasi ends after mid-day (12:21:06).
+`USHASHASHI`: 7 Apr -622, Tuesday, Caturdasi ends after mid-day (12:06:06).
+`TRUE_REVATI`: 7 Apr -622, Tuesday, Caturdasi ends after mid-day (12:21:06).
 
 
 ##### Misc code
@@ -309,3 +350,33 @@ def galc_center(jd, mode):
     galc = swe.fixstar_ut("Gal. Center", jd, flag = swe.FLG_SIDEREAL | swe.FLG_SWIEPH | swe.FLG_NOABERR)
     return to_dms_prec(galc[0] % 30)
 ```
+
+#### Julian to Gregorian date conversion in Swiss Eph
+
+Generally years before 1582 are quoted in (proleptic) Julian, not Gregorian.
+You can use `swe.date_conversion()` first and then apply `swe.revjul()`.
+
+For example: `21 Mar 499, 7:30:31.57 UT` actually means it is Julian date
+because 499 AD < 1582 AD.
+
+```python
+swe.date_conversion(499, 3, 21, 7 + 30/60. + 31.57/3600., 'j')   # [j]ulian
+    (0, 1903396.8128653935)
+
+swe.revjul(_[1], swe.GREG_CAL)
+    (499, 3, 22, 7.508769443258643)
+```
+
+So, 21 Mar became 22 Mar, just one day off.
+
+Similarly, Kali Yuga began on February 18, 3102 BC.
+
+```
+swe.date_conversion(-3102, 2, 18, cal = 'j')
+    (0, 588466.0)
+
+swe.revjul(_[1], swe.GREG_CAL)
+    (-3102, 1, 23, 12.0)
+```
+
+Now 18 Feb became 32 Jan!

@@ -1,30 +1,30 @@
-00. name = Fagan/Bradley                 , julday = 1802126.17788058 year = +0221, month = 12, day = 14, hour = 016:16:08.88177618
-01. name = Lahiri                        , julday = 1825399.99355486 year = +0285, month = 09, day = 03, hour = 011:50:43.14029664
-02. name = De Luce                       , julday = 1721212.80509256 year = +0000, month = 06, day = 02, hour = 007:19:19.99701396
-03. name = Raman                         , julday = 1863485.26742602 year = +0389, month = 12, day = 12, hour = 018:25:05.60826883
-04. name = Ushashashi                    , julday = 1925433.89406548 year = +0559, month = 07, day = 23, hour = 009:27:27.25718871
-05. name = Krishnamurti                  , julday = 1827944.57942419 year = +0292, month = 08, day = 22, hour = 001:54:22.25004494
-06. name = Djwhal Khul                   , julday = 1706703.94862375 year = -0040, month = 09, day = 11, hour = 010:46:01.09209135
-07. name = Yukteshwar                    , julday = 1861700.43272202 year = +0385, month = 01, day = 22, hour = 022:23:07.18264550
-08. name = J.N. Bhasin                   , julday = 1854239.28185195 year = +0364, month = 08, day = 19, hour = 018:45:52.00891122
-09. name = Babylonian/Kugler 1           , julday = 1773319.35257117 year = +0143, month = 01, day = 30, hour = 020:27:42.14909479
-10. name = Babylonian/Kugler 2           , julday = 1810213.87635878 year = +0244, month = 02, day = 05, hour = 009:01:57.39845797
-11. name = Babylonian/Kugler 3           , julday = 1832606.41620905 year = +0305, month = 05, day = 28, hour = 021:59:20.46230122
-12. name = Babylonian/Huber              , julday = 1804944.19640305 year = +0229, month = 09, day = 01, hour = 016:42:49.22368929
-13. name = Babylonian/Eta Piscium        , julday = 1807871.82628844 year = +0237, month = 09, day = 07, hour = 007:49:51.32125899
-14. name = Babylonian/Aldebaran = 15 Tau , julday = 1801629.76855127 year = +0220, month = 08, day = 05, hour = 006:26:42.82976925
-15. name = Hipparchos                    , julday = 1920430.09331298 year = +0545, month = 11, day = 09, hour = 014:14:22.24170551
-16. name = Sassanian                     , julday = 1927135.81636684 year = +0564, month = 03, day = 20, hour = 007:35:34.09529105
-17. name = Galact. Center = 0 Sag        , julday = 1746447.40424903 year = +0069, month = 07, day = 04, hour = 021:42:07.11598501
-18. name = J2000                         , julday = 2451544.99926122 year = +2000, month = 01, day = 01, hour = 011:58:56.16940677
-19. name = J1900                         , julday = 2415020.00003213 year = +1899, month = 12, day = 31, hour = 012:00:02.77624726
-20. name = B1950                         , julday = 2433282.42312167 year = +1949, month = 12, day = 31, hour = 022:09:17.71263242
-21. name = Suryasiddhanta                , julday = 1903396.74713447 year = +0499, month = 03, day = 22, hour = 005:55:52.41856277
-22. name = Suryasiddhanta, mean Sun      , julday = 1909045.51866817 year = +0514, month = 09, day = 09, hour = 000:26:52.92973459
-23. name = Aryabhata                     , julday = 1903396.72380117 year = +0499, month = 03, day = 22, hour = 005:22:16.42106876
-24. name = Aryabhata, mean Sun           , julday = 1909650.74956226 year = +0516, month = 05, day = 06, hour = 005:59:22.17914298
-25. name = SS Revati                     , julday = 1924230.20140956 year = +0556, month = 04, day = 05, hour = 016:50:01.78629979
-26. name = SS Citra                      , julday = 1847826.94744620 year = +0347, month = 01, day = 29, hour = 010:44:19.35184658
-27. name = True Citra                    , julday = 1825430.71351322 year = +0285, month = 10, day = 04, hour = 005:07:27.54184261
-28. name = True Revati                   , julday = 1684535.50000000 year = -0100, month = 01, day = 01, hour = 000:00:00.00002012
-29. name = True Pushya                   , julday = 1684535.50000000 year = -0100, month = 01, day = 01, hour = 000:00:00.00002012
+00, name = Fagan/Bradley                 , julday = 1802126.17788058, year = +0221, month = 12, day = 14, hour = 016:16:08.88177618
+01, name = Lahiri                        , julday = 1825399.99355486, year = +0285, month = 09, day = 03, hour = 011:50:43.14029664
+02, name = De Luce                       , julday = 1721212.80509256, year = +0000, month = 06, day = 02, hour = 007:19:19.99701396
+03, name = Raman                         , julday = 1863485.26742602, year = +0389, month = 12, day = 12, hour = 018:25:05.60826883
+04, name = Ushashashi                    , julday = 1925433.89406548, year = +0559, month = 07, day = 23, hour = 009:27:27.25718871
+05, name = Krishnamurti                  , julday = 1827944.57942419, year = +0292, month = 08, day = 22, hour = 001:54:22.25004494
+06, name = Djwhal Khul                   , julday = 1706703.94862375, year = -0040, month = 09, day = 11, hour = 010:46:01.09209135
+07, name = Yukteshwar                    , julday = 1861700.43272202, year = +0385, month = 01, day = 22, hour = 022:23:07.18264550
+08, name = J.N. Bhasin                   , julday = 1854239.28185195, year = +0364, month = 08, day = 19, hour = 018:45:52.00891122
+09, name = Babylonian/Kugler 1           , julday = 1773319.35257117, year = +0143, month = 01, day = 30, hour = 020:27:42.14909479
+10, name = Babylonian/Kugler 2           , julday = 1810213.87635878, year = +0244, month = 02, day = 05, hour = 009:01:57.39845797
+11, name = Babylonian/Kugler 3           , julday = 1832606.41620905, year = +0305, month = 05, day = 28, hour = 021:59:20.46230122
+12, name = Babylonian/Huber              , julday = 1804944.19640305, year = +0229, month = 09, day = 01, hour = 016:42:49.22368929
+13, name = Babylonian/Eta Piscium        , julday = 1807871.82628844, year = +0237, month = 09, day = 07, hour = 007:49:51.32125899
+14, name = Babylonian/Aldebaran = 15 Tau , julday = 1801629.76855127, year = +0220, month = 08, day = 05, hour = 006:26:42.82976925
+15, name = Hipparchos                    , julday = 1920430.09331298, year = +0545, month = 11, day = 09, hour = 014:14:22.24170551
+16, name = Sassanian                     , julday = 1927135.81636684, year = +0564, month = 03, day = 20, hour = 007:35:34.09529105
+17, name = Galact. Center = 0 Sag        , julday = 1746447.40424903, year = +0069, month = 07, day = 04, hour = 021:42:07.11598501
+18, name = J2000                         , julday = 2451544.99926122, year = +2000, month = 01, day = 01, hour = 011:58:56.16940677
+19, name = J1900                         , julday = 2415020.00003213, year = +1899, month = 12, day = 31, hour = 012:00:02.77624726
+20, name = B1950                         , julday = 2433282.42312167, year = +1949, month = 12, day = 31, hour = 022:09:17.71263242
+21, name = Suryasiddhanta                , julday = 1903396.74713447, year = +0499, month = 03, day = 22, hour = 005:55:52.41856277
+22, name = Suryasiddhanta, mean Sun      , julday = 1909045.51866817, year = +0514, month = 09, day = 09, hour = 000:26:52.92973459
+23, name = Aryabhata                     , julday = 1903396.72380117, year = +0499, month = 03, day = 22, hour = 005:22:16.42106876
+24, name = Aryabhata, mean Sun           , julday = 1909650.74956226, year = +0516, month = 05, day = 06, hour = 005:59:22.17914298
+25, name = SS Revati                     , julday = 1924230.20140956, year = +0556, month = 04, day = 05, hour = 016:50:01.78629979
+26, name = SS Citra                      , julday = 1847826.94744620, year = +0347, month = 01, day = 29, hour = 010:44:19.35184658
+27, name = True Citra                    , julday = 1825430.71351322, year = +0285, month = 10, day = 04, hour = 005:07:27.54184261
+28, name = True Revati                   , julday = 1684535.50000000, year = -0100, month = 01, day = 01, hour = 000:00:00.00002012
+29, name = True Pushya                   , julday = 1684535.50000000, year = -0100, month = 01, day = 01, hour = 000:00:00.00002012
