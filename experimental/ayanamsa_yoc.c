@@ -91,8 +91,36 @@ void galactic_center(void)
     // prints 359.83333333 == 359°50'00' exactly
 }
 
-// Find 'jd' such that swe_get_ayanamsa_ut(jd) == 0.00
-double bisection_search(double start, double stop)
+typedef double (*func1_t)(double);
+
+double revati(double point)
+{
+    double fval = 0.0;
+    double position[10] = {0}; // longitude, latitude, distance, speed, etc
+    char errmsg[512] = {0};
+    char star[50];
+    int errcode;
+
+    swe_set_sid_mode(SE_SIDM_USER, point, 0.0);
+
+    // Place Revati at at 359°50' (not fixstar_ut)
+    strcpy(star, "Revati");
+    errcode = swe_fixstar(star,
+                          point,
+                          SEFLG_SIDEREAL | SEFLG_SWIEPH,
+                          position,
+                          errmsg);
+    fval = wrap180(position[0]) - ((359 + 50/60.) - 360);
+    return fval;
+}
+
+double ayan_func(double x)
+{
+    return wrap180(swe_get_ayanamsa(x));
+}
+
+// Find 'x' in range [start, stop] such that func(x) == 0.00
+double bisection_search(func1_t func, double start, double stop)
 {
     double left = start;
     double right = (stop > 0) ? stop : 2500000;  // JD = 31 Aug 2132
@@ -100,8 +128,8 @@ double bisection_search(double start, double stop)
 
     do {
         register double middle = (left + right) / 2.;
-        register double midval = wrap180(swe_get_ayanamsa_ut(middle));
-        register double rtval = wrap180(swe_get_ayanamsa_ut(right));
+        register double midval = func(middle);
+        register double rtval = func(right);
 
         if (midval * rtval >= 0.0) {
             right = middle;
@@ -112,6 +140,20 @@ double bisection_search(double start, double stop)
     } while (right - left > epsilon);
 
     return (right + left) / 2;
+}
+
+void ss_citra(void)
+{
+    swe_set_sid_mode(SE_SIDM_SS_CITRA, 0, 0);
+
+    double dhour = 7 + 30/60. + 31.57/3600;
+    double tjd_ut = swe_julday(499, 3, 21, dhour, SE_JUL_CAL);
+    double daya = swe_get_ayanamsa_ut(tjd_ut);
+    double daya_tt = swe_get_ayanamsa(tjd_ut);
+
+    printf("\njd(UT) = %.14lf, ayanamsha = %.15lf, (using wrong function = %.15lf)\n",
+           tjd_ut, daya, daya_tt);
+
 }
 
 int main(int argc, char* argv[])
@@ -167,7 +209,7 @@ int main(int argc, char* argv[])
         printf("name = %-30s, ", swe_get_ayanamsa_name(ayan));
 
         swe_set_sid_mode(ayan, 0, 0);
-        zero_points[i] = bisection_search(start, end);
+        zero_points[i] = bisection_search(ayan_func, start, end);
 
         printf("julday = %0.8lf, ", zero_points[i]);
 
@@ -187,4 +229,6 @@ int main(int argc, char* argv[])
         to_dms(ayan);
     }
     galactic_center();
+
+    ss_citra();
 }

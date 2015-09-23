@@ -351,6 +351,20 @@ bhanuvara around mid-day.
 that it is Tuesday instead of Sunday. The very next year (9 Apr 789 CE),
 vaisakha-sukla-pancami is indeed Sunday, but Ardra until Monday morning 4 AM.
 
+#### Caitanya Mahaprabhu
+
+His planetary positions are [known][cait]. He was born on Phalguna-purnima
+purvaphalguni nakshatra, around evening time in Simha lagna. According to
+`SS_REVATI`, for Simha lagna (~15:45 to 17:45) duration, all other planetary
+positions match, except that Rahu is in Meena instead of Kumbha. Same fate with
+Ushashashi, True Revati, etc.
+
+The popular ones match correctly all positions (Lahiri, Raman, KP, True
+Citra). Strangely enough, GALCENT_0SAG also matches!
+
+
+[cait]: http://www.dandavats.com/?p=8193
+
 ##### Misc code
 ```python
 def galc_center(jd, mode):
