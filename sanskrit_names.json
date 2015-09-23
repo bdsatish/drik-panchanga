@@ -178,6 +178,7 @@
          },
 
 "samvats" : {
+              "0":"Akṣaya",
               "1":"Prabhava",
               "2":"Vibhava",
               "3":"Śukla",
@@ -236,8 +237,7 @@
               "56":"Dundubhi",
               "57":"Rudhirodgārī",
               "58":"Raktākṣī",
-              "59":"Krodhana",
-              "60":"Akṣaya"
+              "59":"Krodhana"
             },
 
 "ritus":   {
