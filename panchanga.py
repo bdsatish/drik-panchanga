@@ -27,7 +27,7 @@ Use Swiss ephemeris to calculate tithi, nakshatra, etc.
 """
 
 from __future__ import division
-from math import floor, ceil
+from math import ceil
 from collections import namedtuple as struct
 import swisseph as swe
 

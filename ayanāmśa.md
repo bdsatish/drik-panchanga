@@ -342,6 +342,14 @@ It's interesting that 20 Mar -623 is adhika-vaishaka-masa but Thursday. 18 Apr
 `USHASHASHI`: 7 Apr -622, Tuesday, Caturdasi ends after mid-day (12:06:06).
 `TRUE_REVATI`: 7 Apr -622, Tuesday, Caturdasi ends after mid-day (12:21:06).
 
+#### Adi Shankara
+
+Traditional records claim he was born vaisakha-sukla-pancami, punarvasu,
+bhanuvara around mid-day.
+
+`SS_REVATI`: 19 Apr 788 CE has punarvasu after 11:45 AM and matches well, except
+that it is Tuesday instead of Sunday. The very next year (9 Apr 789 CE),
+vaisakha-sukla-pancami is indeed Sunday, but Ardra until Monday morning 4 AM.
 
 ##### Misc code
 ```python
@@ -369,14 +377,19 @@ swe.revjul(_[1], swe.GREG_CAL)
 
 So, 21 Mar became 22 Mar, just one day off.
 
-Similarly, Kali Yuga began on February 18, 3102 BC.
+Similarly, Kali Yuga began on February 17/18, 3102 BC. Note that whenever BC is
+given, you've to substract 1 from it (irrespective of Gregorian/Julian). So 3102
+BC = -3101
 
-```
-swe.date_conversion(-3102, 2, 18, cal = 'j')
+```python
+swe.date_conversion(-3101, 2, 18, cal = 'j')
     (0, 588466.0)
 
 swe.revjul(_[1], swe.GREG_CAL)
-    (-3102, 1, 23, 12.0)
+    (-3101, 1, 23, 12.0)
+
+ahargana(588466)
+    0.5
 ```
 
-Now 18 Feb became 32 Jan!
+Now 18 Feb 3102 BC (julian) became 23 Jan 3102 BC (greg)!
