@@ -34,7 +34,10 @@ import swisseph as swe
 Date = struct('Date', ['year', 'month', 'day'])
 Place = struct('Location', ['latitude', 'longitude', 'timezone'])
 
-set_ayanamsa_mode = lambda: swe.set_sid_mode(swe.SIDM_LAHIRI)
+revati_359_50 = lambda: swe.set_sid_mode(swe.SIDM_USER, 1926892.343164331, 0)
+galc_cent_mid_mula = lambda: swe.set_sid_mode(swe.SIDM_USER, 1922011.128853056, 0)
+
+set_ayanamsa_mode = lambda: swe.set_sid_mode(swe.SIDM_ARYABHATA_MSUN)
 reset_ayanamsa_mode = lambda: swe.set_sid_mode(swe.SIDM_FAGAN_BRADLEY)
 
 # Hindu sunrise/sunset is calculated w.r.t middle of the sun's disk
@@ -202,7 +205,7 @@ def tithi(jd, place):
     degrees_left = leap_tithi * 12 - moon_phase
     approx_end = inverse_lagrange(x, y, degrees_left)
     ends = (rise + approx_end -jd) * 24 + place.timezone
-    leap_tithi = 1 if today == 30 else today + 1
+    leap_tithi = 1 if today == 30 else leap_tithi
     answer += [int(leap_tithi), to_dms(ends)]
 
   return answer
@@ -239,7 +242,7 @@ def nakshatra(jd, place):
     leap_nak = nak + 1
     approx_end = inverse_lagrange(offsets, longitudes, leap_nak * 360 / 27)
     ends = (rise - jd + approx_end) * 24 + tz
-    leap_nak = 1 if nak == 27 else nak + 1
+    leap_nak = 1 if nak == 27 else leap_nak
     answer += [int(leap_nak), to_dms(ends)]
 
   reset_ayanamsa_mode()
@@ -292,7 +295,7 @@ def yoga(jd, place):
     degrees_left = leap_yog * (360 / 27) - total
     approx_end = inverse_lagrange(x, y, degrees_left)
     ends = (rise + approx_end - jd) * 24 + tz
-    leap_yog = 1 if yog == 27 else yog + 1
+    leap_yog = 1 if yog == 27 else leap_yog
     answer += [int(leap_yog), to_dms(ends)]
 
   reset_ayanamsa_mode()

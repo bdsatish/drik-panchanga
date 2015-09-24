@@ -67,7 +67,7 @@ void galactic_center(void)
                              SEFLG_SIDEREAL | SEFLG_SWIEPH,
                              position,
                              errmsg);
-    printf("SS_REVATI = %.8lf\n", position[0]);
+    printf("SS_REVATI_UT = %.8lf\n", position[0]);
     // Surya Siddhanta claims this is 359°50' but returns 359°43'18.4"
 
     // True_Revati of Swiss Eph puts it at 0° always
@@ -77,7 +77,7 @@ void galactic_center(void)
                              SEFLG_SIDEREAL | SEFLG_SWIEPH,
                              position,
                              errmsg);
-    printf("True_Revati = %.8lf\n", position[0]);   // prints 0.00000000
+    printf("True_Revati_UT = %.8lf\n", position[0]);   // prints 0.00000000
 
     // TRUE_REVATI As discovered by me
     julday = swe_julday(563, 7, 20, 19 + 16/60. + 2.17/3600, SE_GREG_CAL);
@@ -87,15 +87,14 @@ void galactic_center(void)
                              SEFLG_SIDEREAL | SEFLG_SWIEPH,
                              position,
                              errmsg);
-    printf("Revati @ 390°50' = %.8lf\n", position[0]);
+    printf("Revati_UT @ 390°50' = %.8lf\n", position[0]);
     // prints 359.83333333 == 359°50'00' exactly
 }
 
 typedef double (*func1_t)(double);
 
-double revati(double point)
+double get_star_position(const char* star_, double point)
 {
-    double fval = 0.0;
     double position[10] = {0}; // longitude, latitude, distance, speed, etc
     char errmsg[512] = {0};
     char star[50];
@@ -103,14 +102,34 @@ double revati(double point)
 
     swe_set_sid_mode(SE_SIDM_USER, point, 0.0);
 
-    // Place Revati at at 359°50' (not fixstar_ut)
-    strcpy(star, "Revati");
+    strcpy(star, star_);
+
+    // (not fixstar_ut)
     errcode = swe_fixstar(star,
                           point,
                           SEFLG_SIDEREAL | SEFLG_SWIEPH,
                           position,
                           errmsg);
-    fval = wrap180(position[0]) - ((359 + 50/60.) - 360);
+
+    if (errcode == 0) { printf("%s: %s\n", __func__, errmsg); }
+    return position[0];
+}
+
+double revati(double point)
+{
+    double fval = 0.0;
+
+    // Place Revati at at 359°50'
+    fval = wrap180(get_star_position("Revati", point)) - ((359 + 50/60.) - 360);
+    return fval;
+}
+
+double gal_cent(double point)
+{
+    double fval = 0.0;
+
+    // Place Galactic Center at middle of Mula (246°40')
+    fval = get_star_position("Gal. Center", point) - (246 + 40/60.);
     return fval;
 }
 
@@ -231,4 +250,16 @@ int main(int argc, char* argv[])
     galactic_center();
 
     ss_citra();
+
+    // Fixed point of Revati@359°50
+    double revati_359_50 = bisection_search(revati, start, end);
+    printf("JD = %.9lf, Revati position: %.9lf\n",
+           revati_359_50,
+           get_star_position("Revati", revati_359_50));
+
+    // Fixed point of Gal cent at mid-mula
+    double gal_cent_mula = bisection_search(gal_cent, start, end);
+    printf("JD = %.9lf, Gal center position: %.9lf\n",
+           gal_cent_mula,
+           get_star_position("Gal. Center", gal_cent_mula));
 }
