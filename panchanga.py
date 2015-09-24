@@ -37,7 +37,7 @@ Place = struct('Location', ['latitude', 'longitude', 'timezone'])
 revati_359_50 = lambda: swe.set_sid_mode(swe.SIDM_USER, 1926892.343164331, 0)
 galc_cent_mid_mula = lambda: swe.set_sid_mode(swe.SIDM_USER, 1922011.128853056, 0)
 
-set_ayanamsa_mode = lambda: swe.set_sid_mode(swe.SIDM_ARYABHATA_MSUN)
+set_ayanamsa_mode = lambda: swe.set_sid_mode(swe.SIDM_LAHIRI)
 reset_ayanamsa_mode = lambda: swe.set_sid_mode(swe.SIDM_FAGAN_BRADLEY)
 
 # Hindu sunrise/sunset is calculated w.r.t middle of the sun's disk
@@ -70,14 +70,17 @@ def unwrap_angles(angles):
   return result
 
 # Make angle lie between [-180, 180) instead of [0, 360)
-wrap180 = lambda angle: (angle - 360) if angle >= 180 else angle;
+norm180 = lambda angle: (angle - 360) if angle >= 180 else angle;
+
+# Ketu is always 180° after Rahu
+ketu = lambda rahu: (rahu + 180) % 360
 
 def function(point):
     swe.set_sid_mode(swe.SIDM_USER, point, 0.0)
     # Place Revati at 359°50'
-    #fval = wrap180(swe.fixstar_ut("Revati", point, flag = swe.FLG_SWIEPH | swe.FLG_SIDEREAL)[0]) - ((359 + 49/60 + 59/3600) - 360)
+    #fval = norm180(swe.fixstar_ut("Revati", point, flag = swe.FLG_SWIEPH | swe.FLG_SIDEREAL)[0]) - ((359 + 49/60 + 59/3600) - 360)
     # Place Revati at 0°0'0"
-    fval = wrap180(swe.fixstar_ut("Revati", point, flag = swe.FLG_SWIEPH | swe.FLG_SIDEREAL)[0])
+    fval = norm180(swe.fixstar_ut("Revati", point, flag = swe.FLG_SWIEPH | swe.FLG_SIDEREAL)[0])
     # Place Citra at 180°
     #fval = swe.fixstar_ut("Citra", point, flag = swe.FLG_SWIEPH | swe.FLG_SIDEREAL)[0] - (180)
     # Place Pushya (delta Cancri) at 106°
@@ -121,6 +124,18 @@ def inverse_lagrange(x, y, ya):
 # Julian Day number as on (year, month, day) at 00:00 UTC
 gregorian_to_jd = lambda date: swe.julday(date.year, date.month, date.day, 0.0)
 jd_to_gregorian = lambda jd: swe.revjul(jd, swe.GREG_CAL)   # returns (y, m, d, h, min, s)
+
+def nakshatra_pada(longitude):
+  """Gives nakshatra (1..27) and paada (1..4) in which given longitude lies"""
+  # 27 nakshatras span 360°
+  one_star = (360 / 27)  # = 13°20'
+  # Each nakshatra has 4 padas, so 27 x 4 = 108 padas in 360°
+  one_pada = (360 / 108) # = 3°20'
+  quotient = int(longitude / one_star)
+  reminder = (longitude - quotient * one_star)
+  pada = int(reminder / one_pada)
+  # convert 0..26 to 1..27 and 0..3 to 1..4
+  return [1 + quotient, 1 + pada]
 
 def solar_longitude(jd):
   """Solar longitude at given instant (julian day) jd"""
@@ -499,9 +514,9 @@ def durmuhurtam(jd, place):
 
   return [start_times, end_times]  # in decimal hours
 
-# Abhijit muhurta is the 8th muhurta (middle one) of the 15 muhurtas
-# during the day_duration
 def abhijit_muhurta(jd, place):
+  """Abhijit muhurta is the 8th muhurta (middle one) of the 15 muhurtas
+  during the day_duration (~12 hours)"""
   lat, lon, tz = place
   tz = place.timezone
   srise = swe.rise_trans(jd - tz/24, swe.SUN, lon, lat, rsmi = _rise_flags + swe.CALC_RISE)[1][0]
@@ -514,38 +529,46 @@ def abhijit_muhurta(jd, place):
   # to local time
   return [(start_time - jd) * 24 + tz, (end_time - jd) * 24 + tz]
 
-# Computes instantaneous planetary positions
-# (i.e., which celestial object lies in which constellation)
 # 'jd' can be any time: ex, 2015-09-19 14:20 UTC
 # today = swe.julday(2015, 9, 19, 14 + 20./60)
 def planetary_positions(jd, place):
+  """Computes instantaneous planetary positions
+     (i.e., which celestial object lies in which constellation)
+
+     Also gives the nakshatra-pada division
+   """
   jd_utc = jd - place.timezone / 24.
   set_ayanamsa_mode()
 
   # namah suryaya chandraya mangalaya ... rahuve ketuve namah
   planet_list = [swe.SUN, swe.MOON, swe.MARS, swe.MERCURY, swe.JUPITER,
                  swe.VENUS, swe.SATURN, swe.MEAN_NODE, # Rahu = MEAN_NODE
-                 swe.URANUS, swe.NEPTUNE]
+                 swe.PLUTO,  # I've mapped Pluto to Ketu
+                 swe.URANUS, swe.NEPTUNE ]
   # Ketu is always 180° off Rahu, so same coordinates but different constellations
   # i.e if Rahu is in Pisces, Ketu is in Virgo etc
 
   positions = []
   for planet in planet_list:
-    longitude = swe.calc_ut(jd_utc, planet, flag = swe.FLG_SWIEPH)[0]
-    # tropical to sidereal (nirayana) longitude
-    nirayana_long = (longitude - swe.get_ayanamsa(jd_utc)) % 360
+    if planet != swe.PLUTO:
+      longitude = swe.calc_ut(jd_utc, planet, flag = swe.FLG_SWIEPH)[0]
+      # tropical to sidereal (nirayana) longitude
+      nirayana_long = (longitude - swe.get_ayanamsa(jd_utc)) % 360
+    else: # Ketu
+      nirayana_long = ketu(swe.calc_ut(jd_utc, swe.RAHU,
+                                       flag = swe.FLG_SWIEPH | swe.FLG_SIDEREAL)[0])
 
     # 12 zodiac signs span 360°, so each one takes 30°
     # 0 = Mesha, 1 = Vrishabha, ..., 11 = Meena
-    constellation = nirayana_long // 30
+    constellation = int(nirayana_long / 30)
     coordinates = to_dms(nirayana_long % 30)
-    positions.append([planet, int(constellation), coordinates])
+    positions.append([planet, constellation, coordinates, nakshatra_pada(nirayana_long)])
 
   reset_ayanamsa_mode()
   return positions
 
-# Lagna (=ascendant) calculation at any given time
 def ascendant(jd, place):
+  """Lagna (=ascendant) calculation at any given time & place"""
   jd_utc = jd - place.timezone / 24.
   set_ayanamsa_mode()
 
@@ -555,12 +578,23 @@ def ascendant(jd, place):
   nirayana_lagna = (tropical_ascendant - swe.get_ayanamsa(jd_utc)) % 360
   # 12 zodiac signs span 360°, so each one takes 30°
   # 0 = Mesha, 1 = Vrishabha, ..., 11 = Meena
-  constellation = nirayana_lagna // 30
+  constellation = int(nirayana_lagna / 30)
   coordinates = to_dms(nirayana_lagna % 30)
 
   reset_ayanamsa_mode()
-  return [int(constellation), coordinates]
+  return [constellation, coordinates, nakshatra_pada(nirayana_lagna)]
 
+# http://www.oocities.org/talk2astrologer/LearnAstrology/Details/Navamsa.html
+# Useful for making D9 chart
+def navamsa_from_long(longitude):
+  """Calculates the navamsa-house in which given longitude falls
+  0 = Aries, 1 = Taurus, ..., 11 = Pisces
+  """
+  one_pada = (360 / 108)  # There are also 108 navamsas
+  one_house = 12 * one_pada # = 40 degrees exactly
+  houses_elapsed = longitude / one_house
+  fraction_left = houses_elapsed % 1
+  return int(fraction_left * 12)
 
 # ----- TESTS ------
 def all_tests():

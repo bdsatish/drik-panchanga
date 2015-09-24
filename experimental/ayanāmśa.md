@@ -365,6 +365,20 @@ Citra). Strangely enough, GALCENT_0SAG also matches!
 
 [cait]: http://www.dandavats.com/?p=8193
 
+#### Guru Nanak
+
+Traditional date: kartika-masa-purnima, krittika nakshatra, simha lagna, gurvara
+around midnight. Historians says 15 Apr 1469 Julian = 24 Apr 1469.
+
+Kartika masa is in October-November, so it can't be April, irrespective of
+Ayanamsa.
+
+17-Nov-1470 matches all of the above. Indeed it is Simha lagna around 23:45.
+
+29-Oct-1469 is Friday, Asvini nakshatra. Simha lagna around midnight on that day
+pushes it to 30-Oct-1969 before 4 AM which makes it Saturday, Bharani (both
+nakshatra and weekday mismatch for 1469)
+
 ##### Misc code
 ```python
 def galc_center(jd, mode):

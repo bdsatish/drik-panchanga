@@ -134,8 +134,7 @@ accurate databases of planetary data for about 10000 years. Hence, this panchang
 is based on the Swiss Ephemeris. Other databases include those published by NASA's
 JPL (DE405) or the Moshier ephemeris.
 
-Śubhāśubha Samaya
------------------
+#### Śubhāśubha Samaya
 
 Gaurī (Gowri) Panchanga and Choghadiya are south Indian and north Indian names
 respectively, for the same mathematical calculation. Basically, day and night
@@ -149,8 +148,27 @@ that such concepts of (in-)auspiciousness are all pseudo-science).
 Rāhukāla, Yamagaṇḍakāla, Gulikakāla, Durmuhūrtams and Varjyam are all considered
 inauspicious. Abhijit muhūrta and Amṛtakāla are considered auspicious.
 
-
 [kowri]: http://tamilastrology.hosuronline.com/KowriPanchangam/
+
+### Uranus and Neptune
+
+These planets were not discovered by Indian astronomers. They are sometimes
+translated as "[Aruṇa graha][ar_hi]" and "[Varuṇa graha][va_hi]" in languages
+like Hindi, Nepali, etc. Problmen is that there is another trans-Neptunian
+planet which is also called [Varuna][v20k] in English.
+
+The Positional Astronomy Center of India [translates][pac] them as `हर्शल` and
+`नेपच्यून`. This is inconsistent in the sense that Uranus was translated after its
+discoverer (William Herschel) where as Neptune was phonetically transcribed from
+English, instead of basing on its discoverer (Johann Galle). Therefore, I've
+"Indianized" their names in a rhyming fashion as `हर्षल` (=Uranus) and `गल्ल`
+(=Neptune). They also mean "happy" and "cheek/chin" respectively in many Indian
+languages.
+
+[ar_hi]: https://hi.wikipedia.org/wiki/अरुण_(ग्रह)
+[va_hi]: https://hi.wikipedia.org/wiki/वरुण_(ग्रह)
+[pac]: http://www.packolkata.gov.in/download/hindi/Page_020.jpg
+[v20k]: https://en.wikipedia.org/wiki/20000_Varuna
 
 References
 ----------

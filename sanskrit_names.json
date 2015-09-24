@@ -259,6 +259,7 @@
          },
 
 // Must match the order of SE_SUN, SE_MOON, etc in swephexp.h
+// 9 = SE_PLUTO, but meh it's no longer a major planet. So, reassigning 9 = Ketu
 "planets": { "0": "sūrya",
              "1": "candra",
              "4": "maṅgala",
@@ -267,9 +268,9 @@
              "3": "śukra",
              "6": "śani",
              "10": "rāhu",
-             "-10": "ketu",
-             "7": "aruṇa",
-             "8": "varuṇa"
+             "9": "ketu",
+             "7": "harṣala",
+             "8": "galla"
            },
 
 // 0 = Aries, 1 = Taurus, etc

@@ -209,6 +209,7 @@ class Panchanga(wx.Frame):
         samvat = samvatsara(jd, mas[0])
         day_dur = day_duration(jd, place)[1]
         gauri = self.gauri_panchanga(jd)
+        positions = self.kundali(jd)
 
         # Update GUI one by one. First the easy ones
         self.karanaTxt.SetLabel("%s" % self.karanas[str(kar[0])])
@@ -300,6 +301,8 @@ class Panchanga(wx.Frame):
         self.samvats = sktnames["samvats"]
         self.ritus = sktnames["ritus"]
         self.gauri = sktnames["gauri"]
+        self.planets = sktnames["planets"]
+        self.zodiac = sktnames["zodiac"]
 
     def set_place(self, event):  # wxGlade: Panchanga.<event_handler>
         lat = float(self.latTxt.Value)
@@ -324,10 +327,21 @@ class Panchanga(wx.Frame):
 
         return zip(names, times)
 
+    def kundali(self, jd):
+        place = self.place
+        data = planetary_positions(jd, place)
+        for position in data:
+            graha = self.planets[str(position[0])]
+            house = self.zodiac[str(position[1])]
+            d, m, s = position[2]
+            dms = u"%d°%d'%d\"" % (d, m, s)
+            nak = self.nakshatras[str(position[3][0])]
+            pada = position[3][1]
+
 # end of class Panchanga
 
 # Global functions
-# Load json file ignoring single-line comments (//)
+# Load json file ignoring comments (// and /* ... */)
 def load_json_file(filename):
     comment = re.compile('(^)?[^\S\n]*/(?:\*(.*?)\*/[^\S\n]*|/[^\n]*)($)?',
                          re.DOTALL | re.MULTILINE)
