@@ -225,4 +225,6 @@ GNU Affero GPL version 3 (or later).
 #### TODO ####
 
 * Festivals
-* Rahukaala, Yamaganda kaala
+* Amritakala, varjyam
+* Vimshottari Dasha
+* gettext translations

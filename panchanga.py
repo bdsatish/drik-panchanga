@@ -87,12 +87,13 @@ ketu = lambda rahu: (rahu + 180) % 360
 
 def function(point):
     swe.set_sid_mode(swe.SIDM_USER, point, 0.0)
+    #swe.set_sid_mode(swe.SIDM_LAHIRI)
     # Place Revati at 359°50'
     #fval = norm180(swe.fixstar_ut("Revati", point, flag = swe.FLG_SWIEPH | swe.FLG_SIDEREAL)[0]) - ((359 + 49/60 + 59/3600) - 360)
     # Place Revati at 0°0'0"
-    fval = norm180(swe.fixstar_ut("Revati", point, flag = swe.FLG_SWIEPH | swe.FLG_SIDEREAL)[0])
+    #fval = norm180(swe.fixstar_ut("Revati", point, flag = swe.FLG_SWIEPH | swe.FLG_SIDEREAL)[0])
     # Place Citra at 180°
-    #fval = swe.fixstar_ut("Citra", point, flag = swe.FLG_SWIEPH | swe.FLG_SIDEREAL)[0] - (180)
+    fval = swe.fixstar_ut("Citra", point, flag = swe.FLG_SWIEPH | swe.FLG_SIDEREAL)[0] - (180)
     # Place Pushya (delta Cancri) at 106°
     # fval = swe.fixstar_ut(",deCnc", point, flag = swe.FLG_SWIEPH | swe.FLG_SIDEREAL)[0] - (106)
     return fval
@@ -554,15 +555,15 @@ def ascendant(jd, place):
   return [constellation, coordinates, nakshatra_pada(nirayana_lagna)]
 
 # http://www.oocities.org/talk2astrologer/LearnAstrology/Details/Navamsa.html
-# Useful for making D9 chart
+# Useful for making D9 divisional chart
 def navamsa_from_long(longitude):
-  """Calculates the navamsa-house in which given longitude falls
+  """Calculates the navamsa-sign in which given longitude falls
   0 = Aries, 1 = Taurus, ..., 11 = Pisces
   """
   one_pada = (360 / (12 * 9))  # There are also 108 navamsas
-  one_house = 12 * one_pada    # = 40 degrees exactly
-  houses_elapsed = longitude / one_house
-  fraction_left = houses_elapsed % 1
+  one_sign = 12 * one_pada    # = 40 degrees exactly
+  signs_elapsed = longitude / one_sign
+  fraction_left = signs_elapsed % 1
   return int(fraction_left * 12)
 
 def navamsa(jd, place):
