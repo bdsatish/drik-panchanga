@@ -72,6 +72,9 @@ def unwrap_angles(angles):
 # Make angle lie between [-180, 180) instead of [0, 360)
 norm180 = lambda angle: (angle - 360) if angle >= 180 else angle;
 
+# Make angle lie between [0, 360)
+norm360 = lambda angle: angle % 360
+
 # Ketu is always 180° after Rahu
 ketu = lambda rahu: (rahu + 180) % 360
 
@@ -137,20 +140,15 @@ def nakshatra_pada(longitude):
   # convert 0..26 to 1..27 and 0..3 to 1..4
   return [1 + quotient, 1 + pada]
 
-def solar_longitude(jd):
-  """Solar longitude at given instant (julian day) jd"""
-  data = swe.calc_ut(jd, swe.SUN, flag = swe.FLG_SWIEPH)
-  return data[0]   # in degrees
+def sidereal_longitude(jd, planet):
+  """Computes nirayana (sidereal) longitude of given planet on jd"""
+  set_ayanamsa_mode()
+  longi = swe.calc_ut(jd, planet, flag = swe.FLG_SWIEPH | swe.FLG_SIDEREAL)
+  reset_ayanamsa_mode()
+  return norm360(longi[0]) # degrees
 
-def lunar_longitude(jd):
-  """Lunar longitude at given instant (julian day) jd"""
-  data = swe.calc_ut(jd, swe.MOON, flag = swe.FLG_SWIEPH)
-  return data[0]   # in degrees
-
-def lunar_latitude(jd):
-  """Lunar latitude at given instant (julian day) jd"""
-  data = swe.calc_ut(jd, swe.MOON, flag = swe.FLG_SWIEPH)
-  return data[1]   # in degrees
+solar_longitude = lambda jd: sidereal_longitude(jd, swe.SUN)
+lunar_longitude = lambda jd: sidereal_longitude(jd, swe.MOON)
 
 def sunrise(jd, place):
   """Sunrise when centre of disc is at horizon for given date and place"""
@@ -230,14 +228,12 @@ def nakshatra(jd, place):
   """Current nakshatra as of julian day (jd)
      1 = Asvini, 2 = Bharani, ..., 27 = Revati
   """
-  set_ayanamsa_mode()
   # 1. Find time of sunrise
   lat, lon, tz = place
   rise = sunrise(jd, place)[0] - tz / 24.  # Sunrise at UT 00:00
 
-  # Swiss Ephemeris always gives Sayana. So subtract ayanamsa to get Nirayana
   offsets = [0.0, 0.25, 0.5, 0.75, 1.0]
-  longitudes = [ (lunar_longitude(rise + t) - swe.get_ayanamsa_ut(rise)) % 360 for t in offsets]
+  longitudes = [ lunar_longitude(rise + t) for t in offsets]
 
   # 2. Today's nakshatra is when offset = 0
   # There are 27 Nakshatras spanning 360 degrees
@@ -260,8 +256,6 @@ def nakshatra(jd, place):
     leap_nak = 1 if nak == 27 else leap_nak
     answer += [int(leap_nak), to_dms(ends)]
 
-  reset_ayanamsa_mode()
-
   return answer
 
 
@@ -269,14 +263,13 @@ def yoga(jd, place):
   """Yoga at given jd and place.
      1 = Vishkambha, 2 = Priti, ..., 27 = Vaidhrti
   """
-  set_ayanamsa_mode()
   # 1. Find time of sunrise
   lat, lon, tz = place
   rise = sunrise(jd, place)[0] - tz / 24.  # Sunrise at UT 00:00
 
   # 2. Find the Nirayana longitudes and add them
-  lunar_long = (lunar_longitude(rise) - swe.get_ayanamsa_ut(rise)) % 360
-  solar_long = (solar_longitude(rise) - swe.get_ayanamsa_ut(rise)) % 360
+  lunar_long = lunar_longitude(rise)
+  solar_long = solar_longitude(rise)
   total = (lunar_long + solar_long) % 360
   # There are 27 Yogas spanning 360 degrees
   yog = ceil(total * 27 / 360)
@@ -299,8 +292,8 @@ def yoga(jd, place):
   answer = [int(yog), to_dms(ends)]
 
   # 5. Check for skipped yoga
-  lunar_long_tmrw = (lunar_longitude(rise + 1) - swe.get_ayanamsa_ut(rise + 1)) % 360
-  solar_long_tmrw = (solar_longitude(rise + 1) - swe.get_ayanamsa_ut(rise + 1)) % 360
+  lunar_long_tmrw = lunar_longitude(rise + 1)
+  solar_long_tmrw = solar_longitude(rise + 1)
   total_tmrw = (lunar_long_tmrw + solar_long_tmrw) % 360
   tomorrow = ceil(total_tmrw * 27 / 360)
   isSkipped = (tomorrow - yog) % 27 > 1
@@ -312,8 +305,6 @@ def yoga(jd, place):
     ends = (rise + approx_end - jd) * 24 + tz
     leap_yog = 1 if yog == 27 else leap_yog
     answer += [int(leap_yog), to_dms(ends)]
-
-  reset_ayanamsa_mode()
 
   return answer
 
@@ -380,13 +371,9 @@ def new_moon(jd, tithi_, opt = -1):
 
 def raasi(jd):
   """Zodiac of given jd. 1 = Mesha, ... 12 = Meena"""
-  set_ayanamsa_mode()
   s = solar_longitude(jd)
-  solar_nirayana = (solar_longitude(jd) - swe.get_ayanamsa_ut(jd)) % 360
+  solar_nirayana = solar_longitude(jd)
   # 12 rasis occupy 360 degrees, so each one is 30 degrees
-
-  reset_ayanamsa_mode()
-
   return ceil(solar_nirayana / 30.)
 
 def lunar_phase(jd):
