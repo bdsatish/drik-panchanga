@@ -34,15 +34,21 @@ import swisseph as swe
 Date = struct('Date', ['year', 'month', 'day'])
 Place = struct('Place', ['latitude', 'longitude', 'timezone'])
 
+# Hindu sunrise/sunset is calculated w.r.t middle of the sun's disk
+# They are geomretic, i.e. "true sunrise/set", so refraction is not considered
+_rise_flags = swe.BIT_DISC_CENTER + swe.BIT_NO_REFRACTION
+
+# namah suryaya chandraya mangalaya ... rahuve ketuve namah
+swe.KETU = swe.PLUTO  # I've mapped Pluto to Ketu
+planet_list = [swe.SUN, swe.MOON, swe.MARS, swe.MERCURY, swe.JUPITER,
+               swe.VENUS, swe.SATURN, swe.MEAN_NODE, # Rahu = MEAN_NODE
+               swe.KETU, swe.URANUS, swe.NEPTUNE ]
+
 revati_359_50 = lambda: swe.set_sid_mode(swe.SIDM_USER, 1926892.343164331, 0)
 galc_cent_mid_mula = lambda: swe.set_sid_mode(swe.SIDM_USER, 1922011.128853056, 0)
 
 set_ayanamsa_mode = lambda: swe.set_sid_mode(swe.SIDM_LAHIRI)
 reset_ayanamsa_mode = lambda: swe.set_sid_mode(swe.SIDM_FAGAN_BRADLEY)
-
-# Hindu sunrise/sunset is calculated w.r.t middle of the sun's disk
-# They are geomretic, i.e. "true sunrise/set", so refraction is not considered
-_rise_flags = swe.BIT_DISC_CENTER + swe.BIT_NO_REFRACTION
 
 # Convert 23d 30' 30" to 23.508333 degrees
 from_dms = lambda degs, mins, secs: degs + mins/60 + secs/3600
@@ -75,7 +81,8 @@ norm180 = lambda angle: (angle - 360) if angle >= 180 else angle;
 # Make angle lie between [0, 360)
 norm360 = lambda angle: angle % 360
 
-# Ketu is always 180° after Rahu
+# Ketu is always 180° after Rahu, so same coordinates but different constellations
+# i.e if Rahu is in Pisces, Ketu is in Virgo etc
 ketu = lambda rahu: (rahu + 180) % 360
 
 def function(point):
@@ -515,17 +522,9 @@ def planetary_positions(jd, place):
    """
   jd_utc = jd - place.timezone / 24.
 
-  # namah suryaya chandraya mangalaya ... rahuve ketuve namah
-  planet_list = [swe.SUN, swe.MOON, swe.MARS, swe.MERCURY, swe.JUPITER,
-                 swe.VENUS, swe.SATURN, swe.MEAN_NODE, # Rahu = MEAN_NODE
-                 swe.PLUTO,  # I've mapped Pluto to Ketu
-                 swe.URANUS, swe.NEPTUNE ]
-  # Ketu is always 180° off Rahu, so same coordinates but different constellations
-  # i.e if Rahu is in Pisces, Ketu is in Virgo etc
-
   positions = []
   for planet in planet_list:
-    if planet != swe.PLUTO:
+    if planet != swe.KETU:
       nirayana_long = sidereal_longitude(jd_utc, planet)
     else: # Ketu
       nirayana_long = ketu(sidereal_longitude(jd_utc, swe.RAHU))
@@ -565,6 +564,21 @@ def navamsa_from_long(longitude):
   houses_elapsed = longitude / one_house
   fraction_left = houses_elapsed % 1
   return int(fraction_left * 12)
+
+def navamsa(jd, place):
+  """Calculates navamsa of all planets"""
+  jd_utc = jd - place.timezone / 24.
+
+  positions = []
+  for planet in planet_list:
+    if planet != swe.KETU:
+      nirayana_long = sidereal_longitude(jd_utc, planet)
+    else: # Ketu
+      nirayana_long = ketu(sidereal_longitude(jd_utc, swe.RAHU))
+
+    positions.append([planet, navamsa_from_long(nirayana_long)])
+
+  return positions
 
 # ----- TESTS ------
 def all_tests():
@@ -627,6 +641,13 @@ def ascendant_tests():
   jd = swe.julday(2015, 9, 25, 13 + 29/60. + 13/3600.)
   assert(ascendant(jd, bangalore) == [8, [20, 23, 31], [20, 3]])
 
+def navamsa_tests():
+  jd = swe.julday(2015, 9, 25, 13 + 29/60. + 13/3600.)
+  nv = navamsa(jd, bangalore)
+  expected = [[0, 11], [1, 5], [4, 1], [2, 2], [5, 4], [3, 10],
+              [6, 4], [10, 11], [9, 5], [7, 10], [8, 10]]
+  assert(nv == expected)
+
 
 if __name__ == "__main__":
   bangalore = Place(12.972, 77.594, +5.5)
@@ -644,4 +665,5 @@ if __name__ == "__main__":
   # yoga_tests()
   # masa_tests()
   ascendant_tests()
+  navamsa_tests()
   # new_moon(jd)
