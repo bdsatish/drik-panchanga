@@ -525,7 +525,6 @@ def planetary_positions(jd, place):
      Also gives the nakshatra-pada division
    """
   jd_utc = jd - place.timezone / 24.
-  set_ayanamsa_mode()
 
   # namah suryaya chandraya mangalaya ... rahuve ketuve namah
   planet_list = [swe.SUN, swe.MOON, swe.MARS, swe.MERCURY, swe.JUPITER,
@@ -538,12 +537,9 @@ def planetary_positions(jd, place):
   positions = []
   for planet in planet_list:
     if planet != swe.PLUTO:
-      longitude = swe.calc_ut(jd_utc, planet, flag = swe.FLG_SWIEPH)[0]
-      # tropical to sidereal (nirayana) longitude
-      nirayana_long = (longitude - swe.get_ayanamsa(jd_utc)) % 360
+      nirayana_long = sidereal_longitude(jd_utc, planet)
     else: # Ketu
-      nirayana_long = ketu(swe.calc_ut(jd_utc, swe.RAHU,
-                                       flag = swe.FLG_SWIEPH | swe.FLG_SIDEREAL)[0])
+      nirayana_long = ketu(sidereal_longitude(jd_utc, swe.RAHU))
 
     # 12 zodiac signs span 360°, so each one takes 30°
     # 0 = Mesha, 1 = Vrishabha, ..., 11 = Meena
@@ -551,7 +547,6 @@ def planetary_positions(jd, place):
     coordinates = to_dms(nirayana_long % 30)
     positions.append([planet, constellation, coordinates, nakshatra_pada(nirayana_long)])
 
-  reset_ayanamsa_mode()
   return positions
 
 def ascendant(jd, place):
@@ -600,29 +595,29 @@ def tithi_tests():
   apr19 = gregorian_to_jd(Date(2013, 4, 19))
   apr20 = gregorian_to_jd(Date(2013, 4, 20))
   apr21 = gregorian_to_jd(Date(2013, 4, 21))
-  print(tithi(date1, bangalore))  # Expected: krishna ashtami (23), ends at 27:07:39
-  print(tithi(date2, bangalore))  # Expected: Saptami, ends at 16:24:20
-  print(tithi(date3, bangalore))  # Expected: Krishna Saptami, ends at 25:03:29
-  print(tithi(date2, helsinki))   # Expected: Shukla saptami until 12:54:20
-  print(tithi(apr24, bangalore))  # Expected: [10, [6,9,27], 11, [27, 33, 56]]
-  print(tithi(feb3, bangalore))   # Expected: [22, [8,14,6], 23, [30, 33, 16]]
-  print(tithi(apr19, helsinki))   # Expected: [9, [28, 44, 59]]
-  print(tithi(apr20, helsinki))   # Expected: [10, - ahoratra -]
-  print(tithi(apr21, helsinki))   # Expected: [10, [5, 22, 7]]
+  print(tithi(date1, bangalore))  # Expected: krishna ashtami (23), ends at 27:07:38
+  print(tithi(date2, bangalore))  # Expected: Saptami, ends at 16:24:19
+  print(tithi(date3, bangalore))  # Expected: Krishna Saptami, ends at 25:03:30
+  print(tithi(date2, helsinki))   # Expected: Shukla saptami until 12:54:19
+  print(tithi(apr24, bangalore))  # Expected: [10, [6,9,29], 11, [27, 33, 58]]
+  print(tithi(feb3, bangalore))   # Expected: [22, [8,14,6], 23, [30, 33, 17]]
+  print(tithi(apr19, helsinki))   # Expected: [9, [28, 45, 0]]
+  print(tithi(apr20, helsinki))   # Expected: [10, [29, 22, 7]]
+  print(tithi(apr21, helsinki))   # Expected: [10, [5, 22, 6]]
   return
 
 def nakshatra_tests():
-  print(nakshatra(date1, bangalore))  # Expected: 27 (Revati), ends at 17:06:09
-  print(nakshatra(date2, bangalore))  # Expected: 27 (Revati), ends at 19:22:41
-  print(nakshatra(date3, bangalore))  # Expecred: 24 (Shatabhisha) ends at 26:33:06
-  print(nakshatra(date4, shillong))   # Expected: [3, [5,0,52]] then [4,[26,30,50]]
+  print(nakshatra(date1, bangalore))  # Expected: 27 (Revati), ends at 17:06:37
+  print(nakshatra(date2, bangalore))  # Expected: 27 (Revati), ends at 19:23:09
+  print(nakshatra(date3, bangalore))  # Expecred: 24 (Shatabhisha) ends at 26:32:43
+  print(nakshatra(date4, shillong))   # Expected: [3, [5,1,14]] then [4,[26,31,13]]
   return
 
 def yoga_tests():
   may22 = gregorian_to_jd(Date(2013, 5, 22))
-  print(yoga(date3, bangalore))  # Expected: Vishkambha (1), ends at 23:00:29
-  print(yoga(date2, bangalore))  # Expected: Siddha (21), ends at 29:10:02
-  print(yoga(may22, helsinki))   # [16, [6,19,59], 17, [27,21,26]]
+  print(yoga(date3, bangalore))  # Expected: Vishkambha (1), ends at 22:59:45
+  print(yoga(date2, bangalore))  # Expected: Siddha (21), ends at 29:10:56
+  print(yoga(may22, helsinki))   # [16, [6,20,33], 17, [27,21,58]]
 
 def masa_tests():
   jd = gregorian_to_jd(Date(2013, 2, 10))
@@ -649,8 +644,8 @@ if __name__ == "__main__":
   apr_8 = gregorian_to_jd(Date(2010, 4, 8))
   apr_10 = gregorian_to_jd(Date(2010, 4, 10))
   # all_tests()
-  # tithi_tests()
+  tithi_tests()
   # nakshatra_tests()
   # yoga_tests()
-  masa_tests()
+  # masa_tests()
   # new_moon(jd)
