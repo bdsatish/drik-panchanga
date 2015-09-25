@@ -22,8 +22,10 @@ Also includes computation of sunrise, sunset, moonrise and moonset.
 
 Included in the CLI version (not yet in GUI):
 * Instantaneous planetary positions, including Lagna (Ascendant)
+* Navamsa positions
 * Rahu Kala, Yamaganda Kala, Gulika Kala
 * Abhijit muhurta and Durmuhurtams
+* Choghadiya/Gauri panchanga
 
 By default, the month type is Amavasyanta (new moon to new moon) which
 is most prominent type of calendar used in South India.
@@ -154,16 +156,16 @@ inauspicious. Abhijit muhūrta and Amṛtakāla are considered auspicious.
 
 These planets were not discovered by Indian astronomers. They are sometimes
 translated as "[Aruṇa graha][ar_hi]" and "[Varuṇa graha][va_hi]" in languages
-like Hindi, Nepali, etc. Problmen is that there is another trans-Neptunian
+like Hindi, Nepali, etc. Problem is that there is another trans-Neptunian
 planet which is also called [Varuna][v20k] in English.
 
-The Positional Astronomy Center of India [translates][pac] them as `हर्शल` and
+The Positional Astronomy Center [translates][pac] them as `हर्शल` and
 `नेपच्यून`. This is inconsistent in the sense that Uranus was translated after its
 discoverer (William Herschel) where as Neptune was phonetically transcribed from
 English, instead of basing on its discoverer (Johann Galle). Therefore, I've
-"Indianized" their names in a rhyming fashion as `हर्षल` (=Uranus) and `गल्ल`
-(=Neptune). They also mean "happy" and "cheek/chin" respectively in many Indian
-languages.
+"Indianized" their names in a rhyming fashion as **`हर्षल`** (=Uranus) and
+**`गल्ल`** (=Neptune). They also mean "happy" and "cheek/chin" respectively in
+many Indian languages.
 
 [ar_hi]: https://hi.wikipedia.org/wiki/अरुण_(ग्रह)
 [va_hi]: https://hi.wikipedia.org/wiki/वरुण_(ग्रह)

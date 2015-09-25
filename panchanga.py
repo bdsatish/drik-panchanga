@@ -32,7 +32,7 @@ from collections import namedtuple as struct
 import swisseph as swe
 
 Date = struct('Date', ['year', 'month', 'day'])
-Place = struct('Location', ['latitude', 'longitude', 'timezone'])
+Place = struct('Place', ['latitude', 'longitude', 'timezone'])
 
 revati_359_50 = lambda: swe.set_sid_mode(swe.SIDM_USER, 1926892.343164331, 0)
 galc_cent_mid_mula = lambda: swe.set_sid_mode(swe.SIDM_USER, 1922011.128853056, 0)
@@ -590,8 +590,8 @@ def navamsa_from_long(longitude):
   """Calculates the navamsa-house in which given longitude falls
   0 = Aries, 1 = Taurus, ..., 11 = Pisces
   """
-  one_pada = (360 / 108)  # There are also 108 navamsas
-  one_house = 12 * one_pada # = 40 degrees exactly
+  one_pada = (360 / (12 * 9))  # There are also 108 navamsas
+  one_house = 12 * one_pada    # = 40 degrees exactly
   houses_elapsed = longitude / one_house
   fraction_left = houses_elapsed % 1
   return int(fraction_left * 12)
