@@ -551,13 +551,12 @@ def planetary_positions(jd, place):
 
 def ascendant(jd, place):
   """Lagna (=ascendant) calculation at any given time & place"""
-  jd_utc = jd - place.timezone / 24.
-  set_ayanamsa_mode()
+  lat, lon, tz = place
+  jd_utc = jd - (tz / 24.)
+  set_ayanamsa_mode() # needed for swe.houses_ex()
 
   # returns two arrays, cusps and ascmc, where ascmc[0] = Ascendant
-  tropical_ascendant = swe.houses(jd_utc, place.latitude, place.longitude)[1][0]
-  # tropical to sidereal (nirayana) conversion
-  nirayana_lagna = (tropical_ascendant - swe.get_ayanamsa(jd_utc)) % 360
+  nirayana_lagna = swe.houses_ex(jd_utc, lat, lon, flag = swe.FLG_SIDEREAL)[1][0]
   # 12 zodiac signs span 360°, so each one takes 30°
   # 0 = Mesha, 1 = Vrishabha, ..., 11 = Meena
   constellation = int(nirayana_lagna / 30)
@@ -633,6 +632,13 @@ def masa_tests():
   print(masa(may20, helsinki))   # Vaisakha [2]
   print(masa(may21, helsinki))   # Jyestha [3]
 
+def ascendant_tests():
+  jd = swe.julday(2015, 9, 24, 23 + 38/60.)
+  assert(ascendant(jd, bangalore) == [2, [4, 37, 10], [5, 4]])
+  jd = swe.julday(2015, 9, 25, 13 + 29/60. + 13/3600.)
+  assert(ascendant(jd, bangalore) == [8, [20, 23, 31], [20, 3]])
+
+
 if __name__ == "__main__":
   bangalore = Place(12.972, 77.594, +5.5)
   shillong = Place(25.569, 91.883, +5.5)
@@ -644,8 +650,9 @@ if __name__ == "__main__":
   apr_8 = gregorian_to_jd(Date(2010, 4, 8))
   apr_10 = gregorian_to_jd(Date(2010, 4, 10))
   # all_tests()
-  tithi_tests()
+  # tithi_tests()
   # nakshatra_tests()
   # yoga_tests()
   # masa_tests()
+  ascendant_tests()
   # new_moon(jd)
