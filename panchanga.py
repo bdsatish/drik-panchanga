@@ -440,22 +440,11 @@ def rahu_yamaganda_glulika_kalam(jd, place, option='rahu'):
   # to local timezone
   start_time = (start_time - jd) * 24 + tz
   end_time = (end_time - jd) * 24 + tz
-  return [start_time, end_time]  # in decimal hours
+  return [to_dms(start_time), to_dms(end_time)] # decimal hours to H:M:S
 
-def rahu_kalam(jd, place):
-  start_time, end_time = rahu_yamaganda_glulika_kalam(jd, place, 'rahu')
-  print(to_dms(start_time))
-  print(to_dms(end_time))
-
-def yamaganda_kalam(jd, place):
-  start_time, end_time = rahu_yamaganda_glulika_kalam(jd, place, 'yamaganda')
-  print(to_dms(start_time))
-  print(to_dms(end_time))
-
-def gulika_kalam(jd, place):
-  start_time, end_time = rahu_yamaganda_glulika_kalam(jd, place, 'gulika')
-  print(to_dms(start_time))
-  print(to_dms(end_time))
+rahu_kalam = lambda jd, place: rahu_yamaganda_glulika_kalam(jd, place, 'rahu')
+yamaganda_kalam = lambda jd, place: rahu_yamaganda_glulika_kalam(jd, place, 'yamaganda')
+gulika_kalam = lambda jd, place: rahu_yamaganda_glulika_kalam(jd, place, 'gulika')
 
 def durmuhurtam(jd, place):
   lat, lon, tz = place
