@@ -30,7 +30,7 @@ from __future__ import division
 from math import ceil
 import swisseph as swe
 from collections import OrderedDict as Dict
-from panchanga import sidereal_longitude, sidereal_year
+from panchanga import sidereal_longitude, sidereal_year, get_planet_name
 
 swe.KETU = swe.PLUTO  # I've mapped Pluto to Ketu
 vimsottari_year = sidereal_year  # assume 365.25 days
@@ -121,22 +121,10 @@ if __name__ == "__main__":
     # YYYY-MM-DD 09:40 IST = 04:10 UTC
     jdut1 = swe.utc_to_jd(1985, 6, 9, 4, 10, 0, flag = swe.GREG_CAL)[1]
     print("jdut1", jdut1)
-    periods = vimsottari_mahadasa(jdut1)
-    print("---- Maha dasha start dates -----")
-    for x in periods:
-        print(x, periods[x], swe.revjul(periods[x]))
-
-    print("---- Rahu bhukti start dates -----")
-    bhuktis = vimsottari_bhukti(swe.RAHU, periods[swe.RAHU])
-    for x in bhuktis:
-        print(x, bhuktis[x], swe.revjul(bhuktis[x]))
-
-    print("---- Saturn bhukti start dates -----")
-    bhuktis = vimsottari_bhukti(swe.SANI, periods[swe.SANI])
-    for x in bhuktis:
-        print(x, bhuktis[x], swe.revjul(bhuktis[x]))
-
-    print("---- Shukra bhukti start dates -----")
-    bhuktis = vimsottari_bhukti(swe.SUKRA, periods[swe.SUKRA])
-    for x in bhuktis:
-        print(x, bhuktis[x], swe.revjul(bhuktis[x]))
+    dashas = vimsottari_mahadasa(jdut1)
+    for i in dashas:
+        print(' ---------- ' + get_planet_name(i) + ' Dasa ---------- ')
+        bhuktis = vimsottari_bhukti(i, dashas[i])
+        for j in bhuktis:
+            y, m, d, h = swe.revjul(bhuktis[j])
+            print('%8s: %04d-%02d-%02d' % (get_planet_name(j), y, m, d))

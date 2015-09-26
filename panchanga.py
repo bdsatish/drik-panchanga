@@ -52,6 +52,13 @@ galc_cent_mid_mula = lambda: swe.set_sid_mode(swe.SIDM_USER, 1922011.128853056, 
 set_ayanamsa_mode = lambda: swe.set_sid_mode(swe.SIDM_LAHIRI)
 reset_ayanamsa_mode = lambda: swe.set_sid_mode(swe.SIDM_FAGAN_BRADLEY)
 
+# Temporary function
+def get_planet_name(planet):
+  names = { swe.SURYA: 'Surya', swe.CHANDRA: 'Candra', swe.KUJA: 'Mangala',
+            swe.BUDHA: 'Budha', swe.GURU: 'Guru', swe.SUKRA: 'Sukra',
+            swe.SANI: 'Sani', swe.RAHU: 'Rahu', swe.KETU: 'Ketu', swe.PLUTO: 'Ketu'}
+  return names[planet]
+
 # Convert 23d 30' 30" to 23.508333 degrees
 from_dms = lambda degs, mins, secs: degs + mins/60 + secs/3600
 
