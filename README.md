@@ -23,9 +23,11 @@ Also includes computation of sunrise, sunset, moonrise and moonset.
 Included in the CLI version (not yet in GUI):
 * Instantaneous planetary positions, including Lagna (Ascendant)
 * Navamsa positions
+* Choghadiya/Gauri panchanga
+* Vimsottari Dasha-Bhukti
 * Rahu Kala, Yamaganda Kala, Gulika Kala
 * Abhijit muhurta and Durmuhurtams
-* Choghadiya/Gauri panchanga
+
 
 By default, the month type is Amavasyanta (new moon to new moon) which
 is most prominent type of calendar used in South India.
@@ -184,6 +186,8 @@ This is _the_ calendar book (though it mostly deals with Surya Siddhanta):
 * Dershowitz and Reingold, _Calendrical Calculations_, 3rd edition, 2008.
   [Online Java applet](http://emr.cs.iit.edu/home/reingold/calendar-book/Calendrica.html).
 
+* Shayamasundara Dasa, [_Vimsottari Year -- 360 or 365 ?_](http://shyamasundaradasa.com/jyotish/resources/articles/pdf_versions/english/360_vs_365.pdf)
+
 #### Similar software ####
 
 Prof. M. Yanom's [online interface](http://www.cc.kyoto-su.ac.jp/~yanom/pancanga/)
@@ -226,5 +230,6 @@ GNU Affero GPL version 3 (or later).
 
 * Festivals
 * Amritakala, varjyam
-* Vimshottari Dasha
 * gettext translations
+* Harmonize all functions to use UT aka UT1 instead of UTC or ET
+  (`swe.jdut1_to_utc() <==> swe.utc_to_jd()[1]`, `swe.utc_time_zone()`,  etc.)

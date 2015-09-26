@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#!/usr/bin/env python
 # -*- coding: UTF-8 -*-
 
 # panchanga.py -- routines for computing tithi, vara, etc.
@@ -33,6 +33,8 @@ import swisseph as swe
 
 Date = struct('Date', ['year', 'month', 'day'])
 Place = struct('Place', ['latitude', 'longitude', 'timezone'])
+
+sidereal_year = 365.256360417   # From WolframAlpha
 
 # Hindu sunrise/sunset is calculated w.r.t middle of the sun's disk
 # They are geomretic, i.e. "true sunrise/set", so refraction is not considered
@@ -135,6 +137,13 @@ def inverse_lagrange(x, y, ya):
 # Julian Day number as on (year, month, day) at 00:00 UTC
 gregorian_to_jd = lambda date: swe.julday(date.year, date.month, date.day, 0.0)
 jd_to_gregorian = lambda jd: swe.revjul(jd, swe.GREG_CAL)   # returns (y, m, d, h, min, s)
+
+def local_time_to_jdut1(year, month, day, hour = 0, minutes = 0, seconds = 0, timezone = 0.0):
+  """Converts local time to JD(UT1)"""
+  y, m, d, h, mnt, s = swe.utc_time_zone(year, month, day, hour, minutes, seconds, timezone)
+  # BUG in pyswisseph: replace 0 by s
+  jd_et, jd_ut1 = swe.utc_to_jd(y, m, d, h, mnt, 0, flag = swe.GREG_CAL)
+  return jd_ut1
 
 def nakshatra_pada(longitude):
   """Gives nakshatra (1..27) and paada (1..4) in which given longitude lies"""
@@ -354,7 +363,6 @@ def masa(jd, place):
 ahargana = lambda jd: jd - 588465.5
 
 def elapsed_year(jd, maasa_num):
-  sidereal_year = 365.256360417   # From WolframAlpha
   ahar = ahargana(jd)  # or (jd + sunrise(jd, place)[0])
   kali = int((ahar + (4 - maasa_num) * 30) / sidereal_year)
   saka = kali - 3179
@@ -429,7 +437,7 @@ def gauri_chogadiya(jd, place):
 
   return end_times
 
-def rahu_yamaganda_glulika_kalam(jd, place, option='rahu'):
+def trikalam(jd, place, option='rahu'):
   lat, lon, tz = place
   tz = place.timezone
   srise = swe.rise_trans(jd - tz/24, swe.SUN, lon, lat, rsmi = _rise_flags + swe.CALC_RISE)[1][0]
@@ -450,9 +458,9 @@ def rahu_yamaganda_glulika_kalam(jd, place, option='rahu'):
   end_time = (end_time - jd) * 24 + tz
   return [to_dms(start_time), to_dms(end_time)] # decimal hours to H:M:S
 
-rahu_kalam = lambda jd, place: rahu_yamaganda_glulika_kalam(jd, place, 'rahu')
-yamaganda_kalam = lambda jd, place: rahu_yamaganda_glulika_kalam(jd, place, 'yamaganda')
-gulika_kalam = lambda jd, place: rahu_yamaganda_glulika_kalam(jd, place, 'gulika')
+rahu_kalam = lambda jd, place: trikalam(jd, place, 'rahu')
+yamaganda_kalam = lambda jd, place: trikalam(jd, place, 'yamaganda')
+gulika_kalam = lambda jd, place: trikalam(jd, place, 'gulika')
 
 def durmuhurtam(jd, place):
   lat, lon, tz = place
@@ -521,14 +529,14 @@ def planetary_positions(jd, place):
 
      Also gives the nakshatra-pada division
    """
-  jd_utc = jd - place.timezone / 24.
+  jd_ut = jd - place.timezone / 24.
 
   positions = []
   for planet in planet_list:
     if planet != swe.KETU:
-      nirayana_long = sidereal_longitude(jd_utc, planet)
+      nirayana_long = sidereal_longitude(jd_ut, planet)
     else: # Ketu
-      nirayana_long = ketu(sidereal_longitude(jd_utc, swe.RAHU))
+      nirayana_long = ketu(sidereal_longitude(jd_ut, swe.RAHU))
 
     # 12 zodiac signs span 360°, so each one takes 30°
     # 0 = Mesha, 1 = Vrishabha, ..., 11 = Meena

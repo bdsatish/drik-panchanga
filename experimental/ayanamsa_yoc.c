@@ -175,6 +175,39 @@ void ss_citra(void)
 
 }
 
+void date_conversion(void)
+{
+    int year, month, day, hour, min;
+    double sec, timezone = 5.5;
+
+    /* Local time to UTC. Enter +5.5 */
+    swe_utc_time_zone(1985, 6, 9, 9, 40, 0, timezone,
+                      &year, &month, &day, &hour, &min, &sec);
+
+    printf("%d-%d-%d %d:%d:%lf\n", year, month, day, hour, min, sec);
+
+    /* UTC to JD(UT1) */
+    double jd[2];
+    swe_utc_to_jd(year, month, day, hour, min, sec, SE_GREG_CAL, jd, NULL);
+    printf("JD(ET) = %lf, JD(UT1) = %lf\n", jd[0], jd[1]);
+
+    double djd = swe_julday(1985, 6, 9, 9 + 40/60., SE_GREG_CAL) - timezone/24.;
+    double dt = swe_deltat(djd);
+    double dut = djd + dt;
+    printf("Using Julday (wrrooong): %lf\n", dut);
+
+    /* JD(UT1) to UTC */
+    swe_jdut1_to_utc(jd[1], SE_GREG_CAL, &year, &month, &day, &hour, &min, &sec);
+    printf("UTC: %d-%d-%d %d:%d:%lf\n", year, month, day, hour, min, sec);
+
+    /* UTC to local time zone. India is +5.5 but for UTC -> local, enter -5.5 */
+    int y, m, d, h, mi;
+    double dsec;
+    swe_utc_time_zone(year, month, day, hour, min, sec, -timezone,
+                      &y, &m, &d, &h, &mi, &dsec);
+    printf("Local: %d-%d-%d %d:%d:%lf\n", y, m, d, h, mi, dsec);
+}
+
 int main(int argc, char* argv[])
 {
     double start = swe_julday(-100, 1, 1, 0, SE_GREG_CAL);  // 1 Jan 100 BCE
@@ -262,4 +295,6 @@ int main(int argc, char* argv[])
     printf("JD = %.9lf, Gal center position: %.9lf\n",
            gal_cent_mula,
            get_star_position("Gal. Center", gal_cent_mula));
+
+    date_conversion();
 }
