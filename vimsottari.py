@@ -23,7 +23,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-Calculates Vimshottari (=120) Dasha-bhukti-antara-sukshma
+Calculates Vimshottari (=120) Dasha-bhukti-antara-sukshma-prana
 """
 
 from __future__ import division
@@ -33,7 +33,7 @@ from collections import OrderedDict as Dict
 from panchanga import sidereal_longitude, sidereal_year, get_planet_name
 
 swe.KETU = swe.PLUTO  # I've mapped Pluto to Ketu
-vimsottari_year = sidereal_year  # assume 365.25 days
+vimsottari_year = sidereal_year  # some say 360 days, others 365.25 or 365.2563 etc
 
 # Nakshatra lords, order matters. See https://en.wikipedia.org/wiki/Dasha_(astrology)
 adhipati_list = [ swe.KETU, swe.SUKRA, swe.SURYA, swe.CHANDRA, swe.KUJA,
@@ -45,20 +45,13 @@ mahadasa = { swe.KETU: 7, swe.SUKRA: 20, swe.SURYA: 6, swe.CHANDRA: 10, swe.KUJA
 
 # assert(0 <= nak <= 26)
 # Return nakshatra lord (adhipati)
-adhipati = lambda nak: adhipati_list[nak % 9]  # 9 because len(adhipati_list)
+adhipati = lambda nak: adhipati_list[nak % (len(adhipati_list))]
 
 def next_adhipati(lord):
-    """Returns next guy in the adhipati_list"""
-    # TODO: Use modulo arithmetic
-    if lord == swe.KETU:    return swe.SUKRA
-    if lord == swe.SUKRA:   return swe.SURYA
-    if lord == swe.SURYA:   return swe.CHANDRA
-    if lord == swe.CHANDRA: return swe.KUJA
-    if lord == swe.KUJA:    return swe.RAHU
-    if lord == swe.RAHU:    return swe.GURU
-    if lord == swe.GURU:    return swe.SANI
-    if lord == swe.SANI:    return swe.BUDHA
-    if lord == swe.BUDHA:   return swe.KETU    # wrap around to Ketu
+    """Returns next guy after `lord` in the adhipati_list"""
+    current = adhipati_list.index(lord)
+    next_index = (current + 1) % len(adhipati_list)
+    return adhipati_list[next_index]
 
 def nakshatra_position(jdut1):
     """Get the Nakshatra index and degrees traversed at a given JD(UT1) """
@@ -99,10 +92,49 @@ def vimsottari_bhukti(maha_lord, start_date):
     retval = Dict()
     for i in range(9):
         retval[lord] = start_date
-        start_date += (mahadasa[lord] * mahadasa[maha_lord] / 120.) * vimsottari_year
+        factor = mahadasa[lord] * mahadasa[maha_lord] / 120.
+        start_date += factor * vimsottari_year
         lord = next_adhipati(lord)
 
     return retval
+
+# North Indian tradition: dasa-antardasa-pratyantardasa
+# South Indian tradition: dasa-bhukti-antara-sukshma
+def vimsottari_antara(maha_lord, bhukti_lord, start_date):
+    """Compute all antaradasas from given bhukit's start date.
+    The bhukti's lord and its lord (mahadasa lord) must be given"""
+    lord = bhukti_lord
+    retval = Dict()
+    for i in range(9):
+        retval[lord] = start_date
+        factor = mahadasa[lord] * (mahadasa[maha_lord] / 120.)
+        factor *= (mahadasa[bhukti_lord] / 120.)
+        start_date += factor * vimsottari_year
+        lord = next_adhipati(lord)
+
+    return retval
+
+
+def where_occurs(jd, some_dict):
+    """Returns minimum key such that some_dict[key] < jd"""
+    # It is assumed that the dict is sorted in ascending order
+    # i.e. some_dict[i] < some_dict[j]  where i < j
+    for key in reversed(some_dict.keys()):
+        if some_dict[key] < jd: return key
+
+
+def compute_antara_from(jd, mahadashas):
+    """Returns antaradasha within which given `jd` falls"""
+    # Find mahadasa where this JD falls
+    i = where_occurs(jd, mahadashas)
+    # Compute all bhuktis of that mahadasa
+    bhuktis = vimsottari_bhukti(i, mahadashas[i])
+    # Find bhukti where this JD falls
+    j = where_occurs(jd, bhuktis)
+    # JD falls in i-th dasa / j-th bhukti
+    # Compute all antaras of that bhukti
+    antara = vimsottari_antara(i, j, bhuktis[j])
+    return (i, j, antara)
 
 # ---------------------- ALL TESTS ------------------------------
 def adhipati_tests():
@@ -120,11 +152,22 @@ if __name__ == "__main__":
     adhipati_tests()
     # YYYY-MM-DD 09:40 IST = 04:10 UTC
     jdut1 = swe.utc_to_jd(1985, 6, 9, 4, 10, 0, flag = swe.GREG_CAL)[1]
+    tz = 5.5
     print("jdut1", jdut1)
     dashas = vimsottari_mahadasa(jdut1)
     for i in dashas:
         print(' ---------- ' + get_planet_name(i) + ' Dasa ---------- ')
         bhuktis = vimsottari_bhukti(i, dashas[i])
         for j in bhuktis:
-            y, m, d, h = swe.revjul(bhuktis[j])
-            print('%8s: %04d-%02d-%02d' % (get_planet_name(j), y, m, d))
+            jd = bhuktis[j]
+            y, m, d, h = swe.revjul(round(jd + tz))
+            print('%8s: %04d-%02d-%02d\t%.6lf' % (get_planet_name(j), y, m, d, jd))
+
+    jd = 2456950       # Some random date, ex: current date
+    i, j, antara = compute_antara_from(jd, dashas)
+    print("---- JD %d falls in %s dasa/%s bhukti -----" %
+          (jd, get_planet_name(i), get_planet_name(j)))
+    for k in antara:
+        jd = antara[k]
+        y, m, d, h = swe.revjul(round(jd + tz))
+        print('%8s: %04d-%02d-%02d\t%.6lf' % (get_planet_name(k), y, m, d, jd))
