@@ -598,6 +598,7 @@ def navamsa(jd, place):
 
 # ----- TESTS ------
 def all_tests():
+  print(sys._getframe().f_code.co_name)
   print(moonrise(date2, bangalore)) # Expected: 11:32:04
   print(moonset(date2, bangalore))  # Expected: 24:8:47
   print(sunrise(date2, bangalore)[1])  # Expected:  6:49:47
@@ -608,6 +609,7 @@ def all_tests():
   return
 
 def tithi_tests():
+  print(sys._getframe().f_code.co_name)
   feb3 = gregorian_to_jd(Date(2013, 2, 3))
   apr24 = gregorian_to_jd(Date(2010, 4, 24))
   apr19 = gregorian_to_jd(Date(2013, 4, 19))
@@ -625,6 +627,7 @@ def tithi_tests():
   return
 
 def nakshatra_tests():
+  print(sys._getframe().f_code.co_name)
   print(nakshatra(date1, bangalore))  # Expected: 27 (Revati), ends at 17:06:37
   print(nakshatra(date2, bangalore))  # Expected: 27 (Revati), ends at 19:23:09
   print(nakshatra(date3, bangalore))  # Expecred: 24 (Shatabhisha) ends at 26:32:43
@@ -632,12 +635,14 @@ def nakshatra_tests():
   return
 
 def yoga_tests():
+  print(sys._getframe().f_code.co_name)
   may22 = gregorian_to_jd(Date(2013, 5, 22))
   print(yoga(date3, bangalore))  # Expected: Vishkambha (1), ends at 22:59:45
   print(yoga(date2, bangalore))  # Expected: Siddha (21), ends at 29:10:56
   print(yoga(may22, helsinki))   # [16, [6,20,33], 17, [27,21,58]]
 
 def masa_tests():
+  print(sys._getframe().f_code.co_name)
   jd = gregorian_to_jd(Date(2013, 2, 10))
   aug17 = gregorian_to_jd(Date(2012, 8, 17))
   aug18 = gregorian_to_jd(Date(2012, 8, 18))
@@ -652,12 +657,14 @@ def masa_tests():
   print(masa(may21, helsinki))   # Jyestha [3]
 
 def ascendant_tests():
+  print(sys._getframe().f_code.co_name)
   jd = swe.julday(2015, 9, 24, 23 + 38/60.)
   assert(ascendant(jd, bangalore) == [2, [4, 37, 10], [5, 4]])
   jd = swe.julday(2015, 9, 25, 13 + 29/60. + 13/3600.)
   assert(ascendant(jd, bangalore) == [8, [20, 23, 31], [20, 3]])
 
 def navamsa_tests():
+  print(sys._getframe().f_code.co_name)
   jd = swe.julday(2015, 9, 25, 13 + 29/60. + 13/3600.)
   nv = navamsa(jd, bangalore)
   expected = [[0, 11], [1, 5], [4, 1], [2, 2], [5, 4], [3, 10],
@@ -666,6 +673,7 @@ def navamsa_tests():
 
 
 if __name__ == "__main__":
+  import sys
   bangalore = Place(12.972, 77.594, +5.5)
   shillong = Place(25.569, 91.883, +5.5)
   helsinki = Place(60.17, 24.935, +2.0)
@@ -675,11 +683,11 @@ if __name__ == "__main__":
   date4 = gregorian_to_jd(Date(2009, 6, 21))
   apr_8 = gregorian_to_jd(Date(2010, 4, 8))
   apr_10 = gregorian_to_jd(Date(2010, 4, 10))
-  # all_tests()
-  # tithi_tests()
-  # nakshatra_tests()
-  # yoga_tests()
-  # masa_tests()
+  all_tests()
+  tithi_tests()
+  nakshatra_tests()
+  yoga_tests()
+  masa_tests()
   ascendant_tests()
   navamsa_tests()
   # new_moon(jd)

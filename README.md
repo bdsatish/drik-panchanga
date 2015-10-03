@@ -61,6 +61,10 @@ If you want to _modify_ the GUI (`Gui.wxg`), you must use wxGlade:
     apt-get install python-wxglade
 ```
 
+Wxglade 0.7.0 is buggy (0.6.8 is ok), try the development version from [here][wxgde].
+
+[wxgde]: https://bitbucket.org/agriggio/wxglade/downloads
+
 How does it look?
 
 [Sample screenshot](https://raw.githubusercontent.com/bdsatish/drik-panchanga/master/screenshot.jpg):
