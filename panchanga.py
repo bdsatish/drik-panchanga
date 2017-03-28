@@ -358,6 +358,7 @@ def masa(jd, place):
   critical = sunrise(jd, place)[0]  # - tz/24 ?
   last_new_moon = new_moon(critical, ti, -1)
   next_new_moon = new_moon(critical, ti, +1)
+  print "last new = ", last_new_moon, " next new", next_new_moon
   this_solar_month = raasi(last_new_moon)
   next_solar_month = raasi(next_new_moon)
   is_leap_month = (this_solar_month == next_solar_month)
@@ -383,13 +384,14 @@ def new_moon(jd, tithi_, opt = -1):
      opt = -1:  JDN < jd such that lunar_phase(JDN) = 360 degrees
      opt = +1:  JDN >= jd such that lunar_phase(JDN) = 360 degrees
   """
+  tithi_ = (tithi_ + 15) % 30
   if opt == -1:  start = jd - tithi_         # previous new moon
   if opt == +1:  start = jd + (30 - tithi_)  # next new moon
   # Search within a span of (start +- 2) days
   x = [ -2 + offset/4 for offset in range(17) ]
   y = [lunar_phase(start + i) for i in x]
   y = unwrap_angles(y)
-  y0 = inverse_lagrange(x, y, 360)
+  y0 = inverse_lagrange(x, y, 180)
   return start + y0
 
 def raasi(jd):
@@ -649,12 +651,14 @@ def masa_tests():
   sep19 = gregorian_to_jd(Date(2012, 9, 18))
   may20 = gregorian_to_jd(Date(2012, 5, 20))
   may21 = gregorian_to_jd(Date(2012, 5, 21))
-  print(masa(jd, bangalore))     # Pusya (10)
-  print(masa(aug17, bangalore))  # Shravana (5) amavasya
-  print(masa(aug18, bangalore))  # Adhika Bhadrapada [6, True]
-  print(masa(sep19, bangalore))  # Normal Bhadrapada [6, False]
-  print(masa(may20, helsinki))   # Vaisakha [2]
-  print(masa(may21, helsinki))   # Jyestha [3]
+  oct31 = gregorian_to_jd(Date(2015, 10, 31))
+  # print(masa(jd, bangalore))     # Pusya (10)
+  # print(masa(aug17, bangalore))  # Shravana (5) amavasya
+  # print(masa(aug18, bangalore))  # Adhika Bhadrapada [6, True]
+  # print(masa(sep19, bangalore))  # Normal Bhadrapada [6, False]
+  # print(masa(may20, helsinki))   # Vaisakha [2]
+  # print(masa(may21, helsinki))   # Jyestha [3]
+  print(masa(oct31, bangalore))   # Jyestha [3]
 
 def ascendant_tests():
   print(sys._getframe().f_code.co_name)
@@ -683,11 +687,11 @@ if __name__ == "__main__":
   date4 = gregorian_to_jd(Date(2009, 6, 21))
   apr_8 = gregorian_to_jd(Date(2010, 4, 8))
   apr_10 = gregorian_to_jd(Date(2010, 4, 10))
-  all_tests()
-  tithi_tests()
-  nakshatra_tests()
-  yoga_tests()
+  # all_tests()
+  # tithi_tests()
+  # nakshatra_tests()
+  # yoga_tests()
   masa_tests()
-  ascendant_tests()
-  navamsa_tests()
+  # ascendant_tests()
+  # navamsa_tests()
   # new_moon(jd)
