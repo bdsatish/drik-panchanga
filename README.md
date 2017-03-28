@@ -170,8 +170,11 @@ The Positional Astronomy Center [translates][pac] them as `हर्शल` and
 discoverer (William Herschel) where as Neptune was phonetically transcribed from
 English, instead of basing on its discoverer (Johann Galle). Therefore, I've
 "Indianized" their names in a rhyming fashion as **`हर्षल`** (=Uranus) and
-**`गल्ल`** (=Neptune). They also mean "happy" and "cheek/chin" respectively in
+**`गाल्ल`** (=Neptune). They also mean "happy" and "cheek/chin" respectively in
 many Indian languages.
+
+Other probable names are: हिमनील (=icy-blue, Uranus), इन्द्रनील
+(=sapphire-colored, Neptune), तुषार (=frigid), पलाश (=green),
 
 [ar_hi]: https://hi.wikipedia.org/wiki/अरुण_(ग्रह)
 [va_hi]: https://hi.wikipedia.org/wiki/वरुण_(ग्रह)
