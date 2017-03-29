@@ -190,6 +190,7 @@ class Panchanga(wx.Frame):
         # end wxGlade
 
     def calculate_panchanga(self, event):  # wxGlade: Panchanga.<event_handler>
+        init_swisseph()
         jd = gregorian_to_jd(self.parse_date())
         self.set_place(event)
         place = self.place
@@ -315,7 +316,12 @@ class Panchanga(wx.Frame):
     def compute_timezone_offset(self):
         date = self.parse_date()
         timezone = self.tzone
-        dt = datetime(date.year, date.month, date.day)
+        if date.year > 0:
+            dt = datetime(date.year, date.month, date.day)
+        else:
+            # Nobody knows timezones for year <= 0
+            # Get timezone as of Jan 1, 2000 CE
+            dt = datetime(2000, 1, 1)
         # offset from UTC (in hours). Needed especially for DST countries
         tz_offset = timezone.utcoffset(dt, is_dst = True).total_seconds() / 3600.
         return tz_offset

@@ -49,6 +49,12 @@ planet_list = [swe.SUN, swe.MOON, swe.MARS, swe.MERCURY, swe.JUPITER,
 revati_359_50 = lambda: swe.set_sid_mode(swe.SIDM_USER, 1926892.343164331, 0)
 galc_cent_mid_mula = lambda: swe.set_sid_mode(swe.SIDM_USER, 1922011.128853056, 0)
 
+# Possible ayanamas
+# swe.SIDM_ALDEBARAN_15TAU     swe.SIDM_BABYL_HUBER         swe.SIDM_DJWHAL_KHUL         swe.SIDM_J2000               swe.SIDM_SASSANIAN             swe.SIDM_TRUE_CITRA
+# swe.SIDM_ARYABHATA           swe.SIDM_BABYL_KUGLER1       swe.SIDM_FAGAN_BRADLEY       swe.SIDM_JN_BHASIN           swe.SIDM_SS_CITRA              swe.SIDM_TRUE_REVATI
+# swe.SIDM_ARYABHATA_MSUN      swe.SIDM_BABYL_KUGLER2       swe.SIDM_GALCENT_0SAG        swe.SIDM_KRISHNAMURTI        swe.SIDM_SS_REVATI             swe.SIDM_USER
+# swe.SIDM_B1950               swe.SIDM_BABYL_KUGLER3       swe.SIDM_HIPPARCHOS          swe.SIDM_LAHIRI              swe.SIDM_SURYASIDDHANTA        swe.SIDM_USHASHASHI
+# swe.SIDM_BABYL_ETPSC         swe.SIDM_DELUCE              swe.SIDM_J1900               swe.SIDM_RAMAN               swe.SIDM_SURYASIDDHANTA_MSUN   swe.SIDM_YUKTESHWAR
 set_ayanamsa_mode = lambda: swe.set_sid_mode(swe.SIDM_LAHIRI)
 reset_ayanamsa_mode = lambda: swe.set_sid_mode(swe.SIDM_FAGAN_BRADLEY)
 
@@ -93,6 +99,10 @@ norm360 = lambda angle: angle % 360
 # Ketu is always 180° after Rahu, so same coordinates but different constellations
 # i.e if Rahu is in Pisces, Ketu is in Virgo etc
 ketu = lambda rahu: (rahu + 180) % 360
+
+# Set env variable SE_EPHE_PATH to /usr/share/libswe/ephe
+#swe.set_ephe_path('/usr/share/libswe/ephe')
+init_swisseph = lambda: None
 
 def function(point):
     swe.set_sid_mode(swe.SIDM_USER, point, 0.0)
