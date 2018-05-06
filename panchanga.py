@@ -3,8 +3,8 @@
 
 # panchanga.py -- routines for computing tithi, vara, etc.
 #
-# Copyright (C) 2013 Satish BD  <bdsatish@gmail.com>
-# Downloaded from https://github.com/bdsatish/drik-panchanga
+# Copyright (C) 2013 Satish Bysany
+# Downloaded from https://gitlab.com/satbyy/drik-panchanga
 #
 # This file is part of the "drik-panchanga" Python library
 # for computing Hindu luni-solar calendar based on the Swiss ephemeris

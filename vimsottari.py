@@ -3,8 +3,8 @@
 
 # vimsottari.py -- routines for computing time periods of vimsottari dasha
 #
-# Copyright (C) 2015 Satish BD  <bdsatish@gmail.com>
-# Downloaded from https://github.com/bdsatish/drik-panchanga
+# Copyright (C) 2015 Satish Bysany
+# Downloaded from https://gitlab.com/satbyy/drik-panchanga
 #
 # This file is part of the "drik-panchanga" Python library
 # for computing Hindu luni-solar calendar based on the Swiss ephemeris

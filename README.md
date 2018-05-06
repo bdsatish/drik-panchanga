@@ -42,23 +42,31 @@ automatically based on the date and place entered in the textboxes.
 Requirements
 ------------
 
+This app works with both Python 2 and Python 3. The only difference is that Python 2
+needs wxgtk-3.0 whereas Python 3 needs wxgtk-4.0. The codebase is compatible with both
+Python 2 and 3. See below for Python 3.
+
 Python interface to Swiss ephemeris.
+
 ```
-     pip install pyswisseph  # OR apt-get install pyswisseph
+pip install --user pyswisseph  # OR apt-get install pyswisseph
 ```
+
 The core of the library (`panchanga.py`) can be imported into other code
 or used from the command line.
 
 In order to just _run_ the GUI (`gui.py`) you also need python-tz and
 wxPython (interface to wxWidgets):
+
 ```
-    apt-get install python-tz
-    apt-get install python-wxgtk3.0
+apt-get install python-tz
+apt-get install python-wxgtk3.0
 ```
 
 If you want to _modify_ the GUI (`Gui.wxg`), you must use wxGlade:
+
 ```
-    apt-get install python-wxglade
+apt-get install python-wxglade
 ```
 
 Wxglade 0.7.0 is buggy (0.6.8 is ok), try the development version from [here][wxgde].
@@ -67,14 +75,23 @@ Wxglade 0.7.0 is buggy (0.6.8 is ok), try the development version from [here][wx
 
 How does it look?
 
-[Sample screenshot](https://raw.githubusercontent.com/bdsatish/drik-panchanga/master/screenshot.jpg):
+[Sample screenshot](screenshot.jpg):
 
-![Sample screenshot](https://raw.githubusercontent.com/bdsatish/drik-panchanga/master/screenshot.jpg "Hindu Panchanga")
+![Sample screenshot](screenshot.jpg "Hindu Panchanga")
+
+### Python 3 ###
+
+```
+apt-get install python3-tz python3-wxgtk4.0
+pip3 install --user pyswisseph  # or apt-get
+python3 gui.py
+```
+
 
 Using the GUI
 -------------
 
-### Location known
+### Location known ###
 
 First, type the Date in DD/MM/YYYY format in the 'Date' field. Negative value for YYYY are
 interpolated as proleptic Gregorian calendar.
@@ -85,7 +102,7 @@ If your location's population is more than 50,000 then the location should be fo
 
 Third, click 'Compute'. Now the fields like tithi, etc. are computed and shown on the GUI.
 
-### Location unknown
+### Location unknown ###
 
 First, type the Date in DD/MM/YYYY format in the 'Date' field.
 
@@ -158,7 +175,7 @@ inauspicious. Abhijit muhūrta and Amṛtakāla are considered auspicious.
 
 [kowri]: http://tamilastrology.hosuronline.com/KowriPanchangam/
 
-### Uranus and Neptune
+### Uranus and Neptune ###
 
 These planets were not discovered by Indian astronomers. They are sometimes
 translated as "[Aruṇa graha][ar_hi]" and "[Varuṇa graha][va_hi]" in languages
