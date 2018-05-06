@@ -46,6 +46,8 @@ This app works with both Python 2 and Python 3. The only difference is that Pyth
 needs wxgtk-3.0 whereas Python 3 needs wxgtk-4.0. The codebase is compatible with both
 Python 2 and 3. See below for Python 3.
 
+### Python 2 ###
+
 Python interface to Swiss ephemeris.
 
 ```
@@ -71,7 +73,7 @@ apt-get install python-wxglade
 
 Wxglade 0.7.0 is buggy (0.6.8 is ok), try the development version from [here][wxgde].
 
-[wxgde]: https://bitbucket.org/agriggio/wxglade/downloads
+[wxgde]: https://github.com/wxGlade/wxGlade/releases
 
 How does it look?
 
@@ -81,12 +83,22 @@ How does it look?
 
 ### Python 3 ###
 
+Tested with Python 3.6, wxgtk 4.0.1 (phoenix), wxglade 0.8.1.
+
 ```
-apt-get install python3-tz python3-wxgtk4.0
+apt-get install python3-tz python3-wxgtk4.0 python3-wheel
 pip3 install --user pyswisseph  # or apt-get
 python3 gui.py
 ```
 
+If you want to _edit_ the GUI, download [wxGlade](https://github.com/wxGlade/wxGlade/releases)
+and directly run:
+
+```
+python3 wxglade.py
+```
+
+and open `Gui.wxg`.
 
 Using the GUI
 -------------
