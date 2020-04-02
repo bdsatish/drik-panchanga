@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# -*- coding: UTF-8 -*-
+# -*- coding: utf-8 -*-
 
 # panchanga.py -- routines for computing tithi, vara, etc.
 #
@@ -179,7 +179,7 @@ def sidereal_longitude(jd, planet):
   set_ayanamsa_mode()
   longi = swe.calc_ut(jd, planet, flag = swe.FLG_SWIEPH | swe.FLG_SIDEREAL)
   reset_ayanamsa_mode()
-  return norm360(longi[0]) # degrees
+  return norm360(longi[0][0]) # degrees
 
 solar_longitude = lambda jd: sidereal_longitude(jd, swe.SUN)
 lunar_longitude = lambda jd: sidereal_longitude(jd, swe.MOON)
@@ -553,7 +553,7 @@ def planetary_positions(jd, place):
     if planet != swe.KETU:
       nirayana_long = sidereal_longitude(jd_ut, planet)
     else: # Ketu
-      nirayana_long = ketu(sidereal_longitude(jd_ut, swe.RAHU))
+      nirayana_long = ketu(sidereal_longitude(jd_ut, swe._RAHU))
 
     # 12 zodiac signs span 360°, so each one takes 30°
     # 0 = Mesha, 1 = Vrishabha, ..., 11 = Meena
