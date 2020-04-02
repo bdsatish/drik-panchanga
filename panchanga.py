@@ -50,16 +50,13 @@ revati_359_50 = lambda: swe.set_sid_mode(swe.SIDM_USER, 1926892.343164331, 0)
 galc_cent_mid_mula = lambda: swe.set_sid_mode(swe.SIDM_USER, 1922011.128853056, 0)
 
 # Possible ayanamas
-# swe.SIDM_ALDEBARAN_15TAU       swe.SIDM_BABYL_KUGLER1         swe.SIDM_GALCENT_COCHRANE      swe.SIDM_J1900                 swe.SIDM_SS_REVATI             swe.SIDM_USER
-# swe.SIDM_ARYABHATA             swe.SIDM_BABYL_KUGLER2         swe.SIDM_GALCENT_MULA_WILHELM  swe.SIDM_J2000                 swe.SIDM_SURYASIDDHANTA        swe.SIDM_USHASHASHI
-# swe.SIDM_ARYABHATA_522         swe.SIDM_BABYL_KUGLER3         swe.SIDM_GALCENT_RGILBRAND     swe.SIDM_JN_BHASIN             swe.SIDM_SURYASIDDHANTA_MSUN   swe.SIDM_VALENS_MOON
-# swe.SIDM_ARYABHATA_MSUN        swe.SIDM_DELUCE                swe.SIDM_GALEQU_FIORENZA       swe.SIDM_KRISHNAMURTI          swe.SIDM_TRUE_CITRA            swe.SIDM_YUKTESHWAR
-# swe.SIDM_B1950                 swe.SIDM_DJWHAL_KHUL           swe.SIDM_GALEQU_IAU1958        swe.SIDM_LAHIRI                swe.SIDM_TRUE_MULA
-# swe.SIDM_BABYL_BRITTON         swe.SIDM_FAGAN_BRADLEY         swe.SIDM_GALEQU_MULA           swe.SIDM_RAMAN                 swe.SIDM_TRUE_PUSHYA
-# swe.SIDM_BABYL_ETPSC           swe.SIDM_GALALIGN_MARDYKS      swe.SIDM_GALEQU_TRUE           swe.SIDM_SASSANIAN             swe.SIDM_TRUE_REVATI
-# swe.SIDM_BABYL_HUBER           swe.SIDM_GALCENT_0SAG          swe.SIDM_HIPPARCHOS            swe.SIDM_SS_CITRA              swe.SIDM_TRUE_SHEORAN
-set_ayanamsa_mode = lambda: None#swe.set_sid_mode(swe.SIDM_SS_CITRA)
-reset_ayanamsa_mode = lambda: None #swe.set_sid_mode(swe.SIDM_FAGAN_BRADLEY)
+# swe.SIDM_ALDEBARAN_15TAU     swe.SIDM_BABYL_HUBER         swe.SIDM_DJWHAL_KHUL         swe.SIDM_J2000               swe.SIDM_SASSANIAN             swe.SIDM_TRUE_CITRA
+# swe.SIDM_ARYABHATA           swe.SIDM_BABYL_KUGLER1       swe.SIDM_FAGAN_BRADLEY       swe.SIDM_JN_BHASIN           swe.SIDM_SS_CITRA              swe.SIDM_TRUE_REVATI
+# swe.SIDM_ARYABHATA_MSUN      swe.SIDM_BABYL_KUGLER2       swe.SIDM_GALCENT_0SAG        swe.SIDM_KRISHNAMURTI        swe.SIDM_SS_REVATI             swe.SIDM_USER
+# swe.SIDM_B1950               swe.SIDM_BABYL_KUGLER3       swe.SIDM_HIPPARCHOS          swe.SIDM_LAHIRI              swe.SIDM_SURYASIDDHANTA        swe.SIDM_USHASHASHI
+# swe.SIDM_BABYL_ETPSC         swe.SIDM_DELUCE              swe.SIDM_J1900               swe.SIDM_RAMAN               swe.SIDM_SURYASIDDHANTA_MSUN   swe.SIDM_YUKTESHWAR
+set_ayanamsa_mode = lambda: swe.set_sid_mode(swe.SIDM_LAHIRI)
+reset_ayanamsa_mode = lambda: swe.set_sid_mode(swe.SIDM_FAGAN_BRADLEY)
 
 # Temporary function
 def get_planet_name(planet):
@@ -115,7 +112,7 @@ def function(point):
     # Place Revati at 0°0'0"
     #fval = norm180(swe.fixstar_ut("Revati", point, flag = swe.FLG_SWIEPH | swe.FLG_SIDEREAL)[0])
     # Place Citra at 180°
-    fval = swe.fixstar_ut("Citra", point, flag = swe.FLG_SWIEPH)[0] - (180)
+    fval = swe.fixstar_ut("Citra", point, flag = swe.FLG_SWIEPH | swe.FLG_SIDEREAL)[0] - (180)
     # Place Pushya (delta Cancri) at 106°
     # fval = swe.fixstar_ut(",deCnc", point, flag = swe.FLG_SWIEPH | swe.FLG_SIDEREAL)[0] - (106)
     return fval
@@ -180,7 +177,7 @@ def nakshatra_pada(longitude):
 def sidereal_longitude(jd, planet):
   """Computes nirayana (sidereal) longitude of given planet on jd"""
   set_ayanamsa_mode()
-  longi = swe.calc_ut(jd, planet, flag = swe.FLG_SWIEPH)
+  longi = swe.calc_ut(jd, planet, flag = swe.FLG_SWIEPH | swe.FLG_SIDEREAL)
   reset_ayanamsa_mode()
   return norm360(longi[0][0]) # degrees
 
@@ -573,7 +570,7 @@ def ascendant(jd, place):
   set_ayanamsa_mode() # needed for swe.houses_ex()
 
   # returns two arrays, cusps and ascmc, where ascmc[0] = Ascendant
-  nirayana_lagna = swe.houses_ex(jd_utc, lat, lon)[1][0]
+  nirayana_lagna = swe.houses_ex(jd_utc, lat, lon, flag = swe.FLG_SIDEREAL)[1][0]
   # 12 zodiac signs span 360°, so each one takes 30°
   # 0 = Mesha, 1 = Vrishabha, ..., 11 = Meena
   constellation = int(nirayana_lagna / 30)
