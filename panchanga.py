@@ -60,9 +60,9 @@ reset_ayanamsa_mode = lambda: swe.set_sid_mode(swe.SIDM_FAGAN_BRADLEY)
 
 # Temporary function
 def get_planet_name(planet):
-  names = { swe.SURYA: 'Surya', swe.CHANDRA: 'Candra', swe.KUJA: 'Mangala',
-            swe.BUDHA: 'Budha', swe.GURU: 'Guru', swe.SUKRA: 'Sukra',
-            swe.SANI: 'Sani', swe.RAHU: 'Rahu', swe.KETU: 'Ketu', swe.PLUTO: 'Ketu'}
+  names = { swe._SURYA: 'Surya', swe._CHANDRA: 'Candra', swe._KUJA: 'Mangala',
+            swe._BUDHA: 'Budha', swe._GURU: 'Guru', swe._SUKRA: 'Sukra',
+            swe._SANI: 'Sani', swe._RAHU: 'Rahu', swe._KETU: 'Ketu', swe._PLUTO: 'Ketu'}
   return names[planet]
 
 # Convert 23d 30' 30" to 23.508333 degrees
@@ -550,7 +550,7 @@ def planetary_positions(jd, place):
 
   positions = []
   for planet in planet_list:
-    if planet != swe.KETU:
+    if planet != swe._KETU:
       nirayana_long = sidereal_longitude(jd_ut, planet)
     else: # Ketu
       nirayana_long = ketu(sidereal_longitude(jd_ut, swe._RAHU))
@@ -597,10 +597,10 @@ def navamsa(jd, place):
 
   positions = []
   for planet in planet_list:
-    if planet != swe.KETU:
+    if planet != swe._KETU:
       nirayana_long = sidereal_longitude(jd_utc, planet)
     else: # Ketu
-      nirayana_long = ketu(sidereal_longitude(jd_utc, swe.RAHU))
+      nirayana_long = ketu(sidereal_longitude(jd_utc, swe._RAHU))
 
     positions.append([planet, navamsa_from_long(nirayana_long)])
 
