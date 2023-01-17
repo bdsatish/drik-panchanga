@@ -4,8 +4,8 @@
 
 # gui.py -- Displays a wxPython GUI for panchangam calculations
 #
-# Copyright (C) 2013 Satish Bysany
-# Downloaded from https://gitlab.com/satbyy/drik-panchanga
+# Copyright (C) 2013 to 2023, Satish Bysany
+# Downloaded from https://bitbucket.org/satbyy/drik-panchanga/
 #
 # This file is part of the "drik-panchanga" Python library
 # for computing Hindu luni-solar calendar based on the Swiss ephemeris
@@ -182,7 +182,7 @@ class Panchanga(wx.Frame):
         grid_sizer_1.Add(self.duraTxt, 0, wx.ALIGN_CENTER, 0)
         label_10 = wx.StaticText(self, wx.ID_ANY, "")
         grid_sizer_1.Add(label_10, 0, 0, 0)
-        label_9 = wx.StaticText(self, wx.ID_ANY, "https://gitlab.com/satbyy/drik-panchanga")
+        label_9 = wx.StaticText(self, wx.ID_ANY, "https://bitbucket.org/satbyy/drik-panchanga/")
         grid_sizer_1.Add(label_9, 0, wx.ALIGN_CENTER, 0)
         sizer_1.Add(grid_sizer_1, 1, 0, 0)
         self.SetSizer(sizer_1)

@@ -4,7 +4,7 @@
 # panchanga.py -- routines for computing tithi, vara, etc.
 #
 # Copyright (C) 2013 Satish Bysany
-# Downloaded from https://gitlab.com/satbyy/drik-panchanga
+# Downloaded from https://bitbucket.org/satbyy/drik-panchanga
 #
 # This file is part of the "drik-panchanga" Python library
 # for computing Hindu luni-solar calendar based on the Swiss ephemeris
@@ -599,10 +599,10 @@ def navamsa(jd, place):
 
   positions = []
   for planet in planet_list:
-    if planet != swe._KETU:
+    if planet != swe.KETU:
       nirayana_long = sidereal_longitude(jd_utc, planet)
     else: # Ketu
-      nirayana_long = ketu(sidereal_longitude(jd_utc, swe._RAHU))
+      nirayana_long = ketu(sidereal_longitude(jd_utc, swe.RAHU))
 
     positions.append([planet, navamsa_from_long(nirayana_long)])
 

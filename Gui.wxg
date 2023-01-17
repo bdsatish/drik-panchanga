@@ -492,7 +492,7 @@
                         <option>0</option>
                         <object class="wxStaticText" name="label_9" base="EditStaticText">
                             <attribute>0</attribute>
-                            <label>https://gitlab.com/satbyy/drik-panchanga</label>
+                            <label>https://bitbucket.org/satbyy/drik-panchanga</label>
                         </object>
                     </object>
                     <object class="sizerslot" />
