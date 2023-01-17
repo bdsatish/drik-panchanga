@@ -61,9 +61,9 @@ reset_ayanamsa_mode = lambda: swe.set_sid_mode(swe.SIDM_FAGAN_BRADLEY)
 
 # Temporary function
 def get_planet_name(planet):
-  names = { swe._SURYA: 'Surya', swe._CHANDRA: 'Candra', swe._KUJA: 'Mangala',
-            swe._BUDHA: 'Budha', swe._GURU: 'Guru', swe._SUKRA: 'Sukra',
-            swe._SANI: 'Sani', swe._RAHU: 'Rahu', swe._KETU: 'Ketu', swe._PLUTO: 'Ketu'}
+  names = { swe.SUN: 'Surya', swe.MOON: 'Candra', swe.KUJA: 'Mangala',
+            swe.MERCURY: 'Budha', swe.JUPITER: 'Guru', swe.VENUS: 'Sukra',
+            swe.SATURN: 'Sani', swe.RAHU: 'Rahu', swe.KETU: 'Ketu', swe.PLUTO: 'Ketu'}
   return names[planet]
 
 # Convert 23d 30' 30" to 23.508333 degrees

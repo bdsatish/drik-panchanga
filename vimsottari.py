@@ -1,9 +1,9 @@
 #!/usr/bin/env python
-# -*- coding: UTF-8 -*-
+# -*- coding: utf-8 -*-
 
 # vimsottari.py -- routines for computing time periods of vimsottari dasha
 #
-# Copyright (C) 2015 Satish Bysany
+# Copyright (C) 2015 to 2023, Satish Bysany
 # Downloaded from https://bitbucket.org/satbyy/drik-panchanga
 #
 # This file is part of the "drik-panchanga" Python library
@@ -32,7 +32,17 @@ import swisseph as swe
 from collections import OrderedDict as Dict
 from panchanga import sidereal_longitude, sidereal_year, get_planet_name
 
+# handy equivalents
+swe.SURYA = swe.SUN
+swe.CHANDRA = swe.MOON
+swe.KUJA = swe.MARS
+swe.BUDHA = swe.MERCURY
+swe.GURU = swe.JUPITER
+swe.SUKRA = swe.VENUS
+swe.SANI = swe.SATURN
+swe.RAHU = swe.MEAN_NODE # or TRUE_NODE
 swe.KETU = swe.PLUTO  # I've mapped Pluto to Ketu
+
 vimsottari_year = sidereal_year  # some say 360 days, others 365.25 or 365.2563 etc
 
 # Nakshatra lords, order matters. See https://en.wikipedia.org/wiki/Dasha_(astrology)
@@ -151,7 +161,7 @@ def adhipati_tests():
 if __name__ == "__main__":
     adhipati_tests()
     # YYYY-MM-DD 09:40 IST = 04:10 UTC
-    jdut1 = swe.utc_to_jd(1985, 6, 9, 4, 10, 0, flag = swe.GREG_CAL)[1]
+    jdut1 = swe.utc_to_jd(1985, 6, 9, 4, 10, 0, cal = swe.GREG_CAL)[1]
     tz = 5.5
     print("jdut1", jdut1)
     dashas = vimsottari_mahadasa(jdut1)
