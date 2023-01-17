@@ -130,7 +130,7 @@ class Panchanga(wx.Frame):
         label_33 = wx.StaticText(self, wx.ID_ANY, "Time zone")
         grid_sizer_1.Add(label_33, 0, wx.ALIGN_CENTER_VERTICAL, 0)
         grid_sizer_1.Add(self.latTxt, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_RIGHT | wx.RIGHT, 0)
-        grid_sizer_1.Add(self.lonTxt, 0, wx.ALIGN_CENTER | wx.ALIGN_RIGHT, 0)
+        grid_sizer_1.Add(self.lonTxt, 0, wx.ALIGN_CENTER, 0)
         grid_sizer_1.Add(self.tzTxt, 0, wx.ALIGN_CENTER_VERTICAL, 0)
         static_line_1 = wx.StaticLine(self, wx.ID_ANY)
         grid_sizer_1.Add(static_line_1, 0, 0, 0)
