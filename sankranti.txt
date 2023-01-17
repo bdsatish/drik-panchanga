@@ -1,0 +1,50 @@
+Fagan/Bradley                            2023-1-15 12:04
+Lahiri                                   2023-1-14 15:15
+De Luce                                  2023-1-18 12:32
+Raman                                    2023-1-13 05:10
+Usha/Shashi                              2023-1-10 21:44
+Krishnamurti                             2023-1-14 12:58
+Djwhal Khul                              2023-1-19 01:21
+Yukteshwar                               2023-1-13 06:47
+J.N. Bhasin                              2023-1-13 13:27
+Babylonian/Kugler 1                      2023-1-14 07:38
+Babylonian/Kugler 2                      2023-1-15 16:37
+Babylonian/Kugler 3                      2023-1-16 12:39
+Babylonian/Huber                         2023-1-15 11:54
+Babylonian/Eta Piscium                   2023-1-15 06:56
+Babylonian/Aldebaran = 15 Tau            2023-1-15 12:30
+Hipparchos                               2023-1-11 02:13
+Sassanian                                2023-1-10 20:12
+Galact. Center = 0 Sag                   2023-1-17 13:42
+J2000                                    2023-3-21 05:10
+J1900                                    2023-3-22 14:54
+B1950                                    2023-3-21 22:02
+Suryasiddhanta                           2023-1-11 17:28
+Suryasiddhanta, mean Sun                 2023-1-11 12:24
+Aryabhata                                2023-1-11 17:28
+Aryabhata, mean Sun                      2023-1-11 11:52
+SS Revati                                2023-1-10 22:49
+SS Citra                                 2023-1-13 19:11
+True Citra                               2023-1-14 14:52
+True Revati                              2023-1-10 21:26
+True Pushya (PVRN Rao)                   2023-1-13 12:39
+Galactic Center (Gil Brand)              2023-1-13 06:33
+Galactic Equator (IAU1958)               2023-1-20 16:36
+Galactic Equator                         2023-1-20 17:51
+Galactic Equator mid-Mula                2023-1-14 04:45
+Skydram (Mardyks)                        2023-1-20 16:26
+True Mula (Chandra Hari)                 2023-1-15 08:18
+Dhruva/Gal.Center/Mula (Wilhelm)         2023-1-10 21:38
+Aryabhata 522                            2023-1-11 09:56
+Babylonian/Britton                       2023-1-15 09:08
+"Vedic"/Sheoran                          2023-1-15 23:43
+Cochrane (Gal.Center = 0 Cap)            2023-3-18 01:12
+Galactic Equator (Fiorenza)              2023-1-15 18:11
+Vettius Valens                           2023-1-13 14:14
+Lahiri 1940                              2023-1-14 14:54
+Lahiri VP285                             2023-1-14 15:24
+Krishnamurti-Senthilathiban              2023-1-14 13:27
+Lahiri ICRC                              2023-1-14 15:15
+                                         2023-1-15 12:04
+                                         2023-1-15 12:04
+                                         2023-1-15 12:04
