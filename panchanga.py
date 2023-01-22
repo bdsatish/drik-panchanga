@@ -363,17 +363,23 @@ def vaara(jd):
   """Weekday for given Julian day. 0 = Sunday, 1 = Monday,..., 6 = Saturday"""
   return int(ceil(jd + 1) % 7)
 
-def masa(jd, place):
+def masa(jd, place, amanta = True):
   """Returns lunar month and if it is adhika or not.
+     Set amanta = False for Purnimanta month.
      1 = Chaitra, 2 = Vaisakha, ..., 12 = Phalguna"""
   ti = tithi(jd, place)[0]
   critical = sunrise(jd, place)[0]  # - tz/24 ?
-  last_new_moon = new_moon(critical, ti, -1)
-  next_new_moon = new_moon(critical, ti, +1)
-  this_solar_month = raasi(last_new_moon)
-  next_solar_month = raasi(next_new_moon)
+  last_moon = new_moon(critical, ti, -1) if amanta else full_moon(critical, ti, -1)
+  next_moon = new_moon(critical, ti, +1) if amanta else full_moon(critical, ti, +1)
+  this_solar_month = raasi(last_moon)
+  next_solar_month = raasi(next_moon)
+  print(this_solar_month, next_solar_month)
   is_leap_month = (this_solar_month == next_solar_month)
-  maasa = this_solar_month + 1
+  if amanta:
+    maasa = this_solar_month + 1
+  else:
+    print("pur ", ti)
+    maasa = 1 if (this_solar_month == 10 and ti >= 15) else this_solar_month + 2
   if maasa > 12: maasa = (maasa % 12)
   return [int(maasa), is_leap_month]
 
@@ -389,7 +395,6 @@ def elapsed_year(jd, maasa_num):
   return kali, saka
 
 # New moon day: sun and moon have same longitude (0 degrees = 360 degrees difference)
-# Full moon day: sun and moon are 180 deg apart
 def new_moon(jd, tithi_, opt = -1):
   """Returns JDN, where
      opt = -1:  JDN < jd such that lunar_phase(JDN) = 360 degrees
@@ -402,6 +407,25 @@ def new_moon(jd, tithi_, opt = -1):
   y = [lunar_phase(start + i) for i in x]
   y = unwrap_angles(y)
   y0 = inverse_lagrange(x, y, 360)
+  return start + y0
+
+# assumes "tithi" 1..30 are from new moon to new moon
+# so tithi = 15 is full moon day
+# Full moon day: sun and moon are 180 deg apart
+def full_moon(jd, tithi_, opt = -1):
+  """Returns JDN, where
+     opt = -1:  JDN < jd such that lunar_phase(JDN) = 180 degrees
+     opt = +1:  JDN >= jd such that lunar_phase(JDN) = 180 degrees
+  """
+  if opt == -1:    # previous full moon
+    start = jd - (tithi_ - 15) if tithi_ > 15 else jd - (tithi_ + 15)
+  if opt == +1:   # next full moon
+    start = jd + (15 - tithi_) if tithi_ < 15 else jd - tithi_ + 45
+  # Search within a span of (start +- 2) days
+  x = [ -2 + offset/4 for offset in range(17) ]
+  y = [lunar_phase(start + i) for i in x]
+  y = unwrap_angles(y)
+  y0 = inverse_lagrange(x, y, 180)
   return start + y0
 
 def raasi(jd):
@@ -667,6 +691,18 @@ def masa_tests():
   print(masa(sep19, bangalore))  # Normal Bhadrapada [6, False]
   print(masa(may20, helsinki))   # Vaisakha [2]
   print(masa(may21, helsinki))   # Jyestha [3]
+  apr17 = gregorian_to_jd(Date(2023, 4, 17)) # Purnimanta Vaisakha K12
+  assert(masa(apr17, bangalore, amanta = False) == [2, False]) # Vaisakha
+  assert(masa(apr17, bangalore, amanta = True) == [1, False]) # Caitra
+  may21 = gregorian_to_jd(Date(2023, 5, 21)) # Jyeshtha S2
+  assert(masa(may21, bangalore, amanta = False) == [3, False])
+  assert(masa(may21, bangalore, amanta = True) == [3, False])
+  feb21 = gregorian_to_jd(Date(2023, 2, 21)) # Phalguna S2
+  assert(masa(feb21, bangalore, amanta = False) == [12, False])
+  assert(masa(feb21, bangalore, amanta = True) == [12, False])
+  mar15 = gregorian_to_jd(Date(2023, 3, 15)) # Phalguna K8 (amanta), Caitra K3 (purnimanta)
+  assert(masa(mar15, bangalore, amanta = True) == [12, False])
+  assert(masa(mar15, bangalore, amanta = False) == [1, False])
 
 def ascendant_tests():
   print(sys._getframe().f_code.co_name)
