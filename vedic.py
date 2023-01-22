@@ -35,6 +35,7 @@ def tropical_raasi(jd):
 
 # rename = True will give lunar "masa" almost exactly same result as
 # sidereal calendar. Advantages:
+# - Vernal equinox will occur in the month of Caitra (by definition)
 # - The lunar month name will have purnima on namesake star (e.g. Caitra māsa on Citrā nak.)
 # - All popular festivals will coincide with sidereal calendar
 # - Magha occurs around February, coinciding with Vasanta Ritu
