@@ -28,6 +28,32 @@ def vedic_month(jd, place):
     if jd < next_new_moon: month = 12
     return month
 
+def find_nakshatra_garga(longi):
+    """Given longitude of any celestial object, determine which lunar mansion
+    it falls under, as per Garga system (unequal nakshatra division)
+    1 = Asvini,..., 27 = Revati"""
+    # ending longitudes of 27 nakshatras. Normally it is 13°20'
+    # Following Garga system is from Sewell and Dikshit. It starts with Ashvini nak as 0°0'
+    # However, as observed today in sky, vernal equinox (Mar 21) starts when Sun is
+    # at U.Bhadra every year, so:
+    # 1. Ravi Prakrash Arya starts offset from U.Bhadra with equal spacing https://www.youtube.com/Hnj2ttPLQNQ?t=5244
+    # 2. SMKAP starts from U.Bhadra with some part of it (unequal tropical spacing) pg 35 of smkap.pdf
+    spacing = [ 13+20/60, 20, 33+20/60, 53+20/60, 66+40/60, 73+20/60, 93+20/60,
+                106+40/60, 113+20/60, 126+40/60, 140, 160, 173+20/60, 186+40/60,
+                193+20/60, 213+20/60, 226+40/60, 233+20/60, 246+40/60, 260, 280,
+                293+20/60, 306+40/60, 313+20/60, 326+40/60, 346+40/60, 360]
+    for i in range(0, len(spacing) + 1):
+        if norm360(longi) < spacing[i]:
+            return (i - 2) % 27, spacing[(i - 2)%27]
+
+def tropical_lunar_longitude(jd):
+    longi = swe.calc_ut(jd, swe.MOON, flags = swe.FLG_SWIEPH | swe.FLG_TROPICAL)
+    return norm360(longi[0][0])
+
+def tropical_solar_longitude(jd):
+    longi = swe.calc_ut(jd, swe.SUN, flags = swe.FLG_SWIEPH | swe.FLG_TROPICAL)
+    return norm360(longi[0][0])
+
 def tropical_raasi(jd):
     """Tropical (sayana) rasi of sun on given day. 1 = Aries,...,12 = Pisces (tropical)"""
     longi = swe.calc_ut(jd, swe.SUN, flags = swe.FLG_SWIEPH | swe.FLG_TROPICAL)[0][0]
@@ -59,6 +85,44 @@ def tropical_month_tithi(jd, place, rename = False):
     if maasa > 12: maasa = (maasa % 12)
     return [[int(maasa), is_leap_month], ti]
 
+def tropical_nakshatra(jd, place):
+  """Current nakshatra as of julian day (jd)
+     1 = Asvini, 2 = Bharani, ..., 27 = Revati
+  """
+  # 1. Find time of sunrise
+  lat, lon, tz = place
+  rise = sunrise(jd, place)[0] - tz / 24.  # Sunrise at UT 00:00
+
+  offsets = [0.0, 0.25, 0.5, 0.75, 1.0]
+  longitudes = [ tropical_lunar_longitude(rise + t) for t in offsets]
+
+  # 2. Today's nakshatra is when offset = 0
+  # There are 27 Nakshatras spanning 360 degrees
+  nak = ceil(longitudes[0] * 27 / 360)  # equal spacing
+  print("nak long ", longitudes[0])
+  nak, nak_long = find_nakshatra_garga(longitudes[0])  # unequal spacing
+
+  # 3. Find end time by 5-point inverse Lagrange interpolation
+  y = unwrap_angles(longitudes)
+  x = offsets
+  approx_end = inverse_lagrange(x, y, nak_long)
+  ends = (rise - jd + approx_end) * 24 + tz
+  answer = [int(nak), to_dms(ends)]
+
+  # 4. Check for skipped nakshatra
+  nak_tmrw = ceil(longitudes[-1] * 27 / 360)
+  isSkipped = (nak_tmrw - nak) % 27 > 1
+  if isSkipped:
+    leap_nak = nak + 1
+    approx_end = inverse_lagrange(offsets, longitudes, leap_nak * 360 / 27)
+    ends = (rise - jd + approx_end) * 24 + tz
+    leap_nak = 1 if nak == 27 else leap_nak
+    answer += [int(leap_nak), to_dms(ends)]
+
+  return answer
+
+
+
 ### TESTS ####
 def tropical_month_tithi_tests():
    dt1 = gregorian_to_jd(Date(2022, 12, 21)) # Margashira K13 in sidereal
@@ -84,6 +148,22 @@ def tropical_month_tithi_tests():
    dt3 = gregorian_to_jd(Date(-3101, 1, 22)) # Caitra S1
    val = tropical_month_tithi(dt3, bangalore, True)
    assert(val == [[11, False], [1, [29, 28, 11]]]) # 11 = Magha, no way January is Caitra!
+   # dates from Reformed Sanathan Calendar, matches, including tithi END times!
+   # http://web.archive.org/web/20160807161349/http://reformedsanathancalendar.in/sanathancalendar.pdf
+   mar10 = gregorian_to_jd(Date(2016, 3, 10))
+   val = tropical_month_tithi(mar10, bangalore)
+   assert([[1, False], [2, [24, 34, 3]]]) # Caitra S2, ends 24:34
+   nov18 = gregorian_to_jd(Date(2016, 11, 18)) # RSC expected Ardra (6)
+   val = tropical_month_tithi(nov18, bangalore)
+   assert(val == [[9, False], [20, [27, 32, 23]]]) # Margashira K5, ends 27:32
+   print(nakshatra(nov18, bangalore)) # Punarvasu (7)
+   print(tropical_nakshatra(nov18, bangalore)) # Puṣya (8)
+   nov11 = gregorian_to_jd(Date(2016, 11, 11)) # RSC expected P.Bhadra (25)
+   print(nakshatra(nov11, bangalore)) # U.Bhadra (26)
+   print(tropical_nakshatra(nov11, bangalore)) # Revati (27) and then Asvini (1)
+   mar9 = gregorian_to_jd(Date(2017, 3, 9)) # SMKAP expected Punarvasu (7)
+   print(nakshatra(mar9, bangalore)) # sidereal Puṣya (8)
+   print(tropical_nakshatra(mar9, bangalore)) # Magha (10)
 
 if __name__ == "__main__":
     bangalore = Place(12.972, 77.594, +5.5)
