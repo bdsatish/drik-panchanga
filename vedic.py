@@ -28,6 +28,44 @@ def vedic_month(jd, place):
     if jd < next_new_moon: month = 12
     return month
 
+# Following function should give almost the same result as sidereal nakshatra,
+# but we don't use the swe.FLG_SIDEREAL at all! Idea is like this:
+# 1. Find the tropical longitude of Ashvini nakshatra on given day (jd)
+# 2. Calculate longitude of the rest of the fixed stars by successively adding 13°20'
+# 3. Do a linear search to find in which interval of the above does 'longi' lie
+def tropical_long_fixed_stars(jd, longi):
+    """Returns nakshatra of an object's longitude `longi' on a given `jd' day
+    1 = Ashvini, ..., 27 = Revati"""
+    yy = swe.revjul(jd)[0]
+    vernal_equinox = swe.julday(yy, 3, 20) # any jd is ok
+    # other potential are Magha, Pushya, Satabhisha, Mrigashira, Revati, etc.
+    # 1. Very bright apparent magnitude
+    # 2. Latitude close to ecliptic
+    # 3. Only main star in the "Lunar mansion" of 13°20'
+    # 4. Very low proper motion
+    # 5. Distance to next adjacent star is around 13° or 14°
+    aldebaran = swe.fixstar_ut("Aldebaran", vernal_equinox, flags = swe.FLG_TROPICAL | swe.FLG_SWIEPH)[0][0]
+    rohini_start = aldebaran - dms(13, 20) / 2 # Aldebaran in middle of Rohini (=Rohini-paksha ayanamsha)
+    ashvini_start = rohini_start - 3 * dms(13, 20) # rohini is 4th after ashvini
+    print(ashvini_start)
+    # list like [ 23°, 36.33°, 49.66° ... ], each element 13°20' apart
+    equal_spacing = [ norm360(ashvini_start + n * dms(13, 20)) for n in range(0, 27) ]
+    # dict like { 1:23°, 2:36.33°, 3:49.66°, ... 26:356°, 27:10.66° }
+    # where 1 to 27 are indexes to coordinates
+    index_mapping = dict(zip(range(1, 28), equal_spacing))
+    # arrange dict in descending order of coordinates (not indexes 1..27)
+    # dict like { 26:356°, 2:36.33°, 1:23°, 27:10.66° }
+    sorted_mapping = dict(sorted(index_mapping.items(), key = lambda item: item[1], reverse = True))
+    print(sorted_mapping)
+    nak = None
+    for key in sorted_mapping:
+        if norm360(longi) > sorted_mapping[key]:
+            nak = key
+            break
+    # residue after last element in dict, wraps around to first one
+    if nak is None: nak = list(sorted_mapping)[0]
+    return nak
+
 def find_nakshatra_garga(longi):
     """Given longitude of any celestial object, determine which lunar mansion
     it falls under, as per Garga system (unequal nakshatra division)
@@ -44,7 +82,7 @@ def find_nakshatra_garga(longi):
                 293+20/60, 306+40/60, 313+20/60, 326+40/60, 346+40/60, 360]
     for i in range(0, len(spacing) + 1):
         if norm360(longi) < spacing[i]:
-            return (i - 2) % 27, spacing[(i - 2)%27]
+            return i%27, spacing[i%27]
 
 def tropical_lunar_longitude(jd):
     longi = swe.calc_ut(jd, swe.MOON, flags = swe.FLG_SWIEPH | swe.FLG_TROPICAL)
@@ -85,9 +123,10 @@ def tropical_month_tithi(jd, place, rename = False):
     if maasa > 12: maasa = (maasa % 12)
     return [[int(maasa), is_leap_month], ti]
 
-def tropical_nakshatra(jd, place):
+def tropical_nakshatra(jd, place, equal = True):
   """Current nakshatra as of julian day (jd)
      1 = Asvini, 2 = Bharani, ..., 27 = Revati
+     `equal = False' uses Garga's unequal nakshatra spacing.
   """
   # 1. Find time of sunrise
   lat, lon, tz = place
@@ -99,13 +138,11 @@ def tropical_nakshatra(jd, place):
   # 2. Today's nakshatra is when offset = 0
   # There are 27 Nakshatras spanning 360 degrees
   nak = ceil(longitudes[0] * 27 / 360)  # equal spacing
-  print("nak long ", longitudes[0])
-  nak, nak_long = find_nakshatra_garga(longitudes[0])  # unequal spacing
 
   # 3. Find end time by 5-point inverse Lagrange interpolation
   y = unwrap_angles(longitudes)
   x = offsets
-  approx_end = inverse_lagrange(x, y, nak_long)
+  approx_end = inverse_lagrange(x, y, nak * 360 / 27)
   ends = (rise - jd + approx_end) * 24 + tz
   answer = [int(nak), to_dms(ends)]
 
@@ -178,3 +215,4 @@ if __name__ == "__main__":
     print(vedic_month(date5, bangalore))
     print(vedic_month(date6, bangalore))
     tropical_month_tithi_tests()
+    tropical_long_fixed_stars(date6)
