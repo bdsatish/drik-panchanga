@@ -67,7 +67,7 @@ def get_planet_name(planet):
   return names[planet]
 
 # Convert 23d 30' 30" to 23.508333 degrees
-from_dms = lambda degs, mins, secs: degs + mins/60 + secs/3600
+from_dms = lambda degs, mins, secs = 0: degs + mins/60 + secs/3600
 
 # the inverse
 def to_dms_prec(deg):

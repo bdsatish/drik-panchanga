@@ -45,26 +45,27 @@ def tropical_long_fixed_stars(jd, longi):
     # 4. Very low proper motion
     # 5. Distance to next adjacent star is around 13° or 14°
     aldebaran = swe.fixstar_ut("Aldebaran", vernal_equinox, flags = swe.FLG_TROPICAL | swe.FLG_SWIEPH)[0][0]
-    rohini_start = aldebaran - dms(13, 20) / 2 # Aldebaran in middle of Rohini (=Rohini-paksha ayanamsha)
-    ashvini_start = rohini_start - 3 * dms(13, 20) # rohini is 4th after ashvini
-    print(ashvini_start)
+    rohini_start = aldebaran - from_dms(13, 20) / 2 # Aldebaran in middle of Rohini (=Rohini-paksha ayanamsha)
+    ashvini_start = rohini_start - 3 * from_dms(13, 20) # rohini is 4th after ashvini
     # list like [ 23°, 36.33°, 49.66° ... ], each element 13°20' apart
-    equal_spacing = [ norm360(ashvini_start + n * dms(13, 20)) for n in range(0, 27) ]
+    equal_spacing = [ norm360(ashvini_start + n * from_dms(13, 20)) for n in range(0, 27) ]
     # dict like { 1:23°, 2:36.33°, 3:49.66°, ... 26:356°, 27:10.66° }
     # where 1 to 27 are indexes to coordinates
     index_mapping = dict(zip(range(1, 28), equal_spacing))
     # arrange dict in descending order of coordinates (not indexes 1..27)
-    # dict like { 26:356°, 2:36.33°, 1:23°, 27:10.66° }
+    # dict like { 26:356°, ..., 2:36.33°, 1:23°, 27:10.66° }
     sorted_mapping = dict(sorted(index_mapping.items(), key = lambda item: item[1], reverse = True))
-    print(sorted_mapping)
     nak = None
     for key in sorted_mapping:
         if norm360(longi) > sorted_mapping[key]:
             nak = key
             break
     # residue after last element in dict, wraps around to first one
-    if nak is None: nak = list(sorted_mapping)[0]
-    return nak
+    keys = list(sorted_mapping.keys())
+    if nak is None: nak = keys[0]
+    prev = keys[keys.index(nak) - 1] # find key of item before 'nak'
+    nak_end = sorted_mapping[prev]
+    return nak, nak_end
 
 def find_nakshatra_garga(longi):
     """Given longitude of any celestial object, determine which lunar mansion
@@ -133,25 +134,27 @@ def tropical_nakshatra(jd, place, equal = True):
   rise = sunrise(jd, place)[0] - tz / 24.  # Sunrise at UT 00:00
 
   offsets = [0.0, 0.25, 0.5, 0.75, 1.0]
-  longitudes = [ tropical_lunar_longitude(rise + t) for t in offsets]
+  longitudes = [tropical_lunar_longitude(rise + t) for t in offsets]
 
   # 2. Today's nakshatra is when offset = 0
   # There are 27 Nakshatras spanning 360 degrees
-  nak = ceil(longitudes[0] * 27 / 360)  # equal spacing
+  nak, long_end = tropical_long_fixed_stars(jd, longitudes[0])
+  if long_end < longitudes[0]: long_end += 360   # wraparound
 
   # 3. Find end time by 5-point inverse Lagrange interpolation
   y = unwrap_angles(longitudes)
   x = offsets
-  approx_end = inverse_lagrange(x, y, nak * 360 / 27)
+  approx_end = inverse_lagrange(x, y, long_end)
   ends = (rise - jd + approx_end) * 24 + tz
   answer = [int(nak), to_dms(ends)]
 
   # 4. Check for skipped nakshatra
-  nak_tmrw = ceil(longitudes[-1] * 27 / 360)
+  nak_tmrw, nak_tmrw_end = tropical_long_fixed_stars(jd, longitudes[-1])
+  if nak_tmrw_end < longitudes[-1]: nak_tmrw_end += 360   # wraparound
   isSkipped = (nak_tmrw - nak) % 27 > 1
   if isSkipped:
     leap_nak = nak + 1
-    approx_end = inverse_lagrange(offsets, longitudes, leap_nak * 360 / 27)
+    approx_end = inverse_lagrange(offsets, longitudes, nak_tmrw_end)
     ends = (rise - jd + approx_end) * 24 + tz
     leap_nak = 1 if nak == 27 else leap_nak
     answer += [int(leap_nak), to_dms(ends)]
@@ -159,8 +162,23 @@ def tropical_nakshatra(jd, place, equal = True):
   return answer
 
 
-
 ### TESTS ####
+def tropical_long_fixed_stars_tests():
+  sun_long = tropical_solar_longitude(date1)
+  nak, nak_ends_long = tropical_long_fixed_stars(date1, sun_long)
+  assert(nak == 7 and (nak_ends_long - 116.58) < 0.1) # Sun in Punarvasu
+  mars = swe.calc_ut(date1, swe.MARS, flags = swe.FLG_TROPICAL)[0][0]
+  nak, nak_ends_long = tropical_long_fixed_stars(date1, mars)
+  assert(nak == 3 and (nak_ends_long - 63.25) < 0.1) # Mars in Krittika
+
+  bc_date = swe.julday(-2700, 2, 26, 13.0) # 18:30 PM in India
+  moon = tropical_lunar_longitude(bc_date)
+  nak, nak_ends_long = tropical_long_fixed_stars(bc_date, moon)
+  assert(nak == 25 and (nak_ends_long - 291.37) < 0.1) # Moon in Purvabhadra
+  mercury = swe.calc_ut(bc_date, swe.MERCURY, swe.FLG_TROPICAL | swe.FLG_SWIEPH)[0][0]
+  nak, nak_ends_long = tropical_long_fixed_stars(bc_date, mercury)
+  assert(nak == 3 and (nak_ends_long - 358.04) < 0.1) # Mercury in Krittika
+
 def tropical_month_tithi_tests():
    dt1 = gregorian_to_jd(Date(2022, 12, 21)) # Margashira K13 in sidereal
    bangalore = Place(12.972, 77.594, +5.5)
@@ -182,10 +200,10 @@ def tropical_month_tithi_tests():
    val = tropical_month_tithi(dt3, bangalore, False)
    assert(val == [[8, False], [15, [24, 59, 55]]]) # 8 = Kartika :(
    # Kali Yuga start date
-   dt3 = gregorian_to_jd(Date(-3101, 1, 22)) # Caitra S1
+   dt3 = gregorian_to_jd(Date(-3101, 1, 22)) # sidereal Caitra S1
    val = tropical_month_tithi(dt3, bangalore, True)
    assert(val == [[11, False], [1, [29, 28, 11]]]) # 11 = Magha, no way January is Caitra!
-   # dates from Reformed Sanathan Calendar, matches, including tithi END times!
+   # Below dates from Reformed Sanathan Calendar, matches, including tithi END times!
    # http://web.archive.org/web/20160807161349/http://reformedsanathancalendar.in/sanathancalendar.pdf
    mar10 = gregorian_to_jd(Date(2016, 3, 10))
    val = tropical_month_tithi(mar10, bangalore)
@@ -193,14 +211,23 @@ def tropical_month_tithi_tests():
    nov18 = gregorian_to_jd(Date(2016, 11, 18)) # RSC expected Ardra (6)
    val = tropical_month_tithi(nov18, bangalore)
    assert(val == [[9, False], [20, [27, 32, 23]]]) # Margashira K5, ends 27:32
-   print(nakshatra(nov18, bangalore)) # Punarvasu (7)
-   print(tropical_nakshatra(nov18, bangalore)) # Puṣya (8)
+
+def tropical_nakshatra_tests():
+   nov18 = gregorian_to_jd(Date(2016, 11, 18)) # RSC expected Ardra (6)
+   nak, ends = nakshatra(nov18, bangalore) # assumes SIDM_LAHIRI
+   assert(nak == 7 and ends == [28, 16, 24]) # Punarvasu (7) ends 28:16
+   tr_nak = tropical_nakshatra(nov18, bangalore)
+   assert(tr_nak == [7, [26, 59, 19]]) # Punarvasu (7) ends 26:59. TRUE_PUSHYA ends 26:19
    nov11 = gregorian_to_jd(Date(2016, 11, 11)) # RSC expected P.Bhadra (25)
-   print(nakshatra(nov11, bangalore)) # U.Bhadra (26)
-   print(tropical_nakshatra(nov11, bangalore)) # Revati (27) and then Asvini (1)
+   nak = nakshatra(nov11, bangalore) # U.Bhadra (26), ends 25:00
+   assert(nak[0] == 26 and nak[1][0] == 25)
+   tr_nak = tropical_nakshatra(nov11, bangalore) # U.Bhadra (26), ends 23:47
+   assert(tr_nak[0] == 26 and tr_nak[1] == [23, 47, 18])
    mar9 = gregorian_to_jd(Date(2017, 3, 9)) # SMKAP expected Punarvasu (7)
-   print(nakshatra(mar9, bangalore)) # sidereal Puṣya (8)
-   print(tropical_nakshatra(mar9, bangalore)) # Magha (10)
+   nak = nakshatra(mar9, bangalore) # sidereal Puṣya (8) ends 17:12:04
+   assert(nak[0] == 8 and nak[1][0:2] == [17, 12])
+   tr_nak = tropical_nakshatra(mar9, bangalore) # Pushya (8) ends 15:53:56
+   assert(tr_nak[0] == 8 and tr_nak[1] == [15, 53, 56])
 
 if __name__ == "__main__":
     bangalore = Place(12.972, 77.594, +5.5)
@@ -211,8 +238,6 @@ if __name__ == "__main__":
     date4 = gregorian_to_jd(Date(2022, 12, 10))
     date5 = gregorian_to_jd(Date(2022, 12, 24))
     date6 = gregorian_to_jd(Date(2022, 12, 25))
-    print(vedic_month(date4, bangalore))
-    print(vedic_month(date5, bangalore))
-    print(vedic_month(date6, bangalore))
     tropical_month_tithi_tests()
-    tropical_long_fixed_stars(date6)
+    tropical_long_fixed_stars_tests()
+    tropical_nakshatra_tests()
