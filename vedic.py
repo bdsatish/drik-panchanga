@@ -36,15 +36,13 @@ def vedic_month(jd, place):
 def tropical_long_fixed_stars(jd, longi):
     """Returns nakshatra of an object's longitude `longi' on a given `jd' day
     1 = Ashvini, ..., 27 = Revati"""
-    yy = swe.revjul(jd)[0]
-    vernal_equinox = swe.julday(yy, 3, 20) # any jd is ok
     # other potential are Magha, Pushya, Satabhisha, Mrigashira, Revati, etc.
     # 1. Very bright apparent magnitude
     # 2. Latitude close to ecliptic
     # 3. Only main star in the "Lunar mansion" of 13°20'
     # 4. Very low proper motion
     # 5. Distance to next adjacent star is around 13° or 14°
-    aldebaran = swe.fixstar_ut("Aldebaran", vernal_equinox, flags = swe.FLG_TROPICAL | swe.FLG_SWIEPH)[0][0]
+    aldebaran = swe.fixstar_ut("Aldebaran", jd, flags = swe.FLG_TROPICAL | swe.FLG_SWIEPH)[0][0]
     rohini_start = aldebaran - from_dms(13, 20) / 2 # Aldebaran in middle of Rohini (=Rohini-paksha ayanamsha)
     ashvini_start = rohini_start - 3 * from_dms(13, 20) # rohini is 4th after ashvini
     # list like [ 23°, 36.33°, 49.66° ... ], each element 13°20' apart
@@ -217,17 +215,17 @@ def tropical_nakshatra_tests():
    nak, ends = nakshatra(nov18, bangalore) # assumes SIDM_LAHIRI
    assert(nak == 7 and ends == [28, 16, 24]) # Punarvasu (7) ends 28:16
    tr_nak = tropical_nakshatra(nov18, bangalore)
-   assert(tr_nak == [7, [26, 59, 19]]) # Punarvasu (7) ends 26:59. TRUE_PUSHYA ends 26:19
+   assert(tr_nak == [7, [27, 0, 54]]) # Punarvasu (7) ends 27:00. TRUE_PUSHYA ends 26:19
    nov11 = gregorian_to_jd(Date(2016, 11, 11)) # RSC expected P.Bhadra (25)
    nak = nakshatra(nov11, bangalore) # U.Bhadra (26), ends 25:00
    assert(nak[0] == 26 and nak[1][0] == 25)
-   tr_nak = tropical_nakshatra(nov11, bangalore) # U.Bhadra (26), ends 23:47
-   assert(tr_nak[0] == 26 and tr_nak[1] == [23, 47, 18])
+   tr_nak = tropical_nakshatra(nov11, bangalore) # U.Bhadra (26), ends 23:48
+   assert(tr_nak[0] == 26 and tr_nak[1] == [23, 48, 45])
    mar9 = gregorian_to_jd(Date(2017, 3, 9)) # SMKAP expected Punarvasu (7)
    nak = nakshatra(mar9, bangalore) # sidereal Puṣya (8) ends 17:12:04
    assert(nak[0] == 8 and nak[1][0:2] == [17, 12])
-   tr_nak = tropical_nakshatra(mar9, bangalore) # Pushya (8) ends 15:53:56
-   assert(tr_nak[0] == 8 and tr_nak[1] == [15, 53, 56])
+   tr_nak = tropical_nakshatra(mar9, bangalore) # Pushya (8) ends 15:54
+   assert(tr_nak[0] == 8 and tr_nak[1] == [15, 54, 2])
 
 if __name__ == "__main__":
     bangalore = Place(12.972, 77.594, +5.5)
