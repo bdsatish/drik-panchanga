@@ -109,13 +109,15 @@ def function(point):
     swe.set_sid_mode(swe.SIDM_USER, point, 0.0)
     #swe.set_sid_mode(swe.SIDM_LAHIRI)
     # Place Revati at 359°50'
-    #fval = norm180(swe.fixstar_ut("Revati", point, flags = swe.FLG_SWIEPH | swe.FLG_SIDEREAL)[0]) - ((359 + 49/60 + 59/3600) - 360)
+    #fval = norm180(swe.fixstar_ut("Revati", point, flags = swe.FLG_SWIEPH | swe.FLG_SIDEREAL)[0][0]) - ((359 + 49/60 + 59/3600) - 360)
     # Place Revati at 0°0'0"
-    #fval = norm180(swe.fixstar_ut("Revati", point, flags = swe.FLG_SWIEPH | swe.FLG_SIDEREAL)[0])
+    #fval = norm180(swe.fixstar_ut("Revati", point, flags = swe.FLG_SWIEPH | swe.FLG_SIDEREAL)[0][0])
+    # Place Aldebaran in middle of Rohini (Rohini paksha ayanamsha)
+    #fval = norm180(swe.fixstar_ut("Aldebaran", jd,  swe.FLG_SIDEREAL)[0][0] - (46+40/60))
     # Place Citra at 180°
-    fval = swe.fixstar_ut("Citra", point, flags = swe.FLG_SWIEPH | swe.FLG_SIDEREAL)[0] - (180)
+    fval = swe.fixstar_ut("Citra", point, flags = swe.FLG_SWIEPH | swe.FLG_SIDEREAL)[0][0] - (180)
     # Place Pushya (delta Cancri) at 106°
-    # fval = swe.fixstar_ut(",deCnc", point, flags = swe.FLG_SWIEPH | swe.FLG_SIDEREAL)[0] - (106)
+    # fval = swe.fixstar_ut(",deCnc", point, flags = swe.FLG_SWIEPH | swe.FLG_SIDEREAL)[0][0] - (106)
     return fval
 
 def bisection_search(func, start, stop):
