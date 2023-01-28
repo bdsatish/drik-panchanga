@@ -1,0 +1,451 @@
+Name              , Designation, ID   ,Gk  , Con,Tag, Mag ,  HIP ,   HD 
+Absolutno         , XO-5       , _    ,_   , Lyn,_  ,11.95,     _,     _
+Acamar            , HR 897     , tet01,θ1  , Eri,A  , 2.88, 13847, 18622
+Achernar          , HR 472     , alf  ,α   , Eri,A  , 0.45,  7588, 10144
+Achird            , HR 219     , eta  ,η   , Cas,A  , 3.46,  3821,  4614
+Acrab             , HR 5984    , bet  ,β   , Sco,Aa , 2.56, 78820,144217
+Acrux             , HR 4730    , alf  ,α   , Cru,Aa , 1.33, 60718,108248
+Acubens           , HR 3572    , alf  ,α   , Cnc,Aa , 4.26, 44066, 76756
+Adhafera          , HR 4031    , zet  ,ζ   , Leo,Aa , 3.43, 50335, 89025
+Adhara            , HR 2618    , eps  ,ε   , CMa,A  , 1.50, 33579, 52089
+Adhil             , HR 390     , ksi  ,ξ   , And,_  , 4.87,  6411,  8207
+Ain               , HR 1409    , eps  ,ε   , Tau,Aa1, 3.53, 20889, 28305
+Ainalrami         , HR 7116    , nu01 ,ν1  , Sgr,A  , 4.86, 92761,174974
+Aladfar           , HR 7298    , eta  ,η   , Lyr,Aa , 4.43, 94481,180163
+Alasia            , HD 168746  , _    ,_   , Ser,_  , 7.95, 90004,168746
+Albaldah          , HR 7264    , pi   ,π   , Sgr,A  , 2.88, 94141,178524
+Albali            , HR 7950    , eps  ,ε   , Aqr,_  , 3.78,102618,198001
+Albireo           , HR 7417    , bet  ,β   , Cyg,Aa , 3.37, 95947,183912
+Alchiba           , HR 4623    , alf  ,α   , Crv,_  , 4.02, 59199,105452
+Alcor             , HR 5062    , 80   ,80  , UMa,Ca , 3.99, 65477,116842
+Alcyone           , HR 1165    , eta  ,η   , Tau,A  , 2.85, 17702, 23630
+Aldebaran         , HR 1457    , alf  ,α   , Tau,_  , 0.87, 21421, 29139
+Alderamin         , HR 8162    , alf  ,α   , Cep,_  , 2.45,105199,203280
+Aldhanab          , HR 8353    , gam  ,γ   , Gru,_  , 3.00,108085,207971
+Aldhibah          , HR 6396    , zet  ,ζ   , Dra,A  , 3.17, 83895,155763
+Aldulfin          , HR 7852    , eps  ,ε   , Del,_  , 4.03,101421,195810
+Alfirk            , HR 8238    , bet  ,β   , Cep,Aa , 3.23,106032,205021
+Algedi            , HR 7754    , alf02,α2  , Cap,_  , 3.58,100064,192947
+Algenib           , HR 39      , gam  ,γ   , Peg,_  , 2.83,  1067,   886
+Algieba           , HR 4057    , gam01,γ1  , Leo,_  , 2.61, 50583, 89484
+Algol             , HR 936     , bet  ,β   , Per,Aa1, 2.09, 14576, 19356
+Algorab           , HR 4757    , del  ,δ   , Crv,A  , 2.94, 60965,108767
+Alhena            , HR 2421    , gam  ,γ   , Gem,Aa , 1.93, 31681, 47105
+Alioth            , HR 4905    , eps  ,ε   , UMa,A  , 1.76, 62956,112185
+Aljanah           , HR 7949    , eps  ,ε   , Cyg,Aa , 2.48,102488,197989
+Alkaid            , HR 5191    , eta  ,η   , UMa,_  , 1.85, 67301,120315
+Alkalurops        , HR 5733    , mu01 ,μ1  , Boo,Aa , 4.31, 75411,137391
+Alkaphrah         , HR 3594    , kap  ,κ   , UMa,A  , 4.16, 44471, 77327
+Alkarab           , HR 8905    , ups  ,υ   , Peg,_  , 4.42,115623,220657
+Alkes             , HR 4287    , alf  ,α   , Crt,_  , 4.08, 53740, 95272
+Almaaz            , HR 1605    , eps  ,ε   , Aur,_  , 3.03, 23416, 31964
+Almach            , HR 603     , gam  ,γ   , And,A  , 2.10,  9640, 12533
+Alnair            , HR 8425    , alf  ,α   , Gru,_  , 1.73,109268,209952
+Alnasl            , HR 6746    , gam02,γ2  , Sgr,_  , 2.98, 88635,165135
+Alnilam           , HR 1903    , eps  ,ε   , Ori,_  , 1.69, 26311, 37128
+Alnitak           , HR 1948    , zet  ,ζ   , Ori,Aa , 1.74, 26727, 37742
+Alniyat           , HR 6084    , sig  ,σ   , Sco,Aa1, 2.90, 80112,147165
+Alphard           , HR 3748    , alf  ,α   , Hya,_  , 1.99, 46390, 81797
+Alphecca          , HR 5793    , alf  ,α   , CrB,_  , 2.22, 76267,139006
+Alpheratz         , HR 15      , alf  ,α   , And,Aa , 2.07,   677,   358
+Alpherg           , HR 437     , eta  ,η   , Psc,A  , 3.83,  7097,  9270
+Alrakis           , HR 6370    , mu   ,μ   , Dra,A  , 5.55, 83608,154906
+Alrescha          , HR 596     , alf  ,α   , Psc,A  , 3.82,  9487, 12446
+Alruba            , HR 6618    , _    ,_   , Dra,_  , 5.75, 86782,161693
+Alsafi            , HR 7462    , sig  ,σ   , Dra,_  , 4.67, 96100,185144
+Alsciaukat        , HR 3275    , 31   ,31  , Lyn,_  , 4.25, 41075, 70272
+Alsephina         , HR 3485    , del  ,δ   , Vel,Aa , 1.99, 42913, 74956
+Alshain           , HR 7602    , bet  ,β   , Aql,A  , 3.71, 98036,188512
+Alshat            , HR 7773    , nu   ,ν   , Cap,A  , 4.77,100310,193432
+Altair            , HR 7557    , alf  ,α   , Aql,_  , 0.76, 97649,187642
+Altais            , HR 7310    , del  ,δ   , Dra,_  , 3.07, 94376,180711
+Alterf            , HR 3773    , lam  ,λ   , Leo,_  , 4.32, 46750, 82308
+Aludra            , HR 2827    , eta  ,η   , CMa,_  , 2.45, 35904, 58350
+Alula Australis   , HR 4375    , ksi  ,ξ   , UMa,Aa , 4.41, 55203, 98231
+Alula Borealis    , HR 4377    , nu   ,ν   , UMa,_  , 3.49, 55219, 98262
+Alya              , HR 7141    , tet01,θ1  , Ser,A  , 4.62, 92946,175638
+Alzirr            , HR 2484    , ksi  ,ξ   , Gem,_  , 3.35, 32362, 48737
+Amadioha          , HD 43197   , _    ,_   , CMa,_  , 8.98, 29550, 43197
+Amansinaya        , WASP-34    , _    ,_   , Crt,_  ,10.30,     _,     _
+Anadolu           , WASP-52    , _    ,_   , Peg,_  ,11.95,     _,     _
+Ancha             , HR 8499    , tet  ,θ   , Aqr,_  , 4.17,110003,211391
+Angetenar         , HR 850     , tau02,τ2  , Eri,_  , 4.76, 13288, 17824
+Aniara            , HD 102956  , _    ,_   , UMa,_  , 7.86, 57820,102956
+Ankaa             , HR 99      , alf  ,α   , Phe,_  , 2.40,  2081,  2261
+Anser             , HR 7405    , alf  ,α   , Vul,_  , 4.44, 95771,183439
+Antares           , HR 6134    , alf  ,α   , Sco,A  , 1.06, 80763,148478
+Arcalis           , HD 131496  , _    ,_   , Boo,_  , 7.80, 72845,131496
+Arcturus          , HR 5340    , alf  ,α   , Boo,_  ,-0.05, 69673,124897
+Arkab Posterior   , HR 7343    , bet02,β2  , Sgr,_  , 4.27, 95294,181623
+Arkab Prior       , HR 7337    , bet01,β1  , Sgr,_  , 3.96, 95241,181454
+Arneb             , HR 1865    , alf  ,α   , Lep,A  , 2.58, 25985, 36673
+Ascella           , HR 7194    , zet  ,ζ   , Sgr,A  , 2.60, 93506,176687
+Asellus Australis , HR 3461    , del  ,δ   , Cnc,Aa , 3.94, 42911, 74442
+Asellus Borealis  , HR 3449    , gam  ,γ   , Cnc,Aa , 4.66, 42806, 74198
+Ashlesha          , HR 3482    , eps  ,ε   , Hya,A  , 3.49, 43109, 74874
+Aspidiske         , HR 3699    , iot  ,ι   , Car,_  , 2.21, 45556, 80404
+Asterope          , HR 1151    , 21   ,21  , Tau,A  , 5.76, 17579, 23432
+Atakoraka         , WASP-64    , _    ,_   , CMa,_  ,12.53,     _,     _
+Athebyne          , HR 6132    , eta  ,η   , Dra,A  , 2.73, 80331,148387
+Atik              , HR 1131    , omi  ,ο   , Per,A  , 3.84, 17448, 23180
+Atlas             , HR 1178    , 27   ,27  , Tau,Aa1, 3.62, 17847, 23850
+Atria             , HR 6217    , alf  ,α   , TrA,_  , 1.91, 82273,150798
+Avior             , HR 3307    , eps  ,ε   , Car,A  , 1.86, 41037, 71129
+Axolotl           , HD 224693  , _    ,_   , Cet,_  , 8.23,118319,224693
+Ayeyarwady        , HD 18742   , _    ,_   , Eri,_  , 7.81, 13993, 18742
+Azelfafage        , HR 8301    , pi01 ,π1  , Cyg,_  , 4.69,107136,206672
+Azha              , HR 874     , eta  ,η   , Eri,_  , 3.89, 13701, 18322
+Azmidi            , HR 3045    , ksi  ,ξ   , Pup,_  , 3.45, 38170, 63700
+Baekdu            , HD 133086  , 8    ,8   , UMi,_  , 6.83, 73136,133086
+Barnard's Star    , GJ 699     , V2500,V250, Oph,_  , 9.54, 87937,     _
+Baten Kaitos      , HR 539     , zet  ,ζ   , Cet,Aa , 3.74,  8645, 11353
+Beemim            , HR 1393    , ups03,υ3  , Eri,_  , 3.97, 20535, 28028
+Beid              , HR 1298    , omi01,ο1  , Eri,_  , 4.04, 19587, 26574
+Belel             , HD 181342  , _    ,_   , Sgr,_  , 7.55, 95124,181342
+Belenos           , HD 8574    , _    ,_   , Psc,_  , 7.12,  6643,  8574
+Bellatrix         , HR 1790    , gam  ,γ   , Ori,_  , 1.64, 25336, 35468
+Berehynia         , HAT-P-15   , _    ,_   , Per,_  ,11.72,     _,     _
+Betelgeuse        , HR 2061    , alf  ,α   , Ori,Aa , 0.45, 27989, 39801
+Bharani           , HR 838     , 41   ,41  , Ari,Aa , 3.61, 13209, 17573
+Bibha             , HD 86081   , _    ,_   , Sex,_  , 8.73, 48711, 86081
+Biham             , HR 8450    , tet  ,θ   , Peg,_  , 3.52,109427,210418
+Bosona            , HD 206610  , _    ,_   , Aqr,_  , 8.34,107251,206610
+Botein            , HR 951     , del  ,δ   , Ari,_  , 4.35, 14838, 19787
+Brachium          , HR 5603    , sig  ,σ   , Lib,A  , 3.25, 73714,133216
+Bubup             , HD 38283   , _    ,_   , Men,_  , 6.69, 26380, 38283
+Buna              , HD 16175   , _    ,_   , And,_  , 7.28, 12191, 16175
+Bunda             , HR 8264    , ksi  ,ξ   , Aqr,A  , 4.80,106786,205767
+Canopus           , HR 2326    , alf  ,α   , Car,A  ,-0.62, 30438, 45348
+Capella           , HR 1708    , alf  ,α   , Aur,Aa , 0.08, 24608, 34029
+Caph              , HR 21      , bet  ,β   , Cas,A  , 2.28,   746,   432
+Castor            , HR 2891    , alf  ,α   , Gem,Aa , 1.98, 36850, 60179
+Castula           , HR 265     , ups02,υ2  , Cas,_  , 4.62,  4422,  5395
+Cebalrai          , HR 6603    , bet  ,β   , Oph,_  , 2.76, 86742,161096
+Ceibo             , HD 63454   , _    ,_   , Cha,_  , 9.37, 37284, 63454
+Celaeno           , HR 1140    , 16   ,16  , Tau,_  , 5.45, 17489, 23288
+Cervantes         , HR 6585    , mu   ,μ   , Ara,_  , 5.15, 86796,160691
+Chalawan          , HR 4277    , 47   ,47  , UMa,_  , 5.03, 53721, 95128
+Chamukuy          , HR 1412    , tet02,θ2  , Tau,Aa , 3.73, 20894, 28319
+Chaophraya        , WASP-50    , _    ,_   , Eri,_  ,11.55,     _,     _
+Chara             , HR 4785    , bet  ,β   , CVn,Aa , 4.24, 61317,109358
+Chason            , HAT-P-5    , _    ,_   , Lyr,_  ,11.82,     _,     _
+Chechia           , HD 192699  , _    ,_   , Aql,_  , 6.44, 99894,192699
+Chertan           , HR 4359    , tet  ,θ   , Leo,_  , 3.33, 54879, 97633
+Citadelle         , HD 1502    , _    ,_   , Psc,_  , 8.36,  1547,  1502
+Citala            , HD 52265   , _    ,_   , Mon,_  , 6.29, 33719, 52265
+Cocibolca         , HD 4208    , _    ,_   , Scl,_  , 7.78,  3479,  4208
+Copernicus        , HR 3522    , 55   ,55  , Cnc,A  , 5.95, 43587, 75732
+Cor Caroli        , HR 4915    , alf02,α2  , CVn,Aa , 2.89, 63125,112413
+Cujam             , HR 6117    , ome  ,ω   , Her,A  , 4.57, 80463,148112
+Cursa             , HR 1666    , bet  ,β   , Eri,_  , 2.78, 23875, 33111
+Dabih             , HR 7776    , bet01,β1  , Cap,Aa , 3.05,100345,193495
+Dalim             , HR 963     , alf  ,α   , For,A  , 3.86, 14879, 20010
+Deneb             , HR 7924    , alf  ,α   , Cyg,_  , 1.25,102098,197345
+Deneb Algedi      , HR 8322    , del  ,δ   , Cap,Aa , 2.85,107556,207098
+Denebola          , HR 4534    , bet  ,β   , Leo,_  , 2.14, 57632,102647
+Diadem            , HR 4968    , alf  ,α   , Com,A  , 4.85, 64241,114378
+Dingolay          , HD 96063   , _    ,_   , Leo,_  , 8.21, 54158, 96063
+Diphda            , HR 188     , bet  ,β   , Cet,_  , 2.04,  3419,  4128
+Diwo              , WASP-17    , _    ,_   , Sco,_  ,11.38,     _,     _
+Diya              , WASP-72    , _    ,_   , For,_  ,10.84,     _,     _
+Dofida            , HD 117618  , _    ,_   , Cen,_  , 7.17, 66047,117618
+Dombay            , HAT-P-3    , _    ,_   , UMa,_  ,11.28,     _,     _
+Dschubba          , HR 5953    , del  ,δ   , Sco,A  , 2.29, 78401,143275
+Dubhe             , HR 4301    , alf  ,α   , UMa,A  , 1.81, 54061, 95689
+Dziban            , HR 6636    , psi01,ψ1  , Dra,A  , 4.57, 86614,162003
+Ebla              , HD 218566  , _    ,_   , Psc,_  , 8.59,114322,218566
+Edasich           , HR 5744    , iot  ,ι   , Dra,_  , 3.29, 75458,137759
+Electra           , HR 1142    , 17   ,17  , Tau,_  , 3.72, 17499, 23302
+Elgafar           , HR 5409    , phi  ,ϕ   , Vir,A  , 4.84, 70755,126868
+Elkurud           , HR 2177    , tet  ,θ   , Col,_  , 5.00, 29034, 42167
+Elnath            , HR 1791    , bet  ,β   , Tau,Aa , 1.65, 25428, 35497
+Eltanin           , HR 6705    , gam  ,γ   , Dra,_  , 2.24, 87833,164058
+Emiw              , HD 7199    , _    ,_   , Tuc,_  , 8.06,  5529,  7199
+Enif              , HR 8308    , eps  ,ε   , Peg,_  , 2.38,107315,206778
+Errai             , HR 8974    , gam  ,γ   , Cep,Aa , 3.21,116727,222404
+Fafnir            , HR 6945    , 42   ,42  , Dra,A  , 4.82, 90344,170693
+Fang              , HR 5944    , pi   ,π   , Sco,Aa , 2.89, 78265,143018
+Fawaris           , HR 7528    , del  ,δ   , Cyg,A  , 2.90, 97165,186882
+Felis             , HR 3923    , _    ,_   , Hya,_  , 4.94, 48615, 85951
+Felixvarela       , BD-17 63   , _    ,_   , Cet,_  , 9.62,  2247,     _
+Flegetonte        , HD 102195  , _    ,_   , Vir,_  , 8.07, 57370,102195
+Fomalhaut         , HR 8728    , alf  ,α   , PsA,A  , 1.17,113368,216956
+Formosa           , HD 100655  , _    ,_   , Leo,_  , 6.45, 56508,100655
+Franz             , HAT-P-14   , _    ,_   , Her,_  , 9.86,     _,     _
+Fulu              , HR 153     , zet  ,ζ   , Cas,_  , 3.69,  2920,  3360
+Fumalsamakah      , HR 8773    , bet  ,β   , Psc,_  , 4.48,113889,217891
+Funi              , HD 109246  , _    ,_   , Dra,_  , 8.75, 61177,109246
+Furud             , HR 2282    , zet  ,ζ   , CMa,Aa , 3.02, 30122, 44402
+Fuyue             , HR 6630    , _    ,_   , Sco,_  , 3.19, 87261,161892
+Gacrux            , HR 4763    , gam  ,γ   , Cru,_  , 1.59, 61084,108903
+Gakyid            , HD 73534   , _    ,_   , Cnc,_  , 8.23, 42446, 73534
+Giausar           , HR 4434    , lam  ,λ   , Dra,_  , 3.82, 56211,100029
+Gienah            , HR 4662    , gam  ,γ   , Crv,_  , 2.58, 59803,106625
+Ginan             , HR 4700    , eps  ,ε   , Cru,_  , 3.59, 60260,107446
+Gloas             , WASP-13    , _    ,_   , Lyn,_  ,10.38,     _,     _
+Gomeisa           , HR 2845    , bet  ,β   , CMi,A  , 2.89, 36188, 58715
+Grumium           , HR 6688    , ksi  ,ξ   , Dra,A  , 3.73, 87585,163588
+Gudja             , HR 5879    , kap  ,κ   , Ser,_  , 4.09, 77450,141477
+Gumala            , HD 179949  , V5652,V565, Sgr,_  , 6.25, 94645,179949
+Guniibuu          , HR 6402    , 36   ,_   , Oph,A  , 5.07, 84405,155886
+Hadar             , HR 5267    , bet  ,β   , Cen,Aa , 0.61, 68702,122451
+Haedus            , HR 1641    , eta  ,η   , Aur,_  , 3.18, 23767, 32630
+Hamal             , HR 617     , alf  ,α   , Ari,_  , 2.01,  9884, 12929
+Hassaleh          , HR 1577    , iot  ,ι   , Aur,_  , 2.69, 23015, 31398
+Hatysa            , HR 1899    , iot  ,ι   , Ori,Aa , 2.80, 26241, 37043
+Helvetios         , HR 8729    , 51   ,51  , Peg,_  , 5.49,113357,217014
+Heze              , HR 5107    , zet  ,ζ   , Vir,A  , 3.38, 66249,118098
+Hoggar            , HD 28678   , _    ,_   , Tau,_  , 8.38, 21109, 28678
+Homam             , HR 8634    , zet  ,ζ   , Peg,A  , 3.41,112029,214923
+Horna             , HAT-P-38   , _    ,_   , Tri,_  ,12.30,     _,     _
+Hunahpu           , HD 98219   , _    ,_   , Crt,_  , 8.05, 55174, 98219
+Hunor             , HAT-P-2    , _    ,_   , Her,_  , 8.72, 80076,147506
+Iklil             , HR 5928    , rho  ,ρ   , Sco,Aa , 3.87, 78104,142669
+Illyrian          , HD 82886   , _    ,_   , LMi,_  , 7.62, 47087, 82886
+Imai              , HR 4656    , del  ,δ   , Cru,_  , 2.75, 59747,106490
+Inquill           , HD 156411  , _    ,_   , Ara,_  , 6.67, 84787,156411
+Intan             , HD 20868   , _    ,_   , For,_  , 9.92, 15578, 20868
+Intercrus         , HR 3743    , _    ,_   , UMa,_  , 5.41, 46471, 81688
+Irena             , WASP-38    , _    ,_   , Her,_  , 9.41,     _,     _
+Itonda            , HD 208487  , _    ,_   , Gru,_  , 7.47,108375,208487
+Izar              , HR 5506    , eps  ,ε   , Boo,A  , 2.35, 72105,129988
+Jabbah            , HR 6027    , nu   ,ν   , Sco,Aa , 4.50, 79374,145502
+Jishui            , HR 2930    , omi  ,ο   , Gem,_  , 4.89, 37265, 61110
+Kaffaljidhma      , HR 804     , gam  ,γ   , Cet,A  , 3.56, 12706, 16970
+Kalausi           , HD 83443   , _    ,_   , Vel,_  , 8.23, 47202, 83443
+Kamuy             , HD 145457  , _    ,_   , CrB,_  , 6.57, 79219,145457
+Kang              , HR 5315    , kap  ,κ   , Vir,_  , 4.18, 69427,124294
+Karaka            , HD 137388  , _    ,_   , Aps,_  , 8.71, 76351,137388
+Kaus Australis    , HR 6879    , eps  ,ε   , Sgr,A  , 1.79, 90185,169022
+Kaus Borealis     , HR 6913    , lam  ,λ   , Sgr,_  , 2.82, 90496,169916
+Kaus Media        , HR 6859    , del  ,δ   , Sgr,_  , 2.72, 89931,168454
+Kaveh             , HD 175541  , _    ,_   , Ser,_  , 8.02, 92895,175541
+Keid              , HR 1325    , omi02,ο2  , Eri,A  , 4.43, 19849, 26965
+Khambalia         , HR 5359    , lam  ,λ   , Vir,A  , 4.52, 69974,125337
+Kitalpha          , HR 8131    , alf  ,α   , Equ,A  , 3.92,104987,202447
+Kochab            , HR 5563    , bet  ,β   , UMi,_  , 2.07, 72607,131873
+Koeia             , HIP 12961  , _    ,_   , Eri,_  ,10.25, 12961,     _
+Koit              , XO-4       , _    ,_   , Lyn,_  ,10.78,     _,     _
+Kornephoros       , HR 6148    , bet  ,β   , Her,Aa , 2.78, 80816,148856
+Kraz              , HR 4786    , bet  ,β   , Crv,_  , 2.65, 61359,109379
+Kurhah            , HR 8417    , ksi  ,ξ   , Cep,Aa , 4.26,108917,209790
+La Superba        , HR 4846    , Y    ,Y   , CVn,_  , 5.42, 62223,110914
+Larawag           , HR 6241    , eps  ,ε   , Sco,_  , 2.29, 82396,151680
+Lerna             , HAT-P-42   , _    ,_   , Hya,_  ,12.00,     _,     _
+Lesath            , HR 6508    , ups  ,υ   , Sco,_  , 2.70, 85696,158408
+Libertas          , HR 7595    , ksi  ,ξ   , Aql,A  , 4.71, 97938,188310
+Lich              , PSR B1257+1, _    ,_   , Vir,_  ,    _,     _,     _
+Liesma            , HD 118203  , _    ,_   , UMa,_  , 8.05, 66192,118203
+Lilii Borea       , HR 824     , 39   ,39  , Ari,_  , 4.52, 13061, 17361
+Lionrock          , HD 212771  , _    ,_   , Aqr,_  , 7.60,110813,212771
+Lucilinburhuc     , HD 45350   , _    ,_   , Aur,_  , 7.89, 30860, 45350
+Lusitania         , HD 45652   , _    ,_   , Mon,_  , 8.10, 30905, 45652
+Maasym            , HR 6526    , lam  ,λ   , Her,_  , 4.41, 85693,158899
+Macondo           , HD 93083   , _    ,_   , Ant,_  , 8.30, 52521, 93083
+Mago              , HD 32518   , _    ,_   , Cam,_  , 6.43, 24003, 32518
+Mahasim           , HR 2095    , tet  ,θ   , Aur,A  , 2.65, 28380, 40312
+Mahsati           , HD 152581  , _    ,_   , Oph,_  , 8.38, 82651,152581
+Maia              , HR 1149    , 20   ,20  , Tau,_  , 3.87, 17573, 23408
+Malmok            , WASP-39    , V732 ,V732, Vir,_  ,11.89,     _,     _
+Marfik            , HR 6149    , lam  ,λ   , Oph,A  , 3.82, 80883,148857
+Markab            , HR 8781    , alf  ,α   , Peg,_  , 2.49,113963,218045
+Markeb            , HR 3734    , kap  ,κ   , Vel,_  , 2.47, 45941, 81188
+Marohu            , WASP-6     , _    ,_   , Aqr,_  ,11.98,     _,     _
+Marsic            , HR 6008    , kap  ,κ   , Her,A  , 5.00, 79043,145001
+Matar             , HR 8650    , eta  ,η   , Peg,Aa , 2.93,112158,215182
+Mazaalai          , HAT-P-21   , _    ,_   , UMa,_  ,11.56,     _,     _
+Mebsuta           , HR 2473    , eps  ,ε   , Gem,   , 3.06, 32246, 48329
+Megrez            , HR 4660    , del  ,δ   , UMa,_  , 3.32, 59774,106591
+Meissa            , HR 1879    , lam  ,λ   , Ori,A  , 3.39, 26207, 36861
+Mekbuda           , HR 2650    , zet  ,ζ   , Gem,Aa , 4.01, 34088, 52973
+Meleph            , HR 3429    , eps  ,ε   , Cnc,Aa , 6.29, 42556, 73731
+Menkalinan        , HR 2088    , bet  ,β   , Aur,Aa , 1.90, 28360, 40183
+Menkar            , HR 911     , alf  ,α   , Cet,_  , 2.54, 14135, 18884
+Menkent           , HR 5288    , tet  ,θ   , Cen,_  , 2.06, 68933,123139
+Menkib            , HR 1228    , ksi  ,ξ   , Per,_  , 3.98, 18614, 24912
+Merak             , HR 4295    , bet  ,β   , UMa,_  , 2.34, 53910, 95418
+Merga             , HR 5533    , 38   ,38  , Boo,_  , 5.76, 72487,130945
+Meridiana         , HR 7254    , alf  ,α   , CrA,_  , 4.11, 94114,178253
+Merope            , HR 1156    , 23   ,23  , Tau,Aa , 4.14, 17608, 23480
+Mesarthim         , HR 546     , gam02,γ2  , Ari,A  , 4.75,  8832, 11502
+Miaplacidus       , HR 3685    , bet  ,β   , Car,_  , 1.67, 45238, 80007
+Mimosa            , HR 4853    , bet  ,β   , Cru,_  , 1.25, 62434,111123
+Minchir           , HR 3418    , sig  ,σ   , Hya,_  , 4.45, 42402, 73471
+Minelauva         , HR 4910    , del  ,δ   , Vir,_  , 3.39, 63090,112300
+Mintaka           , HR 1852    , del  ,δ   , Ori,Aa , 2.25, 25930, 36486
+Mira              , HR 681     , omi  ,ο   , Cet,Aa , 6.47, 10826, 14386
+Mirach            , HR 337     , bet  ,β   , And,_  , 2.07,  5447,  6860
+Miram             , HR 834     , eta  ,η   , Per,A  , 3.77, 13268, 17506
+Mirfak            , HR 1017    , alf  ,α   , Per,_  , 1.79, 15863, 20902
+Mirzam            , HR 2294    , bet  ,β   , CMa,_  , 1.98, 30324, 44743
+Misam             , HR 941     , kap  ,κ   , Per,Aa , 3.79, 14668, 19476
+Mizar             , HR 5054    , zet  ,ζ   , UMa,Aa , 2.23, 65378,116656
+Moldoveanu        , XO-1       , _    ,_   , CrB,_  ,11.28,     _,     _
+Monch             , HD 130322  , _    ,_   , Vir,_  , 8.04, 72339,130322
+Montuno           , WASP-79    , _    ,_   , Eri,_  ,10.06,     _,     _
+Morava            , WASP-60    , _    ,_   , Peg,_  ,12.18,     _,     _
+Moriah            , HAT-P-23   , _    ,_   , Del,_  ,12.17,     _,     _
+Mothallah         , HR 544     , alf  ,α   , Tri,_  , 3.42,  8796, 11443
+Mouhoun           , HD 30856   , _    ,_   , Eri,_  , 7.91, 22491, 30856
+Mpingo            , WASP-71    , _    ,_   , Cet,_  ,10.57,     _,     _
+Muliphein         , HR 2657    , gam  ,γ   , CMa,_  , 4.11, 34045, 53244
+Muphrid           , HR 5235    , eta  ,η   , Boo,Aa , 2.68, 67927,121370
+Muscida           , HR 3323    , omi  ,ο   , UMa,A  , 3.35, 41704, 71369
+Musica            , HR 8030    , 18   ,18  , Del,_  , 5.48,103527,199665
+Muspelheim        , HAT-P-29   , _    ,_   , Per,_  ,11.73,     _,     _
+Nahn              , HR 3627    , ksi  ,ξ   , Cnc,A  , 5.70, 44946, 78515
+Naledi            , WASP-62    , _    ,_   , Dor,_  ,10.12,     _,     _
+Naos              , HR 3165    , zet  ,ζ   , Pup,_  , 2.21, 39429, 66811
+Nashira           , HR 8278    , gam  ,γ   , Cap,A  , 3.69,106985,206088
+Nasti             , HD 68988   , _    ,_   , UMa,_  , 8.20, 40687, 68988
+Natasha           , HD 85390   , _    ,_   , Vel,_  , 8.54, 48235, 85390
+Nekkar            , HR 5602    , bet  ,β   , Boo,_  , 3.49, 73555,133208
+Nembus            , HR 464     , 51   ,51  , And,_  , 3.59,  7607,  9927
+Nenque            , HD 6434    , _    ,_   , Phe,_  , 7.72,  5054,  6434
+Nervia            , HD 49674   , _    ,_   , Aur,A  , 8.10, 32916, 49674
+Nganurganity      , HR 2646    , sig  ,σ   , CMa,_  , 3.49, 33856, 52877
+Nihal             , HR 1829    , bet  ,β   , Lep,A  , 2.83, 25606, 36079
+Nikawiy           , HD 136418  , _    ,_   , Boo,_  , 7.88, 74961,136418
+Nosaxa            , HD 48265   , _    ,_   , Pup,_  , 8.05, 31895, 48265
+Nunki             , HR 7121    , sig  ,σ   , Sgr,Aa , 2.05, 92855,175191
+Nusakan           , HR 5747    , bet  ,β   , CrB,A  , 3.90, 75695,137909
+Nushagak          , HD 17156   , _    ,_   , Cas,_  , 8.17, 13192, 17156
+Nyamien           , WASP-15    , _    ,_   , Cen,_  ,10.80,     _,     _
+Ogma              , HD 149026  , _    ,_   , Her,_  , 8.16, 80838,149026
+Okab              , HR 7235    , zet  ,ζ   , Aql,A  , 2.99, 93747,177724
+Paikauhale        , HR 6165    , tau  ,τ   , Sco,A  , 2.82, 81266,149438
+Parumleo          , WASP-32    , _    ,_   , Psc,_  ,11.41,     _,     _
+Peacock           , HR 7790    , alf  ,α   , Pav,Aa , 1.94,100751,193924
+Petra             , WASP-80    , _    ,_   , Aql,_  ,11.27,     _,     _
+Phact             , HR 1956    , alf  ,α   , Col,_  , 2.65, 26634, 37795
+Phecda            , HR 4554    , gam  ,γ   , UMa,Aa , 2.41, 58001,103287
+Pherkad           , HR 5735    , gam  ,γ   , UMi,_  , 3.00, 75097,137422
+Phoenicia         , HD 192263  , V1703,V170, Aql,_  , 7.79, 99711,192263
+Piautos           , HR 3268    , lam  ,λ   , Cnc,A  , 5.92, 40881, 70011
+Pincoya           , HD 164604  , _    ,_   , Sgr,_  , 9.66, 88414,164604
+Pipirima          , HR 6252    , mu02 ,μ2  , Sco,A  , 3.56, 82545,151985
+Pipoltr           , TrES-3     , V1434,V143, Her,_  ,12.20,     _,     _
+Pleione           , HR 1180    , 28   ,28  , Tau,Aa , 5.05, 17851, 23862
+Poerava           , HD 221287  , _    ,_   , Tuc,_  , 7.82,116084,221287
+Polaris           , HR 424     , alf  ,α   , UMi,Aa , 2.13, 11767,  8890
+Polaris Australis , HR 7228    , sig  ,σ   , Oct,_  , 5.45,104382,177482
+Polis             , HR 6812    , mu   ,μ   , Sgr,Aa , 3.84, 89341,166937
+Pollux            , HR 2990    , bet  ,β   , Gem,_  , 1.16, 37826, 62509
+Porrima           , HR 4825    , gam  ,γ   , Vir,A  , 3.44, 61941,110379
+Praecipua         , HR 4247    , 46   ,46  , LMi,_  , 3.79, 53229, 94264
+Prima Hyadum      , HR 1346    , gam  ,γ   , Tau,A  , 3.65, 20205, 27371
+Procyon           , HR 2943    , alf  ,α   , CMi,A  , 0.40, 37279, 61421
+Propus            , HR 2216    , eta  ,η   , Gem,A  , 3.32, 29655, 42995
+Proxima Centauri  , GJ 551     , alf  ,α   , Cen,C  ,11.01, 70890,999999
+Ran               , HR 1084    , eps  ,ε   , Eri,_  , 3.73, 16537, 22049
+Rana              , HR 1136    , del  ,δ   , Eri,_  , 3.53, 17378, 23249
+Rapeto            , HD 153950  , _    ,_   , Sco,_  , 7.39, 83547,153950
+Rasalas           , HR 3905    , mu   ,μ   , Leo,_  , 3.88, 48455, 85503
+Rasalgethi        , HR 6406    , alf01,α1  , Her,Aa , 3.37, 84345,156014
+Rasalhague        , HR 6556    , alf  ,α   , Oph,A  , 2.08, 86032,159561
+Rastaban          , HR 6536    , bet  ,β   , Dra,A  , 2.79, 85670,159181
+Regulus           , HR 3982    , alf  ,α   , Leo,A  , 1.36, 49669, 87901
+Revati            , HR 361     , zet  ,ζ   , Psc,A  , 5.21,  5737,  7344
+Rigel             , HR 1713    , bet  ,β   , Ori,A  , 0.18, 24436, 34085
+Rigil Kentaurus   , HR 5459    , alf  ,α   , Cen,A  ,-0.01, 71683,128620
+Rosaliadecastro   , HD 149143  , _    ,_   , Oph,_  , 7.89, 81022,149143
+Rotanev           , HR 7882    , bet  ,β   , Del,A  , 3.64,101769,196524
+Ruchbah           , HR 403     , del  ,δ   , Cas,Aa , 2.66,  6686,  8538
+Rukbat            , HR 7348    , alf  ,α   , Sgr,_  , 3.96, 95347,181869
+Sabik             , HR 6378    , eta  ,η   , Oph,A  , 2.43, 84012,155125
+Saclateni         , HR 1612    , zet  ,ζ   , Aur,A  , 3.69, 23453, 32068
+Sadachbia         , HR 8518    , gam  ,γ   , Aqr,Aa , 3.86,110395,212061
+Sadalbari         , HR 8684    , mu   ,μ   , Peg,_  , 3.51,112748,216131
+Sadalmelik        , HR 8414    , alf  ,α   , Aqr,A  , 2.95,109074,209750
+Sadalsuud         , HR 8232    , bet  ,β   , Aqr,A  , 2.90,106278,204867
+Sadr              , HR 7796    , gam  ,γ   , Cyg,A  , 2.23,100453,194093
+Sagarmatha        , HD 100777  , _    ,_   , Leo,_  , 8.42, 56572,100777
+Saiph             , HR 2004    , kap  ,κ   , Ori,_  , 2.07, 27366, 38771
+Salm              , HR 8880    , tau  ,τ   , Peg,_  , 4.58,115250,220061
+Samaya            , HD 205739  , _    ,_   , PsA,_  , 8.56,106824,205739
+Sansuna           , HAT-P-34   , _    ,_   , Sge,_  ,10.31,     _,     _
+Sargas            , HR 6553    , tet  ,θ   , Sco,A  , 1.86, 86228,159532
+Sarin             , HR 6410    , del  ,δ   , Her,Aa , 3.12, 84379,156164
+Sceptrum          , HR 1481    , 53   ,53  , Eri,A  , 4.02, 21594, 29503
+Scheat            , HR 8775    , bet  ,β   , Peg,_  , 2.44,113881,217906
+Schedar           , HR 168     , alf  ,α   , Cas,_  , 2.24,  3179,  3712
+Secunda Hyadum    , HR 1373    , del01,δ1  , Tau,Aa , 3.78, 20455, 27697
+Segin             , HR 0542    , eps  ,ε   , Cas,_  , 3.35,  8886, 11415
+Seginus           , HR 5435    , gam  ,γ   , Boo,Aa , 3.04, 71075,127762
+Sham              , HR 7479    , alf  ,α   , Sge,_  , 4.39, 96757,185758
+Shama             , HD 99109   , _    ,_   , Leo,_  , 9.10, 55664, 99109
+Sharjah           , HIP 79431  , _    ,_   , Sco,_  ,11.34, 79431,     _
+Shaula            , HR 6527    , lam  ,λ   , Sco,Aa , 2.08, 85927,158926
+Sheliak           , HR 7106    , bet  ,β   , Lyr,Aa1, 3.60, 92420,174638
+Sheratan          , HR 553     , bet  ,β   , Ari,A  , 2.70,  8903, 11636
+Sika              , HD 181720  , _    ,_   , Sgr,_  , 7.84, 95262,181720
+Sirius            , HR 2491    , alf  ,α   , CMa,A  ,-1.45, 32349, 48915
+Situla            , HR 8610    , kap  ,κ   , Aqr,A  , 5.04,111710,214376
+Skat              , HR 8709    , del  ,δ   , Aqr,A  , 3.27,113136,216627
+Solaris           , BD+14 4559 , _    ,_   , Peg,_  , 9.78,104780,     _
+Spica             , HR 5056    , alf  ,α   , Vir,Aa , 0.98, 65474,116658
+Sterrennacht      , HAT-P-6    , _    ,_   , And,_  ,10.54,     _,     _
+Stribor           , HD 75898   , _    ,_   , Lyn,_  , 8.03, 43674, 75898
+Sualocin          , HR 7906    , alf  ,α   , Del,Aa , 3.86,101958,196867
+Subra             , HR 3852    , omi  ,ο   , Leo,Aa , 3.52, 47508, 83808
+Suhail            , HR 3634    , lam  ,λ   , Vel,_  , 2.23, 44816, 78647
+Sulafat           , HR 7178    , gam  ,γ   , Lyr,_  , 3.25, 93194,176437
+Syrma             , HR 5338    , iot  ,ι   , Vir,_  , 4.07, 69701,124850
+Tabit             , HR 1543    , pi03 ,π3  , Ori,_  , 3.19, 22449, 30652
+Taika             , HAT-P-40   , _    ,_   , Lac,_  ,11.35,     _,     _
+Taiyangshou       , HR 4518    , chi  ,χ   , UMa,_  , 3.69, 57399,102224
+Taiyi             , HR 4916    , 8    ,8   , Dra,_  , 5.23, 63076,112429
+Talitha           , HR 3569    , iot  ,ι   , UMa,Aa , 3.12, 44127, 76644
+Tangra            , WASP-21    , _    ,_   , Peg,_  ,11.40,     _,     _
+Tania Australis   , HR 4069    , mu   ,μ   , UMa,A  , 3.06, 50801, 89758
+Tania Borealis    , HR 4033    , lam  ,λ   , UMa,A  , 3.45, 50372, 89021
+Tapecue           , HD 63765   , _    ,_   , Car,_  , 8.10, 38041, 63765
+Tarazed           , HR 7525    , gam  ,γ   , Aql,_  , 2.72, 97278,186791
+Tarf              , HR 3249    , bet  ,β   , Cnc,A  , 3.53, 40526, 69267
+Taygeta           , HR 1145    , 19   ,19  , Tau,Aa , 4.30, 17531, 23338
+Tegmine           , HR 3208    , zet01,ζ1  , Cnc,A  , 5.24, 40167, 68255
+Tejat             , HR 2286    , mu   ,μ   , Gem,Aa , 2.87, 30343, 44478
+Terebellum        , HR 7597    , ome  ,ω   , Sgr,A  , 4.70, 98066,188376
+Tevel             , HAT-P-9    , _    ,_   , Aur,_  ,12.15,     _,     _
+Theemin           , HR 1464    , ups02,υ2  , Eri,_  , 3.81, 21393, 29291
+Thuban            , HR 5291    , alf  ,α   , Dra,A  , 3.67, 68756,123299
+Tiaki             , HR 8636    , bet  ,β   , Gru,_  , 2.12,112122,214952
+Tianguan          , HR 1910    , zet  ,ζ   , Tau,A  , 2.97, 26451, 37202
+Tianyi            , HR 4863    , 7    ,7   , Dra,_  , 5.43, 62423,111335
+Timir             , HD 148427  , _    ,_   , Oph,_  , 6.89, 80687,148427
+Tislit            , WASP-161   , _    ,_   , Pup,_  ,10.77,     _,     _
+Titawin           , HR 458     , ups  ,υ   , And,A  , 4.09,  7513,  9826
+Tojil             , WASP-22    , _    ,_   , Eri,_  ,11.58,     _,     _
+Toliman           , HR 5460    , alf  ,α   , Cen,B  , 1.35, 71681,128621
+Tonatiuh          , HR 4609    , _    ,_   , Cam,_  , 5.80, 58952,104985
+Torcular          , HR 510     , omi  ,ο   , Psc,A  , 4.29,  8198, 10761
+Tuiren            , HAT-P-36   , _    ,_   , CVn,_  ,12.09,     _,     _
+Tupa              , HD 108147  , _    ,_   , Cru,_  , 6.99, 60644,108147
+Tupi              , HD 23079   , _    ,_   , Ret,_  , 7.12, 17096, 23079
+Tureis            , HR 3185    , rho  ,ρ   , Pup,A  , 2.83, 39757, 67523
+Ukdah             , HR 3845    , iot  ,ι   , Hya,_  , 3.90, 47431, 83618
+Uklun             , HD 102117  , _    ,_   , Cen,_  , 7.47, 57291,102117
+Unukalhai         , HR 5854    , alf  ,α   , Ser,_  , 2.63, 77070,140573
+Uruk              , HD 231701  , _    ,_   , Sge,_  , 8.97, 96078,231701
+Vega              , HR 7001    , alf  ,α   , Lyr,_  , 0.03, 91262,172167
+Veritate          , HR 8930    , 14   ,14  , And,A  , 5.22,116076,221345
+Vindemiatrix      , HR 4932    , eps  ,ε   , Vir,_  , 2.85, 63608,113226
+Wasat             , HR 2777    , del  ,δ   , Gem,Aa , 3.52, 35550, 56986
+Wazn              , HR 2040    , bet  ,β   , Col,_  , 3.12, 27628, 39425
+Wezen             , HR 2693    , del  ,δ   , CMa,Aa , 1.83, 34444, 54605
+Wurren            , HR 338     , zet  ,ζ   , Phe,Aa , 4.02,  5348,  6882
+Xamidimura        , HR 6247    , mu01 ,μ1  , Sco,Aa , 3.00, 82514,151890
+Xihe              , HD 173416  , _    ,_   , Lyr,_  , 6.04, 91852,173416
+Xuange            , HR 5351    , lam  ,λ   , Boo,_  , 4.18, 69732,125162
+Yed Posterior     , HR 6075    , eps  ,ε   , Oph,_  , 3.23, 79882,146791
+Yed Prior         , HR 6056    , del  ,δ   , Oph,_  , 2.73, 79593,146051
+Yildun            , HR 6789    , del  ,δ   , UMi,_  , 4.35, 85822,166205
+Zaniah            , HR 4689    , eta  ,η   , Vir,Aa , 4.60, 60129,107259
+Zaurak            , HR 1231    , gam  ,γ   , Eri,_  , 2.97, 18543, 25025
+Zavijava          , HR 4540    , bet  ,β   , Vir,_  , 3.59, 57757,102870
+Zhang             , HR 3903    , ups01,υ1  , Hya,A  , 4.11, 48356, 85444
+Zibal             , HR 984     , zet  ,ζ   , Eri,Aa , 4.80, 15197, 20320
+Zosma             , HR 4357    , del  ,δ   , Leo,_  , 2.56, 54872, 97603
+Zubenelgenubi     , HR 5531    , alf02,α2  , Lib,Aa , 2.75, 72622,130841
+Zubenelhakrabi    , HR 5787    , gam  ,γ   , Lib,A  , 3.91, 76333,138905
+Zubeneschamali    , HR 5685    , bet  ,β   , Lib,_  , 2.61, 74785,135742

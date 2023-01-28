@@ -1,0 +1,76 @@
+,Name              ,Designation,ID   ,Gk  ,Con,Tag,Mag ,HIP ,HD 
+4,Acrab             ,HR 5984    ,bet  ,β   ,Sco,Aa ,2.56,78820,144217
+7,Adhafera          ,HR 4031    ,zet  ,ζ   ,Leo,Aa ,3.43,50335,89025
+10,Ain               ,HR 1409    ,eps  ,ε   ,Tau,Aa1,3.53,20889,28305
+14,Albaldah          ,HR 7264    ,pi   ,π   ,Sgr,A  ,2.88,94141,178524
+15,Albali            ,HR 7950    ,eps  ,ε   ,Aqr,_  ,3.78,102618,198001
+19,Alcyone           ,HR 1165    ,eta  ,η   ,Tau,A  ,2.85,17702,23630
+20,Aldebaran         ,HR 1457    ,alf  ,α   ,Tau,_  ,0.87,21421,29139
+26,Algedi            ,HR 7754    ,alf02,α2  ,Cap,_  ,3.58,100064,192947
+28,Algieba           ,HR 4057    ,gam01,γ1  ,Leo,_  ,2.61,50583,89484
+31,Alhena            ,HR 2421    ,gam  ,γ   ,Gem,Aa ,1.93,31681,47105
+42,Alnasl            ,HR 6746    ,gam02,γ2  ,Sgr,_  ,2.98,88635,165135
+45,Alniyat           ,HR 6084    ,sig  ,σ   ,Sco,Aa1,2.9,80112,147165
+49,Alpherg           ,HR 437     ,eta  ,η   ,Psc,A  ,3.83,7097,9270
+51,Alrescha          ,HR 596     ,alf  ,α   ,Psc,A  ,3.82,9487,12446
+65,Alzirr            ,HR 2484    ,ksi  ,ξ   ,Gem,_  ,3.35,32362,48737
+74,Antares           ,HR 6134    ,alf  ,α   ,Sco,A  ,1.06,80763,148478
+78,Arkab Prior       ,HR 7337    ,bet01,β1  ,Sgr,_  ,3.96,95241,181454
+80,Ascella           ,HR 7194    ,zet  ,ζ   ,Sgr,A  ,2.6,93506,176687
+81,Asellus Australis ,HR 3461    ,del  ,δ   ,Cnc,Aa ,3.94,42911,74442
+89,Atlas             ,HR 1178    ,27   ,27  ,Tau,Aa1,3.62,17847,23850
+107,Bharani           ,HR 838     ,41   ,41  ,Ari,Aa ,3.61,13209,17573
+112,Brachium          ,HR 5603    ,sig  ,σ   ,Lib,A  ,3.25,73714,133216
+119,Castor            ,HR 2891    ,alf  ,α   ,Gem,Aa ,1.98,36850,60179
+126,Chamukuy          ,HR 1412    ,tet02,θ2  ,Tau,Aa ,3.73,20894,28319
+131,Chertan           ,HR 4359    ,tet  ,θ   ,Leo,_  ,3.33,54879,97633
+139,Dabih             ,HR 7776    ,bet01,β1  ,Cap,Aa ,3.05,100345,193495
+142,Deneb Algedi      ,HR 8322    ,del  ,δ   ,Cap,Aa ,2.85,107556,207098
+143,Denebola          ,HR 4534    ,bet  ,β   ,Leo,_  ,2.14,57632,102647
+151,Dschubba          ,HR 5953    ,del  ,δ   ,Sco,A  ,2.29,78401,143275
+156,Electra           ,HR 1142    ,17   ,17  ,Tau,_  ,3.72,17499,23302
+159,Elnath            ,HR 1791    ,bet  ,β   ,Tau,Aa ,1.65,25428,35497
+165,Fang              ,HR 5944    ,pi   ,π   ,Sco,Aa ,2.89,78265,143018
+177,Fuyue             ,HR 6630    ,_    ,_   ,Sco,_  ,3.19,87261,161892
+180,Giausar           ,HR 4434    ,lam  ,λ   ,Dra,_  ,3.82,56211,100029
+192,Hassaleh          ,HR 1577    ,iot  ,ι   ,Aur,_  ,2.69,23015,31398
+197,Homam             ,HR 8634    ,zet  ,ζ   ,Peg,A  ,3.41,112029,214923
+212,Kaffaljidhma      ,HR 804     ,gam  ,γ   ,Cet,A  ,3.56,12706,16970
+218,Kaus Borealis     ,HR 6913    ,lam  ,λ   ,Sgr,_  ,2.82,90496,169916
+219,Kaus Media        ,HR 6859    ,del  ,δ   ,Sgr,_  ,2.72,89931,168454
+223,Kitalpha          ,HR 8131    ,alf  ,α   ,Equ,A  ,3.92,104987,202447
+248,Marfik            ,HR 6149    ,lam  ,λ   ,Oph,A  ,3.82,80883,148857
+256,Megrez            ,HR 4660    ,del  ,δ   ,UMa,_  ,3.32,59774,106591
+260,Menkalinan        ,HR 2088    ,bet  ,β   ,Aur,Aa ,1.9,28360,40183
+269,Miaplacidus       ,HR 3685    ,bet  ,β   ,Car,_  ,1.67,45238,80007
+273,Mintaka           ,HR 1852    ,del  ,δ   ,Ori,Aa ,2.25,25930,36486
+309,Nusakan           ,HR 5747    ,bet  ,β   ,CrB,A  ,3.9,75695,137909
+316,Peacock           ,HR 7790    ,alf  ,α   ,Pav,Aa ,1.94,100751,193924
+324,Pipirima          ,HR 6252    ,mu02 ,μ2  ,Sco,A  ,3.56,82545,151985
+331,Pollux            ,HR 2990    ,bet  ,β   ,Gem,_  ,1.16,37826,62509
+332,Porrima           ,HR 4825    ,gam  ,γ   ,Vir,A  ,3.44,61941,110379
+333,Praecipua         ,HR 4247    ,46   ,46  ,LMi,_  ,3.79,53229,94264
+335,Procyon           ,HR 2943    ,alf  ,α   ,CMi,A  ,0.4,37279,61421
+341,Rasalas           ,HR 3905    ,mu   ,μ   ,Leo,_  ,3.88,48455,85503
+342,Rasalgethi        ,HR 6406    ,alf01,α1  ,Her,Aa ,3.37,84345,156014
+347,Rigel             ,HR 1713    ,bet  ,β   ,Ori,A  ,0.18,24436,34085
+353,Sabik             ,HR 6378    ,eta  ,η   ,Oph,A  ,2.43,84012,155125
+356,Sadalbari         ,HR 8684    ,mu   ,μ   ,Peg,_  ,3.51,112748,216131
+358,Sadalsuud         ,HR 8232    ,bet  ,β   ,Aqr,A  ,2.9,106278,204867
+359,Sadr              ,HR 7796    ,gam  ,γ   ,Cyg,A  ,2.23,100453,194093
+361,Saiph             ,HR 2004    ,kap  ,κ   ,Ori,_  ,2.07,27366,38771
+366,Sarin             ,HR 6410    ,del  ,δ   ,Her,Aa ,3.12,84379,156164
+371,Segin             ,HR 0542    ,eps  ,ε   ,Cas,_  ,3.35,8886,11415
+376,Shaula            ,HR 6527    ,lam  ,λ   ,Sco,Aa ,2.08,85927,158926
+377,Sheliak           ,HR 7106    ,bet  ,β   ,Lyr,Aa1,3.6,92420,174638
+380,Sirius            ,HR 2491    ,alf  ,α   ,CMa,A  ,-1.45,32349,48915
+382,Skat              ,HR 8709    ,del  ,δ   ,Aqr,A  ,3.27,113136,216627
+389,Suhail            ,HR 3634    ,lam  ,λ   ,Vel,_  ,2.23,44816,78647
+392,Tabit             ,HR 1543    ,pi03 ,π3  ,Ori,_  ,3.19,22449,30652
+405,Tejat             ,HR 2286    ,mu   ,μ   ,Gem,Aa ,2.87,30343,44478
+431,Wasat             ,HR 2777    ,del  ,δ   ,Gem,Aa ,3.52,35550,56986
+432,Wazn              ,HR 2040    ,bet  ,β   ,Col,_  ,3.12,27628,39425
+442,Zaurak            ,HR 1231    ,gam  ,γ   ,Eri,_  ,2.97,18543,25025
+447,Zubenelgenubi     ,HR 5531    ,alf02,α2  ,Lib,Aa ,2.75,72622,130841
+448,Zubenelhakrabi    ,HR 5787    ,gam  ,γ   ,Lib,A  ,3.91,76333,138905
+449,Zubeneschamali    ,HR 5685    ,bet  ,β   ,Lib,_  ,2.61,74785,135742
