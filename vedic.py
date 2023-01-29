@@ -42,9 +42,9 @@ def tropical_long_fixed_stars(jd, longi):
     # 3. Only main star in the "Lunar mansion" of 13°20'
     # 4. Very low proper motion
     # 5. Distance to next adjacent star is around 13° or 14°
-    aldebaran = swe.fixstar_ut("Aldebaran", jd, flags = swe.FLG_TROPICAL | swe.FLG_SWIEPH)[0][0]
-    rohini_start = aldebaran - from_dms(13, 20) / 2 # Aldebaran in middle of Rohini (=Rohini-paksha ayanamsha)
-    ashvini_start = rohini_start - 3 * from_dms(13, 20) # rohini is 4th after ashvini
+    spica = swe.fixstar_ut("Spica", jd, flags = swe.FLG_TROPICAL | swe.FLG_SWIEPH)[0][0]
+    # Ashvini nakshatra starts exactly 180° opposite of Citra (results exactly match TRUE_CITRA)
+    ashvini_start = spica - 180
     # list like [ 23°, 36.33°, 49.66° ... ], each element 13°20' apart
     equal_spacing = [ norm360(ashvini_start + n * from_dms(13, 20)) for n in range(0, 27) ]
     # dict like { 1:23°, 2:36.33°, 3:49.66°, ... 26:356°, 27:10.66° }
@@ -98,7 +98,7 @@ def tropical_raasi(jd):
 
 # rename = True will give lunar "masa" almost exactly same result as
 # sidereal calendar. Advantages:
-# - Vernal equinox will occur in the month of Caitra (by definition)
+# - Vernal equinox mostly occur in the month of Caitra?
 # - The lunar month name will have purnima on namesake star (e.g. Caitra māsa on Citrā nak.)
 # - All popular festivals will coincide with sidereal calendar
 # - Magha occurs around February, coinciding with Vasanta Ritu
@@ -164,18 +164,18 @@ def tropical_nakshatra(jd, place, equal = True):
 def tropical_long_fixed_stars_tests():
   sun_long = tropical_solar_longitude(date1)
   nak, nak_ends_long = tropical_long_fixed_stars(date1, sun_long)
-  assert(nak == 7 and (nak_ends_long - 116.58) < 0.1) # Sun in Punarvasu
+  assert(nak == 7 and (nak_ends_long - 117.31) < 0.1) # Sun in Punarvasu
   mars = swe.calc_ut(date1, swe.MARS, flags = swe.FLG_TROPICAL)[0][0]
   nak, nak_ends_long = tropical_long_fixed_stars(date1, mars)
-  assert(nak == 3 and (nak_ends_long - 63.25) < 0.1) # Mars in Krittika
+  assert(nak == 3 and (nak_ends_long - 63.98) < 0.1) # Mars in Krittika
 
   bc_date = swe.julday(-2700, 2, 26, 13.0) # 18:30 PM in India
   moon = tropical_lunar_longitude(bc_date)
   nak, nak_ends_long = tropical_long_fixed_stars(bc_date, moon)
-  assert(nak == 25 and (nak_ends_long - 291.37) < 0.1) # Moon in Purvabhadra
+  assert(nak == 25 and (nak_ends_long - 292.23) < 0.1) # Moon in Purvabhadra
   mercury = swe.calc_ut(bc_date, swe.MERCURY, swe.FLG_TROPICAL | swe.FLG_SWIEPH)[0][0]
   nak, nak_ends_long = tropical_long_fixed_stars(bc_date, mercury)
-  assert(nak == 3 and (nak_ends_long - 358.04) < 0.1) # Mercury in Krittika
+  assert(nak == 3 and (nak_ends_long - 358.90) < 0.1) # Mercury in Krittika
 
 def tropical_month_tithi_tests():
    dt1 = gregorian_to_jd(Date(2022, 12, 21)) # Margashira K13 in sidereal
@@ -215,17 +215,17 @@ def tropical_nakshatra_tests():
    nak, ends = nakshatra(nov18, bangalore) # assumes SIDM_LAHIRI
    assert(nak == 7 and ends == [28, 16, 24]) # Punarvasu (7) ends 28:16
    tr_nak = tropical_nakshatra(nov18, bangalore)
-   assert(tr_nak == [7, [27, 0, 54]]) # Punarvasu (7) ends 27:00. TRUE_PUSHYA ends 26:19
+   assert(tr_nak == [7, [28, 14, 15]]) # Punarvasu (7) TRUE_PUSHYA ends 26:19
    nov11 = gregorian_to_jd(Date(2016, 11, 11)) # RSC expected P.Bhadra (25)
    nak = nakshatra(nov11, bangalore) # U.Bhadra (26), ends 25:00
    assert(nak[0] == 26 and nak[1][0] == 25)
-   tr_nak = tropical_nakshatra(nov11, bangalore) # U.Bhadra (26), ends 23:48
-   assert(tr_nak[0] == 26 and tr_nak[1] == [23, 48, 45])
+   tr_nak = tropical_nakshatra(nov11, bangalore) # U.Bhadra (26)
+   assert(tr_nak[0] == 26 and tr_nak[1] == [24, 58, 8])
    mar9 = gregorian_to_jd(Date(2017, 3, 9)) # SMKAP expected Punarvasu (7)
    nak = nakshatra(mar9, bangalore) # sidereal Puṣya (8) ends 17:12:04
    assert(nak[0] == 8 and nak[1][0:2] == [17, 12])
-   tr_nak = tropical_nakshatra(mar9, bangalore) # Pushya (8) ends 15:54
-   assert(tr_nak[0] == 8 and tr_nak[1] == [15, 54, 2])
+   tr_nak = tropical_nakshatra(mar9, bangalore) # Pushya (8)
+   assert(tr_nak[0] == 8 and tr_nak[1] == [17, 10, 52])
 
 if __name__ == "__main__":
     bangalore = Place(12.972, 77.594, +5.5)
