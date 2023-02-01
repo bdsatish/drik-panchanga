@@ -1,4 +1,4 @@
-// gcc experimental/ecliptic_to_polar.c -lswe -lm && ./a.out
+//usr/bin/cc "$0" -I ~/.local/include -L ~/.local/lib -lswe -lm -ldl && exec ./a.out "$@"
 
 #include <swephexp.h>
 #include <math.h>
@@ -35,19 +35,25 @@ double equatorial_to_ss_polar(double ra, double eps)
     return pl;
 }
 
+void init_swisseph(void)
+{
+    swe_set_ephe_path("/usr/share/libswe/ephe/");
+    printf("version %s\n", swe_version(version));
+}
+
 int main(void)
 {
     char star[40] = "Shaula";
     double x_equ[6] = {0};
     double x_sid[6] = {0};
     char version[100];
+
+    init_swisseph();
+
     /* 21 Mar 499, 7:30:31.57 UT */
     // double tjd_ut = swe_julday(499, 3, 21, 7 + 30./60 + 31.57/3600, SE_JUL_CAL);
     // double tjd_ut = swe_julday(560, 3, 21, 12.0, SE_JUL_CAL);
     double tjd_ut = swe_julday(2023, 3, 21, 12.0, SE_JUL_CAL);
-
-    swe_set_ephe_path("/usr/share/libswe/ephe/");
-    printf("version %s\n", swe_version(version));
 
     double epsln = obliquity(tjd_ut);
     printf("obliquity %.7lf\n", epsln);
