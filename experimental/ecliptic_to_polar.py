@@ -27,7 +27,6 @@ def swi_armc_to_mc(armc, epsln):
   if abs(armc - 90) > _VERY_SMALL and abs(armc - 270) > _VERY_SMALL:
     tant = tand(armc)
     mc = atan2d(tant, cosd(epsln)) # This is same as ayan_on_jd, below
-    print("MC = ", mc)
     if armc > 90 and armc <= 270:
       mc = swe.degnorm(mc + 180)
   else:
@@ -35,13 +34,7 @@ def swi_armc_to_mc(armc, epsln):
 
   return mc;
 
-def ecliptic_to_polar_longitude(jd, ecl_long):
-    """Converts ecliptic longitude as given by fixstar_ut or calc_ut to polar longitude"""
-    # ECL_NUT is a special "planet" which returns obliquity and nutation
-    epsln = swe.calc_ut(jd, swe.ECL_NUT, swe.FLG_TROPICAL)  # obliquity to the ecliptic
-    mc = swi_armc_to_mc(ecl_long, epsln[0][0])
-    return mc
-
+# Below is same as swi_armc_to_mc()
 def ra_to_pl(ra, epsln):
     coseps = cosd(epsln)
     if abs(ra - 90) < _VERY_SMALL or abs(ra - 270) < _VERY_SMALL:
@@ -52,6 +45,19 @@ def ra_to_pl(ra, epsln):
         ra1 = 180 - ra # shifts to quadrant 1 or 4
         pl1 = atand(tand(ra1) / coseps)
         pl = 180 - pl1 # shift back to quad 2 or 3
+    return pl
+
+def ecliptic_to_polar_longitude(jd, ecl_long):
+    """Converts ecliptic longitude as given by fixstar_ut or calc_ut to polar longitude"""
+    # ECL_NUT is a special "planet" which returns obliquity and nutation
+    epsln = swe.calc_ut(jd, swe.ECL_NUT, swe.FLG_TROPICAL)  # obliquity to the ecliptic
+    mc = swi_armc_to_mc(ecl_long, epsln[0][0])
+    return mc
+
+def ecliptic_to_polar_longitude_new(jd, right_ascension):
+    """Input right_ascension must be from TROPICAL | EQUATORIAL coordinates as on jd"""
+    epsln = swe.calc(jd_ss_citra, swe.ECL_NUT, swe.FLG_TROPICAL)
+    pl = ra_to_pl(right_ascension, epsln[0][0])
     return pl
 
 if __name__ == "__main__":
@@ -68,22 +74,13 @@ if __name__ == "__main__":
     print("Expected: ", to_dms(expected), "Actual: ", to_dms(new_ll))
     assert(to_dms(expected) == to_dms(new_ll))
 
-    epsln = swe.calc(jd_ss_citra, swe.ECL_NUT, swe.FLG_TROPICAL)  # obliquity to the ecliptic
-    print(epsln)
-    coords = swe.fixstar("Spica", jd_ss_citra, swe.FLG_TROPICAL | swe.FLG_EQUATORIAL)
-    print(coords)
-    ra = coords[0][0]
-    pl = ra_to_pl(ra, epsln[0][0])
-    print(pl)
+    (right_asc, decl, *_), *_ = swe.fixstar("Spica", jd_ss_citra, swe.FLG_TROPICAL | swe.FLG_EQUATORIAL)
+    print("Polar long spica:", ecliptic_to_polar_longitude_new(jd_ss_citra, right_asc))
 
-    coords = swe.fixstar("Revati", jd_ss_citra, swe.FLG_TROPICAL | swe.FLG_EQUATORIAL)
-    print(coords)
-    ra = coords[0][0]
-    pl = ra_to_pl(ra, epsln[0][0])
-    print("My code:", pl)
-    new_ll = ecliptic_to_polar_longitude(jd_ss_citra, ra)
-    print("Equatorial: ", ra, "Polar:", new_ll)
+    (right_asc, decl, *_), *_ = swe.fixstar(",zePsc", jd_ss_citra, swe.FLG_TROPICAL | swe.FLG_EQUATORIAL)
     ayan_on_jd = -0.79167046
     expected = ayan_on_jd + (359 + 50/60)
-    print(expected)
-    # assert(to_dms(expected) == to_dms(new_ll))
+    print("Expected long? Revati", expected)
+    print("His formula: ", ecliptic_to_polar_longitude_new(jd_ss_citra, right_asc))
+    print("My formula: ", ecliptic_to_polar_longitude(jd_ss_citra, right_asc))
+
