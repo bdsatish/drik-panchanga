@@ -5,7 +5,7 @@
 
 // fix this star at that sidereal ecliptic longitude
 static char fixed_star[32] = "Regulus"; // "Shaula"
-static const double fixed_long = 126+40/60.; // 241.0;
+static double fixed_long = 126+40/60.; // 241.0;
 
 // All the following choices give Spica at 180±0.5°, so very close!
 // Place Mula ("Shaula") at 241° -- both SS and Brahma-sphuta-siddhanta prescribe this value exactly
@@ -43,12 +43,22 @@ double fix_star_at_sidereal_longitude(double jd)
     return fval;
 }
 
-int main(void)
+int main(int argc, char *argv[])
 {
+    if (argc > 1 && argc != 3) {
+        printf("%s STAR SIDEREAL_LONG #\ne.g.\t%s Aldebaran 46.6666\n", argv[0], argv[0]);
+        return 0;
+    }
+
+    if (argc == 3) {
+        strncpy(fixed_star, argv[1], sizeof(fixed_star));
+        fixed_long = atof(argv[2]);
+    }
+
     init_swisseph();
 
     double start = swe_julday(1, 1, 1, 12.0, SE_GREG_CAL);
-    double stop = swe_julday(500, 1, 1, 12.0, SE_GREG_CAL);
+    double stop = swe_julday(600, 1, 1, 12.0, SE_GREG_CAL);
     double root_jd = bisection(fix_star_at_sidereal_longitude, start, stop);
     double x[6];
     char err[256];
@@ -63,12 +73,12 @@ int main(void)
            fixed_star, fixed_long, root_jd, year, month, day, time);
 
     // print some common stars
-    const int num_stars = 12;
+    const int num_stars = 13;
     const char* stars[num_stars] = {
         "Regulus" /*Magha*/, "Shaula" /*Mula*/, "Antares" /*Jyestha*/, "Aldebaran" /*Rohini*/,
         "Alcyone" /*Krittika*/, ",SgrA*" /*Gal. center*/, "Spica" /*Citra*/, ",deCnc" /*Pushya*/,
         ",zePsc" /*Revati*/, "ZubenElgenubi" /*Visakha*/, "Dschubba" /*Anuradha*/,
-        "Ashlesha" /*Ashlesha*/ };
+        "Ashlesha" /*Ashlesha*/, "Pollux" /*Punarvasu*/ };
 
     for (int i = 0; i < num_stars; i++) {
         strcpy(fixed_star, stars[i]);
