@@ -4,8 +4,8 @@
 #include "bisection.h"
 
 // fix this star at that sidereal ecliptic longitude
-static char fixed_star[32] = "Antares"; // "Shaula"
-static const double fixed_long = 226+40/60.; // 241.0;
+static char fixed_star[32] = "Regulus"; // "Shaula"
+static const double fixed_long = 126+40/60.; // 241.0;
 
 // All the following choices give Spica at 180±0.5°, so very close!
 // Place Mula ("Shaula") at 241° -- both SS and Brahma-sphuta-siddhanta prescribe this value exactly
@@ -13,6 +13,7 @@ static const double fixed_long = 226+40/60.; // 241.0;
 // Place Rohini ("Aldebaran") at 46°40' -- middle of the nakshatra
 // Place Pushya (",deCnc") at 105.5° -- still closer to prescribed 106°
 // Place Jyestha ("Antares") at 226°40' -- exact beginning of the nakshatra, though SS and BSS give 229° polar long.
+// Place Anuradha ("Dschubba") at 219° -- though 220° is exactly in middle of Anuradha
 // Only oddball is Revati, which is close to 356° and not 359°50' as per SS
 //
 // As per all of the above, choose an ayanamsha whose zero date falls
@@ -62,11 +63,12 @@ int main(void)
            fixed_star, fixed_long, root_jd, year, month, day, time);
 
     // print some common stars
-    const int num_stars = 11;
+    const int num_stars = 12;
     const char* stars[num_stars] = {
         "Regulus" /*Magha*/, "Shaula" /*Mula*/, "Antares" /*Jyestha*/, "Aldebaran" /*Rohini*/,
         "Alcyone" /*Krittika*/, ",SgrA*" /*Gal. center*/, "Spica" /*Citra*/, ",deCnc" /*Pushya*/,
-        ",zePsc" /*Revati*/, "ZubenElgenubi" /*Visakha*/, "Dschubba" /*Anuradha*/ };
+        ",zePsc" /*Revati*/, "ZubenElgenubi" /*Visakha*/, "Dschubba" /*Anuradha*/,
+        "Ashlesha" /*Ashlesha*/ };
 
     for (int i = 0; i < num_stars; i++) {
         strcpy(fixed_star, stars[i]);

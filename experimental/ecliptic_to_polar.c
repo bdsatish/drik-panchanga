@@ -49,6 +49,7 @@ int main(int argc, char* argv[])
         return 0;
     }
 
+    double gh_day;
     char star[40];
     double x_equ[6] = {0};
     double x_sid[6] = {0};
@@ -89,5 +90,27 @@ int main(int argc, char* argv[])
     pl = equatorial_to_ss_polar(x_equ[0], epsln); // equatorial to SS polar long
     printf("Jyestha at SS polar longitude %.7f on its zero-day ayan\n", pl);
 
+    // Graha-laghava positions
+    gh_day = swe_julday(1520, 3, 19, 6.0, SE_JUL_CAL);
+    epsln = obliquity(gh_day);
+    double expected = 0;
+    xx_sid[0] = 359.666; xx_sid[1] = -0.24; xx_sid[2] = 1.0;
+    swe_cotrans(xx_sid, x_equ, -epsln); // ecliptic to equatorial coords
+    pl = equatorial_to_ss_polar(x_equ[0], epsln); // equatorial to SS polar long
+    printf("Revati (zePsc) sidereal [%.4f, %.4f] at SS polar longitude %.7f on its grha-laghava day. Expected %.1f\n",
+           xx_sid[0], xx_sid[1], pl, expected);
+
     swe_close();
 }
+
+
+// Rohini (Aldebaran) sidereal [46.6666, -5.6000] at SS polar longitude 48.2923257 on its graha-laghava day. Expected 49.0000
+// Magha (Regulus) sidereal [126.6666, 0.3790] at SS polar longitude 126.7652541 on its graha-laghava day. Expected 129.0000
+// Citra (Spica) sidereal [180.0000, -1.9220] at SS polar longitude 179.1638906 on its graha-laghava day. Expected 183.0000
+// Jyestha (Antares) sidereal [226.6666, -4.3512] at SS polar longitude 225.3336877 on its graha-laghava day. Expected 230.0000
+// Mula (Sabik) sidereal [234.1200, 7.2000] at SS polar longitude 235.8856992 on its graha-laghava day. Expected 242
+// Mula (Shaula)sidereal [241.0000, -13.5100] at SS polar longitude 237.8089711 on its grha-laghava day. Expected 242.0
+// Anuradha (Dscubba) sidereal [220.0000, -1.7300] at SS polar longitude 219.4185972 on its grha-laghava day. Expected 224.0
+// Ashlesha (epHya) sidereal [110.0000, -11.2400] at SS polar longitude 108.4339784 on its grha-laghava day. Expected 107.0
+// Pushya (deCnc) sidereal [106.0000, -0.0030] at SS polar longitude 105.9996404 on its grha-laghava day. Expected 106.0
+// Revati (zePsc) sidereal [359.6660, -0.2400] at SS polar longitude -0.2296270 on its grha-laghava day. Expected 0.0
