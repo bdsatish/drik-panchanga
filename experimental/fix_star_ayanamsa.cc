@@ -1,5 +1,6 @@
 //usr/bin/c++ "$0" -Wall -Wextra -I. -I ~/.local/include -L ~/.local/lib -lswe -lm -ldl -o /tmp/a.out && exec /tmp/a.out "$@"
 
+#include <ctime>
 #include <swephexp.h>
 #include "bisection.h"
 
@@ -89,7 +90,11 @@ int main(int argc, char *argv[])
 
     // Print the same table at modern times
     puts("---------");
-    year = 2023; month = 3; day = 21; time = 12.0;
+    time_t t = std::time(NULL);
+    struct tm ltime = {};
+    localtime_r(&t, &ltime);
+
+    year = ltime.tm_year + 1900; month = ltime.tm_mon + 1; day = ltime.tm_mday; time = 12.0;
     double jd = swe_julday(year, month, day, time, SE_GREG_CAL);
 
     for (int i = 0; i < num_stars; i++) {
