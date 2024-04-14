@@ -23,7 +23,9 @@ static double fixed_long = 126+40/60.; // 241.0;
 void init_swisseph(void)
 {
     char version[20] = {'\0'};
-    char path[] = "/usr/share/libswe/ephe/";
+    char path[100] = {'\0'};
+    strcpy(path, getenv("HOME"));
+    strcat(path, "/.local/share/swisseph:/usr/share/libswe/ephe/");
 
     swe_set_ephe_path(path);
     printf("sweph version %s\n", swe_version(version));
