@@ -1,9 +1,10 @@
+//usr/bin/c++ "$0" -Wall -Wextra -I. -I ~/.local/include -L ~/.local/lib -lswe -lm -ldl -o /tmp/a.out && exec /tmp/a.out "$@"
 // Ayanamsha Time of Coincidence calculator
 //
 // Finds the zero point of the sidereal ecliptic for a given type of ayanamsha
 // All dates are (proleptic) Gregorian calendar
 //
-// Tested with SwissEph 2.02.01
+// Tested with SwissEph 2.10.03
 // gcc $CPPFLAGS $LIBS -lm -lswe file.c
 
 #include <swephexp.h>
@@ -12,17 +13,17 @@
 #include <stdlib.h>
 #include <math.h>
 
-#ifndef SE_SIDM_TRUE_CITRA
-#define SE_SIDM_TRUE_CITRA      27
-#endif
-
-#ifndef SE_SIDM_TRUE_REVATI
-#define SE_SIDM_TRUE_REVATI     28
-#endif
-
-#ifndef SE_SIDM_TRUE_PUSHYA
-#define SE_SIDM_TRUE_PUSHYA     29
-#endif
+void init_swisseph(void)
+{
+    char version[32] = {'\0'};
+    char path[256] = {'\0'};
+    strcpy(path, getenv("HOME"));
+    strcat(path, "/.local/share/swisseph/:/opt/packages/swisseph/ephe/:"
+	         "/usr/local/share/swisseph/:/usr/share/libswe/ephe/:");
+    //or setenv SE_EPHE_PATH
+    swe_set_ephe_path(path);
+    printf("sweph version %s\n", swe_version(version));
+}
 
 // normalize angle to lie in range [-180, 180) degrees
 double wrap180(double angle)
@@ -43,7 +44,6 @@ void to_dms(double deg)
 
 void galactic_center(void)
 {
-    swe_set_ephe_path("/opt/packages/swisseph/ephe"); //better setenv SE_EPHE_PATH
     double julday = swe_julday(550, 3, 9, 14 + 3/60. + 32.45/3600, SE_GREG_CAL);
     swe_set_sid_mode(SE_SIDM_USER, julday, 0.0);
 
@@ -133,6 +133,16 @@ double gal_cent(double point)
     return fval;
 }
 
+double rohini(double point)
+{
+    double fval = 0.0;
+
+    // Place Aldebaran at middle of Rohini always 46°40'
+    // String "Rohini" does not work here
+    fval = get_star_position("Aldebaran", point) - (46 + 40/60.);
+    return fval;
+}
+
 double ayan_func(double x)
 {
     return wrap180(swe_get_ayanamsa(x));
@@ -146,9 +156,9 @@ double bisection_search(func1_t func, double start, double stop)
     double epsilon = 5E-10;
 
     do {
-        register double middle = (left + right) / 2.;
-        register double midval = func(middle);
-        register double rtval = func(right);
+        double middle = (left + right) / 2.;
+        double midval = func(middle);
+        double rtval = func(right);
 
         if (midval * rtval >= 0.0) {
             right = middle;
@@ -170,7 +180,7 @@ void ss_citra(void)
     double daya = swe_get_ayanamsa_ut(tjd_ut);
     double daya_tt = swe_get_ayanamsa(tjd_ut);
 
-    printf("\njd(UT) = %.14lf, ayanamsha = %.15lf, (using wrong function = %.15lf)\n",
+    printf("\njd(UT) = %.14lf, SS_CITRA ayanamsha = %.15lf, (using wrong function = %.15lf)\n",
            tjd_ut, daya, daya_tt);
 
 }
@@ -210,9 +220,10 @@ void date_conversion(void)
 
 int main(int argc, char* argv[])
 {
+    init_swisseph();
     double start = swe_julday(-100, 1, 1, 0, SE_GREG_CAL);  // 1 Jan 100 BCE
     double end = swe_julday(2100, 1, 1, 0, SE_GREG_CAL);    // 1 Jan 2100 CE
-
+    
     const int c_ayanamsa_list[] =
        { SE_SIDM_FAGAN_BRADLEY,
          SE_SIDM_LAHIRI,
@@ -243,9 +254,27 @@ int main(int argc, char* argv[])
          SE_SIDM_SS_CITRA,
          SE_SIDM_TRUE_CITRA,
          SE_SIDM_TRUE_REVATI,
-         SE_SIDM_TRUE_PUSHYA };
+         SE_SIDM_TRUE_PUSHYA,
+	 SE_SIDM_GALCENT_RGILBRAND,
+	 SE_SIDM_GALEQU_IAU1958,
+	 SE_SIDM_GALEQU_TRUE,
+	 SE_SIDM_GALEQU_MULA,
+	 SE_SIDM_GALALIGN_MARDYKS,
+	 SE_SIDM_TRUE_MULA,
+	 SE_SIDM_GALCENT_MULA_WILHELM,
+	 SE_SIDM_ARYABHATA_522,
+	 SE_SIDM_BABYL_BRITTON,
+	 SE_SIDM_TRUE_SHEORAN,
+	 SE_SIDM_GALCENT_COCHRANE,
+	 SE_SIDM_GALEQU_FIORENZA,
+	 SE_SIDM_VALENS_MOON,
+	 SE_SIDM_LAHIRI_1940,
+	 SE_SIDM_LAHIRI_VP285,
+	 SE_SIDM_KRISHNAMURTI_VP291,
+	 SE_SIDM_LAHIRI_ICRC
+       };
 
-    int num = (argc > 1) ? atoi(argv[1]) : 30;
+    int num = (argc > 1) ? atoi(argv[1]) : 47;
     if (num > SE_NSIDM_PREDEF)   {  printf("%d: Out of range!\n", num); exit(1); }
 
     int ayanamsa_list[num];
@@ -292,9 +321,16 @@ int main(int argc, char* argv[])
 
     // Fixed point of Gal cent at mid-mula
     double gal_cent_mula = bisection_search(gal_cent, start, end);
-    printf("JD = %.9lf, Gal center position: %.9lf\n",
-           gal_cent_mula,
+    printf("JD = %.9lf = %d/%02d/%02d, Gal center position: %.9lf\n",
+           gal_cent_mula, year, month, day,
            get_star_position("Gal. Center", gal_cent_mula));
 
+    // Fixed point of Aldebaran at mid-Rohini
+    double aldebaran = bisection_search(rohini, start, end);
+    swe_revjul(aldebaran, SE_GREG_CAL, &year, &month, &day, &hours);
+    printf("JD = %.9lf = %d/%02d/%02d, Aldebaran in Rohini: %.9lf\n",
+           aldebaran, year, month, day,
+           get_star_position("Aldebaran", aldebaran));
+    
     date_conversion();
 }
