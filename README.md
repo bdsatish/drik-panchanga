@@ -46,7 +46,7 @@ This app works with both Python 2 and Python 3. The only difference is that Pyth
 needs wxgtk-3.0 whereas Python 3 needs wxgtk-4.0. The codebase is compatible with both
 Python 2 and 3. See below for Python 3.
 
-### Python 2 ###
+### Python 2 (DEPRECATED) ###
 
 Python interface to Swiss ephemeris.
 
@@ -83,7 +83,7 @@ How does it look?
 
 ### Python 3 ###
 
-Tested with Python 3.6, wxgtk 4.0.1 (phoenix), wxglade 0.8.1.
+Tested with Python 3.12, wxgtk 4.2.2, wxglade 0.8.1.
 
 ```
 apt-get install python3-tz python3-wxgtk4.0 python3-wheel

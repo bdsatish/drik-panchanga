@@ -182,7 +182,7 @@ class Panchanga(wx.Frame):
         grid_sizer_1.Add(self.duraTxt, 0, wx.ALIGN_CENTER, 0)
         label_10 = wx.StaticText(self, wx.ID_ANY, "")
         grid_sizer_1.Add(label_10, 0, 0, 0)
-        label_9 = wx.StaticText(self, wx.ID_ANY, "https://bitbucket.org/satbyy/drik-panchanga/")
+        label_9 = wx.StaticText(self, wx.ID_ANY, "https://github.com/bdsatish/drik-panchanga")
         grid_sizer_1.Add(label_9, 0, wx.ALIGN_CENTER, 0)
         sizer_1.Add(grid_sizer_1, 1, 0, 0)
         self.SetSizer(sizer_1)
@@ -349,15 +349,10 @@ class Panchanga(wx.Frame):
 # Global functions
 # Load json file ignoring comments (// and /* ... */)
 def load_json_file(filename):
-    comment = re.compile('(^)?[^\S\n]*/(?:\*(.*?)\*/[^\S\n]*|/[^\n]*)($)?',
-                         re.DOTALL | re.MULTILINE)
-    with open(filename) as fp:
+    with open(filename, encoding='utf-8') as fp:
         content = ''.join(fp.readlines())
-        match = comment.search(content)  ## Look for comments
-        while match:
-            # single line comment
-            content = content[:match.start()] + content[match.end():]
-            match = comment.search(content)
+        content = re.sub(r'//.*', '', content)
+        content = re.sub(r'/\*.*?\*/', '', content, flags=re.DOTALL)
 
         return json.loads(content)
 
