@@ -213,8 +213,6 @@ class Panchanga(wx.Frame):
         positions = self.kundali(jd)
 
         # Update GUI one by one. First the easy ones
-        self.karanaTxt.SetLabel("%s" % self.karanas[str(kar[0])])
-        self.karanaTimeTxt.SetLabel(" -- ")
         self.varaTxt.SetLabel("%s" % self.vaaras[str(vara)])
         self.sunriseTxt.SetLabel(format_time(srise))
         self.sunsetTxt.SetLabel(format_time(sset))
@@ -234,6 +232,10 @@ class Panchanga(wx.Frame):
         name, hms = format_name_hms(yog, self.yogas)
         self.yogaTxt.SetLabel(name)
         self.yogaTimeTxt.SetLabel(hms)
+
+        name, hms = format_name_hms(kar, self.karanas)
+        self.karanaTxt.SetLabel(name)
+        self.karanaTimeTxt.SetLabel(hms)
 
         name, hms = format_name_hms(ti, self.tithis)
         self.tithiTxt.SetLabel(name)
