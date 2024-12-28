@@ -155,7 +155,7 @@ def inverse_lagrange(x, y, ya):
   return total
 
 # Julian Day number as on (year, month, day) at 00:00 UTC
-gregorian_to_jd = lambda date: swe.julday(date.year, date.month, date.day, 0.0)
+gregorian_to_jd = lambda date, hours = 0.0: swe.julday(date.year, date.month, date.day, hours)
 jd_to_gregorian = lambda jd: swe.revjul(jd, swe.GREG_CAL)   # returns (y, m, d, h, min, s)
 
 def local_time_to_jdut1(year, month, day, hour = 0, minutes = 0, seconds = 0, timezone = 0.0):

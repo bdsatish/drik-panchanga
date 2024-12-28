@@ -256,11 +256,22 @@ coordinates or timezone. This is probably because the program doesn't compute su
 timings at all! The planetary model fails for dates outside the range 1800 CE to 2100 CE.
 
 
-License
+Licence
 -------
 
-GNU Affero GPL version 3 (or later).
+Copyright © Satish BD. Licensed under the GNU Affero GPL version 3 (or later).
 
+
+Word of caution
+---------------
+
+The so-called "Vedic astrology" has no basis in the Vedas, Upanishads, Bhagavad
+Gita, Mahabharata or Ramayana. It is a [fringe science][1] of Hinduism. The
+original [Vedanga Jyotisha](https://archive.org/details/VedangaJyotisa) (~1200
+BCE) and [Surya Siddhanta](https://archive.org/details/in.ernet.dli.2015.69065)
+(~400 CE) are purely astronomical.
+
+[1]: https://en.wikipedia.org/wiki/Fringe_science
 
 #### TODO ####
 
