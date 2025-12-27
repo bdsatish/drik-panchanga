@@ -250,7 +250,14 @@ def compute_panchanga(
 
 @app.get("/")
 def root():
-    return {"message": "Drik Panchanga API. Use /panchanga with query params."}
+    return {
+        "message": "Drik Panchanga API",
+        "endpoints": {
+            "/panchanga": "Daily panchanga for a given date/place",
+            "/next-maasikam": "Next maasikam date(s) based on death tithi at sunrise",
+            "/next-samvatsareekam": "Next samvatsareekam date based on death tithi at sunrise",
+        },
+    }
 
 
 @app.get("/panchanga")
