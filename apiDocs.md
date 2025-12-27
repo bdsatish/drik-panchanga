@@ -93,6 +93,12 @@ Description
 
 Computes the next Maasikam date(s) after a given start date, based on death tithi at sunrise.
 
+**from_date behavior**
+The optional parameters `from_year`, `from_month`, and `from_day` together form a **from_date**.
+- If provided, the search for the next Maasikam starts **after this date**.
+- If omitted, the search starts from the **death date**.
+This is useful when you want the next Maasikam after an already observed one.
+
 Query Parameters
 
 Param	Type	Required	Notes
@@ -102,9 +108,9 @@ death_day	int	✅
 latitude	float	✅	Location where calculation applies
 longitude	float	✅	
 tz_offset_hours	float	✅	e.g. 5.5
-from_year	int	❌	If omitted, defaults to death date
-from_month	int	❌	
-from_day	int	❌	
+from_year	int	❌	Start search after this date (part of from_date)
+from_month	int	❌	Start search after this date (part of from_date)
+from_day	int	❌	Start search after this date (part of from_date)
 count	int	❌	Default 1, range 1..24
 
 Example (single next maasikam)
@@ -144,6 +150,12 @@ Description
 
 Computes the next Samvatsareekam date based on death tithi at sunrise, while enforcing a minimum gap (default 300 days) to avoid returning a monthly match.
 
+**from_date behavior**
+The optional parameters `from_year`, `from_month`, and `from_day` together form a **from_date**.
+- If provided, the API searches for the next Samvatsareekam **after this date**.
+- If omitted, the search starts from the **death date**.
+This allows computing future Samvatsareekams year after year without changing the stored death date.
+
 Query Parameters
 
 Param	Type	Required	Notes
@@ -153,9 +165,9 @@ death_day	int	✅
 latitude	float	✅	Location where calculation applies
 longitude	float	✅	
 tz_offset_hours	float	✅	e.g. 5.5
-from_year	int	❌	Default: death date
-from_month	int	❌	
-from_day	int	❌	
+from_year	int	❌	Start search after this date (part of from_date)
+from_month	int	❌	Start search after this date (part of from_date)
+from_day	int	❌	Start search after this date (part of from_date)
 min_days_after	int	❌	Default 300 (range 1..370)
 
 Example
@@ -165,6 +177,10 @@ curl "http://13.234.17.15:8000/next-samvatsareekam?death_year=2025&death_month=1
 Example (stricter gap)
 
 curl "http://13.234.17.15:8000/next-samvatsareekam?death_year=2025&death_month=12&death_day=25&latitude=12.9716&longitude=77.5946&tz_offset_hours=5.5&min_days_after=330"
+
+Example (compute next Samvatsareekam after last observed one)
+
+curl "http://13.234.17.15:8000/next-samvatsareekam?death_year=2020&death_month=6&death_day=12&from_year=2025&from_month=8&from_day=1&latitude=17.385&longitude=78.4867&tz_offset_hours=5.5"
 
 Response (high level)
 
