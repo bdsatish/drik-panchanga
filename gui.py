@@ -4,8 +4,8 @@
 
 # gui.py -- Displays a wxPython GUI for panchangam calculations
 #
-# Copyright (C) 2013 to 2023, Satish Bysany
-# Downloaded from https://bitbucket.org/satbyy/drik-panchanga/
+# Copyright (C) 2013, Satish BD
+# Downloaded from https://github.com/bdsatish/drik-panchanga
 #
 # This file is part of the "drik-panchanga" Python library
 # for computing Hindu luni-solar calendar based on the Swiss ephemeris

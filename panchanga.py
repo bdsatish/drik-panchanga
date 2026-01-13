@@ -3,8 +3,8 @@
 
 # panchanga.py -- routines for computing tithi, vara, etc.
 #
-# Copyright (C) 2013 Satish Bysany
-# Downloaded from https://bitbucket.org/satbyy/drik-panchanga
+# Copyright (C) 2013 Satish BD
+# Downloaded from https://github.com/bdsatish/drik-panchanga
 #
 # This file is part of the "drik-panchanga" Python library
 # for computing Hindu luni-solar calendar based on the Swiss ephemeris
@@ -49,6 +49,7 @@ planet_list = [swe.SUN, swe.MOON, swe.MARS, swe.MERCURY, swe.JUPITER,
 
 revati_359_50 = lambda: swe.set_sid_mode(swe.SIDM_USER, 1926892.343164331, 0)
 galc_cent_mid_mula = lambda: swe.set_sid_mode(swe.SIDM_USER, 1922011.128853056, 0)
+rohini_paksa_ayanamsa = lambda: swe.set_sid_mode(swe.SIDM_USER, 1845433.3947758612, 0)
 
 # Possible ayanamas
 # swe.SIDM_ALDEBARAN_15TAU     swe.SIDM_BABYL_HUBER         swe.SIDM_DJWHAL_KHUL         swe.SIDM_J2000               swe.SIDM_SASSANIAN             swe.SIDM_TRUE_CITRA
