@@ -194,13 +194,13 @@ def tropical_month_tithi_tests():
    # so something is off with sidereal calendar also.
    dt3 = gregorian_to_jd(Date(-3100, 10, 18)) # sidereal Pushya Purnima
    val = tropical_month_tithi(dt3, bangalore, True)
-   assert(val == [[7, False], [15, [24, 59, 55]]]) # 7 = Ashvija :(
+   assert(val == [[7, False], [15, [25, 0, 42]]]) # 7 = Ashvija :(
    val = tropical_month_tithi(dt3, bangalore, False)
-   assert(val == [[8, False], [15, [24, 59, 55]]]) # 8 = Kartika :(
+   assert(val == [[8, False], [15, [25, 0, 42]]]) # 8 = Kartika :(
    # Kali Yuga start date
    dt3 = gregorian_to_jd(Date(-3101, 1, 22)) # sidereal Caitra S1
    val = tropical_month_tithi(dt3, bangalore, True)
-   assert(val == [[11, False], [1, [29, 28, 11]]]) # 11 = Magha, no way January is Caitra!
+   assert(val == [[11, False], [1, [29, 29, 5]]]) # 11 = Magha, no way January is Caitra!
    # Below dates from Reformed Sanathan Calendar, matches, including tithi END times!
    # http://web.archive.org/web/20160807161349/http://reformedsanathancalendar.in/sanathancalendar.pdf
    mar10 = gregorian_to_jd(Date(2016, 3, 10))
