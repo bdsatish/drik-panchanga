@@ -33,8 +33,18 @@ import swisseph as swe
 
 Date = struct('Date', ['year', 'month', 'day'])
 Place = struct('Place', ['latitude', 'longitude', 'timezone'])
+coordinate_flag = swe.FLG_SIDEREAL
 
 sidereal_year = 365.256360417   # From WolframAlpha
+
+def set_coordinate_mode(mode = 'sidereal'):
+  if mode.lower() == 'sidereal':
+    coordinate_flag = swe.FLG_SIDEREAL
+  elif mode.lower() == 'tropical':
+    coordinate_flag = swe.FLG_TROPICAL
+  else:
+    coordinate_flag = swe.FLG_SIDEREAL
+    print('Unknown coordinate mode. Assuming sidereal.')
 
 # Hindu sunrise/sunset is calculated w.r.t middle of the sun's disk
 # They are geometric, i.e. "true sunrise/set", so refraction is not considered
@@ -166,9 +176,9 @@ def local_time_to_jdut1(year, month, day, hour = 0, minutes = 0, seconds = 0, ti
   jd_et, jd_ut1 = swe.utc_to_jd(y, m, d, h, mnt, 0, cal = swe.GREG_CAL)
   return jd_ut1
 
-def nakshatra_pada(longitude, unequal = 'no'):
+def nakshatra_pada(longitude, system = 'classical'):
   """Gives nakshatra (1..27) and paada (1..4) in which given longitude lies"""
-  if unequal == 'garga': return nakshatra_pada_garga_system(longitude)
+  if system == 'garga': return nakshatra_pada_garga_system(longitude)
 
   # Traditional - equal division of ecliptic into 27 parts -
   # 27 nakshatras span 360°
@@ -207,16 +217,15 @@ def nakshatra_pada_garga_system(longitude):
   # nak is 1..27 and pada is 1..4
   return [nak, pada]
 
-def sidereal_longitude(jd, planet, tropical = False):
-  """Computes nirayana (sidereal) longitude of given planet on jd"""
+def planet_longitude(jd, planet):
+  """Computes nirayana (sidereal) or sayana (tropical) longitude of given planet on jd"""
   set_ayanamsa_mode()
-  is_tropical = swe.FLG_TROPICAL if tropical else swe.FLG_SIDEREAL
-  longi = swe.calc_ut(jd, planet, flags = swe.FLG_SWIEPH | is_tropical)
+  longi = swe.calc_ut(jd, planet, flags = swe.FLG_SWIEPH | coordinate_flag)
   reset_ayanamsa_mode()
   return norm360(longi[0][0]) # degrees
 
-solar_longitude = lambda jd, tropical = False: sidereal_longitude(jd, swe.SUN, tropical)
-lunar_longitude = lambda jd, tropical = False: sidereal_longitude(jd, swe.MOON, tropical)
+solar_longitude = lambda jd: planet_longitude(jd, swe.SUN)
+lunar_longitude = lambda jd: planet_longitude(jd, swe.MOON)
 
 def sunrise(jd, place):
   """Sunrise when centre of disc is at horizon for given date and place"""
@@ -620,9 +629,9 @@ def planetary_positions(jd, place):
   positions = []
   for planet in planet_list:
     if planet != swe.KETU:
-      nirayana_long = sidereal_longitude(jd_ut, planet)
+      nirayana_long = planet_longitude(jd_ut, planet)
     else: # Ketu
-      nirayana_long = ketu(sidereal_longitude(jd_ut, swe.RAHU))
+      nirayana_long = ketu(planet_longitude(jd_ut, swe.RAHU))
 
     # 12 zodiac signs span 360°, so each one takes 30°
     # 0 = Mesha, 1 = Vrishabha, ..., 11 = Meena
@@ -667,9 +676,9 @@ def navamsa(jd, place):
   positions = []
   for planet in planet_list:
     if planet != swe.KETU:
-      nirayana_long = sidereal_longitude(jd_utc, planet)
+      nirayana_long = planet_longitude(jd_utc, planet)
     else: # Ketu
-      nirayana_long = ketu(sidereal_longitude(jd_utc, swe.RAHU))
+      nirayana_long = ketu(planet_longitude(jd_utc, swe.RAHU))
 
     positions.append([planet, navamsa_from_long(nirayana_long)])
 
