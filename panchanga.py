@@ -31,13 +31,18 @@ from math import ceil
 from collections import namedtuple as struct
 import swisseph as swe
 
+# ------- Global options ----------
+coordinate_flag = swe.FLG_SIDEREAL
+nakshatra_system = 'equal'
+# ---------
+
 Date = struct('Date', ['year', 'month', 'day'])
 Place = struct('Place', ['latitude', 'longitude', 'timezone'])
-coordinate_flag = swe.FLG_SIDEREAL
 
 sidereal_year = 365.256360417   # From WolframAlpha
 
 def set_coordinate_mode(mode = 'sidereal'):
+  global coordinate_flag
   if mode.lower() == 'sidereal':
     coordinate_flag = swe.FLG_SIDEREAL
   elif mode.lower() == 'tropical':
@@ -45,6 +50,16 @@ def set_coordinate_mode(mode = 'sidereal'):
   else:
     coordinate_flag = swe.FLG_SIDEREAL
     print('Unknown coordinate mode. Assuming sidereal.')
+
+def set_nakshatra_system(system = 'classical'):
+  global nakshatra_system
+  if system.lower() in ['classical', 'equal']:
+    nakshatra_system = 'equal'
+  elif system.lower() in ['garga', 'unequal']:
+    nakshatra_system = 'unequal'
+  else:
+    nakshatra_system = 'equal'
+    print('Unknown nakshatra system mode. Assuming classical equal spacing.')
 
 # Hindu sunrise/sunset is calculated w.r.t middle of the sun's disk
 # They are geometric, i.e. "true sunrise/set", so refraction is not considered
@@ -56,6 +71,14 @@ swe.KETU = swe.PLUTO  # I've mapped Pluto to Ketu
 planet_list = [swe.SUN, swe.MOON, swe.MARS, swe.MERCURY, swe.JUPITER,
                swe.VENUS, swe.SATURN, swe.MEAN_NODE, # Rahu = MEAN_NODE
                swe.KETU, swe.URANUS, swe.NEPTUNE ]
+
+# Reference: https://archive.org/details/siddhantaandindiancalenderrobertsewellsankarabalkrishnadikshit1896_200_C/page/21/mode/1up
+# Longitudes of ending points of nakshatras according to Garga's unequal spacing
+garga_end_points = [ degs + mins / 60 for degs, mins in [
+  (0, 0), (13, 20), (20, 0), (33, 20), (53, 20), (66, 40), (73, 20), (93, 20),
+  (106, 40), (113, 20), (126, 40), (140, 0), (160, 0), (173, 20), (186, 40),
+  (193, 20), (213, 20), (226, 40), (233, 20), (246, 40), (260, 0), (280, 0),
+  (293, 20), (306, 40), (312, 20), (326, 40), (346, 40), (360, 0)]]
 
 revati_359_50 = lambda: swe.set_sid_mode(swe.SIDM_USER, 1926892.343164331, 0)
 galc_cent_mid_mula = lambda: swe.set_sid_mode(swe.SIDM_USER, 1922011.128853056, 0)
@@ -176,10 +199,21 @@ def local_time_to_jdut1(year, month, day, hour = 0, minutes = 0, seconds = 0, ti
   jd_et, jd_ut1 = swe.utc_to_jd(y, m, d, h, mnt, 0, cal = swe.GREG_CAL)
   return jd_ut1
 
-def nakshatra_pada(longitude, system = 'classical'):
-  """Gives nakshatra (1..27) and paada (1..4) in which given longitude lies"""
-  if system == 'garga': return nakshatra_pada_garga_system(longitude)
+def nakshatra_end_point(nakshatra_number):
+  """Given nakshatra_number [1..27] return the longitude at which it ends"""
+  if nakshatra_system == 'unequal':
+    return garga_end_points[nakshatra_number]
+  else:
+    return nakshatra_number * 360 / 27
 
+def nakshatra_pada(longitude):
+  """Gives nakshatra (1..27) and paada (1..4) in which given longitude lies"""
+  if nakshatra_system == 'unequal':
+    return nakshatra_pada_unequal_system(longitude)
+  else:
+    return nakshatra_pada_equal_spacing(longitude)
+
+def nakshatra_pada_equal_spacing(longitude):
   # Traditional - equal division of ecliptic into 27 parts -
   # 27 nakshatras span 360°
   one_star = (360 / 27)  # = 13°20'
@@ -192,18 +226,12 @@ def nakshatra_pada(longitude, system = 'classical'):
   return [1 + quotient, 1 + pada]
 
 # This is more closer to observed phenomena than equal division
-def nakshatra_pada_garga_system(longitude):
+def nakshatra_pada_unequal_system(longitude):
   """Gives nakshatra (1..27) and paada (1..4) which given longitude lies, according to Garga system"""
   assert(longitude > 0)
   assert(longitude < 360)
-  # Reference: https://archive.org/details/siddhantaandindiancalenderrobertsewellsankarabalkrishnadikshit1896_200_C/page/21/mode/1up
-  # Longitudes of ending points of nakshatras
-  end_points = [from_dms(degs, mins) for degs, mins in [
-                (0, 0), (13, 20), (20, 0), (33, 20), (53, 20), (66, 40), (73, 20), (93, 20),
-                (106, 40), (113, 20), (126, 40), (140, 0), (160, 0), (173, 20), (186, 40),
-                (193, 20), (213, 20), (226, 40), (233, 20), (246, 40), (260, 0), (280, 0),
-                (293, 20), (306, 40), (312, 20), (326, 40), (346, 40), (360, 0)]]
 
+  end_points = garga_end_points
   # Linear search
   for nak in range(len(end_points)):
     if longitude < end_points[nak]: break
@@ -314,21 +342,21 @@ def nakshatra(jd, place):
 
   # 2. Today's nakshatra is when offset = 0
   # There are 27 Nakshatras spanning 360 degrees
-  nak = ceil(longitudes[0] * 27 / 360)
+  nak = nakshatra_pada(longitudes[0])[0]  # ignore pada
 
   # 3. Find end time by 5-point inverse Lagrange interpolation
   y = unwrap_angles(longitudes)
   x = offsets
-  approx_end = inverse_lagrange(x, y, nak * 360 / 27)
+  approx_end = inverse_lagrange(x, y, nakshatra_end_point(nak))
   ends = (rise - jd + approx_end) * 24 + tz
   answer = [int(nak), to_dms(ends)]
 
   # 4. Check for skipped nakshatra
-  nak_tmrw = ceil(longitudes[-1] * 27 / 360)
+  nak_tmrw = nakshatra_pada(longitudes[-1])[0]  # ignore pada
   isSkipped = (nak_tmrw - nak) % 27 > 1
   if isSkipped:
     leap_nak = nak + 1
-    approx_end = inverse_lagrange(offsets, longitudes, leap_nak * 360 / 27)
+    approx_end = inverse_lagrange(offsets, longitudes, nakshatra_end_point(leap_nak))
     ends = (rise - jd + approx_end) * 24 + tz
     leap_nak = 1 if nak == 27 else leap_nak
     answer += [int(leap_nak), to_dms(ends)]
@@ -410,7 +438,7 @@ def karana(jd, place):
   approx_end = inverse_lagrange(x, y, degrees_left)
   ends = (rise + approx_end - jd) * 24 + tz
   answer = [int(today), to_dms(ends)]
-  
+
   return answer
 
 def vaara(jd):
@@ -629,15 +657,15 @@ def planetary_positions(jd, place):
   positions = []
   for planet in planet_list:
     if planet != swe.KETU:
-      nirayana_long = planet_longitude(jd_ut, planet)
+      planet_long = planet_longitude(jd_ut, planet)
     else: # Ketu
-      nirayana_long = ketu(planet_longitude(jd_ut, swe.RAHU))
+      planet_long = ketu(planet_longitude(jd_ut, swe.RAHU))
 
     # 12 zodiac signs span 360°, so each one takes 30°
     # 0 = Mesha, 1 = Vrishabha, ..., 11 = Meena
-    constellation = int(nirayana_long / 30)
-    coordinates = to_dms(nirayana_long % 30)
-    positions.append([planet, constellation, coordinates, nakshatra_pada(nirayana_long)])
+    constellation = int(planet_long / 30)
+    coordinates = to_dms(planet_long % 30)
+    positions.append([planet, constellation, coordinates, nakshatra_pada(planet_long)])
 
   return positions
 
@@ -648,14 +676,14 @@ def ascendant(jd, place):
   set_ayanamsa_mode() # needed for swe.houses_ex()
 
   # returns two arrays, cusps and ascmc, where ascmc[0] = Ascendant
-  nirayana_lagna = swe.houses_ex(jd_utc, lat, lon, flags = swe.FLG_SIDEREAL)[1][0]
+  lagna = swe.houses_ex(jd_utc, lat, lon, flags = swe.FLG_SIDEREAL)[1][0]
   # 12 zodiac signs span 360°, so each one takes 30°
   # 0 = Mesha, 1 = Vrishabha, ..., 11 = Meena
-  constellation = int(nirayana_lagna / 30)
-  coordinates = to_dms(nirayana_lagna % 30)
+  constellation = int(lagna / 30)
+  coordinates = to_dms(lagna % 30)
 
   reset_ayanamsa_mode()
-  return [constellation, coordinates, nakshatra_pada(nirayana_lagna)]
+  return [constellation, coordinates, nakshatra_pada(lagna)]
 
 # http://www.oocities.org/talk2astrologer/LearnAstrology/Details/Navamsa.html
 # Useful for making D9 divisional chart
@@ -693,7 +721,7 @@ def all_tests():
   print(sunset(date2, bangalore)[1])   # Expected: 18:10:25
   assert(vaara(date2) == 5)
   print(sunrise(date4, shillong)[1])   # On this day, Nakshatra and Yoga are skipped!
-  assert(karana(date2, helsinki) == [14])   # Expected: 14, Vanija
+  assert(karana(date2, helsinki) == [14, [12, 54, 20]])   # Expected: 14, Vanija, ends 12:54:20
   return
 
 def tithi_tests():
@@ -721,16 +749,22 @@ def nakshatra_tests():
   print(nakshatra(date3, bangalore))  # Expecred: 24 (Shatabhisha) ends at 26:32:43
   print(nakshatra(date4, shillong))   # Expected: [3, [5,1,14]] then [4,[26,31,13]]
 
-  assert(nakshatra_pada(from_dms(5, 30), 'garga') == [1, 2]) # Ashwini
-  assert(nakshatra_pada(from_dms(73, 19), 'garga') == [6, 4]) # Ardra
-  assert(nakshatra_pada(from_dms(93, 20), 'garga') == [8, 1]) # Pushya
-  assert(nakshatra_pada(from_dms(274, 0), 'garga') == [21, 3]) # Uttrashadha
-  assert(nakshatra_pada(from_dms(347, 0), 'garga') == [27, 1]) # Revati 1
-  assert(nakshatra_pada(from_dms(359, 59), 'garga') == [27, 4]) # Revati 4
+  set_nakshatra_system('unequal')
+  assert(nakshatra_pada(from_dms(5, 30)) == [1, 2]) # Ashwini
+  assert(nakshatra_pada(from_dms(73, 19)) == [6, 4]) # Ardra
+  assert(nakshatra_pada(from_dms(93, 20)) == [8, 1]) # Pushya
+  assert(nakshatra_pada(from_dms(274, 0)) == [21, 3]) # Uttrashadha
+  assert(nakshatra_pada(from_dms(347, 0)) == [27, 1]) # Revati 1
+  assert(nakshatra_pada(from_dms(359, 59)) == [27, 4]) # Revati 4
 
   # Contrast b/w equal and unequal systems
-  assert(nakshatra_pada(from_dms(23, 0), 'garga') == [3, 1]) # Krittika 1
+  set_nakshatra_system('unequal')
+  assert(nakshatra_pada(from_dms(23, 0)) == [3, 1]) # Krittika 1
+  set_nakshatra_system('equal')
   assert(nakshatra_pada(from_dms(23, 0)) == [2, 3]) # Bharani 3
+
+  set_nakshatra_system() # reset to default value
+
   return
 
 def yoga_tests():
