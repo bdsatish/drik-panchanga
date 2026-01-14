@@ -30,7 +30,7 @@ from __future__ import division
 from math import ceil
 import swisseph as swe
 from collections import OrderedDict as Dict
-from panchanga import sidereal_longitude, sidereal_year, get_planet_name
+from panchanga import planet_longitude, sidereal_year, get_planet_name
 
 # handy equivalents
 swe.SURYA = swe.SUN
@@ -65,7 +65,7 @@ def next_adhipati(lord):
 
 def nakshatra_position(jdut1):
     """Get the Nakshatra index and degrees traversed at a given JD(UT1) """
-    moon = sidereal_longitude(jdut1, swe.MOON)
+    moon = planet_longitude(jdut1, swe.MOON)
     one_star = (360 / 27.)        # 27 nakshatras span 360°
     nak = int(moon / one_star)    # 0..26
     rem = (moon - nak * one_star) # degrees traversed in given nakshatra

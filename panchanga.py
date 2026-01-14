@@ -79,7 +79,7 @@ def set_chosen_ayanamsa(ayanamsa = 'lahiri'):
   chosen_ayanamsa = ayanamsa.lower()
 
 def set_ayanamsa_mode():
-  ayanamsa = chosen_ayanamsa
+  ayanamsa = chosen_ayanamsa.lower()
   # Fixed stars...
   if ayanamsa == 'citra':
     swe.set_sid_mode(swe.SIDM_TRUE_CITRA)
