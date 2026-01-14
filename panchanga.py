@@ -166,8 +166,11 @@ def local_time_to_jdut1(year, month, day, hour = 0, minutes = 0, seconds = 0, ti
   jd_et, jd_ut1 = swe.utc_to_jd(y, m, d, h, mnt, 0, cal = swe.GREG_CAL)
   return jd_ut1
 
-def nakshatra_pada(longitude):
+def nakshatra_pada(longitude, unequal = 'no'):
   """Gives nakshatra (1..27) and paada (1..4) in which given longitude lies"""
+  if unequal == 'garga': return nakshatra_pada_garga_system(longitude)
+
+  # Traditional - equal division of ecliptic into 27 parts -
   # 27 nakshatras span 360°
   one_star = (360 / 27)  # = 13°20'
   # Each nakshatra has 4 padas, so 27 x 4 = 108 padas in 360°
@@ -177,6 +180,32 @@ def nakshatra_pada(longitude):
   pada = int(reminder / one_pada)
   # convert 0..26 to 1..27 and 0..3 to 1..4
   return [1 + quotient, 1 + pada]
+
+# This is more closer to observed phenomena than equal division
+def nakshatra_pada_garga_system(longitude):
+  """Gives nakshatra (1..27) and paada (1..4) which given longitude lies, according to Garga system"""
+  assert(longitude > 0)
+  assert(longitude < 360)
+  # Reference: https://archive.org/details/siddhantaandindiancalenderrobertsewellsankarabalkrishnadikshit1896_200_C/page/21/mode/1up
+  # Longitudes of ending points of nakshatras
+  end_points = [from_dms(degs, mins) for degs, mins in [
+                (0, 0), (13, 20), (20, 0), (33, 20), (53, 20), (66, 40), (73, 20), (93, 20),
+                (106, 40), (113, 20), (126, 40), (140, 0), (160, 0), (173, 20), (186, 40),
+                (193, 20), (213, 20), (226, 40), (233, 20), (246, 40), (260, 0), (280, 0),
+                (293, 20), (306, 40), (312, 20), (326, 40), (346, 40), (360, 0)]]
+
+  # Linear search
+  for nak in range(len(end_points)):
+    if longitude < end_points[nak]: break
+
+  # there are 4 padas in between two nakshatras
+  one_pada = (end_points[nak] - end_points[nak - 1]) / 4
+
+  for pada in [1, 2, 3, 4]:
+    if longitude < end_points[nak - 1] + pada * one_pada: break
+
+  # nak is 1..27 and pada is 1..4
+  return [nak, pada]
 
 def sidereal_longitude(jd, planet, tropical = False):
   """Computes nirayana (sidereal) longitude of given planet on jd"""
@@ -682,6 +711,17 @@ def nakshatra_tests():
   print(nakshatra(date2, bangalore))  # Expected: 27 (Revati), ends at 19:23:09
   print(nakshatra(date3, bangalore))  # Expecred: 24 (Shatabhisha) ends at 26:32:43
   print(nakshatra(date4, shillong))   # Expected: [3, [5,1,14]] then [4,[26,31,13]]
+
+  assert(nakshatra_pada(from_dms(5, 30), 'garga') == [1, 2]) # Ashwini
+  assert(nakshatra_pada(from_dms(73, 19), 'garga') == [6, 4]) # Ardra
+  assert(nakshatra_pada(from_dms(93, 20), 'garga') == [8, 1]) # Pushya
+  assert(nakshatra_pada(from_dms(274, 0), 'garga') == [21, 3]) # Uttrashadha
+  assert(nakshatra_pada(from_dms(347, 0), 'garga') == [27, 1]) # Revati 1
+  assert(nakshatra_pada(from_dms(359, 59), 'garga') == [27, 4]) # Revati 4
+
+  # Contrast b/w equal and unequal systems
+  assert(nakshatra_pada(from_dms(23, 0), 'garga') == [3, 1]) # Krittika 1
+  assert(nakshatra_pada(from_dms(23, 0)) == [2, 3]) # Bharani 3
   return
 
 def yoga_tests():
