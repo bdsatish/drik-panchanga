@@ -32,14 +32,27 @@ from collections import namedtuple as struct
 import swisseph as swe
 
 # ------- Global options ----------
+# Call the corresponding setter functions to modify these
 coordinate_flag = swe.FLG_SIDEREAL
 nakshatra_system = 'equal'
+chosen_ayanamsa = 'Lahiri'
 # ---------
 
 Date = struct('Date', ['year', 'month', 'day'])
 Place = struct('Place', ['latitude', 'longitude', 'timezone'])
 
 sidereal_year = 365.256360417   # From WolframAlpha
+
+# Hindu sunrise/sunset is calculated w.r.t middle of the sun's disk
+# They are geometric, i.e. "true sunrise/set", so refraction is not considered
+_rise_flags = swe.BIT_DISC_CENTER + swe.BIT_NO_REFRACTION
+
+# namah suryaya chandraya mangalaya ... rahuve ketuve namah
+swe.RAHU = swe.MEAN_NODE # Rahu = either MEAN_NODE or swe.TRUE_NODE
+swe.KETU = swe.PLUTO  # I've mapped Pluto to Ketu
+planet_list = [swe.SUN, swe.MOON, swe.MARS, swe.MERCURY, swe.JUPITER,
+               swe.VENUS, swe.SATURN, swe.MEAN_NODE, # Rahu = MEAN_NODE
+               swe.KETU, swe.URANUS, swe.NEPTUNE ]
 
 def set_coordinate_mode(mode = 'sidereal'):
   global coordinate_flag
@@ -61,16 +74,43 @@ def set_nakshatra_system(system = 'classical'):
     nakshatra_system = 'equal'
     print('Unknown nakshatra system mode. Assuming classical equal spacing.')
 
-# Hindu sunrise/sunset is calculated w.r.t middle of the sun's disk
-# They are geometric, i.e. "true sunrise/set", so refraction is not considered
-_rise_flags = swe.BIT_DISC_CENTER + swe.BIT_NO_REFRACTION
+def set_chosen_ayanamsa(ayanamsa = 'lahiri'):
+  global chosen_ayanamsa
+  chosen_ayanamsa = ayanamsa.lower()
 
-# namah suryaya chandraya mangalaya ... rahuve ketuve namah
-swe.RAHU = swe.MEAN_NODE # Rahu = either MEAN_NODE or swe.TRUE_NODE
-swe.KETU = swe.PLUTO  # I've mapped Pluto to Ketu
-planet_list = [swe.SUN, swe.MOON, swe.MARS, swe.MERCURY, swe.JUPITER,
-               swe.VENUS, swe.SATURN, swe.MEAN_NODE, # Rahu = MEAN_NODE
-               swe.KETU, swe.URANUS, swe.NEPTUNE ]
+def set_ayanamsa_mode():
+  ayanamsa = chosen_ayanamsa
+  # Fixed stars...
+  if ayanamsa == 'citra':
+    swe.set_sid_mode(swe.SIDM_TRUE_CITRA)
+  elif ayanamsa == 'revati':
+    swe.set_sid_mode(swe.SIDM_TRUE_REVATI)
+  elif ayanamsa == 'pushya':
+    swe.set_sid_mode(swe.SIDM_TRUE_PUSHYA)
+  elif ayanamsa == 'mula':
+    swe.set_sid_mode(swe.SIDM_TRUE_MULA)
+  elif ayanamsa == 'rohini':
+    swe.set_sid_mode(swe.SIDM_USER, 1845436.103611175, 0) # 1845433.3947758612?
+  # Persons who created it...
+  elif ayanamsa == 'lahiri':
+    swe.set_sid_mode(swe.SIDM_LAHIRI)
+  elif ayanamsa == 'krishnamurti':
+    swe.set_sid_mode(swe.SIDM_KRISHNAMURTI)
+  elif ayanamsa == 'raman':
+    swe.set_sid_mode(swe.SIDM_RAMAN)
+  elif ayanamsa == 'usha_shashi' or ayanamsa == 'ushashashi':
+    swe.set_sid_mode(swe.SIDM_USHASHASHI)
+  # Research interests...
+  elif ayanamsa == 'suryasiddhanta':
+    swe.set_sid_mode(swe.SIDM_SURYASIDDHANTA)
+  elif ayanamsa == 'revati_359_50':
+    swe.set_sid_mode(swe.SIDM_USER, 1926892.343164331, 0)
+  elif ayanamsa == 'galc_cent_mid_mula':
+    swe.set_sid_mode(swe.SIDM_USER, 1922011.128853056, 0)
+  else: # 'default'
+    swe.set_sid_mode(swe.SIDM_FAGAN_BRADLEY)
+
+reset_ayanamsa_mode = lambda: swe.set_sid_mode(swe.SIDM_FAGAN_BRADLEY)
 
 # Reference: https://archive.org/details/siddhantaandindiancalenderrobertsewellsankarabalkrishnadikshit1896_200_C/page/21/mode/1up
 # Longitudes of ending points of nakshatras according to Garga's unequal spacing
@@ -79,19 +119,6 @@ garga_end_points = [ degs + mins / 60 for degs, mins in [
   (106, 40), (113, 20), (126, 40), (140, 0), (160, 0), (173, 20), (186, 40),
   (193, 20), (213, 20), (226, 40), (233, 20), (246, 40), (260, 0), (280, 0),
   (293, 20), (306, 40), (312, 20), (326, 40), (346, 40), (360, 0)]]
-
-revati_359_50 = lambda: swe.set_sid_mode(swe.SIDM_USER, 1926892.343164331, 0)
-galc_cent_mid_mula = lambda: swe.set_sid_mode(swe.SIDM_USER, 1922011.128853056, 0)
-rohini_paksa_ayanamsa = lambda: swe.set_sid_mode(swe.SIDM_USER, 1845433.3947758612, 0)
-
-# Possible ayanamas
-# swe.SIDM_ALDEBARAN_15TAU     swe.SIDM_BABYL_HUBER         swe.SIDM_DJWHAL_KHUL         swe.SIDM_J2000               swe.SIDM_SASSANIAN             swe.SIDM_TRUE_CITRA
-# swe.SIDM_ARYABHATA           swe.SIDM_BABYL_KUGLER1       swe.SIDM_FAGAN_BRADLEY       swe.SIDM_JN_BHASIN           swe.SIDM_SS_CITRA              swe.SIDM_TRUE_REVATI
-# swe.SIDM_ARYABHATA_MSUN      swe.SIDM_BABYL_KUGLER2       swe.SIDM_GALCENT_0SAG        swe.SIDM_KRISHNAMURTI        swe.SIDM_SS_REVATI             swe.SIDM_USER
-# swe.SIDM_B1950               swe.SIDM_BABYL_KUGLER3       swe.SIDM_HIPPARCHOS          swe.SIDM_LAHIRI              swe.SIDM_SURYASIDDHANTA        swe.SIDM_USHASHASHI
-# swe.SIDM_BABYL_ETPSC         swe.SIDM_DELUCE              swe.SIDM_J1900               swe.SIDM_RAMAN               swe.SIDM_SURYASIDDHANTA_MSUN   swe.SIDM_YUKTESHWAR
-set_ayanamsa_mode = lambda: swe.set_sid_mode(swe.SIDM_LAHIRI)
-reset_ayanamsa_mode = lambda: swe.set_sid_mode(swe.SIDM_FAGAN_BRADLEY)
 
 # Temporary function
 def get_planet_name(planet):
@@ -147,7 +174,7 @@ def function(point):
     # Place Revati at 0°0'0"
     #fval = norm180(swe.fixstar_ut("Revati", point, flags = swe.FLG_SWIEPH | swe.FLG_SIDEREAL)[0][0])
     # Place Aldebaran in middle of Rohini (Rohini paksha ayanamsha)
-    #fval = norm180(swe.fixstar_ut("Aldebaran", jd,  swe.FLG_SIDEREAL)[0][0] - (46+40/60))
+    #fval = norm180(swe.fixstar_ut("Aldebaran", point,  swe.FLG_SIDEREAL)[0][0] - (46+40/60))
     # Place Citra at 180°
     fval = swe.fixstar_ut("Citra", point, flags = swe.FLG_SWIEPH | swe.FLG_SIDEREAL)[0][0] - (180)
     # Place Pushya (delta Cancri) at 106°
@@ -155,6 +182,7 @@ def function(point):
     return fval
 
 def bisection_search(func, start, stop):
+  """Return x ∈ [start, stop] such that func(x) = 0"""
   left = start
   right = stop
   epsilon = 5E-10   # Anything better than this puts the loop below infinite
