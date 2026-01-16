@@ -91,6 +91,10 @@ def set_ayanamsa_mode():
     swe.set_sid_mode(swe.SIDM_TRUE_MULA)
   elif ayanamsa == 'rohini':
     swe.set_sid_mode(swe.SIDM_USER, 1845436.103611175, 0) # 1845433.3947758612?
+  elif ayanamsa == 'rohini_garga':
+    # In unequal nakshatra spacing, Rohini spans 20° (b/w 33°20 - 53°20) rather than the usual 13°20
+    # So we fix Aldebaran at middle of Rohini, 43°20' instead of 46°40'
+    swe.set_sid_mode(swe.SIDM_USER, 1757748.5933482398, 0)
   # Persons who created it...
   elif ayanamsa == 'lahiri':
     swe.set_sid_mode(swe.SIDM_LAHIRI)
@@ -198,7 +202,13 @@ def bisection_search(func, start, stop):
 
     if (right - left) <= epsilon: break
 
-  return (right + left) / 2
+  found = (right + left) / 2
+  fval = func(found)
+  if round(fval, 6) != 0: # expected func(x) = 0 for converged solution
+    print(f"{func.__name__}({found}) = {fval} != 0")
+    print(f"WARNING: convergence likely failed; answer is unreliable.")
+
+  return found
 
 def inverse_lagrange(x, y, ya):
   """Given two lists x and y, find the value of x = xa when y = ya, i.e., f(xa) = ya"""
