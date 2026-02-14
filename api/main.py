@@ -1,4 +1,6 @@
 from datetime import date, timedelta
+import json
+from pathlib import Path
 from typing import Any, Dict
 
 from fastapi import FastAPI, HTTPException, Query
@@ -13,12 +15,25 @@ app = FastAPI(
 )
 
 
+_NAMES: Dict[str, Dict[str, str]] = {}
+try:
+    names_path = Path(__file__).resolve().parents[1] / "sanskrit_names.json"
+    with names_path.open("r", encoding="utf-8") as f:
+        _NAMES = json.load(f)
+except Exception:
+    _NAMES = {}
+
+
 def _fmt_time(dms):
     """Convert [h, m, s] list to 'HH:MM:SS' string; hours may be > 24."""
     if not dms or len(dms) != 3:
         return None
     h, m, s = [int(x) for x in dms]
     return f"{h:02d}:{m:02d}:{s:02d}"
+
+
+def _name(bucket: str, num: int):
+    return _NAMES.get(bucket, {}).get(str(int(num)))
 
 
 # --- Helper functions for tithi/maasikam ---
@@ -51,10 +66,12 @@ def _tithi_at_sunrise(
 
     tithi_dict = {
         "current_number": int(tithi_raw[0]),
+        "current_name": _name("tithis", int(tithi_raw[0])),
         "current_ends_at": _fmt_time(tithi_raw[1]),
     }
     if len(tithi_raw) > 2:
         tithi_dict["leap_number"] = int(tithi_raw[2])
+        tithi_dict["leap_name"] = _name("tithis", int(tithi_raw[2]))
         tithi_dict["leap_ends_at"] = _fmt_time(tithi_raw[3])
 
     return {
@@ -103,30 +120,21 @@ def _find_next_matching_tithi_at_sunrise(
     )
 
 
-def _find_next_annual_matching_tithi_at_sunrise(
+def _find_previous_matching_tithi_at_sunrise(
     death_tithi_num: int,
     death_paksha: str,
     from_dt: date,
     latitude: float,
     longitude: float,
     tz_offset_hours: float,
-    min_days_after: int = 300,
-    max_search_days: int = 800,
+    max_search_days: int = 400,
 ) -> Dict[str, Any]:
-    """Find next *annual* occurrence (Samvatsareekam) of the same paksha+tithi at sunrise.
-
-    Practical rule used here:
-    - Match same paksha + same tithi-in-paksha (at sunrise)
-    - Ensure the returned date is at least `min_days_after` days after `from_dt`
-      (prevents returning a Maasikam-like monthly match when from_dt is the death date)
-    """
+    """Brute-force search backward day-by-day for previous matching sunrise tithi."""
     target_in_paksha = _tithi_in_paksha(death_tithi_num)
 
-    # Start searching after a minimum gap
-    cur = from_dt + timedelta(days=max(min_days_after, 1) - 1)
-
+    cur = from_dt
     for _ in range(max_search_days):
-        cur = cur + timedelta(days=1)
+        cur = cur - timedelta(days=1)
         info = _tithi_at_sunrise(cur.year, cur.month, cur.day, latitude, longitude, tz_offset_hours)
         cur_tithi_num = int(info["tithi"]["current_number"])
         cur_paksha = _paksha_from_tithi_num(cur_tithi_num)
@@ -143,7 +151,51 @@ def _find_next_annual_matching_tithi_at_sunrise(
 
     raise HTTPException(
         status_code=500,
-        detail=f"Could not find next samvatsareekam within {max_search_days} days. Check inputs.",
+        detail=f"Could not find previous matching tithi within {max_search_days} days. Check inputs.",
+    )
+
+
+def _find_annual_matching_tithi_at_sunrise(
+    death_tithi_num: int,
+    death_paksha: str,
+    from_dt: date,
+    latitude: float,
+    longitude: float,
+    tz_offset_hours: float,
+    direction: str = "forward",
+    min_days_gap: int = 300,
+    max_search_days: int = 800,
+) -> Dict[str, Any]:
+    """Find annual occurrence (next/previous) of same paksha+tithi at sunrise.
+
+    Practical rule used here:
+    - Match same paksha + same tithi-in-paksha (at sunrise)
+    - Ensure returned date has at least `min_days_gap` days separation from `from_dt`
+      (prevents returning a Maasikam-like monthly match)
+    """
+    target_in_paksha = _tithi_in_paksha(death_tithi_num)
+    step = 1 if direction == "forward" else -1
+    cur = from_dt + timedelta(days=step * (max(min_days_gap, 1) - 1))
+
+    for _ in range(max_search_days):
+        cur = cur + timedelta(days=step)
+        info = _tithi_at_sunrise(cur.year, cur.month, cur.day, latitude, longitude, tz_offset_hours)
+        cur_tithi_num = int(info["tithi"]["current_number"])
+        cur_paksha = _paksha_from_tithi_num(cur_tithi_num)
+        cur_in_paksha = _tithi_in_paksha(cur_tithi_num)
+
+        if cur_paksha == death_paksha and cur_in_paksha == target_in_paksha:
+            return {
+                "date": cur.isoformat(),
+                "sunrise": info["sunrise"],
+                "tithi": info["tithi"],
+                "paksha": cur_paksha,
+                "tithi_in_paksha": cur_in_paksha,
+            }
+
+    raise HTTPException(
+        status_code=500,
+        detail=f"Could not find {direction} samvatsareekam within {max_search_days} days. Check inputs.",
     )
 
 
@@ -181,31 +233,52 @@ def compute_panchanga(
     # Normalize to a clean JSON structure
     tithi_dict = {
         "current_number": int(tithi_raw[0]),
+        "current_name": _name("tithis", int(tithi_raw[0])),
         "current_ends_at": _fmt_time(tithi_raw[1]),
     }
     if len(tithi_raw) > 2:
         tithi_dict["leap_number"] = int(tithi_raw[2])
+        tithi_dict["leap_name"] = _name("tithis", int(tithi_raw[2]))
         tithi_dict["leap_ends_at"] = _fmt_time(tithi_raw[3])
 
     nak_dict = {
         "current_number": int(nak_raw[0]),
+        "current_name": _name("nakshatras", int(nak_raw[0])),
         "current_ends_at": _fmt_time(nak_raw[1]),
     }
     if len(nak_raw) > 2:
         nak_dict["leap_number"] = int(nak_raw[2])
+        nak_dict["leap_name"] = _name("nakshatras", int(nak_raw[2]))
         nak_dict["leap_ends_at"] = _fmt_time(nak_raw[3])
 
     yoga_dict = {
         "current_number": int(yoga_raw[0]),
+        "current_name": _name("yogas", int(yoga_raw[0])),
         "current_ends_at": _fmt_time(yoga_raw[1]),
     }
     if len(yoga_raw) > 2:
         yoga_dict["leap_number"] = int(yoga_raw[2])
+        yoga_dict["leap_name"] = _name("yogas", int(yoga_raw[2]))
         yoga_dict["leap_ends_at"] = _fmt_time(yoga_raw[3])
 
-    karana_list = (
-        [int(k) for k in kar_raw] if isinstance(kar_raw, (list, tuple)) else [int(kar_raw)]
-    )
+    # karana() may return:
+    # - legacy: [karana_num] or [karana_num, next_karana_num]
+    # - current: [karana_num, [h, m, s]]
+    karana_list = []
+    karana_names = []
+    karana_ends_at = None
+    if isinstance(kar_raw, (list, tuple)):
+        for idx, item in enumerate(kar_raw):
+            if isinstance(item, (int, float, str)):
+                k_num = int(item)
+                karana_list.append(k_num)
+                karana_names.append(_name("karanas", k_num))
+            elif idx == 1 and isinstance(item, (list, tuple)) and len(item) == 3:
+                karana_ends_at = _fmt_time(item)
+    else:
+        k_num = int(kar_raw)
+        karana_list = [k_num]
+        karana_names = [_name("karanas", k_num)]
 
     # Masa: [masa_num] or [masa_num, is_adhika]
     masa_dict: Dict[str, Any] = {}
@@ -230,13 +303,19 @@ def compute_panchanga(
             "nakshatra": nak_dict,
             "yoga": yoga_dict,
             "karana_numbers": karana_list,
+            "karana_names": karana_names,
+            "karana_ends_at": karana_ends_at,
             "vaara_number": int(vaara_raw),
+            "vaara_name": _name("varas", int(vaara_raw)),
         },
         "month_year": {
             "masa_number": masa_dict["number"],
+            "masa_name": _name("masas", masa_dict["number"]),
             "is_adhika_masa": masa_dict.get("is_adhika_masa", False),
             "ritu_number": int(ritu_raw),
+            "ritu_name": _name("ritus", int(ritu_raw)),
             "samvatsara_number": int(samvatsara_raw),
+            "samvatsara_name": _name("samvats", int(samvatsara_raw)),
         },
         "raw": {
             "tithi": tithi_raw,
@@ -299,7 +378,8 @@ def get_next_maasikam(
     from_year: int = Query(None),
     from_month: int = Query(None),
     from_day: int = Query(None),
-    count: int = Query(1, ge=1, le=24, description="How many upcoming maasikams to return"),
+    count: int = Query(1, ge=1, le=24, description="How many maasikams to return"),
+    direction: str = Query("forward", pattern="^(forward|backward)$"),
 ):
     """Compute next Maasikam date(s) based on death tithi+paksha at sunrise.
 
@@ -331,18 +411,28 @@ def get_next_maasikam(
     results = []
     cursor = from_dt
     for _ in range(count):
-        nxt = _find_next_matching_tithi_at_sunrise(
-            death_tithi_num=death_tithi_num,
-            death_paksha=death_paksha,
-            from_dt=cursor,
-            latitude=latitude,
-            longitude=longitude,
-            tz_offset_hours=tz_offset_hours,
-        )
-        results.append(nxt)
-        cursor = date.fromisoformat(nxt["date"])  # next search starts from the found date
+        if direction == "forward":
+            match = _find_next_matching_tithi_at_sunrise(
+                death_tithi_num=death_tithi_num,
+                death_paksha=death_paksha,
+                from_dt=cursor,
+                latitude=latitude,
+                longitude=longitude,
+                tz_offset_hours=tz_offset_hours,
+            )
+        else:
+            match = _find_previous_matching_tithi_at_sunrise(
+                death_tithi_num=death_tithi_num,
+                death_paksha=death_paksha,
+                from_dt=cursor,
+                latitude=latitude,
+                longitude=longitude,
+                tz_offset_hours=tz_offset_hours,
+            )
+        results.append(match)
+        cursor = date.fromisoformat(match["date"])
 
-    return {
+    response = {
         "input": {
             "death_date": death_dt.isoformat(),
             "from_date": from_dt.isoformat(),
@@ -350,6 +440,7 @@ def get_next_maasikam(
             "longitude": longitude,
             "tz_offset_hours": tz_offset_hours,
             "count": count,
+            "direction": direction,
         },
         "death": {
             "sunrise": death_info["sunrise"],
@@ -357,9 +448,14 @@ def get_next_maasikam(
             "paksha": death_paksha,
             "tithi_in_paksha": _tithi_in_paksha(death_tithi_num),
         },
-        "next_maasikam": results[0] if count == 1 else None,
-        "next_maasikams": results,
     }
+    if direction == "forward":
+        response["next_maasikam"] = results[0] if count == 1 else None
+        response["next_maasikams"] = results
+    else:
+        response["previous_maasikam"] = results[0] if count == 1 else None
+        response["previous_maasikams"] = results
+    return response
 
 @app.get("/next-samvatsareekam")
 def get_next_samvatsareekam(
@@ -372,7 +468,8 @@ def get_next_samvatsareekam(
     from_year: int = Query(None),
     from_month: int = Query(None),
     from_day: int = Query(None),
-    min_days_after: int = Query(300, ge=1, le=370, description="Minimum days after from_date before searching (default 300)"),
+    min_days_after: int = Query(300, ge=1, le=370, description="Minimum days gap from from_date before searching (default 300)"),
+    direction: str = Query("forward", pattern="^(forward|backward)$"),
 ):
     """Compute next Samvatsareekam date based on death tithi+paksha at sunrise.
 
@@ -401,17 +498,18 @@ def get_next_samvatsareekam(
     death_tithi_num = int(death_info["tithi"]["current_number"])
     death_paksha = _paksha_from_tithi_num(death_tithi_num)
 
-    nxt = _find_next_annual_matching_tithi_at_sunrise(
+    match = _find_annual_matching_tithi_at_sunrise(
         death_tithi_num=death_tithi_num,
         death_paksha=death_paksha,
         from_dt=from_dt,
         latitude=latitude,
         longitude=longitude,
         tz_offset_hours=tz_offset_hours,
-        min_days_after=min_days_after,
+        direction=direction,
+        min_days_gap=min_days_after,
     )
 
-    return {
+    response = {
         "input": {
             "death_date": death_dt.isoformat(),
             "from_date": from_dt.isoformat(),
@@ -419,6 +517,7 @@ def get_next_samvatsareekam(
             "longitude": longitude,
             "tz_offset_hours": tz_offset_hours,
             "min_days_after": min_days_after,
+            "direction": direction,
         },
         "death": {
             "sunrise": death_info["sunrise"],
@@ -426,5 +525,9 @@ def get_next_samvatsareekam(
             "paksha": death_paksha,
             "tithi_in_paksha": _tithi_in_paksha(death_tithi_num),
         },
-        "next_samvatsareekam": nxt,
     }
+    if direction == "forward":
+        response["next_samvatsareekam"] = match
+    else:
+        response["previous_samvatsareekam"] = match
+    return response

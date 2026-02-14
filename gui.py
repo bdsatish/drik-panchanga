@@ -4,7 +4,7 @@
 
 # gui.py -- Displays a wxPython GUI for panchangam calculations
 #
-# Copyright (C) 2013 Satish BD  <bdsatish@gmail.com>
+# Copyright (C) 2013, Satish BD
 # Downloaded from https://github.com/bdsatish/drik-panchanga
 #
 # This file is part of the "drik-panchanga" Python library
@@ -25,6 +25,7 @@
 
 import wx
 import json
+import re
 
 from time import strptime
 from pytz import timezone, utc
@@ -40,8 +41,9 @@ format_time = lambda t: "%02d:%02d:%02d" % (t[0], t[1], t[2])
 class Panchanga(wx.Frame):
     def __init__(self, *args, **kwds):
         # begin wxGlade: Panchanga.__init__
-        kwds["style"] = wx.DEFAULT_FRAME_STYLE
+        kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
+        self.SetSize((675, 800))
         self.dateTxt = wx.TextCtrl(self, wx.ID_ANY, "23/01/2013")
         self.searchBtn = wx.Button(self, wx.ID_ANY, "Search")
         self.placeTxt = wx.TextCtrl(self, wx.ID_ANY, "Bangalore")
@@ -91,104 +93,104 @@ class Panchanga(wx.Frame):
     def __set_properties(self):
         # begin wxGlade: Panchanga.__set_properties
         self.SetTitle("Indian Calendar")
-        self.SetSize((625, 575))
-        self.SetToolTipString("Can also be entered as: 77d 35' 37\"")
-        self.dateTxt.SetToolTipString("Enter date and then Location below. Negative years are treated as per proleptic Gregorian calendar.")
+        self.SetToolTip(wx.ToolTip("Can also be entered as: 77d 35' 37\""))
+        self.dateTxt.SetToolTip(wx.ToolTip("Enter date and then Location below. Negative years are treated as per proleptic Gregorian calendar."))
         self.dateTxt.SetFocus()
         self.searchBtn.SetForegroundColour(wx.Colour(44, 44, 44))
-        self.placeTxt.SetToolTipString("Type location, click Search. If the search fails, enter Latitude, Longitude and Time zone directly below. Lastly, \"Compute\". Enter ASCII names only.")
-        self.latTxt.SetToolTipString("Can also be entered as: 12d 58' 19\"")
-        self.tzTxt.SetToolTipString("In hours. Positive values are east of UTC and negative, west of UTC.")
+        self.placeTxt.SetToolTip(wx.ToolTip("Type location, click Search. If the search fails, enter Latitude, Longitude and Time zone directly below. Lastly, \"Compute\". Enter ASCII names only."))
+        self.latTxt.SetToolTip(wx.ToolTip("Can also be entered as: 12d 58' 19\""))
+        self.tzTxt.SetToolTip(wx.ToolTip("In hours. Positive values are east of UTC and negative, west of UTC."))
         # end wxGlade
 
     def __do_layout(self):
         # begin wxGlade: Panchanga.__do_layout
         self.sizer_1_staticbox.Lower()
         sizer_1 = wx.StaticBoxSizer(self.sizer_1_staticbox, wx.HORIZONTAL)
-        grid_sizer_1 = wx.GridSizer(16, 3, 0, 0)
+        grid_sizer_1 = wx.GridSizer(17, 3, 0, 0)
         label_1 = wx.StaticText(self, wx.ID_ANY, "")
         grid_sizer_1.Add(label_1, 0, 0, 0)
-        label_2 = wx.StaticText(self, wx.ID_ANY, u"D\u1e5bg-ga\u1e47ita Pa\xf1c\u0101\u1e45ga", style=wx.ALIGN_RIGHT | wx.ALIGN_CENTRE)
+        label_2 = wx.StaticText(self, wx.ID_ANY, u"D\u1e5bg-ga\u1e47ita Pa\u00f1c\u0101\u1e45ga", style=wx.ALIGN_CENTER | wx.ALIGN_RIGHT)
         label_2.SetMinSize((319, 24))
         label_2.SetFont(wx.Font(15, wx.DEFAULT, wx.NORMAL, wx.BOLD, 0, ""))
         grid_sizer_1.Add(label_2, 0, wx.ALIGN_CENTER_VERTICAL, 0)
         label_4 = wx.StaticText(self, wx.ID_ANY, "")
         grid_sizer_1.Add(label_4, 0, 0, 0)
         label_3 = wx.StaticText(self, wx.ID_ANY, "Date (DD/MM/YYYY)")
-        grid_sizer_1.Add(label_3, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
-        grid_sizer_1.Add(self.dateTxt, 0, wx.ALL | wx.EXPAND | wx.ALIGN_CENTER_VERTICAL, 0)
-        grid_sizer_1.Add(self.searchBtn, 0, 0, 0)
+        grid_sizer_1.Add(label_3, 0, wx.ALIGN_CENTER, 0)
+        grid_sizer_1.Add(self.dateTxt, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL | wx.EXPAND, 0)
+        grid_sizer_1.Add(self.searchBtn, 0, wx.ALIGN_CENTER, 0)
         label_6 = wx.StaticText(self, wx.ID_ANY, "Location")
-        grid_sizer_1.Add(label_6, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
-        grid_sizer_1.Add(self.placeTxt, 0, wx.EXPAND | wx.ALIGN_CENTER_VERTICAL, 0)
-        grid_sizer_1.Add(self.computeBtn, 0, 0, 0)
+        grid_sizer_1.Add(label_6, 0, wx.ALIGN_CENTER, 0)
+        grid_sizer_1.Add(self.placeTxt, 0, wx.ALIGN_CENTER_VERTICAL | wx.EXPAND, 0)
+        grid_sizer_1.Add(self.computeBtn, 0, wx.ALIGN_CENTER, 0)
         label_31 = wx.StaticText(self, wx.ID_ANY, "Latitude")
-        grid_sizer_1.Add(label_31, 0, wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL, 0)
+        grid_sizer_1.Add(label_31, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_RIGHT, 0)
         label_32 = wx.StaticText(self, wx.ID_ANY, "Longitude")
-        grid_sizer_1.Add(label_32, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
+        grid_sizer_1.Add(label_32, 0, wx.ALIGN_CENTER, 0)
         label_33 = wx.StaticText(self, wx.ID_ANY, "Time zone")
         grid_sizer_1.Add(label_33, 0, wx.ALIGN_CENTER_VERTICAL, 0)
-        grid_sizer_1.Add(self.latTxt, 0, wx.RIGHT | wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL, 0)
-        grid_sizer_1.Add(self.lonTxt, 0, wx.ALIGN_RIGHT | wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
+        grid_sizer_1.Add(self.latTxt, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_RIGHT | wx.RIGHT, 0)
+        grid_sizer_1.Add(self.lonTxt, 0, wx.ALIGN_CENTER, 0)
         grid_sizer_1.Add(self.tzTxt, 0, wx.ALIGN_CENTER_VERTICAL, 0)
         static_line_1 = wx.StaticLine(self, wx.ID_ANY)
-        grid_sizer_1.Add(static_line_1, 0, wx.EXPAND, 0)
+        grid_sizer_1.Add(static_line_1, 0, 0, 0)
         static_line_2 = wx.StaticLine(self, wx.ID_ANY)
-        grid_sizer_1.Add(static_line_2, 0, wx.EXPAND, 0)
+        grid_sizer_1.Add(static_line_2, 0, 0, 0)
         static_line_3 = wx.StaticLine(self, wx.ID_ANY)
-        grid_sizer_1.Add(static_line_3, 0, wx.EXPAND, 0)
-        grid_sizer_1.Add(self.samvatTxt, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
-        grid_sizer_1.Add(self.masaTxt, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
+        grid_sizer_1.Add(static_line_3, 0, 0, 0)
+        grid_sizer_1.Add(self.samvatTxt, 0, wx.ALIGN_CENTER, 0)
+        grid_sizer_1.Add(self.masaTxt, 0, wx.ALIGN_CENTER, 0)
         grid_sizer_1.Add(self.rituTxt, 0, wx.ALIGN_CENTER_VERTICAL, 0)
         label_7 = wx.StaticText(self, wx.ID_ANY, "Tithi")
-        grid_sizer_1.Add(label_7, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
+        grid_sizer_1.Add(label_7, 0, wx.ALIGN_CENTER, 0)
         grid_sizer_1.Add(self.tithiTxt, 0, wx.ALIGN_CENTER_VERTICAL, 0)
         grid_sizer_1.Add(self.tithiTimeTxt, 0, wx.ALIGN_CENTER_VERTICAL, 0)
         label_13 = wx.StaticText(self, wx.ID_ANY, u"Nak\u1e63atra  ")
-        grid_sizer_1.Add(label_13, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
+        grid_sizer_1.Add(label_13, 0, wx.ALIGN_CENTER, 0)
         grid_sizer_1.Add(self.nakTxt, 0, wx.ALIGN_CENTER_VERTICAL, 0)
         grid_sizer_1.Add(self.nakTimeTxt, 0, wx.ALIGN_CENTER_VERTICAL, 0)
         label_16 = wx.StaticText(self, wx.ID_ANY, "Yoga")
-        grid_sizer_1.Add(label_16, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
+        grid_sizer_1.Add(label_16, 0, wx.ALIGN_CENTER, 0)
         grid_sizer_1.Add(self.yogaTxt, 0, wx.ALIGN_CENTER_VERTICAL, 0)
         grid_sizer_1.Add(self.yogaTimeTxt, 0, wx.ALIGN_CENTER_VERTICAL, 0)
         label_19 = wx.StaticText(self, wx.ID_ANY, u"Kara\u1e47a  ")
-        grid_sizer_1.Add(label_19, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
+        grid_sizer_1.Add(label_19, 0, wx.ALIGN_CENTER, 0)
         grid_sizer_1.Add(self.karanaTxt, 0, wx.ALIGN_CENTER_VERTICAL, 0)
         grid_sizer_1.Add(self.karanaTimeTxt, 0, wx.ALIGN_CENTER_VERTICAL, 0)
         label_22 = wx.StaticText(self, wx.ID_ANY, u"V\u0101ra  ")
-        grid_sizer_1.Add(label_22, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
+        grid_sizer_1.Add(label_22, 0, wx.ALIGN_CENTER, 0)
         grid_sizer_1.Add(self.varaTxt, 0, wx.ALIGN_CENTER_VERTICAL, 0)
         label_24 = wx.StaticText(self, wx.ID_ANY, "")
         grid_sizer_1.Add(label_24, 0, 0, 0)
-        grid_sizer_1.Add(self.aharTxt, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
+        grid_sizer_1.Add(self.aharTxt, 0, wx.ALIGN_CENTER, 0)
         grid_sizer_1.Add(self.sakaTxt, 0, wx.ALIGN_CENTER_VERTICAL, 0)
         grid_sizer_1.Add(self.kaliTxt, 0, wx.ALIGN_CENTER_VERTICAL, 0)
         static_line_4 = wx.StaticLine(self, wx.ID_ANY)
-        grid_sizer_1.Add(static_line_4, 0, wx.EXPAND, 0)
+        grid_sizer_1.Add(static_line_4, 0, 0, 0)
         static_line_5 = wx.StaticLine(self, wx.ID_ANY)
-        grid_sizer_1.Add(static_line_5, 0, wx.EXPAND, 0)
+        grid_sizer_1.Add(static_line_5, 0, 0, 0)
         static_line_6 = wx.StaticLine(self, wx.ID_ANY)
-        grid_sizer_1.Add(static_line_6, 0, wx.EXPAND, 0)
+        grid_sizer_1.Add(static_line_6, 0, 0, 0)
         label_34 = wx.StaticText(self, wx.ID_ANY, "Sunrise")
-        grid_sizer_1.Add(label_34, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
+        grid_sizer_1.Add(label_34, 0, wx.ALIGN_CENTER, 0)
         label_37 = wx.StaticText(self, wx.ID_ANY, "Sunset")
-        grid_sizer_1.Add(label_37, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
+        grid_sizer_1.Add(label_37, 0, wx.ALIGN_CENTER, 0)
         label_5 = wx.StaticText(self, wx.ID_ANY, "Day duration")
-        grid_sizer_1.Add(label_5, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
-        grid_sizer_1.Add(self.sunriseTxt, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
-        grid_sizer_1.Add(self.sunsetTxt, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
-        grid_sizer_1.Add(self.duraTxt, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
+        grid_sizer_1.Add(label_5, 0, wx.ALIGN_CENTER, 0)
+        grid_sizer_1.Add(self.sunriseTxt, 0, wx.ALIGN_CENTER, 0)
+        grid_sizer_1.Add(self.sunsetTxt, 0, wx.ALIGN_CENTER, 0)
+        grid_sizer_1.Add(self.duraTxt, 0, wx.ALIGN_CENTER, 0)
         label_10 = wx.StaticText(self, wx.ID_ANY, "")
         grid_sizer_1.Add(label_10, 0, 0, 0)
         label_9 = wx.StaticText(self, wx.ID_ANY, "https://github.com/bdsatish/drik-panchanga")
-        grid_sizer_1.Add(label_9, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
+        grid_sizer_1.Add(label_9, 0, wx.ALIGN_CENTER, 0)
         sizer_1.Add(grid_sizer_1, 1, 0, 0)
         self.SetSizer(sizer_1)
         self.Layout()
         # end wxGlade
 
     def calculate_panchanga(self, event):  # wxGlade: Panchanga.<event_handler>
+        init_swisseph()
         jd = gregorian_to_jd(self.parse_date())
         self.set_place(event)
         place = self.place
@@ -207,17 +209,17 @@ class Panchanga(wx.Frame):
         kyear, sakayr = elapsed_year(jd, mas[0])
         samvat = samvatsara(jd, mas[0])
         day_dur = day_duration(jd, place)[1]
+        gauri = self.gauri_panchanga(jd)
+        positions = self.kundali(jd)
 
         # Update GUI one by one. First the easy ones
-        self.karanaTxt.SetLabel("%s" % self.karanas[str(kar[0])])
-        self.karanaTimeTxt.SetLabel(" -- ")
         self.varaTxt.SetLabel("%s" % self.vaaras[str(vara)])
         self.sunriseTxt.SetLabel(format_time(srise))
         self.sunsetTxt.SetLabel(format_time(sset))
-        self.sakaTxt.SetLabel(u"Śālivāhana śaka %d" % (sakayr))
+        self.sakaTxt.SetLabel(u"\u015a\u0101liv\u0101hana \u015baka %d" % (sakayr))
         self.kaliTxt.SetLabel("GataKali %d" % (kyear))
         self.aharTxt.SetLabel("KaliDay %d" % (kday))
-        self.rituTxt.SetLabel(u"%s ṛtu" % (self.ritus[str(rtu)]))
+        self.rituTxt.SetLabel(u"%s \u1e5btu" % (self.ritus[str(rtu)]))
         self.samvatTxt.SetLabel("%s samvatsara" % (self.samvats[str(samvat)]))
         self.duraTxt.SetLabel(format_time(day_dur))
 
@@ -225,11 +227,15 @@ class Panchanga(wx.Frame):
         month_name = self.masas[str(mas[0])]
         is_leap = mas[1]
         if is_leap:  month_name = "Adhika " + month_name.lower()
-        self.masaTxt.SetLabel(month_name + u" māsa")
+        self.masaTxt.SetLabel(month_name + u" m\u0101sa")
 
         name, hms = format_name_hms(yog, self.yogas)
         self.yogaTxt.SetLabel(name)
         self.yogaTimeTxt.SetLabel(hms)
+
+        name, hms = format_name_hms(kar, self.karanas)
+        self.karanaTxt.SetLabel(name)
+        self.karanaTimeTxt.SetLabel(hms)
 
         name, hms = format_name_hms(ti, self.tithis)
         self.tithiTxt.SetLabel(name)
@@ -244,7 +250,7 @@ class Panchanga(wx.Frame):
 
     def search_location(self, event):  # wxGlade: Panchanga.<event_handler>
         city = self.placeTxt.Value.title()  # Convert to title-case
-        if self.cities.has_key(city):
+        if city in self.cities:
             self.searchBtn.SetForegroundColour(wx.Colour(0x2C, 0x2C, 0x2C))
             # self.searchBtn.SetLabel("Found!")
 
@@ -288,9 +294,7 @@ class Panchanga(wx.Frame):
         self.cities = json.load(fp)
         self.all_cities = self.cities.keys()
         fp.close()
-        fp = open("sanskrit_names.json")
-        sktnames = json.load(fp)
-        fp.close()
+        sktnames = load_json_file("sanskrit_names.json")
         self.tithis = sktnames["tithis"]
         self.nakshatras = sktnames["nakshatras"]
         self.vaaras = sktnames["varas"]
@@ -299,7 +303,9 @@ class Panchanga(wx.Frame):
         self.masas = sktnames["masas"]
         self.samvats = sktnames["samvats"]
         self.ritus = sktnames["ritus"]
-
+        self.gauri = sktnames["gauri"]
+        self.planets = sktnames["planets"]
+        self.zodiac = sktnames["zodiac"]
 
     def set_place(self, event):  # wxGlade: Panchanga.<event_handler>
         lat = float(self.latTxt.Value)
@@ -312,14 +318,46 @@ class Panchanga(wx.Frame):
     def compute_timezone_offset(self):
         date = self.parse_date()
         timezone = self.tzone
-        dt = datetime(date.year, date.month, date.day)
+        if date.year > 0:
+            dt = datetime(date.year, date.month, date.day)
+        else:
+            # Nobody knows timezones for year <= 0
+            # Get timezone as of Jan 1, 2000 CE
+            dt = datetime(2000, 1, 1)
         # offset from UTC (in hours). Needed especially for DST countries
         tz_offset = timezone.utcoffset(dt, is_dst = True).total_seconds() / 3600.
         return tz_offset
 
+    def gauri_panchanga(self, jd):
+        times = gauri_chogadiya(jd, self.place)
+        vara = vaara(jd)
+        names = self.gauri[str(vara)]
+
+        return zip(names, times)
+
+    def kundali(self, jd):
+        place = self.place
+        data = planetary_positions(jd, place)
+        for position in data:
+            graha = self.planets[str(position[0])]
+            house = self.zodiac[str(position[1])]
+            d, m, s = position[2]
+            dms = u"%d°%d'%d\"" % (d, m, s)
+            nak = self.nakshatras[str(position[3][0])]
+            pada = position[3][1]
+
 # end of class Panchanga
 
 # Global functions
+# Load json file ignoring comments (// and /* ... */)
+def load_json_file(filename):
+    with open(filename, encoding='utf-8') as fp:
+        content = ''.join(fp.readlines())
+        content = re.sub(r'//.*', '', content)
+        content = re.sub(r'/\*.*?\*/', '', content, flags=re.DOTALL)
+
+        return json.loads(content)
+
 # Converts list [12, [23, 45, 50]] to lookup[12] and 23:45:50
 def format_name_hms(nhms, lookup):
     name_txt = lookup[str(nhms[0])]
@@ -332,8 +370,7 @@ def format_name_hms(nhms, lookup):
 
 
 if __name__ == "__main__":
-    app = wx.PySimpleApp(0)
-    wx.InitAllImageHandlers()
+    app = wx.App(False)
     frame_1 = Panchanga(None, -1, "")
     app.SetTopWindow(frame_1)
     frame_1.Show()
