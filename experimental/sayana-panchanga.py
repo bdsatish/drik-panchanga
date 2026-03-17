@@ -12,7 +12,11 @@ from skyfield.searchlib import find_discrete
 
 # Load ephemeris
 ts = load.timescale()
-eph = load('de421.bsp')
+# de441 = 3.1GB for years -13200 to +17191
+# de422 = 623MB for years  -3000 to +3000
+# de405 =  63MB for years   1600 to  2200
+# de421 =  17MB for years   1900 to  2050
+eph = load('de422.bsp')
 earth, sun = eph['earth'], eph['sun']
 
 rasis_sayana = [
@@ -116,8 +120,7 @@ def sayana_to_gregorian_utc(gregorian_year, sayana_month_name, sayana_day):
     }
 
 if __name__ == "__main__":
-    # Example for March 17, 2026, 14:09:47 UTC
-    result = gregorian_to_sayana_utc_midnight(2026, 3, 16, 23, 59, 0)
+    result = gregorian_to_sayana_utc_midnight(2026, 3, 21, 23, 59, 0)
     for key, value in result.items():
         print(f"{key}: {value}")
 
