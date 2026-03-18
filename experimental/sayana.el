@@ -113,3 +113,132 @@ Example execution (Nirayana):
                year month day ut-hour
                system-name rasi-name solar-day
                current-long))))
+
+(require 'lunar)
+
+(defun parse-calendar-time (time-val)
+  "Parse Emacs time string (e.g., '3:26 PM (EET)' or '15:26') to fractional hours."
+  (if (numberp time-val)
+      time-val
+    (if (string-match "\\([0-9]+\\):\\([0-9]+\\)\\s-*\\([aApP][mM]\\)?" time-val)
+        (let ((hour (string-to-number (match-string 1 time-val)))
+              (minute (string-to-number (match-string 2 time-val)))
+              (am-pm (match-string 3 time-val)))
+          ;; Handle 12-hour AM/PM shifts
+          (when (and am-pm (string-match-p "[pP]" am-pm) (< hour 12))
+            (setq hour (+ hour 12)))
+          (when (and am-pm (string-match-p "[aA]" am-pm) (= hour 12))
+            (setq hour 0))
+          (+ hour (/ minute 60.0)))
+      0.0))) ; Fallback boundary
+
+(defun get-lunar-tithi (year month day ut-hour)
+  "Calculate the Madhyama (mean) lunar tithi for a given Gregorian date and UT hour."
+  (let* ((target-date (list month day year))
+         (target-abs (calendar-absolute-from-gregorian target-date))
+         (target-abs-time (+ target-abs (/ ut-hour 24.0)))
+         ;; lunar-phase-list returns 3 months of data centered on the given month
+         (search-month (if (= month 1) 12 (1- month))) ; account for the year wrap-around in January
+         (search-year (if (= month 1) (1- year) year))
+         (phases (lunar-phase-list search-month search-year))
+         new-moons
+         prev-nm next-nm)
+
+    ;; 1. Extract all New Moons (Phase 0) and convert to absolute time
+    (dolist (p phases)
+      (when (= (nth 2 p) 0)
+        (let* ((p-date (nth 0 p))
+               (p-time (parse-calendar-time (nth 1 p)))
+               (p-abs (+ (calendar-absolute-from-gregorian p-date)
+                         (/ p-time 24.0))))
+          (push p-abs new-moons))))
+    (setq new-moons (sort new-moons '<))
+
+
+    ;; 2. Find the immediate bounding New Moons for our target time
+    (catch 'found
+      (let ((i 0)
+            (len (1- (length new-moons))))
+        (while (< i len)
+          (let ((t1 (nth i new-moons))
+                (t2 (nth (1+ i) new-moons)))
+            (when (and (>= target-abs-time t1) (< target-abs-time t2))
+              (setq prev-nm t1
+                    next-nm t2)
+              (throw 'found t)))
+          (setq i (1+ i)))))
+
+    ;; 3. Calculate the Tithi slice
+    (if (not (and prev-nm next-nm))
+        (error "Could not bound the target date between two New Moons.")
+      (let* ((cycle-length (- next-nm prev-nm))
+             (tithi-length (/ cycle-length 30.0))
+             (elapsed (- target-abs-time prev-nm))
+             (tithi-idx (1+ (floor (/ elapsed tithi-length))))
+
+             ;; Standard classification into Shukla and Krishna Paksha
+             (paksha (if (<= tithi-idx 15) "Shukla" "Krishna"))
+             (tithi-num (if (> tithi-idx 15) (- tithi-idx 15) tithi-idx)))
+
+        (message "Date: %04d-%02d-%02d %02d:00 UT | Madhyama Tithi: %s %d (Index %d) | Avg Length: %.2f hrs"
+                 year month day ut-hour
+                 paksha tithi-num
+                 tithi-idx
+                 (* tithi-length 24.0))))))
+
+(defconst lunar-months
+  '("Vaisakha" "Jyeshtha" "Ashadha" "Shravana"
+    "Bhadrapada" "Ashvina" "Kartika" "Margashirsha"
+    "Pausha" "Magha" "Phalguna" "Chaitra"))
+
+(defun get-lunar-month (year month day ut-hour &optional sidereal-p)
+  "Calculate the traditional lunar month for a given date and UT time.
+If SIDEREAL-P is non-nil, calculates using Nirayana longitude.
+; Example execution using Nirayana (Sidereal) framework:
+(get-lunar-month 2026 3 17 14.0 t)
+"
+  (let* ((target-date (list month day year))
+         (target-abs (calendar-absolute-from-gregorian target-date))
+         (target-abs-time (+ target-abs (/ ut-hour 24.0)))
+         (search-month (if (= month 1) 12 (1- month)))
+         (search-year (if (= month 1) (1- year) year))
+         (phases (lunar-phase-list search-month search-year))
+         new-moons prev-nm)
+
+    ;; 1. Extract all New Moons (Phase 0)
+    (dolist (p phases)
+      (when (= (nth 2 p) 0)
+        (let* ((p-date (nth 0 p))
+               (p-time (parse-calendar-time (nth 1 p)))
+               (p-abs (+ (calendar-absolute-from-gregorian p-date)
+                         (/ p-time 24.0))))
+          (push p-abs new-moons))))
+    (setq new-moons (sort new-moons '<))
+
+    ;; 2. Find the immediately preceding New Moon
+    (catch 'found
+      (let ((i 0)
+            (len (1- (length new-moons))))
+        (while (< i len)
+          (let ((t1 (nth i new-moons))
+               (t2 (nth (1+ i) new-moons)))
+            (when (and (>= target-abs-time t1) (< target-abs-time t2))
+              (setq prev-nm t1)
+              (throw 'found t)))
+          (setq i (1+ i)))))
+
+    (if (not prev-nm)
+        (error "Could not locate preceding New Moon.")
+
+      ;; 3. Calculate Sun's longitude at the exact moment of the New Moon
+      (let* ((nm-abs-date (truncate prev-nm))
+             (nm-ut-hour (* (- prev-nm nm-abs-date) 24.0))
+             (nm-greg-date (calendar-gregorian-from-absolute nm-abs-date))
+             (sun-long (get-solar-longitude nm-greg-date nm-ut-hour sidereal-p))
+             (rasi-idx (floor (/ sun-long 30.0)))
+             (lunar-month-name (nth rasi-idx lunar-months))
+             (system-name (if sidereal-p "Nirayana" "Sayana")))
+
+        (message "Date: %04d-%02d-%02d | NM %s Rasi Idx: %d | Lunar Month: %s"
+                 year month day system-name rasi-idx lunar-month-name)))))
+
