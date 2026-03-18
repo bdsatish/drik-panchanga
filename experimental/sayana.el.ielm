@@ -1,0 +1,43 @@
+ELISP> (calculate-sayana-date 2026 3 20 23.0)
+"Gregorian Date: 2026-03-20 23:00 UT | Sayana Date: Mesha 1 | Longitude: 0.35°"
+ELISP> (calculate-sayana-date 2026 3 21 0.01)
+"Gregorian Date: 2026-03-21 00:00 UT | Sayana Date: Mesha 2 | Longitude: 0.39°"
+ELISP> (calculate-sayana-date 2026 3 21 23.59)
+"Gregorian Date: 2026-03-21 23:00 UT | Sayana Date: Mesha 2 | Longitude: 1.37°"
+ELISP> (calculate-sayana-date 2026 3 21 23.59)
+"Gregorian Date: 2026-03-21 23.590000 UT | Sayana Date: Mesha 2 | Longitude: 1.37°"
+ELISP> (calculate-sayana-date 2026 3 21 23.59)
+"Gregorian Date: 2026-03-21 23.590 UT | Sayana Date: Mesha 2 | Longitude: 1.37°"
+ELISP> (calculate-sayana-date 2026 3 20 23.59)
+"Gregorian Date: 2026-03-20 23.590 UT | Sayana Date: Mesha 1 | Longitude: 0.37°"
+ELISP> (calculate-sayana-date 2026 3 21 0.01)
+"Gregorian Date: 2026-03-21 0.010 UT | Sayana Date: Mesha 2 | Longitude: 0.39°"
+ELISP> (calculate-sayana-date 2027 3 21 0.01)
+"Gregorian Date: 2027-03-21 0.010 UT | Sayana Date: Mesha 2 | Longitude: 0.15°"
+ELISP> (calculate-sayana-date 2028 3 21 0.01)
+"Gregorian Date: 2028-03-21 0.010 UT | Sayana Date: Mesha 2 | Longitude: 0.90°"
+ELISP> (calculate-sayana-date 2029 3 21 0.01)
+"Gregorian Date: 2029-03-21 0.010 UT | Sayana Date: Mesha 2 | Longitude: 0.66°"
+ELISP> (calculate-sayana-date 2022 8 21 0.01)
+"Gregorian Date: 2022-08-21 0.010 UT | Sayana Date: Simha 31 | Longitude: 147.94°"
+ELISP> (calculate-sayana-date 2022 8 21 12)
+"Gregorian Date: 2022-08-21 12.000 UT | Sayana Date: Simha 31 | Longitude: 148.42°"
+ELISP> (calculate-sayana-date 2022 8 22 12)
+"Gregorian Date: 2022-08-22 12.000 UT | Sayana Date: Simha 32 | Longitude: 149.39°"
+ELISP> (calculate-sayana-date 2023 8 22 12)
+"Gregorian Date: 2023-08-22 12.000 UT | Sayana Date: Simha 31 | Longitude: 149.16°"
+ELISP> (calculate-sayana-date 2022 8 22 12)
+"Gregorian Date: 2022-08-22 12.000 UT | Sayana Date: Simha 32 | Longitude: 149.39°"
+ELISP> (calculate-sayana-date 2022 8 23 12)
+"Gregorian Date: 2022-08-23 12.000 UT | Sayana Date: Kanya 1 | Longitude: 150.35°"
+ELISP> (calculate-gregorian-from-sayana 2022 "Kanya" 1)
+"Sayana Input: Kanya 1, 2022 | Gregorian Result: 2022-08-23"
+ELISP> (calculate-gregorian-from-sayana 2022 "Simha" 31)
+"Sayana Input: Simha 31, 2022 | Gregorian Result: 2022-08-21"
+ELISP> (calculate-gregorian-from-sayana 2022 "Simha" 32)
+"Sayana Input: Simha 32, 2022 | Gregorian Result: 2022-08-22"
+ELISP> (calculate-gregorian-from-sayana 2022 "Simha" 33)
+"Sayana Input: Simha 33, 2022 | Gregorian Result: 2022-08-23"
+ELISP> (calculate-gregorian-from-sayana 2022 "Kanya" 1)
+"Sayana Input: Kanya 1, 2022 | Gregorian Result: 2022-08-23"
+ELISP> 
