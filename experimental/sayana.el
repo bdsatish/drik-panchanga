@@ -169,7 +169,7 @@ If SIDEREAL-P is non-nil, calculates month based on Nirayana solar longitude.
             (len (1- (length new-moons))))
         (while (< i len)
           (let ((t1 (nth i new-moons))
-               (t2 (nth (1+ i) new-moons)))
+                (t2 (nth (1+ i) new-moons)))
             (when (and (>= target-abs-time t1) (< target-abs-time t2))
               (setq prev-nm t1
                     next-nm t2)
@@ -187,13 +187,26 @@ If SIDEREAL-P is non-nil, calculates month based on Nirayana solar longitude.
              (paksha (if (<= tithi-idx 15) "Shukla" "Krishna"))
              (tithi-num (if (> tithi-idx 15) (- tithi-idx 15) tithi-idx))
 
-             ;; 4. Calculate Lunar Month based on Sun's Rasi at New Moon
-             (nm-abs-date (truncate prev-nm))
-             (nm-ut-hour (* (- prev-nm nm-abs-date) 24.0))
-             (nm-greg-date (calendar-gregorian-from-absolute nm-abs-date))
-             (sun-long (get-solar-longitude nm-greg-date nm-ut-hour sidereal-p))
-             (rasi-idx (floor (/ sun-long 30.0)))
-             (lunar-month-name (nth rasi-idx lunar-months))
+             ;; 4. Evaluate Sun's longitude at both New Moon boundaries
+             (nm1-abs-date (truncate prev-nm))
+             (nm1-ut-hour (* (- prev-nm nm1-abs-date) 24.0))
+             (nm1-greg-date (calendar-gregorian-from-absolute nm1-abs-date))
+             (sun-long-start (get-solar-longitude nm1-greg-date nm1-ut-hour sidereal-p))
+
+             (nm2-abs-date (truncate next-nm))
+             (nm2-ut-hour (* (- next-nm nm2-abs-date) 24.0))
+             (nm2-greg-date (calendar-gregorian-from-absolute nm2-abs-date))
+             (sun-long-end (get-solar-longitude nm2-greg-date nm2-ut-hour sidereal-p))
+
+             ;; 5. Determine Lunar Month and Adhika flag
+             (rasi-idx-start (floor (/ sun-long-start 30.0)))
+             (rasi-idx-end (floor (/ sun-long-end 30.0)))
+             (is-adhika (= rasi-idx-start rasi-idx-end))
+
+             (base-month-name (nth rasi-idx-start lunar-months))
+             (lunar-month-name (if is-adhika
+                                   (concat "Adhika " base-month-name)
+                                 base-month-name))
              (system-name (if sidereal-p "Nirayana" "Sayana")))
 
         (message "%s | Date: %04d-%02d-%02d %02d:00 UT | %s %s %d"
