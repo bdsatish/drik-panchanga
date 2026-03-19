@@ -70,9 +70,9 @@ If SIDEREAL-P is non-nil, calculates against the Nirayana (sidereal) framework.
            system-name month-name solar-day year
            (nth 2 result-greg) (nth 0 result-greg) (nth 1 result-greg)))))
 
-
-(defun calculate-solar-from-gregorian (year month day ut-hour &optional sidereal-p)
+(defun calculate-solar-from-gregorian (year month day fallback-ut &optional sidereal-p)
   "Calculate the Sayana or Nirayana month and day for a Gregorian date and UT time.
+Evaluates solar longitude at the exact moment of local sunrise (defaults to Ujjain).
 If SIDEREAL-P is non-nil, calculates against the Nirayana (sidereal) framework.
 
 ; Example execution (Sayana):
@@ -84,35 +84,37 @@ Example execution (Nirayana):
   (let* ((gregorian-date (list month day year))
          (target-abs-date (calendar-absolute-from-gregorian gregorian-date))
 
-         ;; 1. Get current longitude and determine the Rasi index
-         (current-long (get-solar-longitude gregorian-date ut-hour sidereal-p))
+         ;; 1. Fetch Sunrise UT
+         (target-ut-hour (get-sunrise-ut gregorian-date fallback-ut))
+
+         ;; 2. Get current longitude at sunrise and determine the Rasi index
+         (current-long (get-solar-longitude gregorian-date target-ut-hour sidereal-p))
          (target-rasi-idx (floor (/ current-long 30.0)))
 
-         ;; 2. Search backward at 00:00 UT to find the Sankranti day
+         ;; 3. Search backward at sunrise each day to find the Sankranti transition
          (sankranti-abs-date target-abs-date)
          ;; Increased search limit to 35 safely covers maximum Nirayana month length
          ;; Though a tropical solar month is normally 29-32 days
          (search-limit (- target-abs-date 35)))
 
     (while (and (> sankranti-abs-date search-limit)
-                (= (floor (/ (get-solar-longitude
-                              (calendar-gregorian-from-absolute sankranti-abs-date)
-                              0.0 ; midnight-to-midnight
-                              sidereal-p)
-                             30.0))
-                   target-rasi-idx))
+                (let* ((test-greg (calendar-gregorian-from-absolute sankranti-abs-date))
+                       (test-ut (get-sunrise-ut test-greg fallback-ut))
+                       (test-long (get-solar-longitude test-greg test-ut sidereal-p)))
+                  (= (floor (/ test-long 30.0)) target-rasi-idx))) ; one rasi is 30 degrees
       (setq sankranti-abs-date (1- sankranti-abs-date)))
 
-    ;; 3. Calculate the day (Sankranti day itself is Day 1)
+    ;; 4. Calculate the day (Sankranti day itself is Day 1)
     (let* ((day-one sankranti-abs-date)
            (solar-day (1+ (- target-abs-date day-one)))
            (rasi-name (nth target-rasi-idx solar-rasis))
            (system-name (if sidereal-p "Nirayana" "Sayana")))
 
-      (message "Gregorian Date: %04d-%02d-%02d %02d:00 UT | %s Date: %s %d | Longitude: %.2f°"
-               year month day ut-hour
-               system-name rasi-name solar-day
+      (message "%s | Date: %04d-%02d-%02d | Sunrise UT: %.2f | %s %d | Longitude: %.2f°"
+               system-name year month day target-ut-hour
+               rasi-name solar-day
                current-long))))
+
 
 (require 'lunar)
 
