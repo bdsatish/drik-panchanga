@@ -137,15 +137,36 @@ Example execution (Nirayana):
       0.0))) ; Fallback boundary
 
 
-(defun calculate-lunar-from-gregorian (year month day ut-hour &optional sidereal-p)
-  "Calculate the traditional lunar month, Paksha, and Madhyama Tithi.
-If SIDEREAL-P is non-nil, calculates month based on Nirayana solar longitude.
-; Example execution:
-(calculate-lunar-from-gregorian 2026 3 17 14.0 t)
-"
+(defun get-sunrise-ut (gregorian-date fallback-ut)
+  "Calculate sunrise in UT for GREGORIAN-DATE using Emacs location settings.
+Defaults to Ujjain, India if calendar coordinates are unset.
+Falls back to FALLBACK-UT if no sunrise exists (e.g., polar night/day)."
+  (let* ((calendar-latitude (if (bound-and-true-p calendar-latitude)
+                                calendar-latitude
+                              23.1765))
+         (calendar-longitude (if (bound-and-true-p calendar-longitude)
+                                 calendar-longitude
+                               75.7885))
+         (calendar-time-zone (if (bound-and-true-p calendar-time-zone)
+                                 calendar-time-zone
+                               330)) ; +5:30 IST in minutes
+
+         (sun-data (solar-sunrise-sunset gregorian-date))
+         (sunrise-local (and sun-data (car (car sun-data)))))
+
+    (if (numberp sunrise-local)
+        (- sunrise-local (/ calendar-time-zone 60.0))
+      fallback-ut)))
+
+(defun calculate-lunar-from-gregorian (year month day fallback-ut &optional sidereal-p)
+  "Calculate the traditional lunar month, Paksha, and Madhyama Tithi at local sunrise.
+If SIDEREAL-P is non-nil, calculates using Nirayana solar longitude."
   (let* ((target-date (list month day year))
          (target-abs (calendar-absolute-from-gregorian target-date))
-         (target-abs-time (+ target-abs (/ ut-hour 24.0)))
+
+         ;; 1. Fetch Sunrise UT
+         (target-ut-hour (get-sunrise-ut target-date fallback-ut))
+         (target-abs-time (+ target-abs (/ target-ut-hour 24.0)))
 
          ;; Shift search window backward safely
          (search-month (if (= month 1) 12 (1- month)))
@@ -153,7 +174,7 @@ If SIDEREAL-P is non-nil, calculates month based on Nirayana solar longitude.
          (phases (lunar-phase-list search-month search-year))
          new-moons prev-nm next-nm)
 
-    ;; 1. Extract and sort all New Moons (Phase 0)
+    ;; 2. Extract and sort all New Moons (Phase 0)
     (dolist (p phases)
       (when (= (nth 2 p) 0)
         (let* ((p-date (nth 0 p))
@@ -163,13 +184,13 @@ If SIDEREAL-P is non-nil, calculates month based on Nirayana solar longitude.
           (push p-abs new-moons))))
     (setq new-moons (sort new-moons '<))
 
-    ;; 2. Find the bounding New Moons for the target date
+    ;; 3. Find the bounding New Moons for the target date
     (catch 'found
       (let ((i 0)
             (len (1- (length new-moons))))
         (while (< i len)
           (let ((t1 (nth i new-moons))
-                (t2 (nth (1+ i) new-moons)))
+               (t2 (nth (1+ i) new-moons)))
             (when (and (>= target-abs-time t1) (< target-abs-time t2))
               (setq prev-nm t1
                     next-nm t2)
@@ -179,7 +200,7 @@ If SIDEREAL-P is non-nil, calculates month based on Nirayana solar longitude.
     (if (not (and prev-nm next-nm))
         (error "Could not bound the target date between two New Moons.")
 
-      ;; 3. Calculate Madhyama Tithi and Paksha
+      ;; 4. Calculate Madhyama Tithi and Paksha
       (let* ((cycle-length (- next-nm prev-nm))
              (tithi-length (/ cycle-length 30.0))
              (elapsed (- target-abs-time prev-nm))
@@ -187,7 +208,7 @@ If SIDEREAL-P is non-nil, calculates month based on Nirayana solar longitude.
              (paksha (if (<= tithi-idx 15) "Shukla" "Krishna"))
              (tithi-num (if (> tithi-idx 15) (- tithi-idx 15) tithi-idx))
 
-             ;; 4. Evaluate Sun's longitude at both New Moon boundaries
+             ;; 5. Evaluate Sun's longitude at both New Moon boundaries
              (nm1-abs-date (truncate prev-nm))
              (nm1-ut-hour (* (- prev-nm nm1-abs-date) 24.0))
              (nm1-greg-date (calendar-gregorian-from-absolute nm1-abs-date))
@@ -198,7 +219,7 @@ If SIDEREAL-P is non-nil, calculates month based on Nirayana solar longitude.
              (nm2-greg-date (calendar-gregorian-from-absolute nm2-abs-date))
              (sun-long-end (get-solar-longitude nm2-greg-date nm2-ut-hour sidereal-p))
 
-             ;; 5. Determine Lunar Month and Adhika flag
+             ;; 6. Determine Lunar Month and Adhika flag
              (rasi-idx-start (floor (/ sun-long-start 30.0)))
              (rasi-idx-end (floor (/ sun-long-end 30.0)))
              (is-adhika (= rasi-idx-start rasi-idx-end))
@@ -209,6 +230,6 @@ If SIDEREAL-P is non-nil, calculates month based on Nirayana solar longitude.
                                  base-month-name))
              (system-name (if sidereal-p "Nirayana" "Sayana")))
 
-        (message "%s | Date: %04d-%02d-%02d %02d:00 UT | %s %s %d"
-                 system-name year month day ut-hour
+        (message "%s | Date: %04d-%02d-%02d | Sunrise UT: %.2f | %s %s %d"
+                 system-name year month day target-ut-hour
                  lunar-month-name paksha tithi-num)))))
