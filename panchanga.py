@@ -750,6 +750,56 @@ def navamsa(jd, place):
 
   return positions
 
+saptarshi_stars = ['Dubhe', 'Merak', 'Phecda', 'Megrez', 'Alioth', 'Mizar', 'Alkaid']
+
+# For any jd, this gives Magha nakshatra alone. Because, it is sidereal, the canvas of
+# stars is considered fixed! See the tropical version in vedic.py for a difference.
+def sidereal_saptarshi_nakshatra(jd):
+    """Returns the sidereal nakshatra of the Saptarshi (7 sages / Great Bear)
+    for a given Julian day. Uses Swiss Ephemeris fixed star positions with
+    the chosen sidereal ayanamsa.
+
+    1 = Ashvini, ..., 27 = Revati
+
+    Returns dict with mean nakshatra, pada, longitude, and individual stars.
+    """
+    set_ayanamsa_mode()
+    flags = swe.FLG_SWIEPH | swe.FLG_SIDEREAL
+
+    longitudes = []
+    individual = []
+    for star in saptarshi_stars:
+        result = swe.fixstar_ut(star, jd, flags=flags)
+        longi = norm360(result[0][0])
+        longitudes.append(longi)
+        nak, pada = nakshatra_pada(longi)
+        individual.append([star, longi, nak, pada])
+
+    mean_long = sum(longitudes) / len(longitudes)
+    mean_nak, mean_pada = nakshatra_pada(mean_long)
+
+    reset_ayanamsa_mode()
+
+    return {
+        'mean_nakshatra': mean_nak,
+        'mean_pada': mean_pada,
+        'mean_longitude': mean_long,
+        'individual': individual
+    }
+
+
+def saptarshi_nakshatra_traditional(jd):
+    """Traditional formula-based Saptarshi nakshatra using the 2700-year cycle.
+    The Saptarshis spend 100 years in each nakshatra, moving backwards.
+    At Kali Yuga 0 (3102 BCE), they were at Magha (10).
+    """
+    kali_yrs = ahargana(jd) / sidereal_year
+    offset_from_magha = int(kali_yrs / 100) % 27
+    nak = (10 - offset_from_magha) % 27
+    if nak == 0: nak = 27
+    return nak
+
+
 # ----- TESTS ------
 def all_tests():
   print(sys._getframe().f_code.co_name)

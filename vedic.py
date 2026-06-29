@@ -160,6 +160,109 @@ def tropical_nakshatra(jd, place, equal = True):
   return answer
 
 
+saptarshi_stars = ['Dubhe', 'Merak', 'Phecda', 'Megrez', 'Alioth', 'Mizar', 'Alkaid']
+
+def tropical_saptarshi_nakshatra(jd):
+    """Returns the tropical nakshatra of the Saptarshi (7 sages / Great Bear)
+    for a given Julian day.
+
+    Uses Swiss Ephemeris fixed star positions with FLG_TROPICAL.
+    Nakshatra computed via tropical_long_fixed_stars() anchored to Citra (Spica).
+
+    1 = Ashvini, ..., 27 = Revati
+
+    Returns dict with mean nakshatra, end longitude, and individual stars.
+    """
+    flags = swe.FLG_SWIEPH | swe.FLG_TROPICAL
+
+    longitudes = []
+    individual = []
+    for star in saptarshi_stars:
+        result = swe.fixstar_ut(star, jd, flags=flags)
+        longi = norm360(result[0][0])
+        longitudes.append(longi)
+        nak, nak_end = tropical_long_fixed_stars(jd, longi)
+        individual.append([star, longi, nak, nak_end])
+
+    mean_long = sum(longitudes) / len(longitudes)
+    mean_nak, mean_nak_end = tropical_long_fixed_stars(jd, mean_long)
+
+    return {
+        'mean_nakshatra': mean_nak,
+        'mean_end_longitude': mean_nak_end,
+        'mean_longitude': mean_long,
+        'individual': individual
+    }
+
+
+def seasonal_ayanamsa(jd):
+    """Returns the ayanamsa (precessional offset in degrees) for given JD,
+    using Swiss Ephemeris's built-in function, wrapped to [-180, 180).
+    Positive means tropical is ahead of sidereal.
+    """
+    set_ayanamsa_mode()
+    ayan = swe.get_ayanamsa_ut(jd)
+    reset_ayanamsa_mode()
+    return norm180(ayan)
+
+
+def ritu_tropical(jd):
+    """Ritu (season) based on actual tropical solar longitude.
+    0=Vasanta (spring), 1=Grishma, 2=Varsha, 3=Sharad, 4=Hemanta, 5=Shishira
+    """
+    return (tropical_raasi(jd) - 1) // 2
+
+
+# Taking a nominal 50"/yr precession, the total num of years for 360° is
+# (360° * 60' * 60" ) / 50" = 25920 yrs.
+def ritu_seasonal(jd, sidereal_month):
+    """Maps a sidereal lunar month (1..12) to its corresponding ritu (season),
+    accounting for precessional drift.
+
+    The traditional mapping (at ayanamsa ≈ 0, ~285 CE) was:
+      Vasanta   = Caitra–Vaisakha  (months 1–2)
+      Grishma   = Jyaistha–Asadha  (3–4)
+      Varsha    = Sravana–Bhadrapada (5–6)
+      Sharad    = Asvina–Kartika   (7–8)
+      Hemanta   = Margasira–Pausa  (9–10)
+      Shishira  = Magha–Phalguna   (11–12)
+    """
+    ayan = seasonal_ayanamsa(jd)
+    offset = round(ayan / 30)
+    rit = ((sidereal_month - 1 + offset) // 2) % 6
+    return [rit, ritu_names[rit], offset]
+
+
+# Reference: at year +247 (Prabhava samvat, Feb 23), Feb 19 still fell in Phalguna.
+# After this, Vasanta start (Feb 19) never falls in Caitra again.
+# Every 36 Jovian cycles (2160 years), the season shifts by 1 month.
+ritual_offset_ref_year = 247
+ritual_offset_step = 2160  # 36 × 60-year Jovian cycles
+
+def ritu_seasonal_simple(year, sidereal_month):
+    """Simpler ritu mapping using the 60-year Jovian cycle.
+
+    Every 36 Jovian cycles (2160 years), the month → ritu mapping shifts
+    by 1 month due to precession.
+
+    Reference: at year +247, Vasanta moved from Caitra–Vaisakha
+    to Phalguna–Caitra (offset = +1).
+
+    offset = 1 + (year - 247) // 2160
+
+    Year range      Offset  Vasanta months
+    ----------      ------  --------------
+    -1913 to 246        0   Caitra–Vaisakha
+     247  to 2406      +1   Phalguna–Caitra
+     2407 to 4566      +2   Magha–Phalguna
+     4567 to 6726      +3   Pausa–Magha
+       ...
+    """
+    offset = 1 + (year - ritual_offset_ref_year) // ritual_offset_step
+    rit = ((sidereal_month - 1 + offset) // 2) % 6
+    return [rit, ritu_names[rit], offset]
+
+
 ### TESTS ####
 def tropical_long_fixed_stars_tests():
   sun_long = tropical_solar_longitude(date1)
