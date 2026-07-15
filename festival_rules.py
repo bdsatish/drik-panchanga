@@ -79,7 +79,14 @@ FESTIVAL_RULES = (
         "dharmasindhu",
         "https://www.transliteral.org/pages/z80421215029/view",
     ),
-    FestivalRule(10, "Janmashtami", 5, "K8"),
+    FestivalRule(
+        10,
+        "Janmashtami",
+        5,
+        "K8",
+        "dharmasindhu",
+        "https://www.transliteral.org/pages/z80421220129/view",
+    ),
     FestivalRule(11, "Ganesa caturthi", 6, "S4"),
     FestivalRule(12, "Durgastami", 7, "S8"),
     FestivalRule(13, "Ayudha puja", 7, "S9"),
@@ -123,6 +130,7 @@ GURU_PURNIMA_NUMBER = 6
 NAGA_PANCHAMI_NUMBER = 7
 YAJUR_UPAKARMA_NUMBER = 9
 RAKSHA_BANDHAN_NUMBER = 25
+JANMASHTAMI_NUMBER = 10
 GANESHA_CATURTHI_NUMBER = 11
 DURGA_ASHTAMI_NUMBER = 12
 NARAKA_CATURDASI_NUMBER = 15
@@ -465,6 +473,23 @@ def has_bhadra_free_purnima(start_jd, end_jd):
     return False
 
 
+def nakshatra_number_at(jd):
+    """Return the equal 27-part nakshatra at an arbitrary UTC instant."""
+    return int(panchanga.lunar_longitude(jd) // (360 / 27)) + 1
+
+
+def has_tithi_nakshatra(start_jd, end_jd, tithi_number, nakshatra_number):
+    """Check whether a short ritual window contains a tithi/nakshatra yoga."""
+    for index in range(97):
+        instant = start_jd + (end_jd - start_jd) * index / 96
+        if (
+            tithi_number_at(instant) == tithi_number
+            and nakshatra_number_at(instant) == nakshatra_number
+        ):
+            return True
+    return False
+
+
 def select_taittiriya_apastamba_upakarma_dates(records, rule):
     """Resolve Taittiriya-Apastamba Yajur Upakarma.
 
@@ -536,6 +561,66 @@ def select_taittiriya_apastamba_upakarma_dates(records, rule):
                     selected_date = fallback[0]
         selected.append(selected_date)
     return selected
+
+
+def select_janmashtami_dates(records, rule):
+    """Resolve Dharma Sindhu Janmashtami at Nishitha.
+
+    Nishitha is the eighth muhurta of the local night. A sole Nishitha-
+    vyapini Ashtami is used; if Ashtami occupies both Nishithas, or neither,
+    the later day is used. Rohini joined to Ashtami at Nishitha is preferred
+    when available. Monday and Wednesday add merit but do not change dates.
+    This is Dharma Sindhu Janmashtami, not a Gaudiya rule or either
+    Sri-Vaishnava Sri-Jayanthi reckoning.
+
+    Sources:
+    https://www.transliteral.org/pages/z80421220129/view
+    https://www.transliteral.org/pages/z80421220717/view
+    https://www.transliteral.org/pages/z80421221115/view
+    """
+    rule_records = records_for_rule(records, rule)
+    by_date = {record[0]: record for record in records}
+    nishitha_candidates = []
+    rohini_candidates = []
+    for record in rule_records:
+        next_record = by_date.get(record[0] + timedelta(days=1))
+        if next_record is None:
+            continue
+        night_length = next_record[5] - record[6]
+        nishitha_start = record[6] + night_length * 7 / 15
+        nishitha_end = record[6] + night_length * 8 / 15
+        overlap = tithi_overlap_hours(
+            nishitha_start,
+            nishitha_end,
+            23,
+        )
+        if overlap > 0:
+            candidate = (record[0], overlap)
+            nishitha_candidates.append(candidate)
+            if has_tithi_nakshatra(
+                nishitha_start,
+                nishitha_end,
+                23,
+                4,
+            ):
+                rohini_candidates.append(candidate)
+
+    candidates = rohini_candidates or nishitha_candidates
+    if candidates:
+        return [
+            group[-1][0]
+            for group in group_consecutive_candidates(candidates)
+        ]
+
+    daytime_candidates = [
+        (record[0], 1)
+        for record in rule_records
+        if tithi_overlap_hours(record[5], record[6], 23) > 0
+    ]
+    return [
+        group[-1][0]
+        for group in group_consecutive_candidates(daytime_candidates)
+    ]
 
 
 def select_raksha_bandhan_dates(records, rule):
@@ -894,6 +979,8 @@ def resolve_festivals(months, month_data):
             matches = select_taittiriya_apastamba_upakarma_dates(records, rule)
         elif rule.number == RAKSHA_BANDHAN_NUMBER:
             matches = select_raksha_bandhan_dates(records, rule)
+        elif rule.number == JANMASHTAMI_NUMBER:
+            matches = select_janmashtami_dates(records, rule)
         elif rule.tithi == "S1":
             matches = []
             for index, (

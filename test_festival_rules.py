@@ -9,6 +9,7 @@ from festival_rules import (
     VARAMAHALAKSHMI_RULE,
     select_aksaya_trtiya_dates,
     select_guru_purnima_dates,
+    select_janmashtami_dates,
     select_naga_panchami_dates,
     select_narasimha_jayanthi_dates,
     select_raksha_bandhan_dates,
@@ -292,6 +293,41 @@ class RakshaBandhanRuleTests(unittest.TestCase):
                     self.rule,
                 ),
                 [date(2030, 8, 15)],
+            )
+
+
+class JanmashtamiRuleTests(unittest.TestCase):
+    rule = next(rule for rule in FESTIVAL_RULES if rule.number == 10)
+    records = [
+        (date(2030, 9, 1), "K8", "5", False, 1.0, 10.0, 10.5),
+        (date(2030, 9, 2), "K8", "5", False, 1.0, 11.0, 11.5),
+        (date(2030, 9, 3), "K9", "5", False, 1.0, 12.0, 12.5),
+    ]
+
+    def test_two_nishitha_ashtamis_use_later_day(self):
+        with patch(
+            "festival_rules.tithi_overlap_hours",
+            side_effect=[1.0, 1.0],
+        ), patch(
+            "festival_rules.has_tithi_nakshatra",
+            side_effect=[False, False],
+        ):
+            self.assertEqual(
+                select_janmashtami_dates(self.records, self.rule),
+                [date(2030, 9, 2)],
+            )
+
+    def test_nishitha_rohini_yoga_has_priority(self):
+        with patch(
+            "festival_rules.tithi_overlap_hours",
+            side_effect=[1.0, 1.0],
+        ), patch(
+            "festival_rules.has_tithi_nakshatra",
+            side_effect=[True, False],
+        ):
+            self.assertEqual(
+                select_janmashtami_dates(self.records, self.rule),
+                [date(2030, 9, 1)],
             )
 
 
