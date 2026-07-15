@@ -7,6 +7,7 @@ from unittest.mock import patch
 from festival_rules import (
     FESTIVAL_RULES,
     select_aksaya_trtiya_dates,
+    select_narasimha_jayanthi_dates,
     select_rama_navami_dates,
     select_ugadi_dates,
 )
@@ -109,6 +110,34 @@ class UnresolvedRuleTests(unittest.TestCase):
         rule = FESTIVAL_RULES[3]
         self.assertEqual(rule.status, "unresolved")
         self.assertIsNone(rule.source)
+
+
+class NarasimhaJayanthiRuleTests(unittest.TestCase):
+    rule = FESTIVAL_RULES[4]
+    records = [
+        record(date(2030, 5, 18), "S14", masa="2"),
+        record(date(2030, 5, 19), "S14", masa="2"),
+    ]
+
+    def test_prefers_later_day_when_both_sunsets_have_caturdashi(self):
+        with patch(
+            "festival_rules.tithi_number_at",
+            side_effect=[14, 14],
+        ):
+            self.assertEqual(
+                select_narasimha_jayanthi_dates(self.records, self.rule),
+                [date(2030, 5, 19)],
+            )
+
+    def test_uses_only_sunset_with_caturdashi(self):
+        with patch(
+            "festival_rules.tithi_number_at",
+            side_effect=[14, 15],
+        ):
+            self.assertEqual(
+                select_narasimha_jayanthi_dates(self.records, self.rule),
+                [date(2030, 5, 18)],
+            )
 
 
 if __name__ == "__main__":

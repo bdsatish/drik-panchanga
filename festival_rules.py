@@ -47,7 +47,14 @@ FESTIVAL_RULES = (
     # Keep the supplied community date provisionally until an authority is
     # provided; it must not be represented as a Dharma Sindhu rule.
     FestivalRule(4, "Vasavi jayanthi", 2, "S10", "unresolved"),
-    FestivalRule(5, "Narasimha jayanthi", 2, "S14"),
+    FestivalRule(
+        5,
+        "Narasimha jayanthi",
+        2,
+        "S14",
+        "dharmasindhu",
+        "https://www.transliteral.org/pages/z80421210345/view",
+    ),
     FestivalRule(6, "Guru Purnima", 4, "S15"),
     FestivalRule(7, "Naga panchami", 5, "S5"),
     FestivalRule(9, "Yajur upakarma, Rakhi", 5, "S15"),
@@ -73,6 +80,7 @@ VARAMAHALAKSHMI_NAME = "Varamahalakshmi vrata"
 UGADI_NUMBER = 1
 RAMA_NAVAMI_NUMBER = 2
 AKSAYA_TRTIYA_NUMBER = 3
+NARASIMHA_JAYANTHI_NUMBER = 5
 GANESHA_CATURTHI_NUMBER = 11
 DURGA_ASHTAMI_NUMBER = 12
 NARAKA_CATURDASI_NUMBER = 15
@@ -286,6 +294,39 @@ def select_aksaya_trtiya_dates(records, rule):
         civil_date, _, _, _, _, sunrise_jd, sunset_jd = record
         if tithi_overlap_hours(sunrise_jd, sunset_jd, 3) > 0:
             daytime_candidates.append((civil_date, 1))
+    return [
+        group[-1][0]
+        for group in group_consecutive_candidates(daytime_candidates)
+    ]
+
+
+def select_narasimha_jayanthi_dates(records, rule):
+    """Select Vaishakha S14 at the exact local sunset.
+
+    If Caturdashi occupies sunset on both civil days, or on neither, Dharma
+    Sindhu selects the later day. Swati and Saturday increase merit but do
+    not override this sunset decision.
+
+    Source:
+    https://www.transliteral.org/pages/z80421210345/view
+    """
+    rule_records = records_for_rule(records, rule)
+    sunset_candidates = [
+        (record[0], 1)
+        for record in rule_records
+        if tithi_number_at(record[6]) == 14
+    ]
+    if sunset_candidates:
+        return [
+            group[-1][0]
+            for group in group_consecutive_candidates(sunset_candidates)
+        ]
+
+    daytime_candidates = [
+        (record[0], 1)
+        for record in rule_records
+        if tithi_overlap_hours(record[5], record[6], 14) > 0
+    ]
     return [
         group[-1][0]
         for group in group_consecutive_candidates(daytime_candidates)
@@ -589,6 +630,8 @@ def resolve_festivals(months, month_data):
             matches = select_rama_navami_dates(records, rule)
         elif rule.number == AKSAYA_TRTIYA_NUMBER:
             matches = select_aksaya_trtiya_dates(records, rule)
+        elif rule.number == NARASIMHA_JAYANTHI_NUMBER:
+            matches = select_narasimha_jayanthi_dates(records, rule)
         elif rule.tithi == "S1":
             matches = []
             for index, (
