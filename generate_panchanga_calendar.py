@@ -392,10 +392,10 @@ def draw_month(
         if civil_date in ekadashi_dates:
             pdf.setFillColor(EKADASHI_MARK)
             pdf.rect(
-                x + width - 1.6,
-                row_y,
-                1.6,
-                row_height,
+                x + width * 0.62,
+                row_y + 0.6,
+                width * 0.34,
+                1.2,
                 stroke=0,
                 fill=1,
             )
@@ -504,7 +504,7 @@ def draw_page_footer(pdf, festival_entries):
         32,
         "T: S1-S15 = Sukla; K1-K15 = Krsna. N = nakshatra. "
         "Tiny red numbers refer to the festival key. Sundays have a red left "
-        "edge; Dharma-sindhu Vaishnava Ekadashi upavasa has a teal right edge.",
+        "edge; Dharma-sindhu Vaishnava Ekadashi upavasa has a teal bottom edge.",
     )
     pdf.drawString(
         18,
