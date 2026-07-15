@@ -1,0 +1,718 @@
+#!/usr/bin/env python3
+"""Generate a compact one-page panchanga calendar for any listed city."""
+
+import argparse
+import calendar
+import json
+import re
+from dataclasses import dataclass
+from datetime import date as CivilDate
+from datetime import datetime, timedelta
+from pathlib import Path
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
+from reportlab.lib.colors import HexColor, white
+from reportlab.lib.pagesizes import A4, landscape
+from reportlab.pdfgen import canvas
+
+import panchanga
+
+
+MONTH_COUNT = 13
+DEFAULT_CITIES_PATH = Path(__file__).with_name("cities.json")
+
+
+@dataclass(frozen=True)
+class Location:
+    name: str
+    latitude: float
+    longitude: float
+    timezone_name: str
+
+INK = HexColor("#172033")
+MUTED = HexColor("#5F6B7A")
+ACCENT = HexColor("#263F73")
+GRID = HexColor("#CBD3DF")
+ALT_ROW = HexColor("#F4F7FA")
+SUNDAY_MARK = HexColor("#C94B40")
+MISSING_ROW = HexColor("#ECEFF3")
+ADHIKA_ROW = HexColor("#FFF0C7")
+ADHIKA_INK = HexColor("#875A00")
+MASA_START_ROW = HexColor("#E4F1E7")
+MASA_START_INK = HexColor("#356846")
+FESTIVAL_INK = HexColor("#9A3154")
+
+FESTIVAL_RULES = (
+    (1, "Ugadi", 1, "S1"),
+    (2, "Rama Navami", 1, "S9"),
+    (3, "Aksaya Trtiya", 2, "S3"),
+    (4, "Vasavi jayanthi", 2, "S10"),
+    (5, "Narasimha jayanthi", 2, "S14"),
+    (6, "Guru Purnima", 4, "S15"),
+    (7, "Naga panchami", 5, "S5"),
+    (9, "Yajur upakarma", 5, "S15"),
+    (10, "Janmashtami", 5, "K8"),
+    (11, "Ganesa caturthi", 6, "S4"),
+    (12, "Durgastami", 7, "S8"),
+    (13, "Ayudha puja", 7, "S9"),
+    (14, "Vijaya dasami", 7, "S10"),
+    (15, "Naraka caturdasi", 7, "K14"),
+    (16, "Dipavali", 7, "K15"),
+    (17, "Bali padyami", 8, "S1"),
+    (18, "Gita jayanti", 9, "S11"),
+    (19, "Vasavi atmarpana", 11, "S2"),
+    (20, "Vasanta pancami", 11, "S5"),
+    (21, "Ratha saptami", 11, "S7"),
+    (22, "VSN jayanthi", 11, "S11"),
+)
+VARAMAHALAKSHMI_NUMBER = 8
+VARAMAHALAKSHMI_NAME = "Varamahalakshmi vrata"
+
+NAKSHATRA_KEY_LINES = (
+    "N: 1 Asvini, 2 Bharani, 3 Krittika, 4 Rohini, 5 Mrgasira, 6 Ardra, "
+    "7 Punarvasu, 8 Pusya, 9 Aslesa, 10 Magha, 11 Purvaphalguni, "
+    "12 Uttaraphalguni, 13 Hasta, 14 Citra",
+    "15 Svati, 16 Visakha, 17 Anuradha, 18 Jyestha, 19 Mula, 20 Purvasadha, "
+    "21 Uttarasadha, 22 Sravana, 23 Dhanistha, 24 Satabhisa, "
+    "25 Purvabhadra, 26 Uttarabhadra, 27 Revati",
+)
+
+
+def month_range(start_year, start_month, count=MONTH_COUNT):
+    year, month = start_year, start_month
+    for _ in range(count):
+        yield year, month
+        if month == 12:
+            year, month = year + 1, 1
+        else:
+            month += 1
+
+
+def parse_start_month(value):
+    match = re.fullmatch(r"(\d{4})-(\d{2})", value)
+    if not match:
+        raise ValueError("start month must use YYYY-MM format")
+    year, month = (int(part) for part in match.groups())
+    if not 1 <= month <= 12:
+        raise ValueError("start month must be between 01 and 12")
+    return year, month
+
+
+def make_location(name, latitude, longitude, timezone_name):
+    try:
+        latitude = float(latitude)
+        longitude = float(longitude)
+    except (TypeError, ValueError) as error:
+        raise ValueError(f"Invalid coordinates for city {name!r}") from error
+    if not -90 <= latitude <= 90:
+        raise ValueError(f"Latitude for city {name!r} is outside [-90, 90]")
+    if not -180 <= longitude <= 180:
+        raise ValueError(f"Longitude for city {name!r} is outside [-180, 180]")
+    try:
+        ZoneInfo(timezone_name)
+    except ZoneInfoNotFoundError as error:
+        raise ValueError(
+            f"Unknown IANA timezone {timezone_name!r} for city {name!r}"
+        ) from error
+    return Location(name, latitude, longitude, timezone_name)
+
+
+def location_from_mapping(name, record):
+    if not isinstance(record, dict):
+        raise ValueError(f"Location record for {name!r} must be an object")
+    location_name = record.get("city", record.get("name", name))
+    latitude = record.get("latitude", record.get("lat"))
+    longitude = record.get("longitude", record.get("lon"))
+    timezone_name = record.get(
+        "timezone",
+        record.get("timezone_name", record.get("tz")),
+    )
+    if latitude is None or longitude is None or timezone_name is None:
+        raise ValueError(
+            f"Location record for {location_name!r} needs latitude, "
+            "longitude, and timezone"
+        )
+    return make_location(
+        str(location_name),
+        latitude,
+        longitude,
+        str(timezone_name),
+    )
+
+
+def load_location(city):
+    path = DEFAULT_CITIES_PATH
+    if not path.exists():
+        raise ValueError(f"Cities file does not exist: {path}")
+    with path.open(encoding="utf-8") as source:
+        locations = json.load(source)
+    if not isinstance(locations, dict):
+        raise ValueError("cities.json must contain an object keyed by city")
+
+    matching_names = [
+        name
+        for name in locations
+        if name.casefold() == city.casefold()
+    ]
+    if not matching_names:
+        import difflib
+
+        suggestions = difflib.get_close_matches(
+            city,
+            list(locations),
+            n=5,
+            cutoff=0.6,
+        )
+        message = f"City {city!r} was not found in {path}"
+        if suggestions:
+            message += f". Close matches: {', '.join(suggestions)}"
+        raise ValueError(message)
+    name = matching_names[0]
+    return location_from_mapping(name, locations[name])
+
+
+def timezone_hours(timezone, year, month, day):
+    """Return the location's UTC offset, including daylight-saving time."""
+    local_noon = datetime(
+        year, month, day, 12, tzinfo=timezone
+    )
+    return local_noon.utcoffset().total_seconds() / 3600
+
+
+def tithi_code(tithi_number):
+    if tithi_number <= 15:
+        return f"S{tithi_number}"
+    return f"K{tithi_number - 15}"
+
+
+def masa_code(masa_number, is_adhika):
+    return f"A{masa_number}" if is_adhika else str(masa_number)
+
+
+def daily_values(year, month, location):
+    result = []
+    timezone = ZoneInfo(location.timezone_name)
+    days = calendar.monthrange(year, month)[1]
+    for day in range(1, days + 1):
+        date = panchanga.Date(year, month, day)
+        place = panchanga.Place(
+            location.latitude,
+            location.longitude,
+            timezone_hours(timezone, year, month, day),
+        )
+        jd = panchanga.gregorian_to_jd(date)
+        try:
+            sunrise_jd = panchanga.sunrise(jd, place)[0]
+            if not jd - 1 <= sunrise_jd <= jd + 2:
+                raise RuntimeError("no local sunrise")
+            tithi_number = panchanga.tithi(jd, place)[0]
+            nakshatra_number = panchanga.nakshatra(jd, place)[0]
+            masa_number, is_adhika = panchanga.masa(jd, place)
+        except Exception as error:
+            raise RuntimeError(
+                f"Cannot calculate sunrise panchanga for {location.name} "
+                f"on {year:04d}-{month:02d}-{day:02d}: {error}"
+            ) from error
+        result.append(
+            (
+                day,
+                tithi_code(tithi_number),
+                nakshatra_number,
+                masa_code(masa_number, is_adhika),
+                is_adhika,
+            )
+        )
+    return result
+
+
+def mark_masa_starts(months, month_data):
+    """Append masa codes only where a new masa first appears at sunrise."""
+    previous_masa = None
+    for year, month in months:
+        marked_values = []
+        for day, tithi, nakshatra, masa, is_adhika in month_data[(year, month)]:
+            is_masa_start = masa != previous_masa
+            if is_masa_start:
+                tithi = f"{masa}/{tithi}"
+            marked_values.append(
+                (day, tithi, nakshatra, is_masa_start, is_adhika)
+            )
+            previous_masa = masa
+        month_data[(year, month)] = marked_values
+
+
+def format_festival_dates(dates):
+    dates = sorted(dates)
+    if (
+        len(dates) > 1
+        and len({(value.year, value.month) for value in dates}) == 1
+        and all(
+            right == left + timedelta(days=1)
+            for left, right in zip(dates, dates[1:])
+        )
+    ):
+        return (
+            f"{calendar.month_abbr[dates[0].month]} "
+            f"{dates[0].day}-{dates[-1].day}"
+        )
+    return ",".join(
+        f"{calendar.month_abbr[value.month]} {value.day}"
+        for value in dates
+    )
+
+
+def resolve_festivals(months, month_data):
+    """Resolve the supplied masa/tithi rules to civil dates."""
+    records = []
+    for year, month in months:
+        for day, tithi, _, masa, is_adhika in month_data[(year, month)]:
+            records.append(
+                (
+                    CivilDate(year, month, day),
+                    tithi,
+                    masa,
+                    is_adhika,
+                )
+            )
+
+    dates_by_number = {}
+    names_by_number = {}
+    for number, name, masa_number, tithi in FESTIVAL_RULES:
+        if tithi == "S1":
+            matches = []
+            for index, (
+                civil_date,
+                day_tithi,
+                masa,
+                is_adhika,
+            ) in enumerate(records):
+                if (
+                    masa != str(masa_number)
+                    or is_adhika
+                    or not day_tithi.startswith("S")
+                ):
+                    continue
+                if index == 0:
+                    is_masa_start = day_tithi in {"S1", "S2"}
+                else:
+                    _, _, previous_masa, previous_is_adhika = records[
+                        index - 1
+                    ]
+                    is_masa_start = (
+                        previous_masa != masa
+                        or previous_is_adhika != is_adhika
+                    )
+                if is_masa_start:
+                    matches.append(civil_date)
+        else:
+            matches = [
+                civil_date
+                for civil_date, day_tithi, masa, is_adhika in records
+                if (
+                    day_tithi == tithi
+                    and masa == str(masa_number)
+                    and not is_adhika
+                )
+            ]
+        if not matches:
+            raise RuntimeError(f"No calendar date found for {name}")
+        dates_by_number[number] = matches
+        names_by_number[number] = name
+
+    vrata_dates = []
+    for sravana_purnima_date in dates_by_number[9]:
+        vrata_date = sravana_purnima_date - timedelta(days=1)
+        while vrata_date.weekday() != calendar.FRIDAY:
+            vrata_date -= timedelta(days=1)
+        vrata_dates.append(vrata_date)
+    dates_by_number[VARAMAHALAKSHMI_NUMBER] = sorted(set(vrata_dates))
+    names_by_number[VARAMAHALAKSHMI_NUMBER] = VARAMAHALAKSHMI_NAME
+
+    numbers_by_date = {}
+    entries = []
+    for number in sorted(names_by_number):
+        dates = dates_by_number[number]
+        for civil_date in dates:
+            numbers_by_date.setdefault(civil_date, []).append(number)
+        entries.append(
+            (
+                number,
+                format_festival_dates(dates),
+                names_by_number[number],
+            )
+        )
+    return numbers_by_date, entries
+
+
+def draw_centered(pdf, text, center_x, baseline_y, font, size, color=INK):
+    pdf.setFont(font, size)
+    pdf.setFillColor(color)
+    pdf.drawCentredString(center_x, baseline_y, text)
+
+
+def draw_day_column(pdf, x, top, width):
+    month_header_height = 20
+    column_header_height = 15
+    row_height = 13.7
+    header_height = month_header_height + column_header_height
+
+    pdf.setFillColor(ACCENT)
+    pdf.rect(x, top - header_height, width, header_height, stroke=0, fill=1)
+    draw_centered(
+        pdf,
+        "DAY",
+        x + width / 2,
+        top - 21,
+        "Helvetica-Bold",
+        6.5,
+        white,
+    )
+
+    rows_top = top - header_height
+    for index in range(31):
+        row_y = rows_top - (index + 1) * row_height
+        pdf.setFillColor(ALT_ROW if index % 2 else white)
+        pdf.rect(x, row_y, width, row_height, stroke=0, fill=1)
+        draw_centered(
+            pdf,
+            str(index + 1),
+            x + width / 2,
+            row_y + 4.1,
+            "Helvetica",
+            6.6,
+            INK,
+        )
+
+
+    bottom = rows_top - 31 * row_height
+    pdf.setStrokeColor(GRID)
+    pdf.setLineWidth(0.4)
+    pdf.rect(x, bottom, width, top - bottom, stroke=1, fill=0)
+    for index in range(32):
+        y = rows_top - index * row_height
+        pdf.line(x, y, x + width, y)
+
+
+def draw_month(pdf, year, month, values, festivals_by_date, x, top, width):
+    month_header_height = 20
+    column_header_height = 15
+    row_height = 13.7
+
+    pdf.setFillColor(ACCENT)
+    pdf.rect(
+        x,
+        top - month_header_height,
+        width,
+        month_header_height,
+        stroke=0,
+        fill=1,
+    )
+    draw_centered(
+        pdf,
+        f"{calendar.month_abbr[month]} {str(year)[2:]}",
+        x + width / 2,
+        top - 14,
+        "Helvetica-Bold",
+        7.2,
+        white,
+    )
+
+    header_top = top - month_header_height
+    pdf.setFillColor(HexColor("#E2E7EF"))
+    pdf.rect(
+        x,
+        header_top - column_header_height,
+        width,
+        column_header_height,
+        stroke=0,
+        fill=1,
+    )
+
+    centers = (x + width * 0.29, x + width * 0.79)
+    for label, center in zip(("T", "N"), centers):
+        draw_centered(
+            pdf,
+            label,
+            center,
+            header_top - 10.5,
+            "Helvetica-Bold",
+            6.2,
+            MUTED,
+        )
+
+    rows_top = header_top - column_header_height
+    values_by_day = {
+        day: (tithi, nakshatra, is_masa_start, is_adhika)
+        for day, tithi, nakshatra, is_masa_start, is_adhika in values
+    }
+    for index in range(31):
+        day = index + 1
+        row_y = rows_top - (index + 1) * row_height
+        is_sunday = False
+        if day not in values_by_day:
+            pdf.setFillColor(MISSING_ROW)
+        else:
+            weekday = datetime(year, month, day).weekday()
+            is_sunday = weekday == calendar.SUNDAY
+            if index % 2:
+                pdf.setFillColor(ALT_ROW)
+            else:
+                pdf.setFillColor(white)
+        pdf.rect(x, row_y, width, row_height, stroke=0, fill=1)
+
+        if day not in values_by_day:
+            continue
+
+        tithi, nakshatra, is_masa_start, is_adhika = values_by_day[day]
+        if is_masa_start:
+            pdf.setFillColor(ADHIKA_ROW if is_adhika else MASA_START_ROW)
+            pdf.rect(
+                x,
+                row_y,
+                width * 0.58,
+                row_height,
+                stroke=0,
+                fill=1,
+            )
+        if is_sunday:
+            pdf.setFillColor(SUNDAY_MARK)
+            pdf.rect(x, row_y, 1.6, row_height, stroke=0, fill=1)
+        festival_numbers = festivals_by_date.get(
+            CivilDate(year, month, day),
+            (),
+        )
+        baseline = row_y + (3.0 if festival_numbers else 4.1)
+        draw_centered(
+            pdf,
+            tithi,
+            centers[0],
+            baseline,
+            "Helvetica-Bold",
+            6.0 if is_masa_start else 6.6,
+            (
+                ADHIKA_INK
+                if is_masa_start and is_adhika
+                else MASA_START_INK if is_masa_start else ACCENT
+            ),
+        )
+        draw_centered(
+            pdf, str(nakshatra), centers[1], baseline, "Helvetica", 6.5, INK
+        )
+        if festival_numbers:
+            pdf.setFillColor(FESTIVAL_INK)
+            pdf.setFont("Helvetica-Bold", 3.8)
+            pdf.drawRightString(
+                x + width * 0.55,
+                row_y + 8.3,
+                ",".join(str(number) for number in festival_numbers),
+            )
+
+    bottom = rows_top - 31 * row_height
+    pdf.setStrokeColor(GRID)
+    pdf.setLineWidth(0.4)
+    pdf.rect(x, bottom, width, top - bottom, stroke=1, fill=0)
+    pdf.line(x + width * 0.58, bottom, x + width * 0.58, header_top)
+    for index in range(32):
+        y = rows_top - index * row_height
+        pdf.line(x, y, x + width, y)
+
+
+def month_span_label(months):
+    start_year, start_month = months[0]
+    end_year, end_month = months[-1]
+    return (
+        f"{calendar.month_name[start_month]} {start_year} - "
+        f"{calendar.month_name[end_month]} {end_year}"
+    )
+
+
+def coordinate_label(value, positive, negative):
+    direction = positive if value >= 0 else negative
+    return f"{abs(value):.5f} {direction}"
+
+
+def draw_page_header(pdf, location, months):
+    page_width, page_height = landscape(A4)
+    pdf.setFillColor(INK)
+    pdf.setFont("Helvetica-Bold", 14)
+    pdf.drawString(
+        18,
+        page_height - 20,
+        f"{location.name} Panchanga: {month_span_label(months)}",
+    )
+    pdf.setFillColor(MUTED)
+    pdf.setFont("Helvetica", 7)
+    pdf.drawString(
+        18,
+        page_height - 31,
+        "At local sunrise | True Citra ayanamsa | Equal nakshatras | Amanta masa | "
+        f"{coordinate_label(location.latitude, 'N', 'S')}, "
+        f"{coordinate_label(location.longitude, 'E', 'W')} | "
+        f"{location.timezone_name} civil time",
+    )
+
+
+def draw_page_footer(pdf, festival_entries):
+    pdf.setFillColor(MUTED)
+    pdf.setFont("Helvetica-Bold", 5.3)
+    pdf.setFillColor(FESTIVAL_INK)
+    pdf.drawString(
+        18,
+        84,
+        "Festival markers (supplied sunrise masa/tithi rules; skipped S1 uses "
+        "the first visible S day):",
+    )
+
+    columns = 4
+    rows = 6
+    column_width = (landscape(A4)[0] - 36) / columns
+    pdf.setFont("Helvetica", 5.0)
+    for index, (number, festival_date, name) in enumerate(festival_entries):
+        column = index // rows
+        row = index % rows
+        pdf.drawString(
+            18 + column * column_width,
+            76 - row * 7,
+            f"{number}  {festival_date}  {name}",
+        )
+
+    pdf.setFillColor(MUTED)
+    pdf.setFont("Helvetica", 4.8)
+    pdf.drawString(
+        18,
+        32,
+        "T: S1-S15 = Sukla; K1-K15 = Krsna. N = nakshatra. "
+        "Tiny red numbers refer to the festival key. Sundays have a red edge.",
+    )
+    pdf.drawString(
+        18,
+        24,
+        "Masa: code precedes / at its first visible tithi (3/S2); A = adhika; "
+        "A3/K1 is the range carry-in. Key: 1 Caitra, 2 Vaisakha, 3 Jyestha, "
+        "4 Asadha, 5 Sravana, 6 Bhadrapada, 7 Asvina, 8 Kartika, "
+        "9 Margasirsa, 10 Pusya, 11 Magha, 12 Phalguna.",
+    )
+    pdf.setFont("Helvetica", 4.6)
+    pdf.drawString(18, 15, NAKSHATRA_KEY_LINES[0])
+    pdf.drawString(18, 7, NAKSHATRA_KEY_LINES[1])
+
+
+def build_pdf(location, start_year, start_month, output_path):
+    panchanga.set_chosen_ayanamsa("citra")
+    months = list(month_range(start_year, start_month))
+    month_data = {
+        (year, month): daily_values(year, month, location)
+        for year, month in months
+    }
+    festivals_by_date, festival_entries = resolve_festivals(
+        months,
+        month_data,
+    )
+    mark_masa_starts(months, month_data)
+
+    page_width, page_height = landscape(A4)
+    output_path = Path(output_path)
+    pdf = canvas.Canvas(str(output_path), pagesize=(page_width, page_height))
+    pdf.setTitle(
+        f"{location.name} Panchanga {month_span_label(months)}"
+    )
+    pdf.setAuthor("drik-panchanga")
+    pdf.setSubject(
+        f"Daily tithi, True Citra nakshatra, and amanta masa at "
+        f"{location.name} sunrise"
+    )
+
+    draw_page_header(pdf, location, months)
+
+    margin = 18
+    day_column_width = 24
+    usable_width = page_width - 2 * margin
+    month_width = (usable_width - day_column_width) / len(months)
+    top = page_height - 42
+
+    draw_day_column(pdf, margin, top, day_column_width)
+    for index, (year, month) in enumerate(months):
+        x = margin + day_column_width + index * month_width
+        draw_month(
+            pdf,
+            year,
+            month,
+            month_data[(year, month)],
+            festivals_by_date,
+            x,
+            top,
+            month_width,
+        )
+
+    draw_page_footer(pdf, festival_entries)
+    pdf.showPage()
+
+    pdf.save()
+    return output_path
+
+
+def default_output_path(location, start_year, start_month):
+    months = list(month_range(start_year, start_month))
+    end_year, end_month = months[-1]
+    city_slug = re.sub(
+        r"[^a-z0-9]+",
+        "-",
+        location.name.casefold(),
+    ).strip("-") or "location"
+    return Path(
+        f"{city_slug}_panchanga_"
+        f"{start_year:04d}-{start_month:02d}_to_"
+        f"{end_year:04d}-{end_month:02d}.pdf"
+    )
+
+
+def argument_parser():
+    parser = argparse.ArgumentParser(
+        description=(
+            "Generate a one-page A4 panchanga for 13 consecutive months."
+        )
+    )
+    parser.add_argument(
+        "--city",
+        required=True,
+        help=f"city name as listed in {DEFAULT_CITIES_PATH.name}",
+    )
+    parser.add_argument(
+        "--start",
+        required=True,
+        metavar="YYYY-MM",
+        help="first of the 13 consecutive calendar months",
+    )
+    parser.add_argument(
+        "-o",
+        "--output",
+        type=Path,
+        help="output PDF path (default: generated from city and range)",
+    )
+    return parser
+
+
+def main(argv=None):
+    parser = argument_parser()
+    arguments = parser.parse_args(argv)
+    try:
+        start_year, start_month = parse_start_month(arguments.start)
+        location = load_location(arguments.city)
+        output_path = arguments.output or default_output_path(
+            location,
+            start_year,
+            start_month,
+        )
+        generated = build_pdf(
+            location,
+            start_year,
+            start_month,
+            output_path,
+        )
+    except (OSError, ValueError, RuntimeError) as error:
+        parser.error(str(error))
+    print(generated.resolve())
+
+
+if __name__ == "__main__":
+    main()
