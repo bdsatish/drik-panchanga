@@ -104,5 +104,12 @@ class AksayaTrtiyaRuleTests(unittest.TestCase):
             )
 
 
+class UnresolvedRuleTests(unittest.TestCase):
+    def test_vasavi_jayanthi_is_not_attributed_to_dharma_sindhu(self):
+        rule = FESTIVAL_RULES[3]
+        self.assertEqual(rule.status, "unresolved")
+        self.assertIsNone(rule.source)
+
+
 if __name__ == "__main__":
     unittest.main()

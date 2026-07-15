@@ -43,7 +43,10 @@ FESTIVAL_RULES = (
         "dharmasindhu",
         "https://www.transliteral.org/pages/z80421210038/view",
     ),
-    FestivalRule(4, "Vasavi jayanthi", 2, "S10"),
+    # No Vasavi/Kanyaka Parameshwari observance was found in Dharma Sindhu.
+    # Keep the supplied community date provisionally until an authority is
+    # provided; it must not be represented as a Dharma Sindhu rule.
+    FestivalRule(4, "Vasavi jayanthi", 2, "S10", "unresolved"),
     FestivalRule(5, "Narasimha jayanthi", 2, "S14"),
     FestivalRule(6, "Guru Purnima", 4, "S15"),
     FestivalRule(7, "Naga panchami", 5, "S5"),
