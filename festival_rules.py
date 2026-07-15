@@ -1038,6 +1038,7 @@ def collect_records(months, month_data):
             tithi_hours_after_sunrise,
             sunrise_jd,
             sunset_jd,
+            _yoga,
         ) in month_data[(year, month)]:
             records.append(
                 (
@@ -1310,7 +1311,7 @@ def resolve_festivals(months, month_data):
 
     Each raw daily record is:
     day, tithi, nakshatra, masa, is_adhika, tithi-hours-after-sunrise,
-    sunrise UTC Julian day, sunset UTC Julian day.
+    sunrise UTC Julian day, sunset UTC Julian day, yoga.
     """
     records = collect_records(months, month_data)
 

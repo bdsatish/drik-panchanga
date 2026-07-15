@@ -58,6 +58,13 @@ NAKSHATRA_KEY_LINES = (
     "21 Uttarasadha, 22 Sravana, 23 Dhanistha, 24 Satabhisa, "
     "25 Purvabhadra, 26 Uttarabhadra, 27 Revati",
 )
+YOGA_KEY_LINE = (
+    "Y: 01 Viskumbha, 02 Priti, 03 Ayusman, 04 Saubhagya, 05 Sobhana, "
+    "06 Atiganda, 07 Sukarma, 08 Dhrti, 09 Sula, 10 Ganda, 11 Vrddhi, "
+    "12 Dhruva, 13 Vyaghata, 14 Harsana, 15 Vajra, 16 Siddhi, "
+    "17 Vyatipata, 18 Variyana, 19 Parigha, 20 Siva, 21 Siddha, "
+    "22 Sadhya, 23 Subha, 24 Sukla, 25 Brahma, 26 Aindra, 27 Vaidhrti"
+)
 
 
 def month_range(start_year, start_month, count=MONTH_COUNT):
@@ -217,6 +224,7 @@ def daily_values(year, month, location):
                 - dms_to_hours(sunrise_result[1])
             )
             nakshatra_number = panchanga.nakshatra(jd, place)[0]
+            yoga_number = panchanga.yoga(jd, place)[0]
             masa_number, is_adhika = panchanga.masa(jd, place)
         except Exception as error:
             raise RuntimeError(
@@ -233,6 +241,7 @@ def daily_values(year, month, location):
                 tithi_hours_after_sunrise,
                 sunrise_jd - place.timezone / 24,
                 sunset_jd - place.timezone / 24,
+                yoga_number,
             )
         )
     return result
@@ -249,7 +258,10 @@ def mark_masa_starts(months, month_data):
             nakshatra,
             masa,
             is_adhika,
-            *_,
+            _,
+            _,
+            _,
+            yoga,
         ) in month_data[(year, month)]:
             is_masa_start = masa != previous_masa
             marked_values.append(
@@ -257,6 +269,7 @@ def mark_masa_starts(months, month_data):
                     day,
                     tithi,
                     nakshatra,
+                    yoga,
                     is_masa_start,
                     is_adhika,
                     masa if is_masa_start else None,
@@ -374,8 +387,12 @@ def draw_month(
         fill=1,
     )
 
-    centers = (x + width * 0.29, x + width * 0.79)
-    for label, center in zip(("T", "N"), centers):
+    centers = (
+        x + width * 0.25,
+        x + width * 0.625,
+        x + width * 0.875,
+    )
+    for label, center in zip(("T", "N", "Y"), centers):
         draw_centered(
             pdf,
             label,
@@ -388,11 +405,19 @@ def draw_month(
 
     rows_top = header_top - column_header_height
     values_by_day = {
-        day: (tithi, nakshatra, is_masa_start, is_adhika, masa_badge)
+        day: (
+            tithi,
+            nakshatra,
+            yoga,
+            is_masa_start,
+            is_adhika,
+            masa_badge,
+        )
         for (
             day,
             tithi,
             nakshatra,
+            yoga,
             is_masa_start,
             is_adhika,
             masa_badge,
@@ -419,6 +444,7 @@ def draw_month(
         (
             tithi,
             nakshatra,
+            yoga,
             is_masa_start,
             is_adhika,
             masa_badge,
@@ -429,7 +455,7 @@ def draw_month(
             pdf.rect(
                 x,
                 row_y,
-                width * 0.58,
+                width * 0.5,
                 row_height,
                 stroke=0,
                 fill=1,
@@ -448,9 +474,9 @@ def draw_month(
         if civil_date in ekadashi_dates:
             pdf.setFillColor(EKADASHI_MARK)
             pdf.rect(
-                x + width * 0.62,
+                x + width * 0.53,
                 row_y + 0.6,
-                width * 0.34,
+                width * 0.19,
                 1.2,
                 stroke=0,
                 fill=1,
@@ -476,11 +502,14 @@ def draw_month(
         draw_centered(
             pdf, f"{nakshatra:02d}", centers[1], baseline, "Helvetica", 7.3, INK
         )
+        draw_centered(
+            pdf, f"{yoga:02d}", centers[2], baseline, "Helvetica", 7.3, INK
+        )
         if festival_numbers:
             pdf.setFillColor(FESTIVAL_INK)
             pdf.setFont("Helvetica-Bold", 4.3)
             pdf.drawRightString(
-                x + width * 0.55,
+                x + width * 0.47,
                 row_y + 8.3,
                 ",".join(str(number) for number in festival_numbers),
             )
@@ -489,7 +518,8 @@ def draw_month(
     pdf.setStrokeColor(GRID)
     pdf.setLineWidth(0.4)
     pdf.rect(x, bottom, width, top - bottom, stroke=1, fill=0)
-    pdf.line(x + width * 0.58, bottom, x + width * 0.58, header_top)
+    pdf.line(x + width * 0.5, bottom, x + width * 0.5, header_top)
+    pdf.line(x + width * 0.75, bottom, x + width * 0.75, header_top)
     for index in range(32):
         y = rows_top - index * row_height
         pdf.line(x, y, x + width, y)
@@ -601,7 +631,7 @@ def draw_page_footer(pdf, festival_entries):
     pdf.drawString(
         18,
         25,
-        "T: S01-S15 = Sukla; K01-K15 = Krsna. N = nakshatra. "
+        "T: S01-S15 = Sukla; K01-K15 = Krsna. N = nakshatra; Y = yoga. "
         "Tiny red numbers refer to the festival key. Sundays have a red left "
         "edge; Dharma-sindhu Vaishnava Ekadashi upavasa has a teal bottom edge. "
         "Masa: a small upper-left badge marks its first visible tithi "
@@ -613,6 +643,7 @@ def draw_page_footer(pdf, festival_entries):
         13,
         f"{NAKSHATRA_KEY_LINES[0]}, {NAKSHATRA_KEY_LINES[1]}",
     )
+    pdf.drawString(18, 5, YOGA_KEY_LINE)
 
 
 def build_pdf(location, start_year, start_month, output_path):
@@ -666,7 +697,7 @@ def build_pdf(location, start_year, start_month, output_path):
         "ayanamsa=True Citra"
     )
     pdf.setSubject(
-        f"Daily tithi, True Citra nakshatra, and amanta masa at "
+        f"Daily tithi, True Citra nakshatra, yoga, and amanta masa at "
         f"{location.name} sunrise"
     )
 
