@@ -6,6 +6,7 @@ from unittest.mock import patch
 
 from festival_rules import (
     FESTIVAL_RULES,
+    select_aksaya_trtiya_dates,
     select_rama_navami_dates,
     select_ugadi_dates,
 )
@@ -72,6 +73,34 @@ class RamaNavamiRuleTests(unittest.TestCase):
             self.assertEqual(
                 select_rama_navami_dates(self.records, self.rule),
                 [date(2030, 4, 10)],
+            )
+
+
+class AksayaTrtiyaRuleTests(unittest.TestCase):
+    rule = FESTIVAL_RULES[2]
+    records = [
+        record(date(2030, 5, 5), "S2", masa="2"),
+        record(date(2030, 5, 6), "S3", masa="2"),
+    ]
+
+    def test_prefers_later_day_when_both_yugadi_windows_qualify(self):
+        with patch(
+            "festival_rules.tithi_overlap_hours",
+            side_effect=[1.0, 1.0],
+        ):
+            self.assertEqual(
+                select_aksaya_trtiya_dates(self.records, self.rule),
+                [date(2030, 5, 6)],
+            )
+
+    def test_uses_earlier_day_when_later_window_has_no_tritiya(self):
+        with patch(
+            "festival_rules.tithi_overlap_hours",
+            side_effect=[1.0, 0.0],
+        ):
+            self.assertEqual(
+                select_aksaya_trtiya_dates(self.records, self.rule),
+                [date(2030, 5, 5)],
             )
 
 

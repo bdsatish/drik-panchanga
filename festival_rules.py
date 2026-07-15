@@ -35,7 +35,14 @@ FESTIVAL_RULES = (
         "dharmasindhu",
         "https://www.transliteral.org/pages/z80421205021/view",
     ),
-    FestivalRule(3, "Aksaya Trtiya", 2, "S3"),
+    FestivalRule(
+        3,
+        "Aksaya Trtiya",
+        2,
+        "S3",
+        "dharmasindhu",
+        "https://www.transliteral.org/pages/z80421210038/view",
+    ),
     FestivalRule(4, "Vasavi jayanthi", 2, "S10"),
     FestivalRule(5, "Narasimha jayanthi", 2, "S14"),
     FestivalRule(6, "Guru Purnima", 4, "S15"),
@@ -62,6 +69,7 @@ VARAMAHALAKSHMI_NUMBER = 8
 VARAMAHALAKSHMI_NAME = "Varamahalakshmi vrata"
 UGADI_NUMBER = 1
 RAMA_NAVAMI_NUMBER = 2
+AKSAYA_TRTIYA_NUMBER = 3
 GANESHA_CATURTHI_NUMBER = 11
 DURGA_ASHTAMI_NUMBER = 12
 NARAKA_CATURDASI_NUMBER = 15
@@ -234,6 +242,51 @@ def select_rama_navami_dates(records, rule):
         else:
             selected.append(group[0][0])
     return selected
+
+
+def select_aksaya_trtiya_dates(records, rule):
+    """Apply Dharma Sindhu's preferred Yugadi-window decision.
+
+    Akshaya Tritiya's japa, homa, tarpana, and dana follow the Shukla-Yugadi
+    decision. Dharma Sindhu prefers the seventh through ninth daytime
+    muhurtas. If only one civil day overlaps that window, use it; if both or
+    neither do, use the later day. Yugadi rites are prescribed in both
+    adhika and shuddha Vaishakha, so this selector does not discard adhika
+    records.
+
+    Source:
+    https://www.transliteral.org/pages/z80421210038/view
+    """
+    rule_records = [
+        record for record in records if record[2] == str(rule.masa)
+    ]
+    candidates = []
+    for record in rule_records:
+        civil_date, _, _, _, _, sunrise_jd, sunset_jd = record
+        day_length = sunset_jd - sunrise_jd
+        overlap = tithi_overlap_hours(
+            sunrise_jd + day_length * 6 / 15,
+            sunrise_jd + day_length * 9 / 15,
+            3,
+        )
+        if overlap > 0:
+            candidates.append((civil_date, overlap))
+
+    if candidates:
+        return [
+            group[-1][0]
+            for group in group_consecutive_candidates(candidates)
+        ]
+
+    daytime_candidates = []
+    for record in rule_records:
+        civil_date, _, _, _, _, sunrise_jd, sunset_jd = record
+        if tithi_overlap_hours(sunrise_jd, sunset_jd, 3) > 0:
+            daytime_candidates.append((civil_date, 1))
+    return [
+        group[-1][0]
+        for group in group_consecutive_candidates(daytime_candidates)
+    ]
 
 
 def collect_records(months, month_data):
@@ -531,6 +584,8 @@ def resolve_festivals(months, month_data):
             matches = select_ugadi_dates(records, rule)
         elif rule.number == RAMA_NAVAMI_NUMBER:
             matches = select_rama_navami_dates(records, rule)
+        elif rule.number == AKSAYA_TRTIYA_NUMBER:
+            matches = select_aksaya_trtiya_dates(records, rule)
         elif rule.tithi == "S1":
             matches = []
             for index, (
