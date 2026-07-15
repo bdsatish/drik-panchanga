@@ -2,9 +2,11 @@
 
 from datetime import date
 import unittest
+from unittest.mock import patch
 
 from festival_rules import (
     FESTIVAL_RULES,
+    select_rama_navami_dates,
     select_ugadi_dates,
 )
 
@@ -43,6 +45,34 @@ class UgadiRuleTests(unittest.TestCase):
             select_ugadi_dates(records, self.rule),
             [date(2030, 3, 20)],
         )
+
+
+class RamaNavamiRuleTests(unittest.TestCase):
+    rule = FESTIVAL_RULES[1]
+    records = [
+        record(date(2030, 4, 10), "S8"),
+        record(date(2030, 4, 11), "S9"),
+    ]
+
+    def test_prefers_later_day_when_both_madhyahnas_have_navami(self):
+        with patch(
+            "festival_rules.tithi_overlap_hours",
+            side_effect=[1.0, 1.0],
+        ):
+            self.assertEqual(
+                select_rama_navami_dates(self.records, self.rule),
+                [date(2030, 4, 11)],
+            )
+
+    def test_uses_only_day_whose_madhyahna_has_navami(self):
+        with patch(
+            "festival_rules.tithi_overlap_hours",
+            side_effect=[1.0, 0.0],
+        ):
+            self.assertEqual(
+                select_rama_navami_dates(self.records, self.rule),
+                [date(2030, 4, 10)],
+            )
 
 
 if __name__ == "__main__":
