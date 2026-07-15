@@ -1,0 +1,49 @@
+"""Regression tests for Dharma Sindhu festival-date decisions."""
+
+from datetime import date
+import unittest
+
+from festival_rules import (
+    FESTIVAL_RULES,
+    select_ugadi_dates,
+)
+
+
+def record(day, tithi, masa="1", is_adhika=False):
+    """Build the compact record shape consumed by festival selectors."""
+    return (day, tithi, masa, is_adhika, 1.0, 0.0, 0.5)
+
+
+class UgadiRuleTests(unittest.TestCase):
+    rule = FESTIVAL_RULES[0]
+
+    def test_prefers_earlier_of_two_sunrise_pratipadas(self):
+        records = [
+            record(date(2030, 3, 20), "S1"),
+            record(date(2030, 3, 21), "S1"),
+        ]
+        self.assertEqual(
+            select_ugadi_dates(records, self.rule),
+            [date(2030, 3, 20)],
+        )
+
+    def test_uses_earlier_day_when_pratipada_is_skipped_at_sunrise(self):
+        records = [record(date(2030, 3, 21), "S2")]
+        self.assertEqual(
+            select_ugadi_dates(records, self.rule),
+            [date(2030, 3, 20)],
+        )
+
+    def test_prefers_adhika_chaitra_year_opening(self):
+        records = [
+            record(date(2030, 3, 20), "S1", is_adhika=True),
+            record(date(2030, 4, 19), "S1"),
+        ]
+        self.assertEqual(
+            select_ugadi_dates(records, self.rule),
+            [date(2030, 3, 20)],
+        )
+
+
+if __name__ == "__main__":
+    unittest.main()

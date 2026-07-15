@@ -14,10 +14,19 @@ class FestivalRule:
     name: str
     masa: int
     tithi: str
+    status: str = "provisional"
+    source: str | None = None
 
 
 FESTIVAL_RULES = (
-    FestivalRule(1, "Ugadi", 1, "S1"),
+    FestivalRule(
+        1,
+        "Ugadi",
+        1,
+        "S1",
+        "dharmasindhu",
+        "https://www.transliteral.org/pages/z80421204850/view",
+    ),
     FestivalRule(2, "Rama Navami", 1, "S9"),
     FestivalRule(3, "Aksaya Trtiya", 2, "S3"),
     FestivalRule(4, "Vasavi jayanthi", 2, "S10"),
@@ -44,6 +53,7 @@ FESTIVAL_RULES = (
 
 VARAMAHALAKSHMI_NUMBER = 8
 VARAMAHALAKSHMI_NAME = "Varamahalakshmi vrata"
+UGADI_NUMBER = 1
 GANESHA_CATURTHI_NUMBER = 11
 DURGA_ASHTAMI_NUMBER = 12
 NARAKA_CATURDASI_NUMBER = 15
@@ -122,6 +132,48 @@ def records_for_rule(records, rule):
         for record in records
         if record[2] == str(rule.masa) and not record[3]
     ]
+
+
+def select_ugadi_dates(records, rule):
+    """Select the Chaitra year-opening Pratipada at local sunrise.
+
+    Dharma Sindhu takes sunrise-vyapini Pratipada. If Pratipada occurs at
+    both sunrises, or at neither sunrise because it is skipped, the earlier
+    civil day is selected. When Chaitra is adhika, year-opening rites belong
+    to adhika Chaitra rather than the following shuddha Chaitra.
+
+    Source:
+    https://www.transliteral.org/pages/z80421204850/view
+    """
+    chaitra_records = [
+        record for record in records if record[2] == str(rule.masa)
+    ]
+    if not chaitra_records:
+        return []
+
+    preferred_is_adhika = any(record[3] for record in chaitra_records)
+    chaitra_records = [
+        record
+        for record in chaitra_records
+        if record[3] == preferred_is_adhika
+    ]
+    sunrise_matches = [
+        record[0] for record in chaitra_records if record[1] == rule.tithi
+    ]
+    if sunrise_matches:
+        return [min(sunrise_matches)]
+
+    first_visible_shukla = next(
+        (
+            record[0]
+            for record in chaitra_records
+            if record[1].startswith("S")
+        ),
+        None,
+    )
+    if first_visible_shukla is None:
+        return []
+    return [first_visible_shukla - timedelta(days=1)]
 
 
 def collect_records(months, month_data):
@@ -415,7 +467,9 @@ def resolve_festivals(months, month_data):
     dates_by_number = {}
     names_by_number = {}
     for rule in FESTIVAL_RULES:
-        if rule.tithi == "S1":
+        if rule.number == UGADI_NUMBER:
+            matches = select_ugadi_dates(records, rule)
+        elif rule.tithi == "S1":
             matches = []
             for index, (
                 civil_date,
