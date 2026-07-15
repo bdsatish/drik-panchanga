@@ -236,7 +236,7 @@ def daily_values(year, month, location):
 
 
 def mark_masa_starts(months, month_data):
-    """Append masa codes only where a new masa first appears at sunrise."""
+    """Attach masa badges where a new masa first appears at sunrise."""
     previous_masa = None
     for year, month in months:
         marked_values = []
@@ -249,10 +249,15 @@ def mark_masa_starts(months, month_data):
             *_,
         ) in month_data[(year, month)]:
             is_masa_start = masa != previous_masa
-            if is_masa_start:
-                tithi = f"{masa}/{tithi}"
             marked_values.append(
-                (day, tithi, nakshatra, is_masa_start, is_adhika)
+                (
+                    day,
+                    tithi,
+                    nakshatra,
+                    is_masa_start,
+                    is_adhika,
+                    masa if is_masa_start else None,
+                )
             )
             previous_masa = masa
         month_data[(year, month)] = marked_values
@@ -366,8 +371,15 @@ def draw_month(
 
     rows_top = header_top - column_header_height
     values_by_day = {
-        day: (tithi, nakshatra, is_masa_start, is_adhika)
-        for day, tithi, nakshatra, is_masa_start, is_adhika in values
+        day: (tithi, nakshatra, is_masa_start, is_adhika, masa_badge)
+        for (
+            day,
+            tithi,
+            nakshatra,
+            is_masa_start,
+            is_adhika,
+            masa_badge,
+        ) in values
     }
     for index in range(31):
         day = index + 1
@@ -387,7 +399,13 @@ def draw_month(
         if day not in values_by_day:
             continue
 
-        tithi, nakshatra, is_masa_start, is_adhika = values_by_day[day]
+        (
+            tithi,
+            nakshatra,
+            is_masa_start,
+            is_adhika,
+            masa_badge,
+        ) = values_by_day[day]
         tithi_display = zero_pad_calendar_value(tithi)
         if is_masa_start:
             pdf.setFillColor(ADHIKA_ROW if is_adhika else MASA_START_ROW)
@@ -398,6 +416,13 @@ def draw_month(
                 row_height,
                 stroke=0,
                 fill=1,
+            )
+            pdf.setFillColor(ADHIKA_INK if is_adhika else MASA_START_INK)
+            pdf.setFont("Helvetica-Bold", 4.3)
+            pdf.drawString(
+                x + 2.4,
+                row_y + 8.2,
+                zero_pad_calendar_value(masa_badge),
             )
         if is_sunday:
             pdf.setFillColor(SUNDAY_MARK)
@@ -424,7 +449,7 @@ def draw_month(
             centers[0],
             baseline,
             "Helvetica-Bold",
-            6.7 if is_masa_start else 7.4,
+            7.4,
             (
                 ADHIKA_INK
                 if is_masa_start and is_adhika
@@ -519,8 +544,8 @@ def draw_page_footer(pdf, festival_entries):
         "T: S01-S15 = Sukla; K01-K15 = Krsna. N = nakshatra. "
         "Tiny red numbers refer to the festival key. Sundays have a red left "
         "edge; Dharma-sindhu Vaishnava Ekadashi upavasa has a teal bottom edge. "
-        "Masa: code precedes / at its first visible tithi (03/S02); A = adhika; "
-        "A03/K01 is the range carry-in.",
+        "Masa: a small upper-left badge marks its first visible tithi "
+        "(03 or A03); A = adhika.",
     )
     pdf.setFont("Helvetica", 5.2)
     pdf.drawString(
