@@ -94,6 +94,14 @@ FESTIVAL_RULES = (
     FestivalRule(22, "VSN jayanthi", 11, "S11"),
     FestivalRule(23, "Holi", 12, "K1"),
     FestivalRule(24, "Maha Shivaratri", 11, "K14"),
+    FestivalRule(
+        25,
+        "Raksha Bandhan",
+        5,
+        "S15",
+        "dharmasindhu",
+        "https://www.transliteral.org/pages/z80421215617/view",
+    ),
 )
 
 # The popular Friday-before-Sravana-Purnima rule was not found in Dharma
@@ -114,6 +122,7 @@ NARASIMHA_JAYANTHI_NUMBER = 5
 GURU_PURNIMA_NUMBER = 6
 NAGA_PANCHAMI_NUMBER = 7
 YAJUR_UPAKARMA_NUMBER = 9
+RAKSHA_BANDHAN_NUMBER = 25
 GANESHA_CATURTHI_NUMBER = 11
 DURGA_ASHTAMI_NUMBER = 12
 NARAKA_CATURDASI_NUMBER = 15
@@ -437,6 +446,25 @@ def eclipse_or_sankranti_in_window(start_jd, end_jd):
     return False
 
 
+def karana_index_at(jd):
+    """Return the half-tithi index, 1 through 60, at an arbitrary instant."""
+    return int(panchanga.lunar_phase(jd) // 6) + 1
+
+
+def is_vishti_at(jd):
+    index = karana_index_at(jd)
+    return 2 <= index <= 57 and (index - 2) % 7 == 6
+
+
+def has_bhadra_free_purnima(start_jd, end_jd):
+    """Check a ritual window for a Purnima instant outside Vishti/Bhadra."""
+    for index in range(97):
+        instant = start_jd + (end_jd - start_jd) * index / 96
+        if tithi_number_at(instant) == 15 and not is_vishti_at(instant):
+            return True
+    return False
+
+
 def select_taittiriya_apastamba_upakarma_dates(records, rule):
     """Resolve Taittiriya-Apastamba Yajur Upakarma.
 
@@ -506,6 +534,55 @@ def select_taittiriya_apastamba_upakarma_dates(records, rule):
                 ]
                 if fallback:
                     selected_date = fallback[0]
+        selected.append(selected_date)
+    return selected
+
+
+def select_raksha_bandhan_dates(records, rule):
+    """Select Bhadra-free Shravana Purnima in Aparahna or Pradosha.
+
+    When Purnima remains for more than three muhurtas (six ghatis) after
+    sunrise, that day is used. A shorter next-sunrise remainder sends the
+    observance to the preceding day's Bhadra-free Pradosha. Unlike Upakarma,
+    eclipse and sankranti do not prohibit Raksha Bandhan.
+
+    Sources:
+    https://www.transliteral.org/pages/z80421215617/view
+    https://www.transliteral.org/pages/z80422112841/view
+    """
+    by_date = {record[0]: record for record in records}
+    candidates = [
+        (record[0], record[4])
+        for record in records_for_rule(records, rule)
+        if record[1] == rule.tithi
+    ]
+    selected = []
+    for group in group_consecutive_candidates(candidates):
+        later_date, remainder = group[-1]
+        selected_date = (
+            later_date
+            if remainder > SIX_GHATI_HOURS
+            else later_date - timedelta(days=1)
+        )
+        selected_record = by_date.get(selected_date)
+        if selected_record is not None:
+            sunrise_jd, sunset_jd = selected_record[5:7]
+            day_length = sunset_jd - sunrise_jd
+            aparahna = (
+                sunrise_jd + day_length * 3 / 5,
+                sunrise_jd + day_length * 4 / 5,
+            )
+            pradosha = (
+                sunset_jd,
+                sunset_jd + PRADOSHA_HOURS / 24,
+            )
+            if not (
+                has_bhadra_free_purnima(*aparahna)
+                or has_bhadra_free_purnima(*pradosha)
+            ):
+                previous_date = selected_date - timedelta(days=1)
+                if previous_date in by_date:
+                    selected_date = previous_date
         selected.append(selected_date)
     return selected
 
@@ -815,6 +892,8 @@ def resolve_festivals(months, month_data):
             matches = select_naga_panchami_dates(records, rule)
         elif rule.number == YAJUR_UPAKARMA_NUMBER:
             matches = select_taittiriya_apastamba_upakarma_dates(records, rule)
+        elif rule.number == RAKSHA_BANDHAN_NUMBER:
+            matches = select_raksha_bandhan_dates(records, rule)
         elif rule.tithi == "S1":
             matches = []
             for index, (

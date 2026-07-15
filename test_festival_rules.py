@@ -11,6 +11,7 @@ from festival_rules import (
     select_guru_purnima_dates,
     select_naga_panchami_dates,
     select_narasimha_jayanthi_dates,
+    select_raksha_bandhan_dates,
     select_rama_navami_dates,
     select_taittiriya_apastamba_upakarma_dates,
     select_ugadi_dates,
@@ -253,6 +254,44 @@ class YajurUpakarmaRuleTests(unittest.TestCase):
                     self.rule,
                 ),
                 [date(2030, 8, 14)],
+            )
+
+
+class RakshaBandhanRuleTests(unittest.TestCase):
+    rule = next(rule for rule in FESTIVAL_RULES if rule.number == 25)
+
+    @staticmethod
+    def records(remainder):
+        return [
+            (date(2030, 8, 14), "S14", "5", False, 1.0, 10.0, 10.5),
+            (date(2030, 8, 15), "S15", "5", False, remainder, 11.0, 11.5),
+            (date(2030, 8, 16), "K1", "5", False, 1.0, 12.0, 12.5),
+        ]
+
+    def test_short_later_purnima_uses_previous_pradosha(self):
+        with patch(
+            "festival_rules.has_bhadra_free_purnima",
+            return_value=True,
+        ):
+            self.assertEqual(
+                select_raksha_bandhan_dates(
+                    self.records(1.0),
+                    self.rule,
+                ),
+                [date(2030, 8, 14)],
+            )
+
+    def test_long_later_purnima_uses_later_day(self):
+        with patch(
+            "festival_rules.has_bhadra_free_purnima",
+            return_value=True,
+        ):
+            self.assertEqual(
+                select_raksha_bandhan_dates(
+                    self.records(3.0),
+                    self.rule,
+                ),
+                [date(2030, 8, 15)],
             )
 
 

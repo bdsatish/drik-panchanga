@@ -485,15 +485,15 @@ def draw_page_footer(pdf, festival_entries):
     )
 
     columns = 4
-    rows = 6
+    rows = 7
     column_width = (landscape(A4)[0] - 36) / columns
-    pdf.setFont("Helvetica", 5.0)
+    pdf.setFont("Helvetica", 4.8)
     for index, (number, festival_date, name) in enumerate(festival_entries):
         column = index // rows
         row = index % rows
         pdf.drawString(
             18 + column * column_width,
-            76 - row * 7,
+            76 - row * 6,
             f"{number}  {festival_date}  {name}",
         )
 
