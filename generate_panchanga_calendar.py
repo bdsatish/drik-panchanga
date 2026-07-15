@@ -465,11 +465,18 @@ def draw_month(
             pdf.drawString(
                 x + 2.4,
                 row_y + 8.2,
-                masa_badge,
+                masa_badge.removeprefix("A"),
             )
         if is_sunday:
             pdf.setFillColor(SUNDAY_MARK)
-            pdf.rect(x, row_y, 1.6, row_height, stroke=0, fill=1)
+            pdf.rect(
+                x + width - 1.6,
+                row_y,
+                1.6,
+                row_height,
+                stroke=0,
+                fill=1,
+            )
         civil_date = CivilDate(year, month, day)
         if civil_date in ekadashi_dates:
             pdf.setFillColor(EKADASHI_MARK)
@@ -636,10 +643,10 @@ def draw_page_footer(pdf, festival_entries):
         18,
         25,
         "T: S01-S15 = Sukla; K01-K15 = Krsna. N = nakshatra; Y = yoga. "
-        "Tiny red numbers refer to the festival key. Sundays have a red left "
+        "Tiny red numbers refer to the festival key. Sundays have a red right "
         "edge; Dharma-sindhu Vaishnava Ekadashi upavasa has a teal bottom edge. "
-        "Masa: a small upper-left badge marks its first visible tithi "
-        "(03 or A03); A = adhika.",
+        "Masa: a small upper-left badge marks its first visible tithi; "
+        "gold fill denotes adhika.",
     )
     pdf.setFont("Helvetica", 5.2)
     pdf.drawString(
