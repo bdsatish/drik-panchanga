@@ -81,29 +81,37 @@ FESTIVAL_RULES = (
     ),
     FestivalRule(
         10,
+        "Raksha Bandhan",
+        5,
+        "S15",
+        "dharmasindhu",
+        "https://www.transliteral.org/pages/z80421215617/view",
+    ),
+    FestivalRule(
+        11,
         "Janmashtami",
         5,
         "K8",
         "dharmasindhu",
         "https://www.transliteral.org/pages/z80421220129/view",
     ),
-    FestivalRule(11, "Ganesa caturthi", 6, "S4"),
-    FestivalRule(12, "Durgastami", 7, "S8"),
+    FestivalRule(12, "Ganesa caturthi", 6, "S4"),
+    FestivalRule(13, "Durgastami", 7, "S8"),
     # Dharma Sindhu gives a Mahanavami rule, but no independent Ayudha-puja
     # date rule was found. Preserve the supplied date provisionally.
-    FestivalRule(13, "Ayudha puja", 7, "S9", "unresolved"),
+    FestivalRule(14, "Ayudha puja", 7, "S9", "unresolved"),
     FestivalRule(
-        14,
+        15,
         "Vijaya dasami",
         7,
         "S10",
         "dharmasindhu",
         "https://www.transliteral.org/pages/z80501062120/view",
     ),
-    FestivalRule(15, "Naraka caturdasi", 7, "K14"),
-    FestivalRule(16, "Dipavali", 7, "K15"),
+    FestivalRule(16, "Naraka caturdasi", 7, "K14"),
+    FestivalRule(17, "Dipavali", 7, "K15"),
     FestivalRule(
-        17,
+        18,
         "Bali padyami",
         8,
         "S1",
@@ -112,12 +120,12 @@ FESTIVAL_RULES = (
     ),
     # No Gita-Jayanti observance was found in Dharma Sindhu's Margashirsha
     # section. Preserve the supplied community date provisionally.
-    FestivalRule(18, "Gita jayanti", 9, "S11", "unresolved"),
+    FestivalRule(19, "Gita jayanti", 9, "S11", "unresolved"),
     # No Vasavi Atmarpana observance was found in Dharma Sindhu's Magha
     # section. Preserve the supplied community date provisionally.
-    FestivalRule(19, "Vasavi atmarpana", 11, "S2", "unresolved"),
+    FestivalRule(20, "Vasavi atmarpana", 11, "S2", "unresolved"),
     FestivalRule(
-        20,
+        21,
         "Vasanta pancami",
         11,
         "S5",
@@ -125,7 +133,7 @@ FESTIVAL_RULES = (
         "https://www.transliteral.org/pages/z80513003421/view",
     ),
     FestivalRule(
-        21,
+        22,
         "Ratha saptami",
         11,
         "S7",
@@ -134,15 +142,7 @@ FESTIVAL_RULES = (
     ),
     # Vishnu-Sahasranama Jayanthi was not found in Dharma Sindhu; Bhishma
     # Ashtami is present but is a different observance.
-    FestivalRule(22, "VSN jayanthi", 11, "S11", "unresolved"),
-    FestivalRule(
-        23,
-        "Holi",
-        12,
-        "K1",
-        "dharmasindhu",
-        "https://www.transliteral.org/pages/z80505120438/view",
-    ),
+    FestivalRule(23, "VSN jayanthi", 11, "S11", "unresolved"),
     FestivalRule(
         24,
         "Maha Shivaratri",
@@ -153,11 +153,11 @@ FESTIVAL_RULES = (
     ),
     FestivalRule(
         25,
-        "Raksha Bandhan",
-        5,
-        "S15",
+        "Holi",
+        12,
+        "K1",
         "dharmasindhu",
-        "https://www.transliteral.org/pages/z80421215617/view",
+        "https://www.transliteral.org/pages/z80505120438/view",
     ),
 )
 
@@ -179,17 +179,17 @@ NARASIMHA_JAYANTHI_NUMBER = 5
 GURU_PURNIMA_NUMBER = 6
 NAGA_PANCHAMI_NUMBER = 7
 YAJUR_UPAKARMA_NUMBER = 9
-RAKSHA_BANDHAN_NUMBER = 25
-JANMASHTAMI_NUMBER = 10
-GANESHA_CATURTHI_NUMBER = 11
-DURGA_ASHTAMI_NUMBER = 12
-VIJAYA_DASAMI_NUMBER = 14
-NARAKA_CATURDASI_NUMBER = 15
-DIPAVALI_NUMBER = 16
-BALI_PADYAMI_NUMBER = 17
-VASANTA_PANCHAMI_NUMBER = 20
-RATHA_SAPTAMI_NUMBER = 21
-HOLI_NUMBER = 23
+RAKSHA_BANDHAN_NUMBER = 10
+JANMASHTAMI_NUMBER = 11
+GANESHA_CATURTHI_NUMBER = 12
+DURGA_ASHTAMI_NUMBER = 13
+VIJAYA_DASAMI_NUMBER = 15
+NARAKA_CATURDASI_NUMBER = 16
+DIPAVALI_NUMBER = 17
+BALI_PADYAMI_NUMBER = 18
+VASANTA_PANCHAMI_NUMBER = 21
+RATHA_SAPTAMI_NUMBER = 22
+HOLI_NUMBER = 25
 MAHA_SHIVARATRI_NUMBER = 24
 ONE_GHATI_HOURS = 24 / 60
 SIX_GHATI_HOURS = 6 * ONE_GHATI_HOURS

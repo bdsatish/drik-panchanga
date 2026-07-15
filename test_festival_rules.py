@@ -128,22 +128,22 @@ class UnresolvedRuleTests(unittest.TestCase):
         self.assertIsNone(VARAMAHALAKSHMI_RULE.source)
 
     def test_ayudha_puja_is_not_substituted_with_mahanavami(self):
-        rule = next(rule for rule in FESTIVAL_RULES if rule.number == 13)
+        rule = next(rule for rule in FESTIVAL_RULES if rule.number == 14)
         self.assertEqual(rule.status, "unresolved")
         self.assertIsNone(rule.source)
 
     def test_gita_jayanti_is_not_attributed_to_dharma_sindhu(self):
-        rule = next(rule for rule in FESTIVAL_RULES if rule.number == 18)
-        self.assertEqual(rule.status, "unresolved")
-        self.assertIsNone(rule.source)
-
-    def test_vasavi_atmarpana_is_not_attributed_to_dharma_sindhu(self):
         rule = next(rule for rule in FESTIVAL_RULES if rule.number == 19)
         self.assertEqual(rule.status, "unresolved")
         self.assertIsNone(rule.source)
 
+    def test_vasavi_atmarpana_is_not_attributed_to_dharma_sindhu(self):
+        rule = next(rule for rule in FESTIVAL_RULES if rule.number == 20)
+        self.assertEqual(rule.status, "unresolved")
+        self.assertIsNone(rule.source)
+
     def test_vsn_jayanthi_is_not_attributed_to_dharma_sindhu(self):
-        rule = next(rule for rule in FESTIVAL_RULES if rule.number == 22)
+        rule = next(rule for rule in FESTIVAL_RULES if rule.number == 23)
         self.assertEqual(rule.status, "unresolved")
         self.assertIsNone(rule.source)
 
@@ -285,7 +285,7 @@ class YajurUpakarmaRuleTests(unittest.TestCase):
 
 
 class RakshaBandhanRuleTests(unittest.TestCase):
-    rule = next(rule for rule in FESTIVAL_RULES if rule.number == 25)
+    rule = next(rule for rule in FESTIVAL_RULES if rule.number == 10)
 
     @staticmethod
     def records(remainder):
@@ -323,7 +323,7 @@ class RakshaBandhanRuleTests(unittest.TestCase):
 
 
 class JanmashtamiRuleTests(unittest.TestCase):
-    rule = next(rule for rule in FESTIVAL_RULES if rule.number == 10)
+    rule = next(rule for rule in FESTIVAL_RULES if rule.number == 11)
     records = [
         (date(2030, 9, 1), "K8", "5", False, 1.0, 10.0, 10.5),
         (date(2030, 9, 2), "K8", "5", False, 1.0, 11.0, 11.5),
@@ -358,7 +358,7 @@ class JanmashtamiRuleTests(unittest.TestCase):
 
 
 class VijayaDasamiRuleTests(unittest.TestCase):
-    rule = next(rule for rule in FESTIVAL_RULES if rule.number == 14)
+    rule = next(rule for rule in FESTIVAL_RULES if rule.number == 15)
     records = [
         (date(2030, 10, 5), "S10", "7", False, 3.0, 10.0, 10.5),
         (date(2030, 10, 6), "S10", "7", False, 3.0, 11.0, 11.5),
@@ -392,7 +392,7 @@ class VijayaDasamiRuleTests(unittest.TestCase):
 
 
 class BaliPadyamiRuleTests(unittest.TestCase):
-    rule = next(rule for rule in FESTIVAL_RULES if rule.number == 17)
+    rule = next(rule for rule in FESTIVAL_RULES if rule.number == 18)
     records = [
         (date(2030, 11, 1), "K15", "8", False, 1.0, 10.0, 10.5),
         (date(2030, 11, 2), "S1", "8", False, 4.0, 11.0, 11.5),
@@ -414,7 +414,7 @@ class BaliPadyamiRuleTests(unittest.TestCase):
 
 
 class VasantaPanchamiRuleTests(unittest.TestCase):
-    rule = next(rule for rule in FESTIVAL_RULES if rule.number == 20)
+    rule = next(rule for rule in FESTIVAL_RULES if rule.number == 21)
     records = [
         (date(2030, 2, 1), "S5", "11", False, 3.0, 10.0, 10.5),
         (date(2030, 2, 2), "S5", "11", False, 3.0, 11.0, 11.5),
@@ -442,7 +442,7 @@ class VasantaPanchamiRuleTests(unittest.TestCase):
 
 
 class RathaSaptamiRuleTests(unittest.TestCase):
-    rule = next(rule for rule in FESTIVAL_RULES if rule.number == 21)
+    rule = next(rule for rule in FESTIVAL_RULES if rule.number == 22)
     records = [
         (date(2030, 2, 3), "S7", "11", False, 3.0, 10.0, 10.5),
         (date(2030, 2, 4), "S7", "11", False, 3.0, 11.0, 11.5),
@@ -470,7 +470,7 @@ class RathaSaptamiRuleTests(unittest.TestCase):
 
 
 class HoliRuleTests(unittest.TestCase):
-    rule = next(rule for rule in FESTIVAL_RULES if rule.number == 23)
+    rule = next(rule for rule in FESTIVAL_RULES if rule.number == 25)
     records = [
         (date(2030, 3, 20), "K1", "12", False, 3.0, 10.0, 10.5),
         (date(2030, 3, 21), "K1", "12", False, 3.0, 11.0, 11.5),

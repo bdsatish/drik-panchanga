@@ -265,7 +265,7 @@ def draw_day_column(pdf, x, top, width):
         x + width / 2,
         top - 21,
         "Helvetica-Bold",
-        6.5,
+        7.2,
         white,
     )
 
@@ -280,7 +280,7 @@ def draw_day_column(pdf, x, top, width):
             x + width / 2,
             row_y + 4.1,
             "Helvetica",
-            6.6,
+            7.4,
             INK,
         )
 
@@ -324,7 +324,7 @@ def draw_month(
         x + width / 2,
         top - 14,
         "Helvetica-Bold",
-        7.2,
+        8.0,
         white,
     )
 
@@ -347,7 +347,7 @@ def draw_month(
             center,
             header_top - 10.5,
             "Helvetica-Bold",
-            6.2,
+            7.0,
             MUTED,
         )
 
@@ -410,7 +410,7 @@ def draw_month(
             centers[0],
             baseline,
             "Helvetica-Bold",
-            6.0 if is_masa_start else 6.6,
+            6.7 if is_masa_start else 7.4,
             (
                 ADHIKA_INK
                 if is_masa_start and is_adhika
@@ -418,11 +418,11 @@ def draw_month(
             ),
         )
         draw_centered(
-            pdf, str(nakshatra), centers[1], baseline, "Helvetica", 6.5, INK
+            pdf, str(nakshatra), centers[1], baseline, "Helvetica", 7.3, INK
         )
         if festival_numbers:
             pdf.setFillColor(FESTIVAL_INK)
-            pdf.setFont("Helvetica-Bold", 3.8)
+            pdf.setFont("Helvetica-Bold", 4.3)
             pdf.drawRightString(
                 x + width * 0.55,
                 row_y + 8.3,
@@ -463,7 +463,7 @@ def draw_page_header(pdf, location, months):
         f"{location.name} Panchanga: {month_span_label(months)}",
     )
     pdf.setFillColor(MUTED)
-    pdf.setFont("Helvetica", 7)
+    pdf.setFont("Helvetica", 7.5)
     pdf.drawString(
         18,
         page_height - 31,
@@ -476,7 +476,7 @@ def draw_page_header(pdf, location, months):
 
 def draw_page_footer(pdf, festival_entries):
     pdf.setFillColor(MUTED)
-    pdf.setFont("Helvetica-Bold", 5.3)
+    pdf.setFont("Helvetica-Bold", 6.4)
     pdf.setFillColor(FESTIVAL_INK)
     pdf.drawString(
         18,
@@ -484,39 +484,36 @@ def draw_page_footer(pdf, festival_entries):
         "Festival markers:",
     )
 
-    columns = 4
-    rows = 7
+    columns = 6
+    rows = 5
     column_width = (landscape(A4)[0] - 36) / columns
-    pdf.setFont("Helvetica", 4.8)
+    pdf.setFont("Helvetica", 6.5)
     for index, (number, festival_date, name) in enumerate(festival_entries):
         column = index // rows
         row = index % rows
         pdf.drawString(
             18 + column * column_width,
-            76 - row * 6,
+            76 - row * 8,
             f"{number}  {festival_date}  {name}",
         )
 
     pdf.setFillColor(MUTED)
-    pdf.setFont("Helvetica", 4.8)
+    pdf.setFont("Helvetica", 5.4)
     pdf.drawString(
         18,
         32,
         "T: S1-S15 = Sukla; K1-K15 = Krsna. N = nakshatra. "
         "Tiny red numbers refer to the festival key. Sundays have a red left "
-        "edge; Dharma-sindhu Vaishnava Ekadashi upavasa has a teal bottom edge.",
+        "edge; Dharma-sindhu Vaishnava Ekadashi upavasa has a teal bottom edge. "
+        "Masa: code precedes / at its first visible tithi (3/S2); A = adhika; "
+        "A3/K1 is the range carry-in.",
     )
+    pdf.setFont("Helvetica", 5.2)
     pdf.drawString(
         18,
-        24,
-        "Masa: code precedes / at its first visible tithi (3/S2); A = adhika; "
-        "A3/K1 is the range carry-in. Key: 1 Caitra, 2 Vaisakha, 3 Jyestha, "
-        "4 Asadha, 5 Sravana, 6 Bhadrapada, 7 Asvina, 8 Kartika, "
-        "9 Margasirsa, 10 Pusya, 11 Magha, 12 Phalguna.",
+        7,
+        f"{NAKSHATRA_KEY_LINES[0]}, {NAKSHATRA_KEY_LINES[1]}",
     )
-    pdf.setFont("Helvetica", 4.6)
-    pdf.drawString(18, 15, NAKSHATRA_KEY_LINES[0])
-    pdf.drawString(18, 7, NAKSHATRA_KEY_LINES[1])
 
 
 def build_pdf(location, start_year, start_month, output_path):
