@@ -24,7 +24,7 @@ import panchanga
 
 MONTH_COUNT = 13
 DEFAULT_CITIES_PATH = Path(__file__).with_name("cities.json")
-RULESET_VERSION = "Dharma-sindhu DS-1.2"
+RULESET_VERSION = "Dharma-sindhu DS-1.3"
 LAYOUT_VERSION = "A4-1.0"
 
 

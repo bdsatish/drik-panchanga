@@ -23,6 +23,7 @@ from festival_rules import (
     select_rigveda_upakarma_dates,
     select_taittiriya_apastamba_upakarma_dates,
     select_ugadi_dates,
+    select_vaikuntha_ekadashi_dates,
     select_vasanta_panchami_dates,
     select_vijaya_dasami_dates,
 )
@@ -668,6 +669,103 @@ class BaliPadyamiRuleTests(unittest.TestCase):
             self.assertEqual(
                 select_bali_padyami_dates(self.records, self.rule),
                 [date(2030, 11, 1)],
+            )
+
+
+class VaikunthaEkadashiRuleTests(unittest.TestCase):
+    rule = festival_rule("Vaikuntha Ekadashi")
+
+    def test_rule_is_regional_with_dharma_sindhu_ekadashi_mechanics(self):
+        self.assertEqual(self.rule.status, "regional")
+        self.assertIn("drikpanchang.com", self.rule.source)
+
+    def test_chooses_margasirsa_or_pusya_candidate_in_dhanur(self):
+        margasirsa = date(2030, 12, 10)
+        pusya = date(2031, 1, 8)
+        records = [
+            (margasirsa, "S11", "9", False, 3.0, 10.0, 10.5),
+            (pusya, "S11", "10", False, 3.0, 20.0, 20.5),
+        ]
+        with patch(
+            "festival_rules.resolve_dharma_sindhu_vaishnava_ekadashi_dates",
+            return_value=[margasirsa, pusya],
+        ), patch(
+            "festival_rules.panchanga.raasi",
+            side_effect=[8, 9],
+        ):
+            self.assertEqual(
+                select_vaikuntha_ekadashi_dates([], {}, records),
+                [pusya],
+            )
+
+    def test_keeps_vaishnava_fast_shifted_to_dvadashi(self):
+        fast_date = date(2030, 12, 20)
+        records = [
+            (fast_date, "S12", "9", False, 3.0, 10.0, 10.5),
+        ]
+        with patch(
+            "festival_rules.resolve_dharma_sindhu_vaishnava_ekadashi_dates",
+            return_value=[fast_date],
+        ), patch(
+            "festival_rules.panchanga.raasi",
+            return_value=9,
+        ):
+            self.assertEqual(
+                select_vaikuntha_ekadashi_dates([], {}, records),
+                [fast_date],
+            )
+
+    def test_rejects_krishna_ekadashi_in_dhanur(self):
+        fast_date = date(2030, 12, 5)
+        records = [
+            (fast_date, "K11", "9", False, 3.0, 10.0, 10.5),
+        ]
+        with patch(
+            "festival_rules.resolve_dharma_sindhu_vaishnava_ekadashi_dates",
+            return_value=[fast_date],
+        ), patch(
+            "festival_rules.panchanga.raasi",
+            return_value=9,
+        ):
+            self.assertEqual(
+                select_vaikuntha_ekadashi_dates([], {}, records),
+                [],
+            )
+
+    def test_accepts_adhika_lunar_masa_when_solar_month_is_dhanur(self):
+        fast_date = date(2030, 12, 20)
+        records = [
+            (fast_date, "S11", "10", True, 3.0, 10.0, 10.5),
+        ]
+        with patch(
+            "festival_rules.resolve_dharma_sindhu_vaishnava_ekadashi_dates",
+            return_value=[fast_date],
+        ), patch(
+            "festival_rules.panchanga.raasi",
+            return_value=9,
+        ):
+            self.assertEqual(
+                select_vaikuntha_ekadashi_dates([], {}, records),
+                [fast_date],
+            )
+
+    def test_retains_multiple_dhanur_occurrences_in_supplied_range(self):
+        first = date(2025, 1, 10)
+        second = date(2025, 12, 30)
+        records = [
+            (first, "S11", "10", False, 3.0, 10.0, 10.5),
+            (second, "S11", "9", False, 3.0, 20.0, 20.5),
+        ]
+        with patch(
+            "festival_rules.resolve_dharma_sindhu_vaishnava_ekadashi_dates",
+            return_value=[first, second],
+        ), patch(
+            "festival_rules.panchanga.raasi",
+            return_value=9,
+        ):
+            self.assertEqual(
+                select_vaikuntha_ekadashi_dates([], {}, records),
+                [first, second],
             )
 
 

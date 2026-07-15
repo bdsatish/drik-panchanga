@@ -147,11 +147,22 @@ FESTIVAL_RULES = (
     # No Gita-Jayanti observance was found in Dharma Sindhu's Margashirsha
     # section. Preserve the supplied community date provisionally.
     FestivalRule(21, "Gita jayanti", 9, "S11", "unresolved"),
+    FestivalRule(
+        22,
+        "Vaikuntha Ekadashi",
+        9,
+        "Dhanur-masa S11",
+        "regional",
+        (
+            "https://www.drikpanchang.com/ekadashis/vaikuntha/"
+            "vaikuntha-ekadashi-date-time.html"
+        ),
+    ),
     # No Vasavi Atmarpana observance was found in Dharma Sindhu's Magha
     # section. Preserve the supplied community date provisionally.
-    FestivalRule(22, "Vasavi atmarpana", 11, "S2", "unresolved"),
+    FestivalRule(23, "Vasavi atmarpana", 11, "S2", "unresolved"),
     FestivalRule(
-        23,
+        24,
         "Vasanta pancami",
         11,
         "S5",
@@ -159,7 +170,7 @@ FESTIVAL_RULES = (
         "https://www.transliteral.org/pages/z80513003421/view",
     ),
     FestivalRule(
-        24,
+        25,
         "Ratha saptami",
         11,
         "S7",
@@ -168,9 +179,9 @@ FESTIVAL_RULES = (
     ),
     # Vishnu-Sahasranama Jayanthi was not found in Dharma Sindhu; Bhishma
     # Ashtami is present but is a different observance.
-    FestivalRule(25, "VSN jayanthi", 11, "S11", "unresolved"),
+    FestivalRule(26, "VSN jayanthi", 11, "S11", "unresolved"),
     FestivalRule(
-        26,
+        27,
         "Maha Shivaratri",
         11,
         "K14",
@@ -178,7 +189,7 @@ FESTIVAL_RULES = (
         "https://www.transliteral.org/pages/z80513005728/view",
     ),
     FestivalRule(
-        27,
+        28,
         "Holi",
         12,
         "K1",
@@ -216,10 +227,11 @@ VIJAYA_DASAMI_NUMBER = 17
 NARAKA_CATURDASI_NUMBER = 18
 DIPAVALI_NUMBER = 19
 BALI_PADYAMI_NUMBER = 20
-VASANTA_PANCHAMI_NUMBER = 23
-RATHA_SAPTAMI_NUMBER = 24
-HOLI_NUMBER = 27
-MAHA_SHIVARATRI_NUMBER = 26
+VAIKUNTHA_EKADASHI_NUMBER = 22
+VASANTA_PANCHAMI_NUMBER = 24
+RATHA_SAPTAMI_NUMBER = 25
+HOLI_NUMBER = 28
+MAHA_SHIVARATRI_NUMBER = 27
 ONE_GHATI_HOURS = 24 / 60
 SIX_GHATI_HOURS = 6 * ONE_GHATI_HOURS
 ARUNODAYA_HOURS = 4 * ONE_GHATI_HOURS
@@ -1404,6 +1416,64 @@ def resolve_dharma_sindhu_vaishnava_ekadashi_dates(months, month_data):
     return sorted(set(selected))
 
 
+def select_vaikuntha_ekadashi_dates(months, month_data, records=None):
+    """Select the Dharma-sindhu Vaishnava fast in solar Dhanur masa.
+
+    Vaikuntha (Mukkoti) Ekadashi is a regional/Sri-Vaishnava observance, and
+    no separately named Vaikuntha-Ekadashi rule was found in Dharma Sindhu's
+    Margashirsha or Pausha sections. Its calendrical definition is the Shukla
+    Ekadashi fast that falls in the sidereal solar month of Dhanur. It can
+    therefore belong to lunar Margashirsha or Pausha.
+
+    The festival marker reuses this calendar's existing pure Dharma Sindhu
+    Vaishnava Ekadashi resolver. Consequently Dashami at the four-ghati
+    Arunodaya, Ekadashi/Dvadashi adhikya, and a resulting shift of the fast
+    to Dvadashi are handled identically to every teal-underlined Ekadashi.
+    No ISKCON/Gaudiya Mahadvadashi categories are introduced.
+
+    The solar test is made at local sunrise on the resolved fast day using
+    panchanga.raasi(); Dhanur is rasi 9. Sunrise is appropriate because the
+    Ekadashi upavasa day runs from local sunrise, and a shifted Vaishnava
+    fast may have Dvadashi rather than S11 at that sunrise. The candidate
+    must still be in Shukla Paksha and lunar masa 9 or 10. Adhika lunar masa
+    is not rejected: the controlling definition is solar Dhanur, not the
+    shuddha/adhika label.
+
+    No occurrence is manufactured when neither candidate falls in Dhanur,
+    and all qualifying occurrences are retained. Hence a Gregorian year can
+    contain zero, one, or two dates, while an arbitrary 13-month PDF range
+    may also contain portions of two Dhanur seasons.
+
+    Sources:
+    Dharma Sindhu Vaishnava Ekadashi decision:
+    https://www.transliteral.org/pages/z80422042154/view
+    https://www.transliteral.org/pages/z80422042403/view
+    Regional Dhanur-masa definition:
+    https://www.drikpanchang.com/ekadashis/vaikuntha/vaikuntha-ekadashi-date-time.html
+    https://www.sadagopan.org/ebook/pdf/Vratams.pdf
+    """
+    if records is None:
+        records = collect_records(months, month_data)
+    records_by_date = {record[0]: record for record in records}
+    upavasa_dates = resolve_dharma_sindhu_vaishnava_ekadashi_dates(
+        months,
+        month_data,
+    )
+    selected = []
+    for upavasa_date in upavasa_dates:
+        record = records_by_date.get(upavasa_date)
+        if record is None:
+            continue
+        _, tithi, masa, _, _, sunrise_jd, _ = record
+        if (
+            masa in {"9", "10"}
+            and tithi.startswith("S")
+            and panchanga.raasi(sunrise_jd) == 9
+        ):
+            selected.append(upavasa_date)
+    return selected
+
+
 def select_ganesha_caturthi_dates(records, rule):
     """Apply Dharma Sindhu's Madhyahna-vyapini, purva-viddha rule.
 
@@ -1661,6 +1731,12 @@ def resolve_festivals(months, month_data):
             matches = select_vijaya_dasami_dates(records, rule)
         elif rule.number == BALI_PADYAMI_NUMBER:
             matches = select_bali_padyami_dates(records, rule)
+        elif rule.number == VAIKUNTHA_EKADASHI_NUMBER:
+            matches = select_vaikuntha_ekadashi_dates(
+                months,
+                month_data,
+                records,
+            )
         elif rule.number == VASANTA_PANCHAMI_NUMBER:
             matches = select_vasanta_panchami_dates(records, rule)
         elif rule.number == RATHA_SAPTAMI_NUMBER:
