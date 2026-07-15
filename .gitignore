@@ -29,6 +29,10 @@ nosetests.xml
 # Translations
 *.mo
 
+# Virtual environments
+.venv/
+venv/
+
 # Mr Developer
 .mr.developer.cfg
 .project

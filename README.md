@@ -102,12 +102,18 @@ and open `Gui.wxg`.
 
 ### One-page calendar PDF ###
 
-Install ReportLab in addition to the Swiss Ephemeris dependency, then select a
-city and the first of 13 consecutive months:
+Create a local Python virtual environment and install the calendar generator's
+dependencies:
 
 ```
-pip3 install --user pyswisseph reportlab
-python3 generate_panchanga_calendar.py \
+./setup_venv.sh
+source .venv/bin/activate
+```
+
+Then select a city and the first of 13 consecutive months:
+
+```
+python generate_panchanga_calendar.py \
   --city Paris \
   --start 2026-06
 ```
@@ -115,6 +121,12 @@ python3 generate_panchanga_calendar.py \
 Cities are read from `cities.json` next to the generator. Its IANA time-zone
 names, such as `Europe/Paris`, allow daylight-saving changes to be applied
 to each date. Use `--output FILE.pdf` to choose the output path.
+
+To leave the virtual environment when finished, run:
+
+```
+deactivate
+```
 
 Using the GUI
 -------------
