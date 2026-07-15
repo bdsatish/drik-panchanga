@@ -143,7 +143,14 @@ FESTIVAL_RULES = (
         "dharmasindhu",
         "https://www.transliteral.org/pages/z80505120438/view",
     ),
-    FestivalRule(24, "Maha Shivaratri", 11, "K14"),
+    FestivalRule(
+        24,
+        "Maha Shivaratri",
+        11,
+        "K14",
+        "dharmasindhu",
+        "https://www.transliteral.org/pages/z80513005728/view",
+    ),
     FestivalRule(
         25,
         "Raksha Bandhan",
@@ -183,6 +190,7 @@ BALI_PADYAMI_NUMBER = 17
 VASANTA_PANCHAMI_NUMBER = 20
 RATHA_SAPTAMI_NUMBER = 21
 HOLI_NUMBER = 23
+MAHA_SHIVARATRI_NUMBER = 24
 ONE_GHATI_HOURS = 24 / 60
 SIX_GHATI_HOURS = 6 * ONE_GHATI_HOURS
 ARUNODAYA_HOURS = 4 * ONE_GHATI_HOURS
@@ -901,6 +909,74 @@ def select_holi_dates(records, rule):
     ]
 
 
+def select_maha_shivaratri_dates(records, rule):
+    """Resolve Nishitha-vyapini Magha Krishna Caturdashi.
+
+    Nishitha is the eighth muhurta of the local night. If only one Nishitha
+    contains Caturdashi, use that day; if neither does, use the later day.
+    For two Nishithas Dharma Sindhu records disagreement: Hemadri/Kaustubha
+    choose the earlier day, while Madhava, Nirnaya Sindhu,
+    Purushartha-cintamani and others choose the later. This implementation
+    follows the recorded majority/later-day opinion, except that a wholly
+    covered Nishitha defeats a merely partial one.
+
+    Source:
+    https://www.transliteral.org/pages/z80513005728/view
+    """
+    rule_records = records_for_rule(records, rule)
+    by_date = {record[0]: record for record in records}
+    candidates = []
+    for record in rule_records:
+        next_record = by_date.get(record[0] + timedelta(days=1))
+        if next_record is None:
+            continue
+        night_length = next_record[5] - record[6]
+        nishitha_start = record[6] + night_length * 7 / 15
+        nishitha_end = record[6] + night_length * 8 / 15
+        overlap = tithi_overlap_hours(
+            nishitha_start,
+            nishitha_end,
+            29,
+        )
+        if overlap > 0:
+            candidates.append(
+                (
+                    record[0],
+                    overlap,
+                    (nishitha_end - nishitha_start) * 24,
+                )
+            )
+
+    selected = []
+    for group in group_consecutive_candidates(
+        [(date, overlap) for date, overlap, _ in candidates]
+    ):
+        if len(group) == 1:
+            selected.append(group[0][0])
+            continue
+        details = {
+            date: (overlap, length)
+            for date, overlap, length in candidates
+            if date in {candidate[0] for candidate in group}
+        }
+        first_date, later_date = group[0][0], group[-1][0]
+        first_full = details[first_date][0] >= details[first_date][1] - 1e-5
+        later_full = details[later_date][0] >= details[later_date][1] - 1e-5
+        selected.append(first_date if first_full and not later_full else later_date)
+    if selected:
+        return selected
+
+    daytime_candidates = [
+        (record[0], 1)
+        for record in rule_records
+        if tithi_overlap_hours(record[5], record[6], 29) > 0
+    ]
+    return [
+        group[-1][0]
+        for group in group_consecutive_candidates(daytime_candidates)
+    ]
+
+
 def select_raksha_bandhan_dates(records, rule):
     """Select Bhadra-free Shravana Purnima in Aparahna or Pradosha.
 
@@ -1269,6 +1345,8 @@ def resolve_festivals(months, month_data):
             matches = select_ratha_saptami_dates(records, rule)
         elif rule.number == HOLI_NUMBER:
             matches = select_holi_dates(records, rule)
+        elif rule.number == MAHA_SHIVARATRI_NUMBER:
+            matches = select_maha_shivaratri_dates(records, rule)
         elif rule.tithi == "S1":
             matches = []
             for index, (

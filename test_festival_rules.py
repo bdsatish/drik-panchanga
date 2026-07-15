@@ -12,6 +12,7 @@ from festival_rules import (
     select_guru_purnima_dates,
     select_holi_dates,
     select_janmashtami_dates,
+    select_maha_shivaratri_dates,
     select_naga_panchami_dates,
     select_narasimha_jayanthi_dates,
     select_raksha_bandhan_dates,
@@ -493,6 +494,35 @@ class HoliRuleTests(unittest.TestCase):
             self.assertEqual(
                 select_holi_dates(self.records, self.rule),
                 [date(2030, 3, 21)],
+            )
+
+
+class MahaShivaratriRuleTests(unittest.TestCase):
+    rule = next(rule for rule in FESTIVAL_RULES if rule.number == 24)
+    records = [
+        (date(2030, 3, 5), "K14", "11", False, 3.0, 10.0, 10.5),
+        (date(2030, 3, 6), "K14", "11", False, 3.0, 11.0, 11.5),
+        (date(2030, 3, 7), "K15", "11", False, 3.0, 12.0, 12.5),
+    ]
+
+    def test_two_full_nishithas_use_recorded_majority_later_day(self):
+        with patch(
+            "festival_rules.tithi_overlap_hours",
+            side_effect=[0.8, 0.8],
+        ):
+            self.assertEqual(
+                select_maha_shivaratri_dates(self.records, self.rule),
+                [date(2030, 3, 6)],
+            )
+
+    def test_full_first_nishitha_beats_partial_later_nishitha(self):
+        with patch(
+            "festival_rules.tithi_overlap_hours",
+            side_effect=[0.8, 0.2],
+        ):
+            self.assertEqual(
+                select_maha_shivaratri_dates(self.records, self.rule),
+                [date(2030, 3, 5)],
             )
 
 
