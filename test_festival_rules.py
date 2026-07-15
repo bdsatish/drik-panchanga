@@ -121,6 +121,11 @@ class UnresolvedRuleTests(unittest.TestCase):
         self.assertEqual(VARAMAHALAKSHMI_RULE.status, "unresolved")
         self.assertIsNone(VARAMAHALAKSHMI_RULE.source)
 
+    def test_ayudha_puja_is_not_substituted_with_mahanavami(self):
+        rule = next(rule for rule in FESTIVAL_RULES if rule.number == 13)
+        self.assertEqual(rule.status, "unresolved")
+        self.assertIsNone(rule.source)
+
 
 class NarasimhaJayanthiRuleTests(unittest.TestCase):
     rule = FESTIVAL_RULES[4]

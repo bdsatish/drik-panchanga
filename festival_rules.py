@@ -89,7 +89,9 @@ FESTIVAL_RULES = (
     ),
     FestivalRule(11, "Ganesa caturthi", 6, "S4"),
     FestivalRule(12, "Durgastami", 7, "S8"),
-    FestivalRule(13, "Ayudha puja", 7, "S9"),
+    # Dharma Sindhu gives a Mahanavami rule, but no independent Ayudha-puja
+    # date rule was found. Preserve the supplied date provisionally.
+    FestivalRule(13, "Ayudha puja", 7, "S9", "unresolved"),
     FestivalRule(14, "Vijaya dasami", 7, "S10"),
     FestivalRule(15, "Naraka caturdasi", 7, "K14"),
     FestivalRule(16, "Dipavali", 7, "K15"),
