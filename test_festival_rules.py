@@ -6,6 +6,7 @@ from unittest.mock import patch
 
 from festival_rules import (
     FESTIVAL_RULES,
+    VARAMAHALAKSHMI_RULE,
     select_aksaya_trtiya_dates,
     select_guru_purnima_dates,
     select_naga_panchami_dates,
@@ -112,6 +113,10 @@ class UnresolvedRuleTests(unittest.TestCase):
         rule = FESTIVAL_RULES[3]
         self.assertEqual(rule.status, "unresolved")
         self.assertIsNone(rule.source)
+
+    def test_varamahalakshmi_is_not_attributed_to_dharma_sindhu(self):
+        self.assertEqual(VARAMAHALAKSHMI_RULE.status, "unresolved")
+        self.assertIsNone(VARAMAHALAKSHMI_RULE.source)
 
 
 class NarasimhaJayanthiRuleTests(unittest.TestCase):

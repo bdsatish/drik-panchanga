@@ -89,8 +89,17 @@ FESTIVAL_RULES = (
     FestivalRule(24, "Maha Shivaratri", 11, "K14"),
 )
 
-VARAMAHALAKSHMI_NUMBER = 8
-VARAMAHALAKSHMI_NAME = "Varamahalakshmi vrata"
+# The popular Friday-before-Sravana-Purnima rule was not found in Dharma
+# Sindhu. Preserve it provisionally, but keep its provenance unresolved.
+VARAMAHALAKSHMI_RULE = FestivalRule(
+    8,
+    "Varamahalakshmi vrata",
+    5,
+    "Friday before S15",
+    "unresolved",
+)
+VARAMAHALAKSHMI_NUMBER = VARAMAHALAKSHMI_RULE.number
+VARAMAHALAKSHMI_NAME = VARAMAHALAKSHMI_RULE.name
 UGADI_NUMBER = 1
 RAMA_NAVAMI_NUMBER = 2
 AKSAYA_TRTIYA_NUMBER = 3
