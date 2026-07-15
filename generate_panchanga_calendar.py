@@ -37,6 +37,7 @@ INK = HexColor("#172033")
 MUTED = HexColor("#5F6B7A")
 ACCENT = HexColor("#263F73")
 GRID = HexColor("#CBD3DF")
+MONTH_DIVIDER = HexColor("#AAB5C4")
 ALT_ROW = HexColor("#F4F7FA")
 SUNDAY_MARK = HexColor("#C94B40")
 MISSING_ROW = HexColor("#ECEFF3")
@@ -476,6 +477,9 @@ def draw_month(
     for index in range(32):
         y = rows_top - index * row_height
         pdf.line(x, y, x + width, y)
+    pdf.setStrokeColor(MONTH_DIVIDER)
+    pdf.setLineWidth(0.9)
+    pdf.line(x, bottom, x, top)
 
 
 def month_span_label(months):
