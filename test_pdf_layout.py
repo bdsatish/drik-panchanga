@@ -9,6 +9,8 @@ import unittest
 from reportlab.pdfgen.canvas import Canvas
 
 from generate_panchanga_calendar import (
+    LAYOUT_VERSION,
+    RULESET_VERSION,
     build_pdf,
     ensure_text_fits,
     fitted_font_size,
@@ -25,6 +27,8 @@ class PdfLayoutTests(unittest.TestCase):
 
         page_objects = re.findall(rb"/Type\s*/Page\b", document)
         self.assertEqual(len(page_objects), 1)
+        self.assertIn(RULESET_VERSION.encode("ascii"), document)
+        self.assertIn(LAYOUT_VERSION.encode("ascii"), document)
 
     def test_long_labels_are_fitted_without_overflow(self):
         pdf = Canvas(BytesIO())

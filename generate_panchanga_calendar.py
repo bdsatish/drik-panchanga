@@ -24,6 +24,8 @@ import panchanga
 
 MONTH_COUNT = 13
 DEFAULT_CITIES_PATH = Path(__file__).with_name("cities.json")
+RULESET_VERSION = "Dharma-sindhu DS-1.0"
+LAYOUT_VERSION = "A4-1.0"
 
 
 @dataclass(frozen=True)
@@ -589,6 +591,12 @@ def draw_page_footer(pdf, festival_entries):
         )
 
     pdf.setFillColor(MUTED)
+    pdf.setFont("Helvetica", 4.7)
+    pdf.drawRightString(
+        landscape(A4)[0] - 18,
+        34,
+        f"Ruleset: {RULESET_VERSION} | Layout: {LAYOUT_VERSION}",
+    )
     pdf.setFont("Helvetica", 5.4)
     pdf.drawString(
         18,
@@ -653,6 +661,10 @@ def build_pdf(location, start_year, start_month, output_path):
         f"{location.name} Panchanga {month_span_label(months)}"
     )
     pdf.setAuthor("drik-panchanga")
+    pdf.setKeywords(
+        f"ruleset={RULESET_VERSION}; layout={LAYOUT_VERSION}; "
+        "ayanamsa=True Citra"
+    )
     pdf.setSubject(
         f"Daily tithi, True Citra nakshatra, and amanta masa at "
         f"{location.name} sunrise"
