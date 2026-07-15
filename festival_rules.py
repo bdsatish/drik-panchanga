@@ -110,7 +110,9 @@ FESTIVAL_RULES = (
         "dharmasindhu",
         "https://www.transliteral.org/pages/z80505062407/view",
     ),
-    FestivalRule(18, "Gita jayanti", 9, "S11"),
+    # No Gita-Jayanti observance was found in Dharma Sindhu's Margashirsha
+    # section. Preserve the supplied community date provisionally.
+    FestivalRule(18, "Gita jayanti", 9, "S11", "unresolved"),
     FestivalRule(19, "Vasavi atmarpana", 11, "S2"),
     FestivalRule(20, "Vasanta pancami", 11, "S5"),
     FestivalRule(21, "Ratha saptami", 11, "S7"),
