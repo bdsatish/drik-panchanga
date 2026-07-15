@@ -113,7 +113,9 @@ FESTIVAL_RULES = (
     # No Gita-Jayanti observance was found in Dharma Sindhu's Margashirsha
     # section. Preserve the supplied community date provisionally.
     FestivalRule(18, "Gita jayanti", 9, "S11", "unresolved"),
-    FestivalRule(19, "Vasavi atmarpana", 11, "S2"),
+    # No Vasavi Atmarpana observance was found in Dharma Sindhu's Magha
+    # section. Preserve the supplied community date provisionally.
+    FestivalRule(19, "Vasavi atmarpana", 11, "S2", "unresolved"),
     FestivalRule(20, "Vasanta pancami", 11, "S5"),
     FestivalRule(21, "Ratha saptami", 11, "S7"),
     FestivalRule(22, "VSN jayanthi", 11, "S11"),

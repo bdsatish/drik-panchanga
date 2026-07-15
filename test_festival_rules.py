@@ -133,6 +133,11 @@ class UnresolvedRuleTests(unittest.TestCase):
         self.assertEqual(rule.status, "unresolved")
         self.assertIsNone(rule.source)
 
+    def test_vasavi_atmarpana_is_not_attributed_to_dharma_sindhu(self):
+        rule = next(rule for rule in FESTIVAL_RULES if rule.number == 19)
+        self.assertEqual(rule.status, "unresolved")
+        self.assertIsNone(rule.source)
+
 
 class NarasimhaJayanthiRuleTests(unittest.TestCase):
     rule = FESTIVAL_RULES[4]
