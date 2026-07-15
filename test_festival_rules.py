@@ -15,6 +15,7 @@ from festival_rules import (
     select_narasimha_jayanthi_dates,
     select_raksha_bandhan_dates,
     select_rama_navami_dates,
+    select_ratha_saptami_dates,
     select_taittiriya_apastamba_upakarma_dates,
     select_ugadi_dates,
     select_vasanta_panchami_dates,
@@ -430,6 +431,34 @@ class VasantaPanchamiRuleTests(unittest.TestCase):
             self.assertEqual(
                 select_vasanta_panchami_dates(self.records, self.rule),
                 [date(2030, 2, 2)],
+            )
+
+
+class RathaSaptamiRuleTests(unittest.TestCase):
+    rule = next(rule for rule in FESTIVAL_RULES if rule.number == 21)
+    records = [
+        (date(2030, 2, 3), "S7", "11", False, 3.0, 10.0, 10.5),
+        (date(2030, 2, 4), "S7", "11", False, 3.0, 11.0, 11.5),
+    ]
+
+    def test_two_arunodayas_use_earlier_day(self):
+        with patch(
+            "festival_rules.tithi_overlap_hours",
+            side_effect=[1.0, 1.0],
+        ):
+            self.assertEqual(
+                select_ratha_saptami_dates(self.records, self.rule),
+                [date(2030, 2, 3)],
+            )
+
+    def test_only_later_arunodaya_uses_later_day(self):
+        with patch(
+            "festival_rules.tithi_overlap_hours",
+            side_effect=[0.0, 1.0],
+        ):
+            self.assertEqual(
+                select_ratha_saptami_dates(self.records, self.rule),
+                [date(2030, 2, 4)],
             )
 
 

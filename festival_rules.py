@@ -124,7 +124,14 @@ FESTIVAL_RULES = (
         "dharmasindhu",
         "https://www.transliteral.org/pages/z80513003421/view",
     ),
-    FestivalRule(21, "Ratha saptami", 11, "S7"),
+    FestivalRule(
+        21,
+        "Ratha saptami",
+        11,
+        "S7",
+        "dharmasindhu",
+        "https://www.transliteral.org/pages/z80513004113/view",
+    ),
     FestivalRule(22, "VSN jayanthi", 11, "S11"),
     FestivalRule(23, "Holi", 12, "K1"),
     FestivalRule(24, "Maha Shivaratri", 11, "K14"),
@@ -165,6 +172,7 @@ NARAKA_CATURDASI_NUMBER = 15
 DIPAVALI_NUMBER = 16
 BALI_PADYAMI_NUMBER = 17
 VASANTA_PANCHAMI_NUMBER = 20
+RATHA_SAPTAMI_NUMBER = 21
 ONE_GHATI_HOURS = 24 / 60
 SIX_GHATI_HOURS = 6 * ONE_GHATI_HOURS
 ARUNODAYA_HOURS = 4 * ONE_GHATI_HOURS
@@ -806,6 +814,44 @@ def select_vasanta_panchami_dates(records, rule):
     ]
 
 
+def select_ratha_saptami_dates(records, rule):
+    """Select Arunodaya-vyapini Magha Saptami.
+
+    If Saptami occupies Arunodaya on two days, the earlier day is used. When
+    Saptami is lost before the following Arunodaya and only about one ghati
+    of Shashthi remains, Dharma Sindhu accepts the earlier Shashthi-yukta
+    Saptami for the Arunodaya bath.
+
+    Source:
+    https://www.transliteral.org/pages/z80513004113/view
+    """
+    rule_records = records_for_rule(records, rule)
+    candidates = []
+    for record in rule_records:
+        overlap = tithi_overlap_hours(
+            record[5] - ARUNODAYA_HOURS / 24,
+            record[5],
+            7,
+        )
+        if overlap > 0:
+            candidates.append((record[0], overlap))
+    if candidates:
+        return [
+            group[0][0]
+            for group in group_consecutive_candidates(candidates)
+        ]
+
+    daytime_candidates = [
+        (record[0], 1)
+        for record in rule_records
+        if tithi_overlap_hours(record[5], record[6], 7) > 0
+    ]
+    return [
+        group[0][0]
+        for group in group_consecutive_candidates(daytime_candidates)
+    ]
+
+
 def select_raksha_bandhan_dates(records, rule):
     """Select Bhadra-free Shravana Purnima in Aparahna or Pradosha.
 
@@ -1170,6 +1216,8 @@ def resolve_festivals(months, month_data):
             matches = select_bali_padyami_dates(records, rule)
         elif rule.number == VASANTA_PANCHAMI_NUMBER:
             matches = select_vasanta_panchami_dates(records, rule)
+        elif rule.number == RATHA_SAPTAMI_NUMBER:
+            matches = select_ratha_saptami_dates(records, rule)
         elif rule.tithi == "S1":
             matches = []
             for index, (
