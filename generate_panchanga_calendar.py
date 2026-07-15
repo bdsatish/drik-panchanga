@@ -25,7 +25,7 @@ import panchanga
 MONTH_COUNT = 13
 DEFAULT_CITIES_PATH = Path(__file__).with_name("cities.json")
 RULESET_VERSION = "Dharma-sindhu DS-1.3"
-LAYOUT_VERSION = "A4-1.0"
+LAYOUT_VERSION = "A4-1.1"
 
 
 @dataclass(frozen=True)
@@ -606,27 +606,40 @@ def draw_page_footer(pdf, festival_entries):
     for index, (number, festival_date, name) in enumerate(festival_entries):
         column = index // rows
         row = index % rows
-        entry = f"{number:02d}  {festival_date}  {name}"
+        marker = str(number)
+        entry = f"{name}: {festival_date}"
+        marker_size = 5.0
+        marker_width = pdf.stringWidth(
+            marker,
+            "Helvetica-Bold",
+            marker_size,
+        )
+        marker_gap = 2.0
+        entry_width = column_width - 4 - marker_width - marker_gap
         entry_size = fitted_font_size(
             pdf,
             entry,
             "Helvetica",
             7.5,
             5.5,
-            column_width - 4,
+            entry_width,
         )
         ensure_text_fits(
             pdf,
             entry,
             "Helvetica",
             entry_size,
-            column_width - 4,
+            entry_width,
             f"festival entry {number}",
         )
+        entry_x = 18 + column * column_width
+        entry_y = 88 - row * 8
+        pdf.setFont("Helvetica-Bold", marker_size)
+        pdf.drawString(entry_x, entry_y + 2.0, marker)
         pdf.setFont("Helvetica", entry_size)
         pdf.drawString(
-            18 + column * column_width,
-            88 - row * 8,
+            entry_x + marker_width + marker_gap,
+            entry_y,
             entry,
         )
 
