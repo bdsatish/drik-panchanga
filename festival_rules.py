@@ -63,7 +63,14 @@ FESTIVAL_RULES = (
         "dharmasindhu",
         "https://www.transliteral.org/pages/z80421213928/view",
     ),
-    FestivalRule(7, "Naga panchami", 5, "S5"),
+    FestivalRule(
+        7,
+        "Naga panchami",
+        5,
+        "S5",
+        "dharmasindhu",
+        "https://www.transliteral.org/pages/z80422074237/view",
+    ),
     FestivalRule(9, "Yajur upakarma, Rakhi", 5, "S15"),
     FestivalRule(10, "Janmashtami", 5, "K8"),
     FestivalRule(11, "Ganesa caturthi", 6, "S4"),
@@ -89,6 +96,7 @@ RAMA_NAVAMI_NUMBER = 2
 AKSAYA_TRTIYA_NUMBER = 3
 NARASIMHA_JAYANTHI_NUMBER = 5
 GURU_PURNIMA_NUMBER = 6
+NAGA_PANCHAMI_NUMBER = 7
 GANESHA_CATURTHI_NUMBER = 11
 DURGA_ASHTAMI_NUMBER = 12
 NARAKA_CATURDASI_NUMBER = 15
@@ -352,6 +360,32 @@ def select_guru_purnima_dates(records, rule):
     Sources:
     https://www.transliteral.org/pages/z80421213928/view
     https://www.transliteral.org/pages/z80422074133/view
+    """
+    candidates = [
+        (record[0], record[4])
+        for record in records_for_rule(records, rule)
+        if record[1] == rule.tithi
+    ]
+    selected = []
+    for group in group_consecutive_candidates(candidates):
+        if len(group) == 1:
+            selected.append(group[0][0])
+        elif group[-1][1] >= SIX_GHATI_HOURS:
+            selected.append(group[-1][0])
+        else:
+            selected.append(group[-2][0])
+    return selected
+
+
+def select_naga_panchami_dates(records, rule):
+    """Prefer Shashthi-yukta Panchami when it has three muhurtas.
+
+    The later sunrise day is selected only when Panchami remains for at
+    least three muhurtas (six ghatis). A shorter later Panchami is rejected
+    in favor of the preceding Caturthi-viddha Panchami.
+
+    Source:
+    https://www.transliteral.org/pages/z80422074237/view
     """
     candidates = [
         (record[0], record[4])
@@ -670,6 +704,8 @@ def resolve_festivals(months, month_data):
             matches = select_narasimha_jayanthi_dates(records, rule)
         elif rule.number == GURU_PURNIMA_NUMBER:
             matches = select_guru_purnima_dates(records, rule)
+        elif rule.number == NAGA_PANCHAMI_NUMBER:
+            matches = select_naga_panchami_dates(records, rule)
         elif rule.tithi == "S1":
             matches = []
             for index, (

@@ -8,6 +8,7 @@ from festival_rules import (
     FESTIVAL_RULES,
     select_aksaya_trtiya_dates,
     select_guru_purnima_dates,
+    select_naga_panchami_dates,
     select_narasimha_jayanthi_dates,
     select_rama_navami_dates,
     select_ugadi_dates,
@@ -178,6 +179,30 @@ class GuruPurnimaRuleTests(unittest.TestCase):
         self.assertEqual(
             select_guru_purnima_dates(records, self.rule),
             [date(2030, 7, 15)],
+        )
+
+
+class NagaPanchamiRuleTests(unittest.TestCase):
+    rule = FESTIVAL_RULES[6]
+
+    def test_uses_later_panchami_with_three_muhurtas(self):
+        records = [
+            record(date(2030, 8, 4), "S5", masa="5"),
+            (date(2030, 8, 5), "S5", "5", False, 2.5, 0.0, 0.5),
+        ]
+        self.assertEqual(
+            select_naga_panchami_dates(records, self.rule),
+            [date(2030, 8, 5)],
+        )
+
+    def test_rejects_short_later_panchami(self):
+        records = [
+            record(date(2030, 8, 4), "S5", masa="5"),
+            (date(2030, 8, 5), "S5", "5", False, 2.0, 0.0, 0.5),
+        ]
+        self.assertEqual(
+            select_naga_panchami_dates(records, self.rule),
+            [date(2030, 8, 4)],
         )
 
 
