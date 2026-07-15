@@ -116,7 +116,14 @@ FESTIVAL_RULES = (
     # No Vasavi Atmarpana observance was found in Dharma Sindhu's Magha
     # section. Preserve the supplied community date provisionally.
     FestivalRule(19, "Vasavi atmarpana", 11, "S2", "unresolved"),
-    FestivalRule(20, "Vasanta pancami", 11, "S5"),
+    FestivalRule(
+        20,
+        "Vasanta pancami",
+        11,
+        "S5",
+        "dharmasindhu",
+        "https://www.transliteral.org/pages/z80513003421/view",
+    ),
     FestivalRule(21, "Ratha saptami", 11, "S7"),
     FestivalRule(22, "VSN jayanthi", 11, "S11"),
     FestivalRule(23, "Holi", 12, "K1"),
@@ -157,6 +164,7 @@ VIJAYA_DASAMI_NUMBER = 14
 NARAKA_CATURDASI_NUMBER = 15
 DIPAVALI_NUMBER = 16
 BALI_PADYAMI_NUMBER = 17
+VASANTA_PANCHAMI_NUMBER = 20
 ONE_GHATI_HOURS = 24 / 60
 SIX_GHATI_HOURS = 6 * ONE_GHATI_HOURS
 ARUNODAYA_HOURS = 4 * ONE_GHATI_HOURS
@@ -760,6 +768,44 @@ def select_bali_padyami_dates(records, rule):
     return [first_visible - timedelta(days=1)] if first_visible else []
 
 
+def select_vasanta_panchami_dates(records, rule):
+    """Select Magha Panchami by Purvahna occupancy.
+
+    The later day is used only when it alone contains Panchami during
+    Purvahna. In every other case—including both days or neither day—the
+    earlier day is selected.
+
+    Source:
+    https://www.transliteral.org/pages/z80513003421/view
+    """
+    rule_records = records_for_rule(records, rule)
+    candidates = []
+    for record in rule_records:
+        sunrise_jd, sunset_jd = record[5:7]
+        overlap = tithi_overlap_hours(
+            sunrise_jd,
+            sunrise_jd + (sunset_jd - sunrise_jd) / 2,
+            5,
+        )
+        if overlap > 0:
+            candidates.append((record[0], overlap))
+    if candidates:
+        return [
+            group[0][0]
+            for group in group_consecutive_candidates(candidates)
+        ]
+
+    daytime_candidates = [
+        (record[0], 1)
+        for record in rule_records
+        if tithi_overlap_hours(record[5], record[6], 5) > 0
+    ]
+    return [
+        group[0][0]
+        for group in group_consecutive_candidates(daytime_candidates)
+    ]
+
+
 def select_raksha_bandhan_dates(records, rule):
     """Select Bhadra-free Shravana Purnima in Aparahna or Pradosha.
 
@@ -1122,6 +1168,8 @@ def resolve_festivals(months, month_data):
             matches = select_vijaya_dasami_dates(records, rule)
         elif rule.number == BALI_PADYAMI_NUMBER:
             matches = select_bali_padyami_dates(records, rule)
+        elif rule.number == VASANTA_PANCHAMI_NUMBER:
+            matches = select_vasanta_panchami_dates(records, rule)
         elif rule.tithi == "S1":
             matches = []
             for index, (

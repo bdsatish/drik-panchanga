@@ -17,6 +17,7 @@ from festival_rules import (
     select_rama_navami_dates,
     select_taittiriya_apastamba_upakarma_dates,
     select_ugadi_dates,
+    select_vasanta_panchami_dates,
     select_vijaya_dasami_dates,
 )
 
@@ -401,6 +402,34 @@ class BaliPadyamiRuleTests(unittest.TestCase):
             self.assertEqual(
                 select_bali_padyami_dates(self.records, self.rule),
                 [date(2030, 11, 1)],
+            )
+
+
+class VasantaPanchamiRuleTests(unittest.TestCase):
+    rule = next(rule for rule in FESTIVAL_RULES if rule.number == 20)
+    records = [
+        (date(2030, 2, 1), "S5", "11", False, 3.0, 10.0, 10.5),
+        (date(2030, 2, 2), "S5", "11", False, 3.0, 11.0, 11.5),
+    ]
+
+    def test_both_purvahnas_use_earlier_day(self):
+        with patch(
+            "festival_rules.tithi_overlap_hours",
+            side_effect=[1.0, 1.0],
+        ):
+            self.assertEqual(
+                select_vasanta_panchami_dates(self.records, self.rule),
+                [date(2030, 2, 1)],
+            )
+
+    def test_only_later_purvahna_uses_later_day(self):
+        with patch(
+            "festival_rules.tithi_overlap_hours",
+            side_effect=[0.0, 1.0],
+        ):
+            self.assertEqual(
+                select_vasanta_panchami_dates(self.records, self.rule),
+                [date(2030, 2, 2)],
             )
 
 
