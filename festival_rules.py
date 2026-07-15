@@ -132,7 +132,9 @@ FESTIVAL_RULES = (
         "dharmasindhu",
         "https://www.transliteral.org/pages/z80513004113/view",
     ),
-    FestivalRule(22, "VSN jayanthi", 11, "S11"),
+    # Vishnu-Sahasranama Jayanthi was not found in Dharma Sindhu; Bhishma
+    # Ashtami is present but is a different observance.
+    FestivalRule(22, "VSN jayanthi", 11, "S11", "unresolved"),
     FestivalRule(23, "Holi", 12, "K1"),
     FestivalRule(24, "Maha Shivaratri", 11, "K14"),
     FestivalRule(
