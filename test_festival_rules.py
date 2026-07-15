@@ -16,6 +16,7 @@ from festival_rules import (
     select_rama_navami_dates,
     select_taittiriya_apastamba_upakarma_dates,
     select_ugadi_dates,
+    select_vijaya_dasami_dates,
 )
 
 
@@ -333,6 +334,40 @@ class JanmashtamiRuleTests(unittest.TestCase):
             self.assertEqual(
                 select_janmashtami_dates(self.records, self.rule),
                 [date(2030, 9, 1)],
+            )
+
+
+class VijayaDasamiRuleTests(unittest.TestCase):
+    rule = next(rule for rule in FESTIVAL_RULES if rule.number == 14)
+    records = [
+        (date(2030, 10, 5), "S10", "7", False, 3.0, 10.0, 10.5),
+        (date(2030, 10, 6), "S10", "7", False, 3.0, 11.0, 11.5),
+    ]
+
+    def test_both_aparahnas_use_earlier_day_without_shravana(self):
+        with patch(
+            "festival_rules.tithi_overlap_hours",
+            side_effect=[1.0, 1.0],
+        ), patch(
+            "festival_rules.has_nakshatra",
+            side_effect=[False, False],
+        ):
+            self.assertEqual(
+                select_vijaya_dasami_dates(self.records, self.rule),
+                [date(2030, 10, 5)],
+            )
+
+    def test_only_later_aparahna_uses_later_day(self):
+        with patch(
+            "festival_rules.tithi_overlap_hours",
+            side_effect=[0.0, 1.0],
+        ), patch(
+            "festival_rules.has_nakshatra",
+            side_effect=[False, False],
+        ):
+            self.assertEqual(
+                select_vijaya_dasami_dates(self.records, self.rule),
+                [date(2030, 10, 6)],
             )
 
 

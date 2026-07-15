@@ -92,7 +92,14 @@ FESTIVAL_RULES = (
     # Dharma Sindhu gives a Mahanavami rule, but no independent Ayudha-puja
     # date rule was found. Preserve the supplied date provisionally.
     FestivalRule(13, "Ayudha puja", 7, "S9", "unresolved"),
-    FestivalRule(14, "Vijaya dasami", 7, "S10"),
+    FestivalRule(
+        14,
+        "Vijaya dasami",
+        7,
+        "S10",
+        "dharmasindhu",
+        "https://www.transliteral.org/pages/z80501062120/view",
+    ),
     FestivalRule(15, "Naraka caturdasi", 7, "K14"),
     FestivalRule(16, "Dipavali", 7, "K15"),
     FestivalRule(17, "Bali padyami", 8, "S1"),
@@ -135,6 +142,7 @@ RAKSHA_BANDHAN_NUMBER = 25
 JANMASHTAMI_NUMBER = 10
 GANESHA_CATURTHI_NUMBER = 11
 DURGA_ASHTAMI_NUMBER = 12
+VIJAYA_DASAMI_NUMBER = 14
 NARAKA_CATURDASI_NUMBER = 15
 DIPAVALI_NUMBER = 16
 ONE_GHATI_HOURS = 24 / 60
@@ -492,6 +500,14 @@ def has_tithi_nakshatra(start_jd, end_jd, tithi_number, nakshatra_number):
     return False
 
 
+def has_nakshatra(start_jd, end_jd, nakshatra_number):
+    for index in range(97):
+        instant = start_jd + (end_jd - start_jd) * index / 96
+        if nakshatra_number_at(instant) == nakshatra_number:
+            return True
+    return False
+
+
 def select_taittiriya_apastamba_upakarma_dates(records, rule):
     """Resolve Taittiriya-Apastamba Yajur Upakarma.
 
@@ -623,6 +639,66 @@ def select_janmashtami_dates(records, rule):
         group[-1][0]
         for group in group_consecutive_candidates(daytime_candidates)
     ]
+
+
+def select_vijaya_dasami_dates(records, rule):
+    """Resolve Aparahna-vyapini Vijaya Dashami with Shravana exceptions.
+
+    If Dashami occupies Aparahna on both days, the earlier day is used; if
+    only one day qualifies, that day is used. Shravana on exactly one of two
+    qualifying days gives that day priority. When neither Aparahna contains
+    Dashami, the earlier day remains normal, except that a later Dashami of
+    at least three muhurtas joined to Shravana in Aparahna is selected.
+
+    Source:
+    https://www.transliteral.org/pages/z80501062120/view
+    """
+    rule_records = records_for_rule(records, rule)
+    aparahna_candidates = []
+    shravana_dates = set()
+    for record in rule_records:
+        sunrise_jd, sunset_jd = record[5:7]
+        day_length = sunset_jd - sunrise_jd
+        aparahna = (
+            sunrise_jd + day_length * 3 / 5,
+            sunrise_jd + day_length * 4 / 5,
+        )
+        if tithi_overlap_hours(*aparahna, 10) > 0:
+            aparahna_candidates.append((record[0], 1))
+        if has_nakshatra(*aparahna, 22):
+            shravana_dates.add(record[0])
+
+    if aparahna_candidates:
+        selected = []
+        for group in group_consecutive_candidates(aparahna_candidates):
+            with_shravana = [
+                candidate[0]
+                for candidate in group
+                if candidate[0] in shravana_dates
+            ]
+            selected.append(
+                with_shravana[0]
+                if len(with_shravana) == 1
+                else group[0][0]
+            )
+        return selected
+
+    daytime_candidates = [
+        (record[0], record[4])
+        for record in rule_records
+        if tithi_overlap_hours(record[5], record[6], 10) > 0
+    ]
+    selected = []
+    for group in group_consecutive_candidates(daytime_candidates):
+        later_date, later_remainder = group[-1]
+        if (
+            later_remainder >= SIX_GHATI_HOURS
+            and later_date in shravana_dates
+        ):
+            selected.append(later_date)
+        else:
+            selected.append(group[0][0])
+    return selected
 
 
 def select_raksha_bandhan_dates(records, rule):
@@ -983,6 +1059,8 @@ def resolve_festivals(months, month_data):
             matches = select_raksha_bandhan_dates(records, rule)
         elif rule.number == JANMASHTAMI_NUMBER:
             matches = select_janmashtami_dates(records, rule)
+        elif rule.number == VIJAYA_DASAMI_NUMBER:
+            matches = select_vijaya_dasami_dates(records, rule)
         elif rule.tithi == "S1":
             matches = []
             for index, (
