@@ -34,7 +34,7 @@ class Location:
     timezone_name: str
 
 INK = HexColor("#172033")
-MUTED = HexColor("#5F6B7A")
+MUTED = HexColor("#465466")
 ACCENT = HexColor("#263F73")
 GRID = HexColor("#CBD3DF")
 MONTH_DIVIDER = HexColor("#AAB5C4")
