@@ -7,7 +7,7 @@ import json
 import re
 from dataclasses import dataclass
 from datetime import date as CivilDate
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -15,6 +15,7 @@ from reportlab.lib.colors import HexColor, white
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.pdfgen import canvas
 
+from festival_rules import resolve_festivals
 import panchanga
 
 
@@ -41,32 +42,6 @@ ADHIKA_INK = HexColor("#875A00")
 MASA_START_ROW = HexColor("#E4F1E7")
 MASA_START_INK = HexColor("#356846")
 FESTIVAL_INK = HexColor("#9A3154")
-
-FESTIVAL_RULES = (
-    (1, "Ugadi", 1, "S1"),
-    (2, "Rama Navami", 1, "S9"),
-    (3, "Aksaya Trtiya", 2, "S3"),
-    (4, "Vasavi jayanthi", 2, "S10"),
-    (5, "Narasimha jayanthi", 2, "S14"),
-    (6, "Guru Purnima", 4, "S15"),
-    (7, "Naga panchami", 5, "S5"),
-    (9, "Yajur upakarma", 5, "S15"),
-    (10, "Janmashtami", 5, "K8"),
-    (11, "Ganesa caturthi", 6, "S4"),
-    (12, "Durgastami", 7, "S8"),
-    (13, "Ayudha puja", 7, "S9"),
-    (14, "Vijaya dasami", 7, "S10"),
-    (15, "Naraka caturdasi", 7, "K14"),
-    (16, "Dipavali", 7, "K15"),
-    (17, "Bali padyami", 8, "S1"),
-    (18, "Gita jayanti", 9, "S11"),
-    (19, "Vasavi atmarpana", 11, "S2"),
-    (20, "Vasanta pancami", 11, "S5"),
-    (21, "Ratha saptami", 11, "S7"),
-    (22, "VSN jayanthi", 11, "S11"),
-)
-VARAMAHALAKSHMI_NUMBER = 8
-VARAMAHALAKSHMI_NAME = "Varamahalakshmi vrata"
 
 NAKSHATRA_KEY_LINES = (
     "N: 1 Asvini, 2 Bharani, 3 Krittika, 4 Rohini, 5 Mrgasira, 6 Ardra, "
@@ -189,6 +164,11 @@ def masa_code(masa_number, is_adhika):
     return f"A{masa_number}" if is_adhika else str(masa_number)
 
 
+def dms_to_hours(dms):
+    hours, minutes, seconds = dms
+    return hours + minutes / 60 + seconds / 3600
+
+
 def daily_values(year, month, location):
     result = []
     timezone = ZoneInfo(location.timezone_name)
@@ -202,10 +182,20 @@ def daily_values(year, month, location):
         )
         jd = panchanga.gregorian_to_jd(date)
         try:
-            sunrise_jd = panchanga.sunrise(jd, place)[0]
+            sunrise_result = panchanga.sunrise(jd, place)
+            sunrise_jd = sunrise_result[0]
             if not jd - 1 <= sunrise_jd <= jd + 2:
                 raise RuntimeError("no local sunrise")
-            tithi_number = panchanga.tithi(jd, place)[0]
+            sunset_result = panchanga.sunset(jd, place)
+            sunset_jd = sunset_result[0]
+            if not jd - 1 <= sunset_jd <= jd + 2:
+                raise RuntimeError("no local sunset")
+            tithi_result = panchanga.tithi(jd, place)
+            tithi_number = tithi_result[0]
+            tithi_hours_after_sunrise = (
+                dms_to_hours(tithi_result[1])
+                - dms_to_hours(sunrise_result[1])
+            )
             nakshatra_number = panchanga.nakshatra(jd, place)[0]
             masa_number, is_adhika = panchanga.masa(jd, place)
         except Exception as error:
@@ -220,6 +210,9 @@ def daily_values(year, month, location):
                 nakshatra_number,
                 masa_code(masa_number, is_adhika),
                 is_adhika,
+                tithi_hours_after_sunrise,
+                sunrise_jd - place.timezone / 24,
+                sunset_jd - place.timezone / 24,
             )
         )
     return result
@@ -230,7 +223,14 @@ def mark_masa_starts(months, month_data):
     previous_masa = None
     for year, month in months:
         marked_values = []
-        for day, tithi, nakshatra, masa, is_adhika in month_data[(year, month)]:
+        for (
+            day,
+            tithi,
+            nakshatra,
+            masa,
+            is_adhika,
+            *_,
+        ) in month_data[(year, month)]:
             is_masa_start = masa != previous_masa
             if is_masa_start:
                 tithi = f"{masa}/{tithi}"
@@ -239,109 +239,6 @@ def mark_masa_starts(months, month_data):
             )
             previous_masa = masa
         month_data[(year, month)] = marked_values
-
-
-def format_festival_dates(dates):
-    dates = sorted(dates)
-    if (
-        len(dates) > 1
-        and len({(value.year, value.month) for value in dates}) == 1
-        and all(
-            right == left + timedelta(days=1)
-            for left, right in zip(dates, dates[1:])
-        )
-    ):
-        return (
-            f"{calendar.month_abbr[dates[0].month]} "
-            f"{dates[0].day}-{dates[-1].day}"
-        )
-    return ",".join(
-        f"{calendar.month_abbr[value.month]} {value.day}"
-        for value in dates
-    )
-
-
-def resolve_festivals(months, month_data):
-    """Resolve the supplied masa/tithi rules to civil dates."""
-    records = []
-    for year, month in months:
-        for day, tithi, _, masa, is_adhika in month_data[(year, month)]:
-            records.append(
-                (
-                    CivilDate(year, month, day),
-                    tithi,
-                    masa,
-                    is_adhika,
-                )
-            )
-
-    dates_by_number = {}
-    names_by_number = {}
-    for number, name, masa_number, tithi in FESTIVAL_RULES:
-        if tithi == "S1":
-            matches = []
-            for index, (
-                civil_date,
-                day_tithi,
-                masa,
-                is_adhika,
-            ) in enumerate(records):
-                if (
-                    masa != str(masa_number)
-                    or is_adhika
-                    or not day_tithi.startswith("S")
-                ):
-                    continue
-                if index == 0:
-                    is_masa_start = day_tithi in {"S1", "S2"}
-                else:
-                    _, _, previous_masa, previous_is_adhika = records[
-                        index - 1
-                    ]
-                    is_masa_start = (
-                        previous_masa != masa
-                        or previous_is_adhika != is_adhika
-                    )
-                if is_masa_start:
-                    matches.append(civil_date)
-        else:
-            matches = [
-                civil_date
-                for civil_date, day_tithi, masa, is_adhika in records
-                if (
-                    day_tithi == tithi
-                    and masa == str(masa_number)
-                    and not is_adhika
-                )
-            ]
-        if not matches:
-            raise RuntimeError(f"No calendar date found for {name}")
-        dates_by_number[number] = matches
-        names_by_number[number] = name
-
-    vrata_dates = []
-    for sravana_purnima_date in dates_by_number[9]:
-        vrata_date = sravana_purnima_date - timedelta(days=1)
-        while vrata_date.weekday() != calendar.FRIDAY:
-            vrata_date -= timedelta(days=1)
-        vrata_dates.append(vrata_date)
-    dates_by_number[VARAMAHALAKSHMI_NUMBER] = sorted(set(vrata_dates))
-    names_by_number[VARAMAHALAKSHMI_NUMBER] = VARAMAHALAKSHMI_NAME
-
-    numbers_by_date = {}
-    entries = []
-    for number in sorted(names_by_number):
-        dates = dates_by_number[number]
-        for civil_date in dates:
-            numbers_by_date.setdefault(civil_date, []).append(number)
-        entries.append(
-            (
-                number,
-                format_festival_dates(dates),
-                names_by_number[number],
-            )
-        )
-    return numbers_by_date, entries
 
 
 def draw_centered(pdf, text, center_x, baseline_y, font, size, color=INK):
@@ -559,8 +456,7 @@ def draw_page_footer(pdf, festival_entries):
     pdf.drawString(
         18,
         84,
-        "Festival markers (supplied sunrise masa/tithi rules; skipped S1 uses "
-        "the first visible S day):",
+        "Festival markers:",
     )
 
     columns = 4
