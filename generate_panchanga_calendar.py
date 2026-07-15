@@ -465,7 +465,7 @@ def draw_month(
             pdf.drawString(
                 x + 2.4,
                 row_y + 8.2,
-                zero_pad_calendar_value(masa_badge),
+                masa_badge,
             )
         if is_sunday:
             pdf.setFillColor(SUNDAY_MARK)
@@ -507,12 +507,16 @@ def draw_month(
         )
         if festival_numbers:
             pdf.setFillColor(FESTIVAL_INK)
-            pdf.setFont("Helvetica-Bold", 4.3)
-            pdf.drawRightString(
-                x + width * 0.47,
-                row_y + 8.3,
-                ",".join(str(number) for number in festival_numbers),
-            )
+            marker_size = 4.3 if len(festival_numbers) <= 2 else 3.5
+            marker_spacing = 4.2 if len(festival_numbers) <= 2 else 3.1
+            marker_top = row_y + (8.5 if len(festival_numbers) <= 2 else 9.2)
+            pdf.setFont("Helvetica-Bold", marker_size)
+            for marker_index, number in enumerate(festival_numbers):
+                pdf.drawRightString(
+                    x + width * 0.47,
+                    marker_top - marker_index * marker_spacing,
+                    str(number),
+                )
 
     bottom = rows_top - 31 * row_height
     pdf.setStrokeColor(GRID)
