@@ -209,10 +209,10 @@ def format_festival_dates(dates):
     ):
         return (
             f"{calendar.month_abbr[dates[0].month]} "
-            f"{dates[0].day}-{dates[-1].day}"
+            f"{dates[0].day:02d}-{dates[-1].day:02d}"
         )
     return ",".join(
-        f"{calendar.month_abbr[value.month]} {value.day}"
+        f"{calendar.month_abbr[value.month]} {value.day:02d}"
         for value in dates
     )
 

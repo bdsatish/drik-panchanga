@@ -168,6 +168,19 @@ def masa_code(masa_number, is_adhika):
     return f"A{masa_number}" if is_adhika else str(masa_number)
 
 
+def zero_pad_calendar_value(value):
+    """Zero-pad masa and tithi numbers for fixed-width calendar display."""
+    formatted = []
+    for part in value.split("/"):
+        if part.startswith("A"):
+            formatted.append(f"A{int(part[1:]):02d}")
+        elif part.startswith(("S", "K")):
+            formatted.append(f"{part[0]}{int(part[1:]):02d}")
+        else:
+            formatted.append(f"{int(part):02d}")
+    return "/".join(formatted)
+
+
 def dms_to_hours(dms):
     hours, minutes, seconds = dms
     return hours + minutes / 60 + seconds / 3600
@@ -375,6 +388,7 @@ def draw_month(
             continue
 
         tithi, nakshatra, is_masa_start, is_adhika = values_by_day[day]
+        tithi_display = zero_pad_calendar_value(tithi)
         if is_masa_start:
             pdf.setFillColor(ADHIKA_ROW if is_adhika else MASA_START_ROW)
             pdf.rect(
@@ -406,7 +420,7 @@ def draw_month(
         baseline = row_y + (3.0 if festival_numbers else 4.1)
         draw_centered(
             pdf,
-            tithi,
+            tithi_display,
             centers[0],
             baseline,
             "Helvetica-Bold",
@@ -418,7 +432,7 @@ def draw_month(
             ),
         )
         draw_centered(
-            pdf, str(nakshatra), centers[1], baseline, "Helvetica", 7.3, INK
+            pdf, f"{nakshatra:02d}", centers[1], baseline, "Helvetica", 7.3, INK
         )
         if festival_numbers:
             pdf.setFillColor(FESTIVAL_INK)
@@ -456,7 +470,7 @@ def coordinate_label(value, positive, negative):
 def draw_page_header(pdf, location, months):
     page_width, page_height = landscape(A4)
     pdf.setFillColor(INK)
-    pdf.setFont("Helvetica-Bold", 14)
+    pdf.setFont("Helvetica-Bold", 11)
     pdf.drawString(
         18,
         page_height - 20,
@@ -487,31 +501,31 @@ def draw_page_footer(pdf, festival_entries):
     columns = 6
     rows = 5
     column_width = (landscape(A4)[0] - 36) / columns
-    pdf.setFont("Helvetica", 6.5)
+    pdf.setFont("Helvetica", 7.5)
     for index, (number, festival_date, name) in enumerate(festival_entries):
         column = index // rows
         row = index % rows
         pdf.drawString(
             18 + column * column_width,
             76 - row * 8,
-            f"{number}  {festival_date}  {name}",
+            f"{number:02d}  {festival_date}  {name}",
         )
 
     pdf.setFillColor(MUTED)
     pdf.setFont("Helvetica", 5.4)
     pdf.drawString(
         18,
-        32,
-        "T: S1-S15 = Sukla; K1-K15 = Krsna. N = nakshatra. "
+        25,
+        "T: S01-S15 = Sukla; K01-K15 = Krsna. N = nakshatra. "
         "Tiny red numbers refer to the festival key. Sundays have a red left "
         "edge; Dharma-sindhu Vaishnava Ekadashi upavasa has a teal bottom edge. "
-        "Masa: code precedes / at its first visible tithi (3/S2); A = adhika; "
-        "A3/K1 is the range carry-in.",
+        "Masa: code precedes / at its first visible tithi (03/S02); A = adhika; "
+        "A03/K01 is the range carry-in.",
     )
     pdf.setFont("Helvetica", 5.2)
     pdf.drawString(
         18,
-        7,
+        13,
         f"{NAKSHATRA_KEY_LINES[0]}, {NAKSHATRA_KEY_LINES[1]}",
     )
 
@@ -573,7 +587,7 @@ def build_pdf(location, start_year, start_month, output_path):
     day_column_width = 24
     usable_width = page_width - 2 * margin
     month_width = (usable_width - day_column_width) / len(months)
-    top = page_height - 42
+    top = page_height - 37
 
     draw_day_column(pdf, margin, top, day_column_width)
     for index, (year, month) in enumerate(months):
