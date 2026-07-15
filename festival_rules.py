@@ -97,9 +97,19 @@ FESTIVAL_RULES = (
     ),
     FestivalRule(12, "Ganesa caturthi", 6, "S4"),
     FestivalRule(13, "Durgastami", 7, "S8"),
-    # Dharma Sindhu gives a Mahanavami rule, but no independent Ayudha-puja
-    # date rule was found. Preserve the supplied date provisionally.
-    FestivalRule(14, "Ayudha puja", 7, "S9", "unresolved"),
+    # This is the regional South Indian/Khande-Navami observance, rather than
+    # Dharma Sindhu's distinct Mahanavami puja/upavasa decision.
+    FestivalRule(
+        14,
+        "Ayudha puja",
+        7,
+        "S9",
+        "regional",
+        (
+            "https://www.drikpanchang.com/navratri/durga-puja/"
+            "ayudha-puja-date-time.html"
+        ),
+    ),
     FestivalRule(
         15,
         "Vijaya dasami",
@@ -183,6 +193,7 @@ RAKSHA_BANDHAN_NUMBER = 10
 JANMASHTAMI_NUMBER = 11
 GANESHA_CATURTHI_NUMBER = 12
 DURGA_ASHTAMI_NUMBER = 13
+AYUDHA_PUJA_NUMBER = 14
 VIJAYA_DASAMI_NUMBER = 15
 NARAKA_CATURDASI_NUMBER = 16
 DIPAVALI_NUMBER = 17
@@ -1219,6 +1230,51 @@ def select_ganesha_caturthi_dates(records, rule):
     return selected
 
 
+def select_ayudha_puja_dates(records, rule):
+    """Select shuddha Ashvina S9 by the South Indian sunrise convention.
+
+    Ayudha Puja (also Shastra Puja, Astra Puja, or Khande Navami) is treated
+    here as a regional observance distinct from Dharma Sindhu's Mahanavami
+    puja/upavasa rule. The festival belongs to the civil day on which Shukla
+    Navami prevails at local sunrise (udaya-vyapini).
+
+    A long, or vriddhi, Navami can prevail at two consecutive sunrises. In
+    that case the earlier civil day (purva) is selected. It contains the
+    fuller Navami daytime; the later day contains only Navami's ending
+    portion. Two useful regression examples from Drik Panchang are:
+
+    * 2000: Navami ran Oct 6 05:48 to Oct 7 08:25 in New Delhi, covering both
+      sunrises; Ayudha Puja was Friday, Oct 6.
+    * 2034: Navami ran Oct 21 06:04 to Oct 22 06:34 in New Delhi, again
+      covering both sunrises; Ayudha Puja was Saturday, Oct 21.
+
+    The advertised "Ayudha Puja Vijaya Muhurat" does not select the civil
+    date. It is the recommended eleventh daytime muhurta on the date already
+    selected by the sunrise rule. This distinction matters: in ordinary
+    years that window can begin after astronomical Navami has ended, while
+    the sunrise-defined festival day remains Ayudha Puja.
+
+    This selector intentionally handles only the sourced udaya-vyapini and
+    vriddhi rules. A kshaya Navami, present at neither sunrise, needs a
+    separately sourced fallback and must not be silently guessed here.
+
+    Sources:
+    https://www.drikpanchang.com/navratri/durga-puja/ayudha-puja-date-time.html
+    https://www.drikpanchang.com/navratri/durga-puja/ayudha-puja-date-time.html?year=2000
+    https://www.drikpanchang.com/navratri/durga-puja/ayudha-puja-date-time.html?year=2034
+    https://vishwakosh.marathi.gov.in/22879/
+    """
+    sunrise_candidates = [
+        (record[0], record[4])
+        for record in records_for_rule(records, rule)
+        if record[1] == rule.tithi
+    ]
+    return [
+        group[0][0]
+        for group in group_consecutive_candidates(sunrise_candidates)
+    ]
+
+
 def select_naraka_caturdasi_dates(records, rule):
     """Select K14 during Arunodaya for the South Indian pre-dawn observance.
 
@@ -1406,6 +1462,8 @@ def resolve_festivals(months, month_data):
                 )
             ]
             matches = select_durga_ashtami_dates(candidates)
+        elif rule.number == AYUDHA_PUJA_NUMBER:
+            matches = select_ayudha_puja_dates(records, rule)
         elif rule.number == NARAKA_CATURDASI_NUMBER:
             matches = select_naraka_caturdasi_dates(records, rule)
         elif rule.number == DIPAVALI_NUMBER:

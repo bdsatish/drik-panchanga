@@ -8,6 +8,7 @@ from festival_rules import (
     FESTIVAL_RULES,
     VARAMAHALAKSHMI_RULE,
     select_aksaya_trtiya_dates,
+    select_ayudha_puja_dates,
     select_bali_padyami_dates,
     select_guru_purnima_dates,
     select_holi_dates,
@@ -117,7 +118,7 @@ class AksayaTrtiyaRuleTests(unittest.TestCase):
             )
 
 
-class UnresolvedRuleTests(unittest.TestCase):
+class RuleStatusTests(unittest.TestCase):
     def test_vasavi_jayanthi_is_not_attributed_to_dharma_sindhu(self):
         rule = FESTIVAL_RULES[3]
         self.assertEqual(rule.status, "unresolved")
@@ -127,10 +128,10 @@ class UnresolvedRuleTests(unittest.TestCase):
         self.assertEqual(VARAMAHALAKSHMI_RULE.status, "unresolved")
         self.assertIsNone(VARAMAHALAKSHMI_RULE.source)
 
-    def test_ayudha_puja_is_not_substituted_with_mahanavami(self):
+    def test_ayudha_puja_is_documented_as_a_regional_rule(self):
         rule = next(rule for rule in FESTIVAL_RULES if rule.number == 14)
-        self.assertEqual(rule.status, "unresolved")
-        self.assertIsNone(rule.source)
+        self.assertEqual(rule.status, "regional")
+        self.assertIn("drikpanchang.com", rule.source)
 
     def test_gita_jayanti_is_not_attributed_to_dharma_sindhu(self):
         rule = next(rule for rule in FESTIVAL_RULES if rule.number == 19)
@@ -389,6 +390,62 @@ class VijayaDasamiRuleTests(unittest.TestCase):
                 select_vijaya_dasami_dates(self.records, self.rule),
                 [date(2030, 10, 6)],
             )
+
+
+class AyudhaPujaRuleTests(unittest.TestCase):
+    rule = next(rule for rule in FESTIVAL_RULES if rule.number == 14)
+
+    def test_selects_single_sunrise_vyapini_navami(self):
+        records = [
+            record(date(2026, 10, 19), "S8", masa="7"),
+            record(date(2026, 10, 20), "S9", masa="7"),
+        ]
+        self.assertEqual(
+            select_ayudha_puja_dates(records, self.rule),
+            [date(2026, 10, 20)],
+        )
+
+    def test_2000_vriddhi_navami_uses_first_sunrise(self):
+        records = [
+            record(date(2000, 10, 6), "S9", masa="7"),
+            record(date(2000, 10, 7), "S9", masa="7"),
+        ]
+        self.assertEqual(
+            select_ayudha_puja_dates(records, self.rule),
+            [date(2000, 10, 6)],
+        )
+
+    def test_2034_vriddhi_navami_uses_first_sunrise(self):
+        records = [
+            record(date(2034, 10, 21), "S9", masa="7"),
+            record(date(2034, 10, 22), "S9", masa="7"),
+        ]
+        self.assertEqual(
+            select_ayudha_puja_dates(records, self.rule),
+            [date(2034, 10, 21)],
+        )
+
+    def test_does_not_guess_when_navami_is_skipped_at_sunrise(self):
+        records = [
+            record(date(2030, 10, 4), "S8", masa="7"),
+            record(date(2030, 10, 5), "S10", masa="7"),
+        ]
+        self.assertEqual(select_ayudha_puja_dates(records, self.rule), [])
+
+    def test_excludes_adhika_asvina(self):
+        records = [
+            record(
+                date(2030, 9, 5),
+                "S9",
+                masa="7",
+                is_adhika=True,
+            ),
+            record(date(2030, 10, 5), "S9", masa="7"),
+        ]
+        self.assertEqual(
+            select_ayudha_puja_dates(records, self.rule),
+            [date(2030, 10, 5)],
+        )
 
 
 class BaliPadyamiRuleTests(unittest.TestCase):
