@@ -278,6 +278,12 @@ def fitted_font_size(pdf, text, font, maximum, minimum, available_width):
     return max(minimum, maximum * available_width / natural_width)
 
 
+def ensure_text_fits(pdf, text, font, size, available_width, context):
+    """Fail generation rather than silently clipping an important label."""
+    if pdf.stringWidth(text, font, size) > available_width + 0.01:
+        raise ValueError(f"{context} is too long to fit: {text!r}")
+
+
 def draw_day_column(pdf, x, top, width):
     month_header_height = 20
     column_header_height = 15
@@ -508,17 +514,23 @@ def draw_page_header(pdf, location, months):
     page_width, page_height = landscape(A4)
     title = f"{location.name} Panchanga: {month_span_label(months)}"
     pdf.setFillColor(INK)
-    pdf.setFont(
+    title_size = fitted_font_size(
+        pdf,
+        title,
         "Helvetica-Bold",
-        fitted_font_size(
-            pdf,
-            title,
-            "Helvetica-Bold",
-            11,
-            8,
-            page_width - 36,
-        ),
+        11,
+        8,
+        page_width - 36,
     )
+    ensure_text_fits(
+        pdf,
+        title,
+        "Helvetica-Bold",
+        title_size,
+        page_width - 36,
+        "page title",
+    )
+    pdf.setFont("Helvetica-Bold", title_size)
     pdf.drawString(
         18,
         page_height - 20,
@@ -553,17 +565,23 @@ def draw_page_footer(pdf, festival_entries):
         column = index // rows
         row = index % rows
         entry = f"{number:02d}  {festival_date}  {name}"
-        pdf.setFont(
+        entry_size = fitted_font_size(
+            pdf,
+            entry,
             "Helvetica",
-            fitted_font_size(
-                pdf,
-                entry,
-                "Helvetica",
-                7.5,
-                5.5,
-                column_width - 4,
-            ),
+            7.5,
+            5.5,
+            column_width - 4,
         )
+        ensure_text_fits(
+            pdf,
+            entry,
+            "Helvetica",
+            entry_size,
+            column_width - 4,
+            f"festival entry {number}",
+        )
+        pdf.setFont("Helvetica", entry_size)
         pdf.drawString(
             18 + column * column_width,
             76 - row * 8,
