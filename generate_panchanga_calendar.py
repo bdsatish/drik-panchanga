@@ -270,6 +270,14 @@ def draw_centered(pdf, text, center_x, baseline_y, font, size, color=INK):
     pdf.drawCentredString(center_x, baseline_y, text)
 
 
+def fitted_font_size(pdf, text, font, maximum, minimum, available_width):
+    """Shrink text only when it would exceed its available width."""
+    natural_width = pdf.stringWidth(text, font, maximum)
+    if natural_width <= available_width:
+        return maximum
+    return max(minimum, maximum * available_width / natural_width)
+
+
 def draw_day_column(pdf, x, top, width):
     month_header_height = 20
     column_header_height = 15
@@ -498,12 +506,23 @@ def coordinate_label(value, positive, negative):
 
 def draw_page_header(pdf, location, months):
     page_width, page_height = landscape(A4)
+    title = f"{location.name} Panchanga: {month_span_label(months)}"
     pdf.setFillColor(INK)
-    pdf.setFont("Helvetica-Bold", 11)
+    pdf.setFont(
+        "Helvetica-Bold",
+        fitted_font_size(
+            pdf,
+            title,
+            "Helvetica-Bold",
+            11,
+            8,
+            page_width - 36,
+        ),
+    )
     pdf.drawString(
         18,
         page_height - 20,
-        f"{location.name} Panchanga: {month_span_label(months)}",
+        title,
     )
     pdf.setFillColor(MUTED)
     pdf.setFont("Helvetica", 7.5)
@@ -530,14 +549,25 @@ def draw_page_footer(pdf, festival_entries):
     columns = 6
     rows = 5
     column_width = (landscape(A4)[0] - 36) / columns
-    pdf.setFont("Helvetica", 7.5)
     for index, (number, festival_date, name) in enumerate(festival_entries):
         column = index // rows
         row = index % rows
+        entry = f"{number:02d}  {festival_date}  {name}"
+        pdf.setFont(
+            "Helvetica",
+            fitted_font_size(
+                pdf,
+                entry,
+                "Helvetica",
+                7.5,
+                5.5,
+                column_width - 4,
+            ),
+        )
         pdf.drawString(
             18 + column * column_width,
             76 - row * 8,
-            f"{number:02d}  {festival_date}  {name}",
+            entry,
         )
 
     pdf.setFillColor(MUTED)
