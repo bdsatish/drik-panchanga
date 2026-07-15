@@ -8,6 +8,7 @@ from festival_rules import (
     FESTIVAL_RULES,
     VARAMAHALAKSHMI_RULE,
     select_aksaya_trtiya_dates,
+    select_bali_padyami_dates,
     select_guru_purnima_dates,
     select_janmashtami_dates,
     select_naga_panchami_dates,
@@ -368,6 +369,28 @@ class VijayaDasamiRuleTests(unittest.TestCase):
             self.assertEqual(
                 select_vijaya_dasami_dates(self.records, self.rule),
                 [date(2030, 10, 6)],
+            )
+
+
+class BaliPadyamiRuleTests(unittest.TestCase):
+    rule = next(rule for rule in FESTIVAL_RULES if rule.number == 17)
+    records = [
+        (date(2030, 11, 1), "K15", "8", False, 1.0, 10.0, 10.5),
+        (date(2030, 11, 2), "S1", "8", False, 4.0, 11.0, 11.5),
+    ]
+
+    def test_pratipada_reaching_ninth_muhurta_uses_sunrise_day(self):
+        with patch("festival_rules.tithi_number_at", return_value=1):
+            self.assertEqual(
+                select_bali_padyami_dates(self.records, self.rule),
+                [date(2030, 11, 2)],
+            )
+
+    def test_short_pratipada_uses_previous_day(self):
+        with patch("festival_rules.tithi_number_at", return_value=2):
+            self.assertEqual(
+                select_bali_padyami_dates(self.records, self.rule),
+                [date(2030, 11, 1)],
             )
 
 

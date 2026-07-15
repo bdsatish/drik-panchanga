@@ -102,7 +102,14 @@ FESTIVAL_RULES = (
     ),
     FestivalRule(15, "Naraka caturdasi", 7, "K14"),
     FestivalRule(16, "Dipavali", 7, "K15"),
-    FestivalRule(17, "Bali padyami", 8, "S1"),
+    FestivalRule(
+        17,
+        "Bali padyami",
+        8,
+        "S1",
+        "dharmasindhu",
+        "https://www.transliteral.org/pages/z80505062407/view",
+    ),
     FestivalRule(18, "Gita jayanti", 9, "S11"),
     FestivalRule(19, "Vasavi atmarpana", 11, "S2"),
     FestivalRule(20, "Vasanta pancami", 11, "S5"),
@@ -145,6 +152,7 @@ DURGA_ASHTAMI_NUMBER = 12
 VIJAYA_DASAMI_NUMBER = 14
 NARAKA_CATURDASI_NUMBER = 15
 DIPAVALI_NUMBER = 16
+BALI_PADYAMI_NUMBER = 17
 ONE_GHATI_HOURS = 24 / 60
 SIX_GHATI_HOURS = 6 * ONE_GHATI_HOURS
 ARUNODAYA_HOURS = 4 * ONE_GHATI_HOURS
@@ -701,6 +709,53 @@ def select_vijaya_dasami_dates(records, rule):
     return selected
 
 
+def select_bali_padyami_dates(records, rule):
+    """Select Kartika Pratipada reaching the ninth daytime muhurta.
+
+    Bali Puja, Govardhana Puja, and related rites use the sunrise day only
+    when Pratipada reaches the ninth daytime muhurta. If it ends within the
+    first eight muhurtas, Dharma Sindhu assigns Bali Puja to the preceding,
+    Amavasya-viddha Pratipada day. Morning abhyanga and dyuta have a separate
+    one-muhurta rule and do not control this festival marker.
+
+    Source:
+    https://www.transliteral.org/pages/z80505062407/view
+    """
+    rule_records = records_for_rule(records, rule)
+    sunrise_candidates = [
+        record for record in rule_records if record[1] == rule.tithi
+    ]
+    selected = []
+    for group in group_consecutive_candidates(
+        [(record[0], 1) for record in sunrise_candidates]
+    ):
+        candidate_date = group[-1][0]
+        record = next(
+            value for value in sunrise_candidates if value[0] == candidate_date
+        )
+        sunrise_jd, sunset_jd = record[5:7]
+        ninth_muhurta_start = sunrise_jd + (
+            sunset_jd - sunrise_jd
+        ) * 8 / 15
+        selected.append(
+            candidate_date
+            if tithi_number_at(ninth_muhurta_start) == 1
+            else candidate_date - timedelta(days=1)
+        )
+    if selected:
+        return selected
+
+    first_visible = next(
+        (
+            record[0]
+            for record in rule_records
+            if record[1].startswith("S")
+        ),
+        None,
+    )
+    return [first_visible - timedelta(days=1)] if first_visible else []
+
+
 def select_raksha_bandhan_dates(records, rule):
     """Select Bhadra-free Shravana Purnima in Aparahna or Pradosha.
 
@@ -1061,6 +1116,8 @@ def resolve_festivals(months, month_data):
             matches = select_janmashtami_dates(records, rule)
         elif rule.number == VIJAYA_DASAMI_NUMBER:
             matches = select_vijaya_dasami_dates(records, rule)
+        elif rule.number == BALI_PADYAMI_NUMBER:
+            matches = select_bali_padyami_dates(records, rule)
         elif rule.tithi == "S1":
             matches = []
             for index, (
