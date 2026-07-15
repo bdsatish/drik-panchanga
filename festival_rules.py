@@ -71,7 +71,14 @@ FESTIVAL_RULES = (
         "dharmasindhu",
         "https://www.transliteral.org/pages/z80422074237/view",
     ),
-    FestivalRule(9, "Yajur upakarma, Rakhi", 5, "S15"),
+    FestivalRule(
+        9,
+        "Yajur upakarma",
+        5,
+        "S15",
+        "dharmasindhu",
+        "https://www.transliteral.org/pages/z80421215029/view",
+    ),
     FestivalRule(10, "Janmashtami", 5, "K8"),
     FestivalRule(11, "Ganesa caturthi", 6, "S4"),
     FestivalRule(12, "Durgastami", 7, "S8"),
@@ -106,6 +113,7 @@ AKSAYA_TRTIYA_NUMBER = 3
 NARASIMHA_JAYANTHI_NUMBER = 5
 GURU_PURNIMA_NUMBER = 6
 NAGA_PANCHAMI_NUMBER = 7
+YAJUR_UPAKARMA_NUMBER = 9
 GANESHA_CATURTHI_NUMBER = 11
 DURGA_ASHTAMI_NUMBER = 12
 NARAKA_CATURDASI_NUMBER = 15
@@ -412,6 +420,96 @@ def select_naga_panchami_dates(records, rule):
     return selected
 
 
+def eclipse_or_sankranti_in_window(start_jd, end_jd):
+    """Return whether Dharma Sindhu's eight-yama window is contaminated."""
+    start_rasi = int(panchanga.solar_longitude(start_jd) // 30)
+    end_rasi = int(panchanga.solar_longitude(end_jd) // 30)
+    if start_rasi != end_rasi:
+        return True
+
+    for finder in (
+        panchanga.swe.lun_eclipse_when,
+        panchanga.swe.sol_eclipse_when_glob,
+    ):
+        _, eclipse_times = finder(start_jd - 2)
+        if start_jd <= eclipse_times[0] <= end_jd:
+            return True
+    return False
+
+
+def select_taittiriya_apastamba_upakarma_dates(records, rule):
+    """Resolve Taittiriya-Apastamba Yajur Upakarma.
+
+    Shravana Purnima is primary. If Purnima covers both sunrises, all
+    Yajurvedins use the earlier day. For a split Purnima beginning after the
+    first daytime muhurta, Taittiriyas use the later day when at least two
+    muhurtas (four ghatis) remain after its sunrise; a shorter remainder uses
+    the earlier day. Adhika-masa Upakarma is forbidden.
+
+    An eclipse or sankranti between the preceding and following local night
+    midpoints contaminates the selected day. Apastambas then use Bhadrapada
+    Purnima. This implements Dharma Sindhu's principal eight-yama opinion,
+    not its separately reported stricter element-touch opinion.
+
+    Sources:
+    https://www.transliteral.org/pages/z80421215029/view
+    https://www.transliteral.org/pages/z80421215344/view
+    """
+    rule_records = records_for_rule(records, rule)
+    by_date = {record[0]: record for record in records}
+    sunrise_candidates = [
+        (record[0], record[4])
+        for record in rule_records
+        if record[1] == rule.tithi
+    ]
+    selected = []
+    for group in group_consecutive_candidates(sunrise_candidates):
+        if len(group) > 1:
+            selected_date = group[0][0]
+        else:
+            later_date, remainder = group[0]
+            previous_date = later_date - timedelta(days=1)
+            previous_record = by_date.get(previous_date)
+            later_record = by_date[later_date]
+            selected_date = later_date
+            if previous_record is not None:
+                intervals = tithi_intervals(
+                    previous_record[5],
+                    later_record[5],
+                    15,
+                )
+                purnima_start = intervals[0][0] if intervals else later_record[5]
+                first_muhurta_end = previous_record[5] + (
+                    previous_record[6] - previous_record[5]
+                ) / 15
+                if (
+                    purnima_start <= first_muhurta_end
+                    or remainder < 4 * ONE_GHATI_HOURS
+                ):
+                    selected_date = previous_date
+
+        selected_record = by_date[selected_date]
+        previous_record = by_date.get(selected_date - timedelta(days=1))
+        next_record = by_date.get(selected_date + timedelta(days=1))
+        if previous_record is not None and next_record is not None:
+            previous_midnight = (previous_record[6] + selected_record[5]) / 2
+            following_midnight = (selected_record[6] + next_record[5]) / 2
+            if eclipse_or_sankranti_in_window(
+                previous_midnight,
+                following_midnight,
+            ):
+                fallback_rule = FestivalRule(9, rule.name, 6, "S15")
+                fallback = [
+                    record[0]
+                    for record in records_for_rule(records, fallback_rule)
+                    if record[1] == "S15"
+                ]
+                if fallback:
+                    selected_date = fallback[0]
+        selected.append(selected_date)
+    return selected
+
+
 def collect_records(months, month_data):
     records = []
     for year, month in months:
@@ -715,6 +813,8 @@ def resolve_festivals(months, month_data):
             matches = select_guru_purnima_dates(records, rule)
         elif rule.number == NAGA_PANCHAMI_NUMBER:
             matches = select_naga_panchami_dates(records, rule)
+        elif rule.number == YAJUR_UPAKARMA_NUMBER:
+            matches = select_taittiriya_apastamba_upakarma_dates(records, rule)
         elif rule.tithi == "S1":
             matches = []
             for index, (

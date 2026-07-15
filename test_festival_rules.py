@@ -12,6 +12,7 @@ from festival_rules import (
     select_naga_panchami_dates,
     select_narasimha_jayanthi_dates,
     select_rama_navami_dates,
+    select_taittiriya_apastamba_upakarma_dates,
     select_ugadi_dates,
 )
 
@@ -209,6 +210,50 @@ class NagaPanchamiRuleTests(unittest.TestCase):
             select_naga_panchami_dates(records, self.rule),
             [date(2030, 8, 4)],
         )
+
+
+class YajurUpakarmaRuleTests(unittest.TestCase):
+    rule = FESTIVAL_RULES[7]
+
+    @staticmethod
+    def records(remainder=2.0):
+        return [
+            (date(2030, 8, 14), "S14", "5", False, 1.0, 10.0, 10.5),
+            (date(2030, 8, 15), "S15", "5", False, remainder, 11.0, 11.5),
+            (date(2030, 8, 16), "K1", "5", False, 1.0, 12.0, 12.5),
+        ]
+
+    def test_taittiriyas_use_later_day_with_two_muhurtas(self):
+        with patch(
+            "festival_rules.tithi_intervals",
+            return_value=[(10.1, 11.2)],
+        ), patch(
+            "festival_rules.eclipse_or_sankranti_in_window",
+            return_value=False,
+        ):
+            self.assertEqual(
+                select_taittiriya_apastamba_upakarma_dates(
+                    self.records(),
+                    self.rule,
+                ),
+                [date(2030, 8, 15)],
+            )
+
+    def test_short_later_purnima_uses_earlier_day(self):
+        with patch(
+            "festival_rules.tithi_intervals",
+            return_value=[(10.1, 11.05)],
+        ), patch(
+            "festival_rules.eclipse_or_sankranti_in_window",
+            return_value=False,
+        ):
+            self.assertEqual(
+                select_taittiriya_apastamba_upakarma_dates(
+                    self.records(remainder=1.0),
+                    self.rule,
+                ),
+                [date(2030, 8, 14)],
+            )
 
 
 if __name__ == "__main__":
