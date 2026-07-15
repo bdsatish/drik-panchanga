@@ -103,12 +103,20 @@ FESTIVAL_RULES = (
         "dharmasindhu",
         "https://www.transliteral.org/pages/z80421220129/view",
     ),
-    FestivalRule(13, "Ganesa caturthi", 6, "S4"),
-    FestivalRule(14, "Durgastami", 7, "S8"),
+    FestivalRule(
+        13,
+        "Gowri Habba",
+        6,
+        "S3",
+        "dharmasindhu",
+        "https://www.transliteral.org/pages/z80503220901/view",
+    ),
+    FestivalRule(14, "Ganesa caturthi", 6, "S4"),
+    FestivalRule(15, "Durgastami", 7, "S8"),
     # This is the regional South Indian/Khande-Navami observance, rather than
     # Dharma Sindhu's distinct Mahanavami puja/upavasa decision.
     FestivalRule(
-        15,
+        16,
         "Ayudha puja",
         7,
         "S9",
@@ -119,17 +127,17 @@ FESTIVAL_RULES = (
         ),
     ),
     FestivalRule(
-        16,
+        17,
         "Vijaya dasami",
         7,
         "S10",
         "dharmasindhu",
         "https://www.transliteral.org/pages/z80501062120/view",
     ),
-    FestivalRule(17, "Naraka caturdasi", 7, "K14"),
-    FestivalRule(18, "Dipavali", 7, "K15"),
+    FestivalRule(18, "Naraka caturdasi", 7, "K14"),
+    FestivalRule(19, "Dipavali", 7, "K15"),
     FestivalRule(
-        19,
+        20,
         "Bali padyami",
         8,
         "S1",
@@ -138,12 +146,12 @@ FESTIVAL_RULES = (
     ),
     # No Gita-Jayanti observance was found in Dharma Sindhu's Margashirsha
     # section. Preserve the supplied community date provisionally.
-    FestivalRule(20, "Gita jayanti", 9, "S11", "unresolved"),
+    FestivalRule(21, "Gita jayanti", 9, "S11", "unresolved"),
     # No Vasavi Atmarpana observance was found in Dharma Sindhu's Magha
     # section. Preserve the supplied community date provisionally.
-    FestivalRule(21, "Vasavi atmarpana", 11, "S2", "unresolved"),
+    FestivalRule(22, "Vasavi atmarpana", 11, "S2", "unresolved"),
     FestivalRule(
-        22,
+        23,
         "Vasanta pancami",
         11,
         "S5",
@@ -151,7 +159,7 @@ FESTIVAL_RULES = (
         "https://www.transliteral.org/pages/z80513003421/view",
     ),
     FestivalRule(
-        23,
+        24,
         "Ratha saptami",
         11,
         "S7",
@@ -160,9 +168,9 @@ FESTIVAL_RULES = (
     ),
     # Vishnu-Sahasranama Jayanthi was not found in Dharma Sindhu; Bhishma
     # Ashtami is present but is a different observance.
-    FestivalRule(24, "VSN jayanthi", 11, "S11", "unresolved"),
+    FestivalRule(25, "VSN jayanthi", 11, "S11", "unresolved"),
     FestivalRule(
-        25,
+        26,
         "Maha Shivaratri",
         11,
         "K14",
@@ -170,7 +178,7 @@ FESTIVAL_RULES = (
         "https://www.transliteral.org/pages/z80513005728/view",
     ),
     FestivalRule(
-        26,
+        27,
         "Holi",
         12,
         "K1",
@@ -200,17 +208,18 @@ RIG_UPAKARMA_NUMBER = 9
 YAJUR_UPAKARMA_NUMBER = 10
 RAKSHA_BANDHAN_NUMBER = 11
 JANMASHTAMI_NUMBER = 12
-GANESHA_CATURTHI_NUMBER = 13
-DURGA_ASHTAMI_NUMBER = 14
-AYUDHA_PUJA_NUMBER = 15
-VIJAYA_DASAMI_NUMBER = 16
-NARAKA_CATURDASI_NUMBER = 17
-DIPAVALI_NUMBER = 18
-BALI_PADYAMI_NUMBER = 19
-VASANTA_PANCHAMI_NUMBER = 22
-RATHA_SAPTAMI_NUMBER = 23
-HOLI_NUMBER = 26
-MAHA_SHIVARATRI_NUMBER = 25
+GOWRI_HABBA_NUMBER = 13
+GANESHA_CATURTHI_NUMBER = 14
+DURGA_ASHTAMI_NUMBER = 15
+AYUDHA_PUJA_NUMBER = 16
+VIJAYA_DASAMI_NUMBER = 17
+NARAKA_CATURDASI_NUMBER = 18
+DIPAVALI_NUMBER = 19
+BALI_PADYAMI_NUMBER = 20
+VASANTA_PANCHAMI_NUMBER = 23
+RATHA_SAPTAMI_NUMBER = 24
+HOLI_NUMBER = 27
+MAHA_SHIVARATRI_NUMBER = 26
 ONE_GHATI_HOURS = 24 / 60
 SIX_GHATI_HOURS = 6 * ONE_GHATI_HOURS
 ARUNODAYA_HOURS = 4 * ONE_GHATI_HOURS
@@ -1432,6 +1441,58 @@ def select_ganesha_caturthi_dates(records, rule):
     return selected
 
 
+def select_gowri_habba_dates(records, rule):
+    """Resolve Bhadrapada S3 Gowri Habba by Dharma Sindhu's Gauri rule.
+
+    The South Indian Svarna-Gowri Vrata/Gowri Habba is identified with the
+    Bhadrapada Shukla Tritiya Gauri (Haritalika) vrata discussed by Dharma
+    Sindhu. Its date rule deliberately favors the later, Chaturthi-yukta
+    Tritiya and strongly rejects a Dwitiya-yukta observance:
+
+    * If Tritiya prevails at sunrise on one day, use that day.
+    * If a vriddhi Tritiya prevails at two consecutive sunrises, use the
+      later day even when only a minute remnant remains. Dharma Sindhu says
+      to reject even a full sixty-ghati Tritiya on the earlier day because
+      conjunction with Chaturthi gives the later observance greater merit.
+    * Only in the kshaya case, when Tritiya falls wholly between two
+      sunrises and no Chaturthi-yukta sunrise day exists, use the earlier
+      civil day on which sunrise still has Dwitiya.
+
+    Thus "one day before Ganesa Caturthi" is the usual consequence, not the
+    controlling rule. Each vrata is independently resolved from its own
+    tithi rule, which also handles skipped and repeated tithis correctly.
+    Adhika Bhadrapada is excluded.
+
+    Sources:
+    https://www.transliteral.org/pages/z80503220901/view
+    https://www.transliteral.org/pages/z80422023507/view
+    Dharma Sindhu, first pariccheda, Tritiya-nirnaya, printed pp. 20-21:
+    https://archive.org/details/dharma-sindhu-hindi
+    """
+    rule_records = records_for_rule(records, rule)
+    sunrise_candidates = [
+        (record[0], record[4])
+        for record in rule_records
+        if record[1] == rule.tithi
+    ]
+    if sunrise_candidates:
+        return [
+            group[-1][0]
+            for group in group_consecutive_candidates(sunrise_candidates)
+        ]
+
+    # Kshaya Tritiya: S3 begins after the S2 sunrise and ends before the
+    # following sunrise, which therefore already has S4.
+    for earlier, later in zip(rule_records, rule_records[1:]):
+        if (
+            later[0] == earlier[0] + timedelta(days=1)
+            and earlier[1] == "S2"
+            and later[1] == "S4"
+        ):
+            return [earlier[0]]
+    return []
+
+
 def select_ayudha_puja_dates(records, rule):
     """Select shuddha Ashvina S9 by the South Indian sunrise convention.
 
@@ -1666,6 +1727,8 @@ def resolve_festivals(months, month_data):
                 )
             ]
             matches = select_durga_ashtami_dates(candidates)
+        elif rule.number == GOWRI_HABBA_NUMBER:
+            matches = select_gowri_habba_dates(records, rule)
         elif rule.number == AYUDHA_PUJA_NUMBER:
             matches = select_ayudha_puja_dates(records, rule)
         elif rule.number == NARAKA_CATURDASI_NUMBER:

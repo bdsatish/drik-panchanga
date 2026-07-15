@@ -10,6 +10,7 @@ from festival_rules import (
     select_aksaya_trtiya_dates,
     select_ayudha_puja_dates,
     select_bali_padyami_dates,
+    select_gowri_habba_dates,
     select_guru_purnima_dates,
     select_holi_dates,
     select_janmashtami_dates,
@@ -30,6 +31,10 @@ from festival_rules import (
 def record(day, tithi, masa="1", is_adhika=False):
     """Build the compact record shape consumed by festival selectors."""
     return (day, tithi, masa, is_adhika, 1.0, 0.0, 0.5)
+
+
+def festival_rule(name):
+    return next(rule for rule in FESTIVAL_RULES if rule.name == name)
 
 
 class UgadiRuleTests(unittest.TestCase):
@@ -120,6 +125,13 @@ class AksayaTrtiyaRuleTests(unittest.TestCase):
 
 
 class RuleStatusTests(unittest.TestCase):
+    def test_festival_markers_remain_sequential(self):
+        numbers = sorted(
+            [rule.number for rule in FESTIVAL_RULES]
+            + [VARAMAHALAKSHMI_RULE.number]
+        )
+        self.assertEqual(numbers, list(range(1, len(numbers) + 1)))
+
     def test_vasavi_jayanthi_is_not_attributed_to_dharma_sindhu(self):
         rule = FESTIVAL_RULES[3]
         self.assertEqual(rule.status, "unresolved")
@@ -130,22 +142,22 @@ class RuleStatusTests(unittest.TestCase):
         self.assertIsNone(VARAMAHALAKSHMI_RULE.source)
 
     def test_ayudha_puja_is_documented_as_a_regional_rule(self):
-        rule = next(rule for rule in FESTIVAL_RULES if rule.number == 15)
+        rule = festival_rule("Ayudha puja")
         self.assertEqual(rule.status, "regional")
         self.assertIn("drikpanchang.com", rule.source)
 
     def test_gita_jayanti_is_not_attributed_to_dharma_sindhu(self):
-        rule = next(rule for rule in FESTIVAL_RULES if rule.number == 20)
+        rule = festival_rule("Gita jayanti")
         self.assertEqual(rule.status, "unresolved")
         self.assertIsNone(rule.source)
 
     def test_vasavi_atmarpana_is_not_attributed_to_dharma_sindhu(self):
-        rule = next(rule for rule in FESTIVAL_RULES if rule.number == 21)
+        rule = festival_rule("Vasavi atmarpana")
         self.assertEqual(rule.status, "unresolved")
         self.assertIsNone(rule.source)
 
     def test_vsn_jayanthi_is_not_attributed_to_dharma_sindhu(self):
-        rule = next(rule for rule in FESTIVAL_RULES if rule.number == 24)
+        rule = festival_rule("VSN jayanthi")
         self.assertEqual(rule.status, "unresolved")
         self.assertIsNone(rule.source)
 
@@ -243,7 +255,7 @@ class NagaPanchamiRuleTests(unittest.TestCase):
 
 
 class RigUpakarmaRuleTests(unittest.TestCase):
-    rule = next(rule for rule in FESTIVAL_RULES if rule.number == 9)
+    rule = festival_rule("Rig upakarma")
 
     def test_rule_is_attributed_to_dharma_sindhu(self):
         self.assertEqual(self.rule.status, "dharmasindhu")
@@ -369,7 +381,7 @@ class RigUpakarmaRuleTests(unittest.TestCase):
 
 
 class YajurUpakarmaRuleTests(unittest.TestCase):
-    rule = next(rule for rule in FESTIVAL_RULES if rule.number == 10)
+    rule = festival_rule("Yajur upakarma")
 
     @staticmethod
     def records(remainder=2.0):
@@ -413,7 +425,7 @@ class YajurUpakarmaRuleTests(unittest.TestCase):
 
 
 class RakshaBandhanRuleTests(unittest.TestCase):
-    rule = next(rule for rule in FESTIVAL_RULES if rule.number == 11)
+    rule = festival_rule("Raksha Bandhan")
 
     @staticmethod
     def records(remainder):
@@ -451,7 +463,7 @@ class RakshaBandhanRuleTests(unittest.TestCase):
 
 
 class JanmashtamiRuleTests(unittest.TestCase):
-    rule = next(rule for rule in FESTIVAL_RULES if rule.number == 12)
+    rule = festival_rule("Janmashtami")
     records = [
         (date(2030, 9, 1), "K8", "5", False, 1.0, 10.0, 10.5),
         (date(2030, 9, 2), "K8", "5", False, 1.0, 11.0, 11.5),
@@ -485,8 +497,70 @@ class JanmashtamiRuleTests(unittest.TestCase):
             )
 
 
+class GowriHabbaRuleTests(unittest.TestCase):
+    rule = festival_rule("Gowri Habba")
+
+    def test_rule_is_attributed_to_dharma_sindhu(self):
+        self.assertEqual(self.rule.status, "dharmasindhu")
+        self.assertIn("transliteral.org", self.rule.source)
+
+    def test_selects_single_sunrise_tritiya(self):
+        records = [
+            record(date(2026, 9, 12), "S2", masa="6"),
+            record(date(2026, 9, 13), "S3", masa="6"),
+            record(date(2026, 9, 14), "S4", masa="6"),
+        ]
+        self.assertEqual(
+            select_gowri_habba_dates(records, self.rule),
+            [date(2026, 9, 13)],
+        )
+
+    def test_vriddhi_tritiya_uses_later_chaturthi_yukta_day(self):
+        records = [
+            record(date(2030, 9, 1), "S3", masa="6"),
+            (
+                date(2030, 9, 2),
+                "S3",
+                "6",
+                False,
+                0.01,
+                0.0,
+                0.5,
+            ),
+        ]
+        self.assertEqual(
+            select_gowri_habba_dates(records, self.rule),
+            [date(2030, 9, 2)],
+        )
+
+    def test_kshaya_tritiya_uses_earlier_dvitiya_yukta_day(self):
+        records = [
+            record(date(2030, 9, 1), "S2", masa="6"),
+            record(date(2030, 9, 2), "S4", masa="6"),
+        ]
+        self.assertEqual(
+            select_gowri_habba_dates(records, self.rule),
+            [date(2030, 9, 1)],
+        )
+
+    def test_excludes_adhika_bhadrapada(self):
+        records = [
+            record(
+                date(2030, 8, 2),
+                "S3",
+                masa="6",
+                is_adhika=True,
+            ),
+            record(date(2030, 9, 1), "S3", masa="6"),
+        ]
+        self.assertEqual(
+            select_gowri_habba_dates(records, self.rule),
+            [date(2030, 9, 1)],
+        )
+
+
 class VijayaDasamiRuleTests(unittest.TestCase):
-    rule = next(rule for rule in FESTIVAL_RULES if rule.number == 16)
+    rule = festival_rule("Vijaya dasami")
     records = [
         (date(2030, 10, 5), "S10", "7", False, 3.0, 10.0, 10.5),
         (date(2030, 10, 6), "S10", "7", False, 3.0, 11.0, 11.5),
@@ -520,7 +594,7 @@ class VijayaDasamiRuleTests(unittest.TestCase):
 
 
 class AyudhaPujaRuleTests(unittest.TestCase):
-    rule = next(rule for rule in FESTIVAL_RULES if rule.number == 15)
+    rule = festival_rule("Ayudha puja")
 
     def test_selects_single_sunrise_vyapini_navami(self):
         records = [
@@ -576,7 +650,7 @@ class AyudhaPujaRuleTests(unittest.TestCase):
 
 
 class BaliPadyamiRuleTests(unittest.TestCase):
-    rule = next(rule for rule in FESTIVAL_RULES if rule.number == 19)
+    rule = festival_rule("Bali padyami")
     records = [
         (date(2030, 11, 1), "K15", "8", False, 1.0, 10.0, 10.5),
         (date(2030, 11, 2), "S1", "8", False, 4.0, 11.0, 11.5),
@@ -598,7 +672,7 @@ class BaliPadyamiRuleTests(unittest.TestCase):
 
 
 class VasantaPanchamiRuleTests(unittest.TestCase):
-    rule = next(rule for rule in FESTIVAL_RULES if rule.number == 22)
+    rule = festival_rule("Vasanta pancami")
     records = [
         (date(2030, 2, 1), "S5", "11", False, 3.0, 10.0, 10.5),
         (date(2030, 2, 2), "S5", "11", False, 3.0, 11.0, 11.5),
@@ -626,7 +700,7 @@ class VasantaPanchamiRuleTests(unittest.TestCase):
 
 
 class RathaSaptamiRuleTests(unittest.TestCase):
-    rule = next(rule for rule in FESTIVAL_RULES if rule.number == 23)
+    rule = festival_rule("Ratha saptami")
     records = [
         (date(2030, 2, 3), "S7", "11", False, 3.0, 10.0, 10.5),
         (date(2030, 2, 4), "S7", "11", False, 3.0, 11.0, 11.5),
@@ -654,7 +728,7 @@ class RathaSaptamiRuleTests(unittest.TestCase):
 
 
 class HoliRuleTests(unittest.TestCase):
-    rule = next(rule for rule in FESTIVAL_RULES if rule.number == 26)
+    rule = festival_rule("Holi")
     records = [
         (date(2030, 3, 20), "K1", "12", False, 3.0, 10.0, 10.5),
         (date(2030, 3, 21), "K1", "12", False, 3.0, 11.0, 11.5),
@@ -682,7 +756,7 @@ class HoliRuleTests(unittest.TestCase):
 
 
 class MahaShivaratriRuleTests(unittest.TestCase):
-    rule = next(rule for rule in FESTIVAL_RULES if rule.number == 25)
+    rule = festival_rule("Maha Shivaratri")
     records = [
         (date(2030, 3, 5), "K14", "11", False, 3.0, 10.0, 10.5),
         (date(2030, 3, 6), "K14", "11", False, 3.0, 11.0, 11.5),
