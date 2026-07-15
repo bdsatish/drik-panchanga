@@ -10,6 +10,7 @@ from festival_rules import (
     select_aksaya_trtiya_dates,
     select_bali_padyami_dates,
     select_guru_purnima_dates,
+    select_holi_dates,
     select_janmashtami_dates,
     select_naga_panchami_dates,
     select_narasimha_jayanthi_dates,
@@ -464,6 +465,34 @@ class RathaSaptamiRuleTests(unittest.TestCase):
             self.assertEqual(
                 select_ratha_saptami_dates(self.records, self.rule),
                 [date(2030, 2, 4)],
+            )
+
+
+class HoliRuleTests(unittest.TestCase):
+    rule = next(rule for rule in FESTIVAL_RULES if rule.number == 23)
+    records = [
+        (date(2030, 3, 20), "K1", "12", False, 3.0, 10.0, 10.5),
+        (date(2030, 3, 21), "K1", "12", False, 3.0, 11.0, 11.5),
+    ]
+
+    def test_two_pratipada_mornings_use_earlier_day(self):
+        with patch(
+            "festival_rules.tithi_overlap_hours",
+            side_effect=[1.0, 1.0],
+        ):
+            self.assertEqual(
+                select_holi_dates(self.records, self.rule),
+                [date(2030, 3, 20)],
+            )
+
+    def test_only_later_morning_uses_later_day(self):
+        with patch(
+            "festival_rules.tithi_overlap_hours",
+            side_effect=[0.0, 1.0],
+        ):
+            self.assertEqual(
+                select_holi_dates(self.records, self.rule),
+                [date(2030, 3, 21)],
             )
 
 

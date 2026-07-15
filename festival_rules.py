@@ -135,7 +135,14 @@ FESTIVAL_RULES = (
     # Vishnu-Sahasranama Jayanthi was not found in Dharma Sindhu; Bhishma
     # Ashtami is present but is a different observance.
     FestivalRule(22, "VSN jayanthi", 11, "S11", "unresolved"),
-    FestivalRule(23, "Holi", 12, "K1"),
+    FestivalRule(
+        23,
+        "Holi",
+        12,
+        "K1",
+        "dharmasindhu",
+        "https://www.transliteral.org/pages/z80505120438/view",
+    ),
     FestivalRule(24, "Maha Shivaratri", 11, "K14"),
     FestivalRule(
         25,
@@ -175,6 +182,7 @@ DIPAVALI_NUMBER = 16
 BALI_PADYAMI_NUMBER = 17
 VASANTA_PANCHAMI_NUMBER = 20
 RATHA_SAPTAMI_NUMBER = 21
+HOLI_NUMBER = 23
 ONE_GHATI_HOURS = 24 / 60
 SIX_GHATI_HOURS = 6 * ONE_GHATI_HOURS
 ARUNODAYA_HOURS = 4 * ONE_GHATI_HOURS
@@ -854,6 +862,45 @@ def select_ratha_saptami_dates(records, rule):
     ]
 
 
+def select_holi_dates(records, rule):
+    """Select the color-festival morning after Holika Dahana.
+
+    The listed Holi marker denotes Dharma Sindhu's Vasantotsava/color
+    observance on Phalguna Krishna Pratipada morning, not the preceding
+    Purnima-Pradosha Holika Dahana. If Pratipada occupies both mornings, the
+    earlier morning is selected.
+
+    Sources:
+    https://www.transliteral.org/pages/z80505120438/view
+    https://kamakoti.org/kamakoti/dharmasindhu/bookview.php?chapnum=13
+    """
+    rule_records = records_for_rule(records, rule)
+    morning_candidates = []
+    for record in rule_records:
+        sunrise_jd, sunset_jd = record[5:7]
+        if tithi_overlap_hours(
+            sunrise_jd,
+            sunrise_jd + (sunset_jd - sunrise_jd) / 2,
+            16,
+        ) > 0:
+            morning_candidates.append((record[0], 1))
+    if morning_candidates:
+        return [
+            group[0][0]
+            for group in group_consecutive_candidates(morning_candidates)
+        ]
+
+    daytime_candidates = [
+        (record[0], 1)
+        for record in rule_records
+        if tithi_overlap_hours(record[5], record[6], 16) > 0
+    ]
+    return [
+        group[0][0]
+        for group in group_consecutive_candidates(daytime_candidates)
+    ]
+
+
 def select_raksha_bandhan_dates(records, rule):
     """Select Bhadra-free Shravana Purnima in Aparahna or Pradosha.
 
@@ -1220,6 +1267,8 @@ def resolve_festivals(months, month_data):
             matches = select_vasanta_panchami_dates(records, rule)
         elif rule.number == RATHA_SAPTAMI_NUMBER:
             matches = select_ratha_saptami_dates(records, rule)
+        elif rule.number == HOLI_NUMBER:
+            matches = select_holi_dates(records, rule)
         elif rule.tithi == "S1":
             matches = []
             for index, (
