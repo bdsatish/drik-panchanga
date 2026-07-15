@@ -7,6 +7,7 @@ from unittest.mock import patch
 from festival_rules import (
     FESTIVAL_RULES,
     select_aksaya_trtiya_dates,
+    select_guru_purnima_dates,
     select_narasimha_jayanthi_dates,
     select_rama_navami_dates,
     select_ugadi_dates,
@@ -138,6 +139,46 @@ class NarasimhaJayanthiRuleTests(unittest.TestCase):
                 select_narasimha_jayanthi_dates(self.records, self.rule),
                 [date(2030, 5, 18)],
             )
+
+
+class GuruPurnimaRuleTests(unittest.TestCase):
+    rule = FESTIVAL_RULES[5]
+
+    def test_uses_later_day_with_six_ghatis_of_purnima(self):
+        records = [
+            record(date(2030, 7, 15), "S15", masa="4"),
+            (
+                date(2030, 7, 16),
+                "S15",
+                "4",
+                False,
+                2.5,
+                0.0,
+                0.5,
+            ),
+        ]
+        self.assertEqual(
+            select_guru_purnima_dates(records, self.rule),
+            [date(2030, 7, 16)],
+        )
+
+    def test_rejects_short_later_purnima(self):
+        records = [
+            record(date(2030, 7, 15), "S15", masa="4"),
+            (
+                date(2030, 7, 16),
+                "S15",
+                "4",
+                False,
+                2.0,
+                0.0,
+                0.5,
+            ),
+        ]
+        self.assertEqual(
+            select_guru_purnima_dates(records, self.rule),
+            [date(2030, 7, 15)],
+        )
 
 
 if __name__ == "__main__":

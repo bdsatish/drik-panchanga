@@ -55,7 +55,14 @@ FESTIVAL_RULES = (
         "dharmasindhu",
         "https://www.transliteral.org/pages/z80421210345/view",
     ),
-    FestivalRule(6, "Guru Purnima", 4, "S15"),
+    FestivalRule(
+        6,
+        "Guru Purnima",
+        4,
+        "S15",
+        "dharmasindhu",
+        "https://www.transliteral.org/pages/z80421213928/view",
+    ),
     FestivalRule(7, "Naga panchami", 5, "S5"),
     FestivalRule(9, "Yajur upakarma, Rakhi", 5, "S15"),
     FestivalRule(10, "Janmashtami", 5, "K8"),
@@ -81,11 +88,13 @@ UGADI_NUMBER = 1
 RAMA_NAVAMI_NUMBER = 2
 AKSAYA_TRTIYA_NUMBER = 3
 NARASIMHA_JAYANTHI_NUMBER = 5
+GURU_PURNIMA_NUMBER = 6
 GANESHA_CATURTHI_NUMBER = 11
 DURGA_ASHTAMI_NUMBER = 12
 NARAKA_CATURDASI_NUMBER = 15
 DIPAVALI_NUMBER = 16
 ONE_GHATI_HOURS = 24 / 60
+SIX_GHATI_HOURS = 6 * ONE_GHATI_HOURS
 ARUNODAYA_HOURS = 4 * ONE_GHATI_HOURS
 PRADOSHA_HOURS = 6 * ONE_GHATI_HOURS
 
@@ -331,6 +340,33 @@ def select_narasimha_jayanthi_dates(records, rule):
         group[-1][0]
         for group in group_consecutive_candidates(daytime_candidates)
     ]
+
+
+def select_guru_purnima_dates(records, rule):
+    """Select Ashadha Purnima with six ghatis after local sunrise.
+
+    Dharma Sindhu's Vyasa-puja decision uses the later sunrise day only when
+    Purnima remains for at least three muhurtas (six ghatis) after sunrise;
+    when the later remainder is shorter, the previous Purnima day is used.
+
+    Sources:
+    https://www.transliteral.org/pages/z80421213928/view
+    https://www.transliteral.org/pages/z80422074133/view
+    """
+    candidates = [
+        (record[0], record[4])
+        for record in records_for_rule(records, rule)
+        if record[1] == rule.tithi
+    ]
+    selected = []
+    for group in group_consecutive_candidates(candidates):
+        if len(group) == 1:
+            selected.append(group[0][0])
+        elif group[-1][1] >= SIX_GHATI_HOURS:
+            selected.append(group[-1][0])
+        else:
+            selected.append(group[-2][0])
+    return selected
 
 
 def collect_records(months, month_data):
@@ -632,6 +668,8 @@ def resolve_festivals(months, month_data):
             matches = select_aksaya_trtiya_dates(records, rule)
         elif rule.number == NARASIMHA_JAYANTHI_NUMBER:
             matches = select_narasimha_jayanthi_dates(records, rule)
+        elif rule.number == GURU_PURNIMA_NUMBER:
+            matches = select_guru_purnima_dates(records, rule)
         elif rule.tithi == "S1":
             matches = []
             for index, (
