@@ -73,6 +73,14 @@ FESTIVAL_RULES = (
     ),
     FestivalRule(
         9,
+        "Rig upakarma",
+        5,
+        "Shravana nakshatra",
+        "dharmasindhu",
+        "https://www.transliteral.org/pages/z80422074617/view",
+    ),
+    FestivalRule(
+        10,
         "Yajur upakarma",
         5,
         "S15",
@@ -80,7 +88,7 @@ FESTIVAL_RULES = (
         "https://www.transliteral.org/pages/z80421215029/view",
     ),
     FestivalRule(
-        10,
+        11,
         "Raksha Bandhan",
         5,
         "S15",
@@ -88,19 +96,19 @@ FESTIVAL_RULES = (
         "https://www.transliteral.org/pages/z80421215617/view",
     ),
     FestivalRule(
-        11,
+        12,
         "Janmashtami",
         5,
         "K8",
         "dharmasindhu",
         "https://www.transliteral.org/pages/z80421220129/view",
     ),
-    FestivalRule(12, "Ganesa caturthi", 6, "S4"),
-    FestivalRule(13, "Durgastami", 7, "S8"),
+    FestivalRule(13, "Ganesa caturthi", 6, "S4"),
+    FestivalRule(14, "Durgastami", 7, "S8"),
     # This is the regional South Indian/Khande-Navami observance, rather than
     # Dharma Sindhu's distinct Mahanavami puja/upavasa decision.
     FestivalRule(
-        14,
+        15,
         "Ayudha puja",
         7,
         "S9",
@@ -111,17 +119,17 @@ FESTIVAL_RULES = (
         ),
     ),
     FestivalRule(
-        15,
+        16,
         "Vijaya dasami",
         7,
         "S10",
         "dharmasindhu",
         "https://www.transliteral.org/pages/z80501062120/view",
     ),
-    FestivalRule(16, "Naraka caturdasi", 7, "K14"),
-    FestivalRule(17, "Dipavali", 7, "K15"),
+    FestivalRule(17, "Naraka caturdasi", 7, "K14"),
+    FestivalRule(18, "Dipavali", 7, "K15"),
     FestivalRule(
-        18,
+        19,
         "Bali padyami",
         8,
         "S1",
@@ -130,12 +138,12 @@ FESTIVAL_RULES = (
     ),
     # No Gita-Jayanti observance was found in Dharma Sindhu's Margashirsha
     # section. Preserve the supplied community date provisionally.
-    FestivalRule(19, "Gita jayanti", 9, "S11", "unresolved"),
+    FestivalRule(20, "Gita jayanti", 9, "S11", "unresolved"),
     # No Vasavi Atmarpana observance was found in Dharma Sindhu's Magha
     # section. Preserve the supplied community date provisionally.
-    FestivalRule(20, "Vasavi atmarpana", 11, "S2", "unresolved"),
+    FestivalRule(21, "Vasavi atmarpana", 11, "S2", "unresolved"),
     FestivalRule(
-        21,
+        22,
         "Vasanta pancami",
         11,
         "S5",
@@ -143,7 +151,7 @@ FESTIVAL_RULES = (
         "https://www.transliteral.org/pages/z80513003421/view",
     ),
     FestivalRule(
-        22,
+        23,
         "Ratha saptami",
         11,
         "S7",
@@ -152,9 +160,9 @@ FESTIVAL_RULES = (
     ),
     # Vishnu-Sahasranama Jayanthi was not found in Dharma Sindhu; Bhishma
     # Ashtami is present but is a different observance.
-    FestivalRule(23, "VSN jayanthi", 11, "S11", "unresolved"),
+    FestivalRule(24, "VSN jayanthi", 11, "S11", "unresolved"),
     FestivalRule(
-        24,
+        25,
         "Maha Shivaratri",
         11,
         "K14",
@@ -162,7 +170,7 @@ FESTIVAL_RULES = (
         "https://www.transliteral.org/pages/z80513005728/view",
     ),
     FestivalRule(
-        25,
+        26,
         "Holi",
         12,
         "K1",
@@ -188,20 +196,21 @@ AKSAYA_TRTIYA_NUMBER = 3
 NARASIMHA_JAYANTHI_NUMBER = 5
 GURU_PURNIMA_NUMBER = 6
 NAGA_PANCHAMI_NUMBER = 7
-YAJUR_UPAKARMA_NUMBER = 9
-RAKSHA_BANDHAN_NUMBER = 10
-JANMASHTAMI_NUMBER = 11
-GANESHA_CATURTHI_NUMBER = 12
-DURGA_ASHTAMI_NUMBER = 13
-AYUDHA_PUJA_NUMBER = 14
-VIJAYA_DASAMI_NUMBER = 15
-NARAKA_CATURDASI_NUMBER = 16
-DIPAVALI_NUMBER = 17
-BALI_PADYAMI_NUMBER = 18
-VASANTA_PANCHAMI_NUMBER = 21
-RATHA_SAPTAMI_NUMBER = 22
-HOLI_NUMBER = 25
-MAHA_SHIVARATRI_NUMBER = 24
+RIG_UPAKARMA_NUMBER = 9
+YAJUR_UPAKARMA_NUMBER = 10
+RAKSHA_BANDHAN_NUMBER = 11
+JANMASHTAMI_NUMBER = 12
+GANESHA_CATURTHI_NUMBER = 13
+DURGA_ASHTAMI_NUMBER = 14
+AYUDHA_PUJA_NUMBER = 15
+VIJAYA_DASAMI_NUMBER = 16
+NARAKA_CATURDASI_NUMBER = 17
+DIPAVALI_NUMBER = 18
+BALI_PADYAMI_NUMBER = 19
+VASANTA_PANCHAMI_NUMBER = 22
+RATHA_SAPTAMI_NUMBER = 23
+HOLI_NUMBER = 26
+MAHA_SHIVARATRI_NUMBER = 25
 ONE_GHATI_HOURS = 24 / 60
 SIX_GHATI_HOURS = 6 * ONE_GHATI_HOURS
 ARUNODAYA_HOURS = 4 * ONE_GHATI_HOURS
@@ -545,6 +554,40 @@ def nakshatra_number_at(jd):
     return int(panchanga.lunar_longitude(jd) // (360 / 27)) + 1
 
 
+def nakshatra_overlap_hours(start_jd, end_jd, target_nakshatra):
+    """Measure one nakshatra's overlap with a short ritual-time window."""
+    epsilon = 1e-10
+    start_matches = (
+        nakshatra_number_at(start_jd + epsilon) == target_nakshatra
+    )
+    end_matches = (
+        nakshatra_number_at(end_jd - epsilon) == target_nakshatra
+    )
+    if start_matches and end_matches:
+        return (end_jd - start_jd) * 24
+    if not start_matches and not end_matches:
+        return 0
+
+    low, high = start_jd, end_jd
+    for _ in range(50):
+        middle = (low + high) / 2
+        middle_matches = (
+            nakshatra_number_at(middle) == target_nakshatra
+        )
+        if start_matches:
+            if middle_matches:
+                low = middle
+            else:
+                high = middle
+        elif middle_matches:
+            high = middle
+        else:
+            low = middle
+    if start_matches:
+        return (low - start_jd) * 24
+    return (end_jd - high) * 24
+
+
 def has_tithi_nakshatra(start_jd, end_jd, tithi_number, nakshatra_number):
     """Check whether a short ritual window contains a tithi/nakshatra yoga."""
     for index in range(97):
@@ -563,6 +606,165 @@ def has_nakshatra(start_jd, end_jd, nakshatra_number):
         if nakshatra_number_at(instant) == nakshatra_number:
             return True
     return False
+
+
+def upakarma_date_is_contaminated(records_by_date, selected_date):
+    """Check Dharma Sindhu's principal eight-yama eclipse/sankranti window."""
+    selected_record = records_by_date[selected_date]
+    previous_record = records_by_date.get(selected_date - timedelta(days=1))
+    next_record = records_by_date.get(selected_date + timedelta(days=1))
+    if previous_record is None or next_record is None:
+        return False
+    previous_midnight = (previous_record[6] + selected_record[5]) / 2
+    following_midnight = (selected_record[6] + next_record[5]) / 2
+    return eclipse_or_sankranti_in_window(
+        previous_midnight,
+        following_midnight,
+    )
+
+
+def select_rigveda_upakarma_dates(records, rule):
+    """Resolve the Bahvrca/Rigveda Upakarma prescribed by Dharma Sindhu.
+
+    The primary time is Shravana nakshatra in shuddha Shravana Shukla
+    Paksha, and the rite is performed in Purvahna. This is intentionally
+    distinct from Yajurveda Upakarma, whose primary time is Purnima.
+
+    Dharma Sindhu gives detailed rules when Shravana crosses civil days:
+
+    * If Shravana prevails at two consecutive sunrises, use the later day
+      when at least three muhurtas (six ghatis, 2.4 hours) remain after its
+      sunrise; otherwise use the earlier, fully occupied day.
+    * If the first sunrise has Uttara Ashadha and Shravana prevails only at
+      the following sunrise, use that following day when at least two
+      muhurtas (four ghatis, 1.6 hours) remain.
+    * A shorter following-day remainder is rejected as Uttara-Ashadha-
+      viddha, and the secondary Panchami/Hasta times are used.
+
+    Shravana is the primary option. If it is unavailable or contaminated,
+    Shukla Panchami joined with Hasta is preferred; either Panchami or Hasta
+    alone is also accepted. Panchami and Hasta are primarily sunrise-vyapini
+    with at least three muhurtas remaining; a shorter sunrise remainder sends
+    the observance to the preceding, purva-viddha day. Shravana-masa options
+    precede the corresponding Bhadrapada fallbacks.
+
+    Upakarma is not performed in adhika masa. An eclipse or sankranti in the
+    principal eight-yama window—from the preceding local midnight through
+    the following local midnight—contaminates a candidate. The stricter
+    separately reported opinion about an eclipse/sankranti touching the
+    selected nakshatra or tithi outside that window is not used, matching the
+    existing Yajurveda resolver.
+
+    Sources:
+    https://www.transliteral.org/pages/z80422074617/view
+    https://www.transliteral.org/pages/z80421215344/view
+    Dharma Sindhu, second pariccheda, printed pp. 97-102:
+    https://archive.org/details/dharma-sindhu-hindi
+    """
+    records_by_date = {record[0]: record for record in records}
+    three_muhurtas = 6 * ONE_GHATI_HOURS
+    two_muhurtas = 4 * ONE_GHATI_HOURS
+
+    def month_records(masa):
+        return [
+            record
+            for record in records
+            if (
+                record[2] == str(masa)
+                and not record[3]
+                and record[1].startswith("S")
+            )
+        ]
+
+    def shravana_candidates(candidate_records):
+        candidates = []
+        for record in candidate_records:
+            sunrise_jd = record[5]
+            if nakshatra_number_at(sunrise_jd + 1e-10) != 22:
+                continue
+            candidates.append(
+                (
+                    record[0],
+                    nakshatra_overlap_hours(
+                        sunrise_jd,
+                        sunrise_jd + three_muhurtas / 24,
+                        22,
+                    ),
+                )
+            )
+
+        selected = []
+        for group in group_consecutive_candidates(candidates):
+            if len(group) > 1:
+                selected.append(
+                    group[-1][0]
+                    if group[-1][1] + 1e-9 >= three_muhurtas
+                    else group[0][0]
+                )
+            elif group[0][1] + 1e-9 >= two_muhurtas:
+                selected.append(group[0][0])
+        return selected
+
+    def sunrise_fallback_dates(candidate_records, kind):
+        candidates = []
+        for record in candidate_records:
+            civil_date, tithi, _, _, tithi_remainder, sunrise_jd, _ = record
+            if kind == "panchami":
+                if tithi != "S5":
+                    continue
+                remainder = tithi_remainder
+            else:
+                if nakshatra_number_at(sunrise_jd + 1e-10) != 13:
+                    continue
+                remainder = nakshatra_overlap_hours(
+                    sunrise_jd,
+                    sunrise_jd + three_muhurtas / 24,
+                    13,
+                )
+            candidates.append(
+                civil_date
+                if remainder + 1e-9 >= three_muhurtas
+                else civil_date - timedelta(days=1)
+            )
+        return sorted(set(candidates))
+
+    shravana_month = month_records(rule.masa)
+    for selected_date in shravana_candidates(shravana_month):
+        if not upakarma_date_is_contaminated(
+            records_by_date,
+            selected_date,
+        ):
+            return [selected_date]
+
+    # Prefer a Panchami-Hasta conjunction, then Panchami, then Hasta. The
+    # same order is tried first in Shravana and then in Bhadrapada.
+    for masa in (rule.masa, rule.masa + 1):
+        candidates = month_records(masa)
+        if masa != rule.masa:
+            for selected_date in shravana_candidates(candidates):
+                if not upakarma_date_is_contaminated(
+                    records_by_date,
+                    selected_date,
+                ):
+                    return [selected_date]
+        panchami_dates = sunrise_fallback_dates(candidates, "panchami")
+        hasta_dates = sunrise_fallback_dates(candidates, "hasta")
+        common_dates = sorted(set(panchami_dates) & set(hasta_dates))
+        ordered_dates = common_dates + [
+            value
+            for value in panchami_dates + hasta_dates
+            if value not in common_dates
+        ]
+        for selected_date in ordered_dates:
+            if (
+                selected_date in records_by_date
+                and not upakarma_date_is_contaminated(
+                    records_by_date,
+                    selected_date,
+                )
+            ):
+                return [selected_date]
+    return []
 
 
 def select_taittiriya_apastamba_upakarma_dates(records, rule):
@@ -1386,6 +1588,8 @@ def resolve_festivals(months, month_data):
             matches = select_guru_purnima_dates(records, rule)
         elif rule.number == NAGA_PANCHAMI_NUMBER:
             matches = select_naga_panchami_dates(records, rule)
+        elif rule.number == RIG_UPAKARMA_NUMBER:
+            matches = select_rigveda_upakarma_dates(records, rule)
         elif rule.number == YAJUR_UPAKARMA_NUMBER:
             matches = select_taittiriya_apastamba_upakarma_dates(records, rule)
         elif rule.number == RAKSHA_BANDHAN_NUMBER:
@@ -1492,7 +1696,7 @@ def resolve_festivals(months, month_data):
         names_by_number[rule.number] = rule.name
 
     vrata_dates = []
-    for sravana_purnima_date in dates_by_number[9]:
+    for sravana_purnima_date in dates_by_number[YAJUR_UPAKARMA_NUMBER]:
         vrata_date = sravana_purnima_date - timedelta(days=1)
         while vrata_date.weekday() != calendar.FRIDAY:
             vrata_date -= timedelta(days=1)

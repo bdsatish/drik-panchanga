@@ -19,6 +19,7 @@ from festival_rules import (
     select_raksha_bandhan_dates,
     select_rama_navami_dates,
     select_ratha_saptami_dates,
+    select_rigveda_upakarma_dates,
     select_taittiriya_apastamba_upakarma_dates,
     select_ugadi_dates,
     select_vasanta_panchami_dates,
@@ -129,22 +130,22 @@ class RuleStatusTests(unittest.TestCase):
         self.assertIsNone(VARAMAHALAKSHMI_RULE.source)
 
     def test_ayudha_puja_is_documented_as_a_regional_rule(self):
-        rule = next(rule for rule in FESTIVAL_RULES if rule.number == 14)
+        rule = next(rule for rule in FESTIVAL_RULES if rule.number == 15)
         self.assertEqual(rule.status, "regional")
         self.assertIn("drikpanchang.com", rule.source)
 
     def test_gita_jayanti_is_not_attributed_to_dharma_sindhu(self):
-        rule = next(rule for rule in FESTIVAL_RULES if rule.number == 19)
-        self.assertEqual(rule.status, "unresolved")
-        self.assertIsNone(rule.source)
-
-    def test_vasavi_atmarpana_is_not_attributed_to_dharma_sindhu(self):
         rule = next(rule for rule in FESTIVAL_RULES if rule.number == 20)
         self.assertEqual(rule.status, "unresolved")
         self.assertIsNone(rule.source)
 
+    def test_vasavi_atmarpana_is_not_attributed_to_dharma_sindhu(self):
+        rule = next(rule for rule in FESTIVAL_RULES if rule.number == 21)
+        self.assertEqual(rule.status, "unresolved")
+        self.assertIsNone(rule.source)
+
     def test_vsn_jayanthi_is_not_attributed_to_dharma_sindhu(self):
-        rule = next(rule for rule in FESTIVAL_RULES if rule.number == 23)
+        rule = next(rule for rule in FESTIVAL_RULES if rule.number == 24)
         self.assertEqual(rule.status, "unresolved")
         self.assertIsNone(rule.source)
 
@@ -241,8 +242,134 @@ class NagaPanchamiRuleTests(unittest.TestCase):
         )
 
 
+class RigUpakarmaRuleTests(unittest.TestCase):
+    rule = next(rule for rule in FESTIVAL_RULES if rule.number == 9)
+
+    def test_rule_is_attributed_to_dharma_sindhu(self):
+        self.assertEqual(self.rule.status, "dharmasindhu")
+        self.assertIn("transliteral.org", self.rule.source)
+
+    def test_selects_shravana_at_sunrise_with_two_muhurtas(self):
+        records = [
+            (date(2026, 8, 25), "S13", "5", False, 3.0, 10.0, 10.5),
+            (date(2026, 8, 26), "S14", "5", False, 3.0, 11.0, 11.5),
+            (date(2026, 8, 27), "S15", "5", False, 3.0, 12.0, 12.5),
+        ]
+        with patch(
+            "festival_rules.nakshatra_number_at",
+            side_effect=lambda jd: 22 if 10.9 < jd < 11.1 else 21,
+        ), patch(
+            "festival_rules.nakshatra_overlap_hours",
+            return_value=2.0,
+        ), patch(
+            "festival_rules.upakarma_date_is_contaminated",
+            return_value=False,
+        ):
+            self.assertEqual(
+                select_rigveda_upakarma_dates(records, self.rule),
+                [date(2026, 8, 26)],
+            )
+
+    def test_two_sunrise_shravanas_use_later_with_three_muhurtas(self):
+        records = [
+            (date(2030, 8, 20), "S14", "5", False, 3.0, 10.0, 10.5),
+            (date(2030, 8, 21), "S15", "5", False, 3.0, 11.0, 11.5),
+        ]
+        with patch(
+            "festival_rules.nakshatra_number_at",
+            return_value=22,
+        ), patch(
+            "festival_rules.nakshatra_overlap_hours",
+            side_effect=[3.0, 2.4],
+        ), patch(
+            "festival_rules.upakarma_date_is_contaminated",
+            return_value=False,
+        ):
+            self.assertEqual(
+                select_rigveda_upakarma_dates(records, self.rule),
+                [date(2030, 8, 21)],
+            )
+
+    def test_two_sunrise_shravanas_reject_short_later_remainder(self):
+        records = [
+            (date(2030, 8, 20), "S14", "5", False, 3.0, 10.0, 10.5),
+            (date(2030, 8, 21), "S15", "5", False, 3.0, 11.0, 11.5),
+        ]
+        with patch(
+            "festival_rules.nakshatra_number_at",
+            return_value=22,
+        ), patch(
+            "festival_rules.nakshatra_overlap_hours",
+            side_effect=[3.0, 2.0],
+        ), patch(
+            "festival_rules.upakarma_date_is_contaminated",
+            return_value=False,
+        ):
+            self.assertEqual(
+                select_rigveda_upakarma_dates(records, self.rule),
+                [date(2030, 8, 20)],
+            )
+
+    def test_contaminated_shravana_falls_back_to_panchami(self):
+        records = [
+            (date(2030, 8, 5), "S4", "5", False, 3.0, 10.0, 10.5),
+            (date(2030, 8, 6), "S5", "5", False, 3.0, 11.0, 11.5),
+            (date(2030, 8, 20), "S14", "5", False, 3.0, 30.0, 30.5),
+        ]
+        with patch(
+            "festival_rules.nakshatra_number_at",
+            side_effect=lambda jd: 22 if 29.9 < jd < 30.1 else 1,
+        ), patch(
+            "festival_rules.nakshatra_overlap_hours",
+            return_value=2.0,
+        ), patch(
+            "festival_rules.upakarma_date_is_contaminated",
+            side_effect=[True, False],
+        ):
+            self.assertEqual(
+                select_rigveda_upakarma_dates(records, self.rule),
+                [date(2030, 8, 6)],
+            )
+
+    def test_short_sunrise_panchami_uses_previous_day(self):
+        records = [
+            (date(2030, 8, 5), "S4", "5", False, 3.0, 10.0, 10.5),
+            (date(2030, 8, 6), "S5", "5", False, 2.0, 11.0, 11.5),
+        ]
+        with patch(
+            "festival_rules.nakshatra_number_at",
+            return_value=1,
+        ), patch(
+            "festival_rules.upakarma_date_is_contaminated",
+            return_value=False,
+        ):
+            self.assertEqual(
+                select_rigveda_upakarma_dates(records, self.rule),
+                [date(2030, 8, 5)],
+            )
+
+    def test_uses_bhadrapada_shravana_when_shravana_month_fails(self):
+        records = [
+            (date(2030, 9, 15), "S14", "6", False, 3.0, 50.0, 50.5),
+        ]
+        with patch(
+            "festival_rules.nakshatra_number_at",
+            return_value=22,
+        ), patch(
+            "festival_rules.nakshatra_overlap_hours",
+            return_value=2.0,
+        ), patch(
+            "festival_rules.upakarma_date_is_contaminated",
+            return_value=False,
+        ):
+            self.assertEqual(
+                select_rigveda_upakarma_dates(records, self.rule),
+                [date(2030, 9, 15)],
+            )
+
+
 class YajurUpakarmaRuleTests(unittest.TestCase):
-    rule = FESTIVAL_RULES[7]
+    rule = next(rule for rule in FESTIVAL_RULES if rule.number == 10)
 
     @staticmethod
     def records(remainder=2.0):
@@ -286,7 +413,7 @@ class YajurUpakarmaRuleTests(unittest.TestCase):
 
 
 class RakshaBandhanRuleTests(unittest.TestCase):
-    rule = next(rule for rule in FESTIVAL_RULES if rule.number == 10)
+    rule = next(rule for rule in FESTIVAL_RULES if rule.number == 11)
 
     @staticmethod
     def records(remainder):
@@ -324,7 +451,7 @@ class RakshaBandhanRuleTests(unittest.TestCase):
 
 
 class JanmashtamiRuleTests(unittest.TestCase):
-    rule = next(rule for rule in FESTIVAL_RULES if rule.number == 11)
+    rule = next(rule for rule in FESTIVAL_RULES if rule.number == 12)
     records = [
         (date(2030, 9, 1), "K8", "5", False, 1.0, 10.0, 10.5),
         (date(2030, 9, 2), "K8", "5", False, 1.0, 11.0, 11.5),
@@ -359,7 +486,7 @@ class JanmashtamiRuleTests(unittest.TestCase):
 
 
 class VijayaDasamiRuleTests(unittest.TestCase):
-    rule = next(rule for rule in FESTIVAL_RULES if rule.number == 15)
+    rule = next(rule for rule in FESTIVAL_RULES if rule.number == 16)
     records = [
         (date(2030, 10, 5), "S10", "7", False, 3.0, 10.0, 10.5),
         (date(2030, 10, 6), "S10", "7", False, 3.0, 11.0, 11.5),
@@ -393,7 +520,7 @@ class VijayaDasamiRuleTests(unittest.TestCase):
 
 
 class AyudhaPujaRuleTests(unittest.TestCase):
-    rule = next(rule for rule in FESTIVAL_RULES if rule.number == 14)
+    rule = next(rule for rule in FESTIVAL_RULES if rule.number == 15)
 
     def test_selects_single_sunrise_vyapini_navami(self):
         records = [
@@ -449,7 +576,7 @@ class AyudhaPujaRuleTests(unittest.TestCase):
 
 
 class BaliPadyamiRuleTests(unittest.TestCase):
-    rule = next(rule for rule in FESTIVAL_RULES if rule.number == 18)
+    rule = next(rule for rule in FESTIVAL_RULES if rule.number == 19)
     records = [
         (date(2030, 11, 1), "K15", "8", False, 1.0, 10.0, 10.5),
         (date(2030, 11, 2), "S1", "8", False, 4.0, 11.0, 11.5),
@@ -471,7 +598,7 @@ class BaliPadyamiRuleTests(unittest.TestCase):
 
 
 class VasantaPanchamiRuleTests(unittest.TestCase):
-    rule = next(rule for rule in FESTIVAL_RULES if rule.number == 21)
+    rule = next(rule for rule in FESTIVAL_RULES if rule.number == 22)
     records = [
         (date(2030, 2, 1), "S5", "11", False, 3.0, 10.0, 10.5),
         (date(2030, 2, 2), "S5", "11", False, 3.0, 11.0, 11.5),
@@ -499,7 +626,7 @@ class VasantaPanchamiRuleTests(unittest.TestCase):
 
 
 class RathaSaptamiRuleTests(unittest.TestCase):
-    rule = next(rule for rule in FESTIVAL_RULES if rule.number == 22)
+    rule = next(rule for rule in FESTIVAL_RULES if rule.number == 23)
     records = [
         (date(2030, 2, 3), "S7", "11", False, 3.0, 10.0, 10.5),
         (date(2030, 2, 4), "S7", "11", False, 3.0, 11.0, 11.5),
@@ -527,7 +654,7 @@ class RathaSaptamiRuleTests(unittest.TestCase):
 
 
 class HoliRuleTests(unittest.TestCase):
-    rule = next(rule for rule in FESTIVAL_RULES if rule.number == 25)
+    rule = next(rule for rule in FESTIVAL_RULES if rule.number == 26)
     records = [
         (date(2030, 3, 20), "K1", "12", False, 3.0, 10.0, 10.5),
         (date(2030, 3, 21), "K1", "12", False, 3.0, 11.0, 11.5),
@@ -555,7 +682,7 @@ class HoliRuleTests(unittest.TestCase):
 
 
 class MahaShivaratriRuleTests(unittest.TestCase):
-    rule = next(rule for rule in FESTIVAL_RULES if rule.number == 24)
+    rule = next(rule for rule in FESTIVAL_RULES if rule.number == 25)
     records = [
         (date(2030, 3, 5), "K14", "11", False, 3.0, 10.0, 10.5),
         (date(2030, 3, 6), "K14", "11", False, 3.0, 11.0, 11.5),
