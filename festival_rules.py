@@ -124,6 +124,161 @@ def records_for_rule(records, rule):
     ]
 
 
+def collect_records(months, month_data):
+    records = []
+    for year, month in months:
+        for (
+            day,
+            tithi,
+            _,
+            masa,
+            is_adhika,
+            tithi_hours_after_sunrise,
+            sunrise_jd,
+            sunset_jd,
+        ) in month_data[(year, month)]:
+            records.append(
+                (
+                    CivilDate(year, month, day),
+                    tithi,
+                    masa,
+                    is_adhika,
+                    tithi_hours_after_sunrise,
+                    sunrise_jd,
+                    sunset_jd,
+                )
+            )
+    return records
+
+
+def tithi_intervals(start_jd, end_jd, target_tithi):
+    """Find target-tithi intervals by bracketing each phase transition."""
+    step = 0.25
+    intervals = []
+    cursor = start_jd
+    active = tithi_number_at(cursor) == target_tithi
+    interval_start = cursor if active else None
+
+    while cursor < end_jd:
+        following = min(cursor + step, end_jd)
+        following_active = tithi_number_at(following) == target_tithi
+        if active != following_active:
+            low, high = cursor, following
+            for _ in range(50):
+                middle = (low + high) / 2
+                middle_active = tithi_number_at(middle) == target_tithi
+                if middle_active == active:
+                    low = middle
+                else:
+                    high = middle
+            boundary = (low + high) / 2
+            if following_active:
+                interval_start = boundary
+            else:
+                intervals.append((interval_start, boundary))
+                interval_start = None
+        cursor = following
+        active = following_active
+
+    if interval_start is not None:
+        intervals.append((interval_start, end_jd))
+    return intervals
+
+
+def resolve_dharma_sindhu_vaishnava_ekadashi_dates(months, month_data):
+    """Resolve Dharma Sindhu Vaishnava Ekadashi upavasa dates.
+
+    Dharma Sindhu distinguishes Vaishnavas from Smartas by Dashami-vedha:
+
+    * Arunodaya is the four-ghati (96-minute) period before local sunrise.
+      If even a trace of Dashami remains after Arunodaya begins, Ekadashi is
+      viddha for Vaishnavas; that civil day is rejected and upavasa moves to
+      the following day (Dvadashi).
+    * A shuddha Ekadashi also moves to the following day when Ekadashi has
+      adhikya (it remains after the next sunrise), when Dvadashi has adhikya
+      (it remains after the subsequent sunrise), or when both have adhikya.
+    * Only a shuddha occurrence with neither Ekadashi nor Dvadashi adhikya
+      is observed on the first day.
+    * Both Shukla and Krishna Ekadashis are included. An adhika masa therefore
+      contributes its own two observances. This function selects upavasa dates
+      only; it intentionally does not calculate the following day's Parana.
+
+    Dharma Sindhu, "Vaishnava vrata-day determination" and its summary:
+    https://www.transliteral.org/pages/z80422042154/view
+    https://www.transliteral.org/pages/z80422042403/view
+
+    Sri Vaishnava sources confirm the four-ghati Arunodaya/Dashami rule while
+    cautioning that exceptional Ekadashi/Dvadashi growth and loss cases can
+    depend on one's acharya, family, or regional practice:
+    https://ibiblio.org/sripedia/srirangasri/archives/jul01/msg00084.html
+    https://www.ibiblio.org/sripedia/ramanuja/archives/jan06/msg00060.html
+
+    Therefore this is deliberately the pure Dharma Sindhu fallback requested
+    for this calendar. It does not import the Gaudiya/ISKCON GCal rules for
+    named nakshatra Mahadvadashis, Pakshavardhini, or other Gaurabda-specific
+    decisions.
+    """
+    records = collect_records(months, month_data)
+    sunrises = [(record[0], record[5]) for record in records]
+    if len(sunrises) < 3:
+        return []
+
+    scan_start = sunrises[0][1] - 1
+    scan_end = sunrises[-1][1] + 1
+    selected = []
+    epsilon = 1 / (86400 * 10)
+
+    for ekadashi_tithi in (11, 26):
+        dashami_tithi = ekadashi_tithi - 1
+        dvadashi_tithi = ekadashi_tithi + 1
+        for ekadashi_start, _ in tithi_intervals(
+            scan_start,
+            scan_end,
+            ekadashi_tithi,
+        ):
+            first_sunrise_index = next(
+                (
+                    index
+                    for index, (_, sunrise_jd) in enumerate(sunrises)
+                    if sunrise_jd >= ekadashi_start
+                ),
+                None,
+            )
+            if (
+                first_sunrise_index is None
+                or first_sunrise_index + 2 >= len(sunrises)
+            ):
+                continue
+
+            first_date, first_sunrise = sunrises[first_sunrise_index]
+            second_date, second_sunrise = sunrises[first_sunrise_index + 1]
+            _, third_sunrise = sunrises[first_sunrise_index + 2]
+            arunodaya = first_sunrise - ARUNODAYA_HOURS / 24
+
+            is_dashami_viddha = (
+                tithi_number_at(arunodaya + epsilon) == dashami_tithi
+            )
+            ekadashi_has_adhikya = (
+                tithi_number_at(second_sunrise + epsilon)
+                == ekadashi_tithi
+            )
+            dvadashi_has_adhikya = (
+                tithi_number_at(third_sunrise + epsilon)
+                == dvadashi_tithi
+            )
+            selected.append(
+                second_date
+                if (
+                    is_dashami_viddha
+                    or ekadashi_has_adhikya
+                    or dvadashi_has_adhikya
+                )
+                else first_date
+            )
+
+    return sorted(set(selected))
+
+
 def select_ganesha_caturthi_dates(records, rule):
     """Apply Dharma Sindhu's Madhyahna-vyapini, purva-viddha rule.
 
@@ -255,29 +410,7 @@ def resolve_festivals(months, month_data):
     day, tithi, nakshatra, masa, is_adhika, tithi-hours-after-sunrise,
     sunrise UTC Julian day, sunset UTC Julian day.
     """
-    records = []
-    for year, month in months:
-        for (
-            day,
-            tithi,
-            _,
-            masa,
-            is_adhika,
-            tithi_hours_after_sunrise,
-            sunrise_jd,
-            sunset_jd,
-        ) in month_data[(year, month)]:
-            records.append(
-                (
-                    CivilDate(year, month, day),
-                    tithi,
-                    masa,
-                    is_adhika,
-                    tithi_hours_after_sunrise,
-                    sunrise_jd,
-                    sunset_jd,
-                )
-            )
+    records = collect_records(months, month_data)
 
     dates_by_number = {}
     names_by_number = {}

@@ -15,7 +15,10 @@ from reportlab.lib.colors import HexColor, white
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.pdfgen import canvas
 
-from festival_rules import resolve_festivals
+from festival_rules import (
+    resolve_dharma_sindhu_vaishnava_ekadashi_dates,
+    resolve_festivals,
+)
 import panchanga
 
 
@@ -42,6 +45,7 @@ ADHIKA_INK = HexColor("#875A00")
 MASA_START_ROW = HexColor("#E4F1E7")
 MASA_START_INK = HexColor("#356846")
 FESTIVAL_INK = HexColor("#9A3154")
+EKADASHI_MARK = HexColor("#168078")
 
 NAKSHATRA_KEY_LINES = (
     "N: 1 Asvini, 2 Bharani, 3 Krittika, 4 Rohini, 5 Mrgasira, 6 Ardra, "
@@ -290,7 +294,17 @@ def draw_day_column(pdf, x, top, width):
         pdf.line(x, y, x + width, y)
 
 
-def draw_month(pdf, year, month, values, festivals_by_date, x, top, width):
+def draw_month(
+    pdf,
+    year,
+    month,
+    values,
+    festivals_by_date,
+    ekadashi_dates,
+    x,
+    top,
+    width,
+):
     month_header_height = 20
     column_header_height = 15
     row_height = 13.7
@@ -374,8 +388,19 @@ def draw_month(pdf, year, month, values, festivals_by_date, x, top, width):
         if is_sunday:
             pdf.setFillColor(SUNDAY_MARK)
             pdf.rect(x, row_y, 1.6, row_height, stroke=0, fill=1)
+        civil_date = CivilDate(year, month, day)
+        if civil_date in ekadashi_dates:
+            pdf.setFillColor(EKADASHI_MARK)
+            pdf.rect(
+                x + width - 1.6,
+                row_y,
+                1.6,
+                row_height,
+                stroke=0,
+                fill=1,
+            )
         festival_numbers = festivals_by_date.get(
-            CivilDate(year, month, day),
+            civil_date,
             (),
         )
         baseline = row_y + (3.0 if festival_numbers else 4.1)
@@ -478,7 +503,8 @@ def draw_page_footer(pdf, festival_entries):
         18,
         32,
         "T: S1-S15 = Sukla; K1-K15 = Krsna. N = nakshatra. "
-        "Tiny red numbers refer to the festival key. Sundays have a red edge.",
+        "Tiny red numbers refer to the festival key. Sundays have a red left "
+        "edge; Dharma-sindhu Vaishnava Ekadashi upavasa has a teal right edge.",
     )
     pdf.drawString(
         18,
@@ -496,14 +522,40 @@ def draw_page_footer(pdf, festival_entries):
 def build_pdf(location, start_year, start_month, output_path):
     panchanga.set_chosen_ayanamsa("citra")
     months = list(month_range(start_year, start_month))
-    month_data = {
+    if start_month == 1:
+        context_start = (start_year - 1, 12)
+    else:
+        context_start = (start_year, start_month - 1)
+    context_months = list(
+        month_range(*context_start, count=MONTH_COUNT + 2)
+    )
+    context_data = {
         (year, month): daily_values(year, month, location)
+        for year, month in context_months
+    }
+    month_data = {
+        (year, month): context_data[(year, month)]
         for year, month in months
     }
     festivals_by_date, festival_entries = resolve_festivals(
         months,
         month_data,
     )
+    range_start = CivilDate(start_year, start_month, 1)
+    end_year, end_month = months[-1]
+    range_end = CivilDate(
+        end_year,
+        end_month,
+        calendar.monthrange(end_year, end_month)[1],
+    )
+    ekadashi_dates = {
+        value
+        for value in resolve_dharma_sindhu_vaishnava_ekadashi_dates(
+            context_months,
+            context_data,
+        )
+        if range_start <= value <= range_end
+    }
     mark_masa_starts(months, month_data)
 
     page_width, page_height = landscape(A4)
@@ -535,6 +587,7 @@ def build_pdf(location, start_year, start_month, output_path):
             month,
             month_data[(year, month)],
             festivals_by_date,
+            ekadashi_dates,
             x,
             top,
             month_width,
