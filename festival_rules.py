@@ -1030,6 +1030,9 @@ def select_vijaya_dasami_dates(records, rule):
     Dashami, the earlier day remains normal, except that a later Dashami of
     at least three muhurtas joined to Shravana in Aparahna is selected.
 
+    This rule matches TTD calendar for all years 2021-2026, even though
+    SRS Mutt and Sringeri Mutt calendars differ (e.g. in 2022).
+
     Source:
     https://www.transliteral.org/pages/z80501062120/view
     """
