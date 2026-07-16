@@ -112,11 +112,19 @@ FESTIVAL_RULES = (
         "https://www.transliteral.org/pages/z80503220901/view",
     ),
     FestivalRule(14, "Ganesa caturthi", 6, "S4"),
-    FestivalRule(15, "Durgastami", 7, "S8"),
+    FestivalRule(
+        15,
+        "Mahalaya Amavasya",
+        6,
+        "K15",
+        "dharmasindhu",
+        "http://hindupanchang.blogspot.com/2008/03/",
+    ),
+    FestivalRule(16, "Durgastami", 7, "S8"),
     # This is the regional South Indian/Khande-Navami observance, rather than
     # Dharma Sindhu's distinct Mahanavami puja/upavasa decision.
     FestivalRule(
-        16,
+        17,
         "Ayudha puja",
         7,
         "S9",
@@ -127,17 +135,25 @@ FESTIVAL_RULES = (
         ),
     ),
     FestivalRule(
-        17,
+        18,
         "Vijaya dasami",
         7,
         "S10",
         "dharmasindhu",
         "https://www.transliteral.org/pages/z80501062120/view",
     ),
-    FestivalRule(18, "Naraka Chaturdashi", 7, "K14"),
-    FestivalRule(19, "Deepavali", 7, "K15"),
     FestivalRule(
-        20,
+        19,
+        "Dhana Trayodashi",
+        7,
+        "K13",
+        "dharmasindhu",
+        "https://nepaljyotish.org/en/blog/dharmasindhu-vrata-nirnaya/",
+    ),
+    FestivalRule(20, "Naraka Chaturdashi", 7, "K14"),
+    FestivalRule(21, "Deepavali", 7, "K15"),
+    FestivalRule(
+        22,
         "Bali padyami",
         8,
         "S1",
@@ -146,9 +162,9 @@ FESTIVAL_RULES = (
     ),
     # No Gita-Jayanti observance was found in Dharma Sindhu's Margashirsha
     # section. Preserve the supplied community date provisionally.
-    FestivalRule(21, "Gita jayanti", 9, "S11", "unresolved"),
+    FestivalRule(23, "Gita jayanti", 9, "S11", "unresolved"),
     FestivalRule(
-        22,
+        24,
         "Vaikuntha Ekadashi",
         9,
         "Dhanur-masa S11",
@@ -158,11 +174,19 @@ FESTIVAL_RULES = (
             "vaikuntha-ekadashi-date-time.html"
         ),
     ),
+    FestivalRule(
+        25,
+        "Makara Sankranti",
+        0,
+        "Solar",
+        "dharmasindhu",
+        "https://www.kamakoti.org/kamakoti/dharmasindhu/bookview.php?chapnum=11",
+    ),
     # No Vasavi Atmarpana observance was found in Dharma Sindhu's Magha
     # section. Preserve the supplied community date provisionally.
-    FestivalRule(23, "Vasavi atmarpana", 11, "S2", "unresolved"),
+    FestivalRule(26, "Vasavi atmarpana", 11, "S2", "unresolved"),
     FestivalRule(
-        24,
+        27,
         "Vasanta pancami",
         11,
         "S5",
@@ -170,7 +194,7 @@ FESTIVAL_RULES = (
         "https://www.transliteral.org/pages/z80513003421/view",
     ),
     FestivalRule(
-        25,
+        28,
         "Ratha saptami",
         11,
         "S7",
@@ -179,9 +203,9 @@ FESTIVAL_RULES = (
     ),
     # Vishnu-Sahasranama Jayanthi was not found in Dharma Sindhu; Bhishma
     # Ashtami is present but is a different observance.
-    FestivalRule(26, "VSN jayanthi", 11, "S11", "unresolved"),
+    FestivalRule(29, "VSN jayanthi", 11, "S11", "unresolved"),
     FestivalRule(
-        27,
+        30,
         "Maha Shivaratri",
         11,
         "K14",
@@ -189,7 +213,7 @@ FESTIVAL_RULES = (
         "https://www.transliteral.org/pages/z80513005728/view",
     ),
     FestivalRule(
-        28,
+        31,
         "Holi",
         12,
         "K1",
@@ -197,35 +221,11 @@ FESTIVAL_RULES = (
         "https://www.transliteral.org/pages/z80505120438/view",
     ),
     FestivalRule(
-        29,
-        "Dhana Trayodashi",
-        7,
-        "K13",
-        "dharmasindhu",
-        "https://nepaljyotish.org/en/blog/dharmasindhu-vrata-nirnaya/",
-    ),
-    FestivalRule(
-        30,
-        "Makara Sankranti",
-        0,
-        "Solar",
-        "dharmasindhu",
-        "https://www.kamakoti.org/kamakoti/dharmasindhu/bookview.php?chapnum=11",
-    ),
-    FestivalRule(
-        31,
+        32,
         "Dhanvantari Jayanthi",
         7,
         "K13",
         "regional",
-    ),
-    FestivalRule(
-        32,
-        "Mahalaya Amavasya",
-        6,
-        "K15",
-        "dharmasindhu",
-        "http://hindupanchang.blogspot.com/2008/03/",
     ),
 )
 
@@ -252,22 +252,24 @@ RAKSHA_BANDHAN_NUMBER = 11
 JANMASHTAMI_NUMBER = 12
 GOWRI_HABBA_NUMBER = 13
 GANESHA_CATURTHI_NUMBER = 14
-DURGA_ASHTAMI_NUMBER = 15
-AYUDHA_PUJA_NUMBER = 16
-VIJAYA_DASAMI_NUMBER = 17
-NARAKA_CHATURDASHI_NUMBER = 18
-DEEPAVALI_NUMBER = 19
-BALI_PADYAMI_NUMBER = 20
-GITA_JAYANTI_NUMBER = 21
-VAIKUNTHA_EKADASHI_NUMBER = 22
-VASANTA_PANCHAMI_NUMBER = 24
-RATHA_SAPTAMI_NUMBER = 25
-HOLI_NUMBER = 28
-DHANA_TRAYODASHI_NUMBER = 29
-MAKARA_SANKRANTI_NUMBER = 30
-MAHA_SHIVARATRI_NUMBER = 27
-DHANVANTARI_JAYANTHI_NUMBER = 31
-MAHALAYA_AMAVASYA_NUMBER = 32
+MAHALAYA_AMAVASYA_NUMBER = 15
+DURGA_ASHTAMI_NUMBER = 16
+AYUDHA_PUJA_NUMBER = 17
+VIJAYA_DASAMI_NUMBER = 18
+DHANA_TRAYODASHI_NUMBER = 19
+NARAKA_CHATURDASHI_NUMBER = 20
+DEEPAVALI_NUMBER = 21
+BALI_PADYAMI_NUMBER = 22
+GITA_JAYANTI_NUMBER = 23
+VAIKUNTHA_EKADASHI_NUMBER = 24
+MAKARA_SANKRANTI_NUMBER = 25
+VASAVI_ATMARPANA_NUMBER = 26
+VASANTA_PANCHAMI_NUMBER = 27
+RATHA_SAPTAMI_NUMBER = 28
+VSN_JAYANTHI_NUMBER = 29
+MAHA_SHIVARATRI_NUMBER = 30
+HOLI_NUMBER = 31
+DHANVANTARI_JAYANTHI_NUMBER = 32
 ONE_GHATI_HOURS = 24 / 60
 SIX_GHATI_HOURS = 6 * ONE_GHATI_HOURS
 ARUNODAYA_HOURS = 4 * ONE_GHATI_HOURS
