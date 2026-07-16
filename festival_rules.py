@@ -134,8 +134,8 @@ FESTIVAL_RULES = (
         "dharmasindhu",
         "https://www.transliteral.org/pages/z80501062120/view",
     ),
-    FestivalRule(18, "Naraka caturdasi", 7, "K14"),
-    FestivalRule(19, "Dipavali", 7, "K15"),
+    FestivalRule(18, "Naraka Chaturdashi", 7, "K14"),
+    FestivalRule(19, "Deepavali", 7, "K15"),
     FestivalRule(
         20,
         "Bali padyami",
@@ -198,7 +198,7 @@ FESTIVAL_RULES = (
     ),
     FestivalRule(
         29,
-        "Dhanteras",
+        "Dhana Trayodashi",
         7,
         "K13",
         "dharmasindhu",
@@ -211,6 +211,13 @@ FESTIVAL_RULES = (
         "Solar",
         "dharmasindhu",
         "https://www.kamakoti.org/kamakoti/dharmasindhu/bookview.php?chapnum=11",
+    ),
+    FestivalRule(
+        31,
+        "Dhanvantari Jayanthi",
+        7,
+        "K13",
+        "regional",
     ),
 )
 
@@ -240,16 +247,18 @@ GANESHA_CATURTHI_NUMBER = 14
 DURGA_ASHTAMI_NUMBER = 15
 AYUDHA_PUJA_NUMBER = 16
 VIJAYA_DASAMI_NUMBER = 17
-NARAKA_CATURDASI_NUMBER = 18
-DIPAVALI_NUMBER = 19
+NARAKA_CHATURDASHI_NUMBER = 18
+DEEPAVALI_NUMBER = 19
 BALI_PADYAMI_NUMBER = 20
+GITA_JAYANTI_NUMBER = 21
 VAIKUNTHA_EKADASHI_NUMBER = 22
 VASANTA_PANCHAMI_NUMBER = 24
 RATHA_SAPTAMI_NUMBER = 25
 HOLI_NUMBER = 28
-DHANTERAS_NUMBER = 29
+DHANA_TRAYODASHI_NUMBER = 29
 MAKARA_SANKRANTI_NUMBER = 30
 MAHA_SHIVARATRI_NUMBER = 27
+DHANVANTARI_JAYANTHI_NUMBER = 31
 ONE_GHATI_HOURS = 24 / 60
 SIX_GHATI_HOURS = 6 * ONE_GHATI_HOURS
 ARUNODAYA_HOURS = 4 * ONE_GHATI_HOURS
@@ -1671,7 +1680,7 @@ def select_ayudha_puja_dates(records, rule):
     ]
 
 
-def select_naraka_caturdasi_dates(records, rule):
+def select_naraka_chaturdashi_dates(records, rule):
     """Select K14 during Arunodaya for the South Indian pre-dawn observance.
 
     Arunodaya is the four-ghati (96-minute) period before local sunrise.
@@ -1699,10 +1708,10 @@ def select_naraka_caturdasi_dates(records, rule):
     return selected
 
 
-def select_dhanteras_dates(records, rule):
-    """Apply Dharma Sindhu's Pradosha-vyapini Trayodashi rule for Dhanteras.
+def select_dhana_trayodashi_dates(records, rule):
+    """Apply Dharma Sindhu's Pradosha-vyapini Trayodashi rule for Dhana Trayodashi.
 
-    Dhanteras is assigned to the local evening on which Krishna Trayodashi
+    Dhana Trayodashi is assigned to the local evening on which Krishna Trayodashi
     occupies at least one ghati of Pradosha. When both consecutive evenings
     qualify, the later date is selected; when only the earlier evening
     qualifies, that date is retained.
@@ -1730,6 +1739,23 @@ def select_dhanteras_dates(records, rule):
         ]
         selected.append((qualified or group)[-1][0])
     return selected
+
+
+def select_dhanvantari_jayanthi_dates(records, rule):
+    """Select Udaya-vyapini Krishna Trayodashi for Dhanvantari Jayanthi.
+
+    The festival belongs to the civil day on which Krishna Trayodashi
+    prevails at local sunrise.
+    """
+    sunrise_candidates = [
+        (record[0], record[4])
+        for record in records_for_rule(records, rule)
+        if record[1] == rule.tithi
+    ]
+    return [
+        group[0][0]
+        for group in group_consecutive_candidates(sunrise_candidates)
+    ]
 
 
 def select_makara_sankranti_dates(records, rule):
@@ -1773,7 +1799,7 @@ def select_makara_sankranti_dates(records, rule):
     return selected
 
 
-def select_dipavali_dates(records, rule):
+def select_deepavali_dates(records, rule):
     """Apply Dharma Sindhu's Pradosha-vyapini Amavasya rule.
 
     Lakshmi Puja is assigned to the local evening on which Amavasya occupies
@@ -1882,10 +1908,12 @@ def resolve_festivals(months, month_data):
             matches = select_holi_dates(records, rule)
         elif rule.number == MAHA_SHIVARATRI_NUMBER:
             matches = select_maha_shivaratri_dates(records, rule)
-        elif rule.number == DHANTERAS_NUMBER:
-            matches = select_dhanteras_dates(records, rule)
+        elif rule.number == DHANA_TRAYODASHI_NUMBER:
+            matches = select_dhana_trayodashi_dates(records, rule)
         elif rule.number == MAKARA_SANKRANTI_NUMBER:
             matches = select_makara_sankranti_dates(records, rule)
+        elif rule.number == DHANVANTARI_JAYANTHI_NUMBER:
+            matches = select_dhanvantari_jayanthi_dates(records, rule)
         elif rule.tithi == "S1":
             matches = []
             for index, (
@@ -1948,10 +1976,10 @@ def resolve_festivals(months, month_data):
             matches = select_gowri_habba_dates(records, rule)
         elif rule.number == AYUDHA_PUJA_NUMBER:
             matches = select_ayudha_puja_dates(records, rule)
-        elif rule.number == NARAKA_CATURDASI_NUMBER:
-            matches = select_naraka_caturdasi_dates(records, rule)
-        elif rule.number == DIPAVALI_NUMBER:
-            matches = select_dipavali_dates(records, rule)
+        elif rule.number == NARAKA_CHATURDASHI_NUMBER:
+            matches = select_naraka_chaturdashi_dates(records, rule)
+        elif rule.number == DEEPAVALI_NUMBER:
+            matches = select_deepavali_dates(records, rule)
         else:
             matches = [
                 civil_date

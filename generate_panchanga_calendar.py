@@ -18,6 +18,8 @@ from reportlab.pdfgen import canvas
 from festival_rules import (
     resolve_dharma_sindhu_vaishnava_ekadashi_dates,
     resolve_festivals,
+    GITA_JAYANTI_NUMBER,
+    DHANVANTARI_JAYANTHI_NUMBER,
 )
 import panchanga
 
@@ -746,6 +748,20 @@ def build_pdf(location, start_year, start_month, output_path):
         months,
         month_data,
     )
+    
+    # Exclude certain festivals from the generated PDF
+    excluded_festivals = {GITA_JAYANTI_NUMBER, DHANVANTARI_JAYANTHI_NUMBER}
+    for civil_date in list(festivals_by_date.keys()):
+        festivals_by_date[civil_date] = [
+            num for num in festivals_by_date[civil_date] if num not in excluded_festivals
+        ]
+        if not festivals_by_date[civil_date]:
+            del festivals_by_date[civil_date]
+            
+    festival_entries = [
+        entry for entry in festival_entries if entry[0] not in excluded_festivals
+    ]
+
     range_start = CivilDate(start_year, start_month, 1)
     end_year, end_month = months[-1]
     range_end = CivilDate(

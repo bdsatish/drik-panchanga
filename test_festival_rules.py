@@ -26,9 +26,10 @@ from festival_rules import (
     select_vaikuntha_ekadashi_dates,
     select_vasanta_panchami_dates,
     select_vijaya_dasami_dates,
-    select_dhanteras_dates,
+    select_dhana_trayodashi_dates,
     select_makara_sankranti_dates,
     select_smarta_janmashtami_dates,
+    select_dhanvantari_jayanthi_dates,
 )
 
 
@@ -922,8 +923,8 @@ class MahaShivaratriRuleTests(unittest.TestCase):
             )
 
 
-class DhanterasRuleTests(unittest.TestCase):
-    rule = festival_rule("Dhanteras")
+class DhanaTrayodashiRuleTests(unittest.TestCase):
+    rule = festival_rule("Dhana Trayodashi")
     records = [
         (date(2030, 11, 5), "K12", "7", False, 1.0, 10.0, 10.5),
         (date(2030, 11, 6), "K13", "7", False, 1.0, 11.0, 11.5),
@@ -936,7 +937,7 @@ class DhanterasRuleTests(unittest.TestCase):
             side_effect=[0.0, 1.0, 1.0],
         ):
             self.assertEqual(
-                select_dhanteras_dates(self.records, self.rule),
+                select_dhana_trayodashi_dates(self.records, self.rule),
                 [date(2030, 11, 7)],
             )
 
@@ -946,9 +947,24 @@ class DhanterasRuleTests(unittest.TestCase):
             side_effect=[0.0, 1.0, 0.0],
         ):
             self.assertEqual(
-                select_dhanteras_dates(self.records, self.rule),
+                select_dhana_trayodashi_dates(self.records, self.rule),
                 [date(2030, 11, 6)],
             )
+
+
+class DhanvantariJayanthiRuleTests(unittest.TestCase):
+    rule = festival_rule("Dhanvantari Jayanthi")
+    records = [
+        (date(2030, 11, 5), "K12", "7", False, 1.0, 10.0, 10.5),
+        (date(2030, 11, 6), "K13", "7", False, 1.0, 11.0, 11.5),
+        (date(2030, 11, 7), "K14", "7", False, 1.0, 12.0, 12.5),
+    ]
+
+    def test_selects_sunrise_vyapini_trayodashi(self):
+        self.assertEqual(
+            select_dhanvantari_jayanthi_dates(self.records, self.rule),
+            [date(2030, 11, 6)],
+        )
 
 
 class MakaraSankrantiRuleTests(unittest.TestCase):
