@@ -956,6 +956,41 @@ class DhanaTrayodashiRuleTests(unittest.TestCase):
                 [date(2030, 11, 6)],
             )
 
+    def test_neither_pradosha_uses_later_sunrise_date(self):
+        records = [
+            (date(2030, 11, 5), "K12", "7", False, 1.0, 10.0, 10.5),
+            (date(2030, 11, 6), "K13", "7", False, 1.0, 11.0, 11.5),
+            (date(2030, 11, 7), "K14", "7", False, 1.0, 12.0, 12.5),
+        ]
+        with patch(
+            "festival_rules.tithi_overlap_hours",
+            return_value=0.0,
+        ):
+            self.assertEqual(
+                select_dhana_trayodashi_dates(records, self.rule),
+                [date(2030, 11, 6)],
+            )
+
+    def test_neither_pradosha_handles_skipped_trayodashi(self):
+        records = [
+            (date(2030, 11, 5), "K12", "7", False, 1.0, 10.0, 10.5),
+            (date(2030, 11, 6), "K14", "7", False, 1.0, 11.0, 11.5),
+        ]
+        with (
+            patch(
+                "festival_rules.tithi_overlap_hours",
+                return_value=0.0,
+            ),
+            patch(
+                "festival_rules.tithi_intervals",
+                return_value=[(10.6, 10.9)],
+            ),
+        ):
+            self.assertEqual(
+                select_dhana_trayodashi_dates(records, self.rule),
+                [date(2030, 11, 6)],
+            )
+
 
 class NarakaChaturdashiRuleTests(unittest.TestCase):
     rule = festival_rule("Naraka Chaturdashi")
