@@ -16,7 +16,7 @@ from festival_rules import (
     select_janmashtami_dates,
     select_maha_shivaratri_dates,
     select_naga_panchami_dates,
-    select_narasimha_jayanthi_dates,
+    select_narasimha_jayanti_dates,
     select_raksha_bandhan_dates,
     select_rama_navami_dates,
     select_ratha_saptami_dates,
@@ -29,10 +29,10 @@ from festival_rules import (
     select_dhana_trayodashi_dates,
     select_makara_sankranti_dates,
     select_smarta_janmashtami_dates,
-    select_dhanvantari_jayanthi_dates,
+    select_dhanvantari_jayanti_dates,
     select_mahalaya_amavasya_dates,
     select_mahanavami_puja_dates,
-    select_dussehra_observance_dates,
+    select_dasara_dates,
 )
 
 
@@ -104,7 +104,7 @@ class RamaNavamiRuleTests(unittest.TestCase):
             )
 
 
-class AksayaTrtiyaRuleTests(unittest.TestCase):
+class AkshayaTritiyaRuleTests(unittest.TestCase):
     rule = FESTIVAL_RULES[2]
     records = [
         record(date(2030, 5, 5), "S2", masa="2"),
@@ -140,7 +140,7 @@ class RuleStatusTests(unittest.TestCase):
         )
         self.assertEqual(numbers, list(range(1, len(numbers) + 1)))
 
-    def test_vasavi_jayanthi_is_not_attributed_to_dharma_sindhu(self):
+    def test_vasavi_jayanti_is_not_attributed_to_dharma_sindhu(self):
         rule = FESTIVAL_RULES[3]
         self.assertEqual(rule.status, "unresolved")
         self.assertIsNone(rule.source)
@@ -150,27 +150,27 @@ class RuleStatusTests(unittest.TestCase):
         self.assertIsNone(VARAMAHALAKSHMI_RULE.source)
 
     def test_ayudha_puja_is_documented_as_a_regional_rule(self):
-        rule = festival_rule("Ayudha Puja (Observance)")
+        rule = festival_rule("Ayudha Puja")
         self.assertEqual(rule.status, "regional")
         self.assertIn("drikpanchang.com", rule.source)
 
     def test_gita_jayanti_is_not_attributed_to_dharma_sindhu(self):
-        rule = festival_rule("Gita jayanti")
+        rule = festival_rule("Gita Jayanti")
         self.assertEqual(rule.status, "unresolved")
         self.assertIsNone(rule.source)
 
     def test_vasavi_atmarpana_is_not_attributed_to_dharma_sindhu(self):
-        rule = festival_rule("Vasavi atmarpana")
+        rule = festival_rule("Vasavi Atmarpana")
         self.assertEqual(rule.status, "unresolved")
         self.assertIsNone(rule.source)
 
-    def test_vsn_jayanthi_is_not_attributed_to_dharma_sindhu(self):
-        rule = festival_rule("VSN jayanthi")
+    def test_vsn_jayanti_is_not_attributed_to_dharma_sindhu(self):
+        rule = festival_rule("VSN Jayanti")
         self.assertEqual(rule.status, "unresolved")
         self.assertIsNone(rule.source)
 
 
-class NarasimhaJayanthiRuleTests(unittest.TestCase):
+class NarasimhaJayantiRuleTests(unittest.TestCase):
     rule = FESTIVAL_RULES[4]
     records = [
         record(date(2030, 5, 18), "S14", masa="2"),
@@ -183,7 +183,7 @@ class NarasimhaJayanthiRuleTests(unittest.TestCase):
             side_effect=[14, 14],
         ):
             self.assertEqual(
-                select_narasimha_jayanthi_dates(self.records, self.rule),
+                select_narasimha_jayanti_dates(self.records, self.rule),
                 [date(2030, 5, 19)],
             )
 
@@ -193,7 +193,7 @@ class NarasimhaJayanthiRuleTests(unittest.TestCase):
             side_effect=[14, 15],
         ):
             self.assertEqual(
-                select_narasimha_jayanthi_dates(self.records, self.rule),
+                select_narasimha_jayanti_dates(self.records, self.rule),
                 [date(2030, 5, 18)],
             )
 
@@ -263,7 +263,7 @@ class NagaPanchamiRuleTests(unittest.TestCase):
 
 
 class RigUpakarmaRuleTests(unittest.TestCase):
-    rule = festival_rule("Rig upakarma")
+    rule = festival_rule("Rig Upakarma")
 
     def test_rule_is_attributed_to_dharma_sindhu(self):
         self.assertEqual(self.rule.status, "dharmasindhu")
@@ -389,7 +389,7 @@ class RigUpakarmaRuleTests(unittest.TestCase):
 
 
 class YajurUpakarmaRuleTests(unittest.TestCase):
-    rule = festival_rule("Yajur upakarma")
+    rule = festival_rule("Yajur Upakarma")
 
     @staticmethod
     def records(remainder=2.0):
@@ -542,8 +542,8 @@ class SmartaJanmashtamiRuleTests(unittest.TestCase):
             )
 
 
-class GowriHabbaRuleTests(unittest.TestCase):
-    rule = festival_rule("Gowri Habba")
+class SwarnaGowriVrataRuleTests(unittest.TestCase):
+    rule = festival_rule("Swarna Gowri Vrata")
 
     def test_rule_is_attributed_to_dharma_sindhu(self):
         self.assertEqual(self.rule.status, "dharmasindhu")
@@ -639,7 +639,7 @@ class VijayaDasamiRuleTests(unittest.TestCase):
 
 
 class AyudhaPujaRuleTests(unittest.TestCase):
-    rule = festival_rule("Ayudha Puja (Observance)")
+    rule = festival_rule("Ayudha Puja")
 
     def test_selects_single_sunrise_vyapini_navami(self):
         records = [
@@ -695,7 +695,7 @@ class AyudhaPujaRuleTests(unittest.TestCase):
 
 
 class BaliPadyamiRuleTests(unittest.TestCase):
-    rule = festival_rule("Bali padyami")
+    rule = festival_rule("Bali Padyami")
     records = [
         (date(2030, 11, 1), "K15", "8", False, 1.0, 10.0, 10.5),
         (date(2030, 11, 2), "S1", "8", False, 4.0, 11.0, 11.5),
@@ -814,7 +814,7 @@ class VaikunthaEkadashiRuleTests(unittest.TestCase):
 
 
 class VasantaPanchamiRuleTests(unittest.TestCase):
-    rule = festival_rule("Vasanta pancami")
+    rule = festival_rule("Vasanta Panchami")
     records = [
         (date(2030, 2, 1), "S5", "11", False, 3.0, 10.0, 10.5),
         (date(2030, 2, 2), "S5", "11", False, 3.0, 11.0, 11.5),
@@ -842,7 +842,7 @@ class VasantaPanchamiRuleTests(unittest.TestCase):
 
 
 class RathaSaptamiRuleTests(unittest.TestCase):
-    rule = festival_rule("Ratha saptami")
+    rule = festival_rule("Ratha Saptami")
     records = [
         (date(2030, 2, 3), "S7", "11", False, 3.0, 10.0, 10.5),
         (date(2030, 2, 4), "S7", "11", False, 3.0, 11.0, 11.5),
@@ -955,8 +955,8 @@ class DhanaTrayodashiRuleTests(unittest.TestCase):
             )
 
 
-class DhanvantariJayanthiRuleTests(unittest.TestCase):
-    rule = festival_rule("Dhanvantari Jayanthi")
+class DhanvantariJayantiRuleTests(unittest.TestCase):
+    rule = festival_rule("Dhanvantari Jayanti")
     records = [
         (date(2030, 11, 5), "K12", "7", False, 1.0, 10.0, 10.5),
         (date(2030, 11, 6), "K13", "7", False, 1.0, 11.0, 11.5),
@@ -965,7 +965,7 @@ class DhanvantariJayanthiRuleTests(unittest.TestCase):
 
     def test_selects_sunrise_vyapini_trayodashi(self):
         self.assertEqual(
-            select_dhanvantari_jayanthi_dates(self.records, self.rule),
+            select_dhanvantari_jayanti_dates(self.records, self.rule),
             [date(2030, 11, 6)],
         )
 
@@ -1074,8 +1074,8 @@ class MahanavamiPujaRuleTests(unittest.TestCase):
             )
 
 
-class DussehraObservanceRuleTests(unittest.TestCase):
-    rule = festival_rule("Dussehra (Observance)")
+class DasaraRuleTests(unittest.TestCase):
+    rule = festival_rule("Dasara")
     
     def test_selects_sunrise_vyapini_dashami(self):
         records = [
@@ -1083,7 +1083,7 @@ class DussehraObservanceRuleTests(unittest.TestCase):
             (date(2024, 10, 13), "S10", "7", False, 1.0, 11.0, 11.5),
         ]
         self.assertEqual(
-            select_dussehra_observance_dates(records, self.rule),
+            select_dasara_dates(records, self.rule),
             [date(2024, 10, 13)],
         )
 

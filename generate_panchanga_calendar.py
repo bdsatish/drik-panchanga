@@ -19,7 +19,7 @@ from festival_rules import (
     resolve_dharma_sindhu_vaishnava_ekadashi_dates,
     resolve_festivals,
     GITA_JAYANTI_NUMBER,
-    DHANVANTARI_JAYANTHI_NUMBER,
+    DHANVANTARI_JAYANTI_NUMBER,
     MAHANAVAMI_PUJA_NUMBER,
     VIJAYA_DASAMI_NUMBER,
 )
@@ -754,7 +754,7 @@ def build_pdf(location, start_year, start_month, output_path):
     # Exclude certain festivals from the generated PDF
     excluded_festivals = {
         GITA_JAYANTI_NUMBER, 
-        DHANVANTARI_JAYANTHI_NUMBER,
+        DHANVANTARI_JAYANTI_NUMBER,
         MAHANAVAMI_PUJA_NUMBER,
         VIJAYA_DASAMI_NUMBER, # This is Vijayadashami (Puja)
     }

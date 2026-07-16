@@ -37,7 +37,7 @@ FESTIVAL_RULES = (
     ),
     FestivalRule(
         3,
-        "Aksaya Trtiya",
+        "Akshaya Tritiya",
         2,
         "S3",
         "dharmasindhu",
@@ -46,10 +46,10 @@ FESTIVAL_RULES = (
     # No Vasavi/Kanyaka Parameshwari observance was found in Dharma Sindhu.
     # Keep the supplied community date provisionally until an authority is
     # provided; it must not be represented as a Dharma Sindhu rule.
-    FestivalRule(4, "Vasavi jayanthi", 2, "S10", "unresolved"),
+    FestivalRule(4, "Vasavi Jayanti", 2, "S10", "unresolved"),
     FestivalRule(
         5,
-        "Narasimha jayanthi",
+        "Narasimha Jayanti",
         2,
         "S14",
         "dharmasindhu",
@@ -65,7 +65,7 @@ FESTIVAL_RULES = (
     ),
     FestivalRule(
         7,
-        "Naga panchami",
+        "Naga Panchami",
         5,
         "S5",
         "dharmasindhu",
@@ -73,7 +73,7 @@ FESTIVAL_RULES = (
     ),
     FestivalRule(
         9,
-        "Rig upakarma",
+        "Rig Upakarma",
         5,
         "Shravana nakshatra",
         "dharmasindhu",
@@ -81,7 +81,7 @@ FESTIVAL_RULES = (
     ),
     FestivalRule(
         10,
-        "Yajur upakarma",
+        "Yajur Upakarma",
         5,
         "S15",
         "dharmasindhu",
@@ -105,13 +105,13 @@ FESTIVAL_RULES = (
     ),
     FestivalRule(
         13,
-        "Gowri Habba",
+        "Swarna Gowri Vrata",
         6,
         "S3",
         "dharmasindhu",
         "https://www.transliteral.org/pages/z80503220901/view",
     ),
-    FestivalRule(14, "Ganesa caturthi", 6, "S4"),
+    FestivalRule(14, "Ganesha Chaturthi", 6, "S4"),
     FestivalRule(
         15,
         "Mahalaya Amavasya",
@@ -120,12 +120,12 @@ FESTIVAL_RULES = (
         "dharmasindhu",
         "http://hindupanchang.blogspot.com/2008/03/",
     ),
-    FestivalRule(16, "Durgastami", 7, "S8"),
+    FestivalRule(16, "Durga Ashtami", 7, "S8"),
     # This is the regional South Indian/Khande-Navami observance, rather than
     # Dharma Sindhu's distinct Mahanavami puja/upavasa decision.
     FestivalRule(
         17,
-        "Ayudha Puja (Observance)",
+        "Ayudha Puja",
         7,
         "S9",
         "regional",
@@ -144,17 +144,24 @@ FESTIVAL_RULES = (
     ),
     FestivalRule(
         19,
+        "Dasara",
+        7,
+        "S10",
+        "regional",
+    ),
+    FestivalRule(
+        20,
         "Dhana Trayodashi",
         7,
         "K13",
         "dharmasindhu",
         "https://nepaljyotish.org/en/blog/dharmasindhu-vrata-nirnaya/",
     ),
-    FestivalRule(20, "Naraka Chaturdashi", 7, "K14"),
-    FestivalRule(21, "Deepavali", 7, "K15"),
+    FestivalRule(21, "Naraka Chaturdashi", 7, "K14"),
+    FestivalRule(22, "Deepavali", 7, "K15"),
     FestivalRule(
-        22,
-        "Bali padyami",
+        23,
+        "Bali Padyami",
         8,
         "S1",
         "dharmasindhu",
@@ -162,9 +169,9 @@ FESTIVAL_RULES = (
     ),
     # No Gita-Jayanti observance was found in Dharma Sindhu's Margashirsha
     # section. Preserve the supplied community date provisionally.
-    FestivalRule(23, "Gita jayanti", 9, "S11", "unresolved"),
+    FestivalRule(24, "Gita Jayanti", 9, "S11", "unresolved"),
     FestivalRule(
-        24,
+        25,
         "Vaikuntha Ekadashi",
         9,
         "Dhanur-masa S11",
@@ -175,7 +182,7 @@ FESTIVAL_RULES = (
         ),
     ),
     FestivalRule(
-        25,
+        26,
         "Makara Sankranti",
         0,
         "Solar",
@@ -184,28 +191,28 @@ FESTIVAL_RULES = (
     ),
     # No Vasavi Atmarpana observance was found in Dharma Sindhu's Magha
     # section. Preserve the supplied community date provisionally.
-    FestivalRule(26, "Vasavi atmarpana", 11, "S2", "unresolved"),
+    FestivalRule(27, "Vasavi Atmarpana", 11, "S2", "unresolved"),
     FestivalRule(
-        27,
-        "Vasanta pancami",
+        28,
+        "Vasanta Panchami",
         11,
         "S5",
         "dharmasindhu",
         "https://www.transliteral.org/pages/z80513003421/view",
     ),
     FestivalRule(
-        28,
-        "Ratha saptami",
+        29,
+        "Ratha Saptami",
         11,
         "S7",
         "dharmasindhu",
         "https://www.transliteral.org/pages/z80513004113/view",
     ),
-    # Vishnu-Sahasranama Jayanthi was not found in Dharma Sindhu; Bhishma
+    # Vishnu-Sahasranama Jayanti was not found in Dharma Sindhu; Bhishma
     # Ashtami is present but is a different observance.
-    FestivalRule(29, "VSN jayanthi", 11, "S11", "unresolved"),
+    FestivalRule(30, "VSN Jayanti", 11, "S11", "unresolved"),
     FestivalRule(
-        30,
+        31,
         "Maha Shivaratri",
         11,
         "K14",
@@ -213,7 +220,7 @@ FESTIVAL_RULES = (
         "https://www.transliteral.org/pages/z80513005728/view",
     ),
     FestivalRule(
-        31,
+        32,
         "Holi",
         12,
         "K1",
@@ -221,26 +228,19 @@ FESTIVAL_RULES = (
         "https://www.transliteral.org/pages/z80505120438/view",
     ),
     FestivalRule(
-        32,
-        "Dhanvantari Jayanthi",
+        33,
+        "Dhanvantari Jayanti",
         7,
         "K13",
         "regional",
     ),
     FestivalRule(
-        33,
+        34,
         "Mahanavami (Puja)",
         7,
         "S9",
         "dharmasindhu",
         "https://www.drikpanchang.com/navratri/durga-puja/bengal/maha-navami-date-time.html",
-    ),
-    FestivalRule(
-        34,
-        "Dussehra (Observance)",
-        7,
-        "S10",
-        "regional",
     ),
 )
 
@@ -248,7 +248,7 @@ FESTIVAL_RULES = (
 # Sindhu. Preserve it provisionally, but keep its provenance unresolved.
 VARAMAHALAKSHMI_RULE = FestivalRule(
     8,
-    "Varamahalakshmi vrata",
+    "Varamahalakshmi Vrata",
     5,
     "Friday before S15",
     "unresolved",
@@ -258,7 +258,7 @@ VARAMAHALAKSHMI_NAME = VARAMAHALAKSHMI_RULE.name
 UGADI_NUMBER = 1
 RAMA_NAVAMI_NUMBER = 2
 AKSAYA_TRTIYA_NUMBER = 3
-NARASIMHA_JAYANTHI_NUMBER = 5
+NARASIMHA_JAYANTI_NUMBER = 5
 GURU_PURNIMA_NUMBER = 6
 NAGA_PANCHAMI_NUMBER = 7
 RIG_UPAKARMA_NUMBER = 9
@@ -271,22 +271,22 @@ MAHALAYA_AMAVASYA_NUMBER = 15
 DURGA_ASHTAMI_NUMBER = 16
 AYUDHA_PUJA_NUMBER = 17
 VIJAYA_DASAMI_NUMBER = 18
-DHANA_TRAYODASHI_NUMBER = 19
-NARAKA_CHATURDASHI_NUMBER = 20
-DEEPAVALI_NUMBER = 21
-BALI_PADYAMI_NUMBER = 22
-GITA_JAYANTI_NUMBER = 23
-VAIKUNTHA_EKADASHI_NUMBER = 24
-MAKARA_SANKRANTI_NUMBER = 25
-VASAVI_ATMARPANA_NUMBER = 26
-VASANTA_PANCHAMI_NUMBER = 27
-RATHA_SAPTAMI_NUMBER = 28
-VSN_JAYANTHI_NUMBER = 29
-MAHA_SHIVARATRI_NUMBER = 30
-HOLI_NUMBER = 31
-DHANVANTARI_JAYANTHI_NUMBER = 32
-MAHANAVAMI_PUJA_NUMBER = 33
-DUSSEHRA_OBSERVANCE_NUMBER = 34
+DASARA_NUMBER = 19
+DHANA_TRAYODASHI_NUMBER = 20
+NARAKA_CHATURDASHI_NUMBER = 21
+DEEPAVALI_NUMBER = 22
+BALI_PADYAMI_NUMBER = 23
+GITA_JAYANTI_NUMBER = 24
+VAIKUNTHA_EKADASHI_NUMBER = 25
+MAKARA_SANKRANTI_NUMBER = 26
+VASAVI_ATMARPANA_NUMBER = 27
+VASANTA_PANCHAMI_NUMBER = 28
+RATHA_SAPTAMI_NUMBER = 29
+VSN_JAYANTI_NUMBER = 30
+MAHA_SHIVARATRI_NUMBER = 31
+HOLI_NUMBER = 32
+DHANVANTARI_JAYANTI_NUMBER = 33
+MAHANAVAMI_PUJA_NUMBER = 34
 ONE_GHATI_HOURS = 24 / 60
 SIX_GHATI_HOURS = 6 * ONE_GHATI_HOURS
 ARUNODAYA_HOURS = 4 * ONE_GHATI_HOURS
@@ -503,7 +503,7 @@ def select_aksaya_trtiya_dates(records, rule):
     ]
 
 
-def select_narasimha_jayanthi_dates(records, rule):
+def select_narasimha_jayanti_dates(records, rule):
     """Select Vaishakha S14 at the exact local sunset.
 
     If Caturdashi occupies sunset on both civil days, or on neither, Dharma
@@ -1745,7 +1745,7 @@ def select_mahanavami_puja_dates(records, rule):
     return selected
 
 
-def select_dussehra_observance_dates(records, rule):
+def select_dasara_dates(records, rule):
     """Select Udaya-vyapini Dashami for public observance."""
     sunrise_candidates = [
         (record[0], record[4])
@@ -1819,8 +1819,8 @@ def select_dhana_trayodashi_dates(records, rule):
     return selected
 
 
-def select_dhanvantari_jayanthi_dates(records, rule):
-    """Select Udaya-vyapini Krishna Trayodashi for Dhanvantari Jayanthi.
+def select_dhanvantari_jayanti_dates(records, rule):
+    """Select Udaya-vyapini Krishna Trayodashi for Dhanvantari Jayanti.
 
     The festival belongs to the civil day on which Krishna Trayodashi
     prevails at local sunrise.
@@ -1986,8 +1986,8 @@ def resolve_festivals(months, month_data):
             matches = select_rama_navami_dates(records, rule)
         elif rule.number == AKSAYA_TRTIYA_NUMBER:
             matches = select_aksaya_trtiya_dates(records, rule)
-        elif rule.number == NARASIMHA_JAYANTHI_NUMBER:
-            matches = select_narasimha_jayanthi_dates(records, rule)
+        elif rule.number == NARASIMHA_JAYANTI_NUMBER:
+            matches = select_narasimha_jayanti_dates(records, rule)
         elif rule.number == GURU_PURNIMA_NUMBER:
             matches = select_guru_purnima_dates(records, rule)
         elif rule.number == NAGA_PANCHAMI_NUMBER:
@@ -2022,14 +2022,14 @@ def resolve_festivals(months, month_data):
             matches = select_dhana_trayodashi_dates(records, rule)
         elif rule.number == MAKARA_SANKRANTI_NUMBER:
             matches = select_makara_sankranti_dates(records, rule)
-        elif rule.number == DHANVANTARI_JAYANTHI_NUMBER:
-            matches = select_dhanvantari_jayanthi_dates(records, rule)
+        elif rule.number == DHANVANTARI_JAYANTI_NUMBER:
+            matches = select_dhanvantari_jayanti_dates(records, rule)
         elif rule.number == MAHALAYA_AMAVASYA_NUMBER:
             matches = select_mahalaya_amavasya_dates(records, rule)
         elif rule.number == MAHANAVAMI_PUJA_NUMBER:
             matches = select_mahanavami_puja_dates(records, rule)
-        elif rule.number == DUSSEHRA_OBSERVANCE_NUMBER:
-            matches = select_dussehra_observance_dates(records, rule)
+        elif rule.number == DASARA_NUMBER:
+            matches = select_dasara_dates(records, rule)
         elif rule.tithi == "S1":
             matches = []
             for index, (
