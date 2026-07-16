@@ -44,9 +44,10 @@ FESTIVAL_RULES = (
         "https://www.transliteral.org/pages/z80421210038/view",
     ),
     # No Vasavi/Kanyaka Parameshwari observance was found in Dharma Sindhu.
-    # Keep the supplied community date provisionally until an authority is
-    # provided; it must not be represented as a Dharma Sindhu rule.
-    FestivalRule(4, "Vasavi Jayanti", 2, "S10", "unresolved"),
+    # Resolve the supplied community tithi with the generic udaya policy:
+    # one sunrise uses that date, vriddhi uses the first sunrise, and kshaya
+    # uses the civil day whose sunrise-to-sunrise span contains Dashami.
+    FestivalRule(4, "Vasavi Jayanti", 2, "S10", "generic-udaya"),
     FestivalRule(
         5,
         "Narasimha Jayanti",
@@ -280,6 +281,7 @@ VARAMAHALAKSHMI_NAME = VARAMAHALAKSHMI_RULE.name
 UGADI_NUMBER = 1
 RAMA_NAVAMI_NUMBER = 2
 AKSAYA_TRTIYA_NUMBER = 3
+VASAVI_JAYANTI_NUMBER = 4
 NARASIMHA_JAYANTI_NUMBER = 5
 GURU_PURNIMA_NUMBER = 6
 NAGA_PANCHAMI_NUMBER = 7
@@ -1712,6 +1714,46 @@ def select_gowri_habba_dates(records, rule):
     return []
 
 
+def select_udaya_vyapini_dates(records, rule, tithi_number):
+    """Apply this calendar's generic udaya-marker convention.
+
+    A tithi at one sunrise uses that date; a vriddhi tithi uses its first
+    sunrise; and a kshaya tithi uses the civil day containing it. This is a
+    deterministic marker policy, not a universal Dharma Sindhu rule:
+    observances such as Ekadashi have their own later-sunrise hierarchy.
+    """
+    # First-sunrise vriddhi precedents include Dharma Sindhu's Ugadi rule
+    # and the sourced Ayudha Puja results for 2000 and 2034. Ekadashi is
+    # intentionally different because its fasting rules seek a later,
+    # Dashami-free sunrise rather than a generic civil-day marker.
+    rule_records = sorted(records_for_rule(records, rule))
+    sunrise_candidates = [
+        (record[0], record[4])
+        for record in rule_records
+        if record[1] == rule.tithi
+    ]
+    if sunrise_candidates:
+        return [
+            group[0][0]
+            for group in group_consecutive_candidates(sunrise_candidates)
+        ]
+
+    records_by_date = {record[0]: record for record in records}
+    for record in rule_records:
+        following_record = records_by_date.get(
+            record[0] + timedelta(days=1)
+        )
+        if following_record is None:
+            continue
+        if tithi_intervals(
+            record[5],
+            following_record[5],
+            tithi_number,
+        ):
+            return [record[0]]
+    return []
+
+
 def select_ayudha_puja_dates(records, rule):
     """Select shuddha Ashvina S9 by the South Indian sunrise convention.
 
@@ -1748,28 +1790,16 @@ def select_ayudha_puja_dates(records, rule):
     https://www.drikpanchang.com/navratri/durga-puja/ayudha-puja-date-time.html?year=2005&geoname-id=658225
     https://vishwakosh.marathi.gov.in/22879/
     """
-    rule_records = sorted(records_for_rule(records, rule))
-    sunrise_candidates = [
-        (record[0], record[4])
-        for record in rule_records
-        if record[1] == rule.tithi
-    ]
-    if sunrise_candidates:
-        return [
-            group[0][0]
-            for group in group_consecutive_candidates(sunrise_candidates)
-        ]
+    return select_udaya_vyapini_dates(records, rule, 9)
 
-    records_by_date = {record[0]: record for record in records}
-    for record in rule_records:
-        following_record = records_by_date.get(
-            record[0] + timedelta(days=1)
-        )
-        if following_record is None:
-            continue
-        if tithi_intervals(record[5], following_record[5], 9):
-            return [record[0]]
-    return []
+
+def select_vasavi_jayanti_dates(records, rule):
+    """Apply generic sunrise, vriddhi, and kshaya handling to Vaishakha S10.
+
+    No Dharma Sindhu rule is known for this community festival. Its calendar
+    date is resolved by the documented generic udaya-marker convention.
+    """
+    return select_udaya_vyapini_dates(records, rule, 10)
 
 
 def select_mahanavami_puja_dates(records, rule):
@@ -2236,6 +2266,8 @@ def resolve_festivals(months, month_data):
             matches = select_rama_navami_dates(records, rule)
         elif rule.number == AKSAYA_TRTIYA_NUMBER:
             matches = select_aksaya_trtiya_dates(records, rule)
+        elif rule.number == VASAVI_JAYANTI_NUMBER:
+            matches = select_vasavi_jayanti_dates(records, rule)
         elif rule.number == NARASIMHA_JAYANTI_NUMBER:
             matches = select_narasimha_jayanti_dates(records, rule)
         elif rule.number == GURU_PURNIMA_NUMBER:

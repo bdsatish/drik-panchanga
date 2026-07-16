@@ -24,6 +24,7 @@ from festival_rules import (
     select_rigveda_upakarma_dates,
     select_taittiriya_apastamba_upakarma_dates,
     select_ugadi_dates,
+    select_vasavi_jayanti_dates,
     select_vaikuntha_ekadashi_dates,
     select_vasanta_panchami_dates,
     select_vijaya_dasami_dates,
@@ -145,9 +146,9 @@ class RuleStatusTests(unittest.TestCase):
         )
         self.assertEqual(numbers, list(range(1, len(numbers) + 1)))
 
-    def test_vasavi_jayanti_is_not_attributed_to_dharma_sindhu(self):
+    def test_vasavi_jayanti_uses_documented_generic_udaya_policy(self):
         rule = FESTIVAL_RULES[3]
-        self.assertEqual(rule.status, "unresolved")
+        self.assertEqual(rule.status, "generic-udaya")
         self.assertIsNone(rule.source)
 
     def test_varamahalakshmi_is_not_attributed_to_dharma_sindhu(self):
@@ -185,6 +186,46 @@ class RuleStatusTests(unittest.TestCase):
                 rule = festival_rule(name)
                 self.assertEqual(rule.status, "dharmasindhu")
                 self.assertIsNotNone(rule.source)
+
+
+class VasaviJayantiRuleTests(unittest.TestCase):
+    rule = festival_rule("Vasavi Jayanti")
+
+    def test_selects_single_sunrise_vyapini_dashami(self):
+        records = [
+            record(date(2030, 5, 4), "S9", masa="2"),
+            record(date(2030, 5, 5), "S10", masa="2"),
+            record(date(2030, 5, 6), "S11", masa="2"),
+        ]
+        self.assertEqual(
+            select_vasavi_jayanti_dates(records, self.rule),
+            [date(2030, 5, 5)],
+        )
+
+    def test_vriddhi_dashami_uses_first_sunrise(self):
+        records = [
+            record(date(2030, 5, 4), "S10", masa="2"),
+            record(date(2030, 5, 5), "S10", masa="2"),
+            record(date(2030, 5, 6), "S11", masa="2"),
+        ]
+        self.assertEqual(
+            select_vasavi_jayanti_dates(records, self.rule),
+            [date(2030, 5, 4)],
+        )
+
+    def test_kshaya_dashami_uses_civil_day_containing_dashami(self):
+        records = [
+            record(date(2030, 5, 4), "S9", masa="2"),
+            record(date(2030, 5, 5), "S11", masa="2"),
+        ]
+        with patch(
+            "festival_rules.tithi_intervals",
+            return_value=[(0.1, 0.9)],
+        ):
+            self.assertEqual(
+                select_vasavi_jayanti_dates(records, self.rule),
+                [date(2030, 5, 4)],
+            )
 
 
 class NarasimhaJayantiRuleTests(unittest.TestCase):
