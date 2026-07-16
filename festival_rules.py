@@ -1958,14 +1958,18 @@ def select_deepavali_dates(records, rule):
     Lakshmi Puja is assigned to the local evening on which Amavasya occupies
     at least one ghati (24 minutes) of Pradosha. When both consecutive
     evenings qualify, the later, Pratipada-yukta date is selected; when only
-    the earlier evening qualifies, that date is retained.
+    the earlier evening qualifies, that date is retained. If neither
+    Pradosha contains Amavasya, Dharma Sindhu assigns Lakshmi Puja to the
+    later date, including when Amavasya is skipped at sunrise.
 
     Sources:
     https://www.kamakoti.org/kamakoti/dharmasindhu/bookview.php?chapnum=8
     https://www.drikpanchang.com/diwali/diwali-puja-calendar.html
+    https://archive.org/details/in.ernet.dli.2015.383127/page/n193/mode/2up
     """
+    rule_records = sorted(records_for_rule(records, rule))
     candidates = []
-    for record in records_for_rule(records, rule):
+    for record in rule_records:
         civil_date, _, _, _, _, _, sunset_jd = record
         overlap = tithi_overlap_hours(
             sunset_jd,
@@ -1983,7 +1987,29 @@ def select_deepavali_dates(records, rule):
             if candidate[1] >= ONE_GHATI_HOURS
         ]
         selected.append((qualified or group)[-1][0])
-    return selected
+    if selected:
+        return selected
+
+    sunrise_candidates = [
+        (record[0], record[4])
+        for record in rule_records
+        if record[1] == rule.tithi
+    ]
+    if sunrise_candidates:
+        return [
+            group[-1][0]
+            for group in group_consecutive_candidates(sunrise_candidates)
+        ]
+
+    records_by_date = {record[0]: record for record in records}
+    for record in rule_records:
+        following_date = record[0] + timedelta(days=1)
+        following_record = records_by_date.get(following_date)
+        if following_record is None:
+            continue
+        if tithi_intervals(record[5], following_record[5], 30):
+            return [following_date]
+    return []
 
 
 def select_mahalaya_amavasya_dates(records, rule):

@@ -34,6 +34,7 @@ from festival_rules import (
     select_mahanavami_puja_dates,
     select_naraka_chaturdashi_dates,
     select_dasara_dates,
+    select_deepavali_dates,
     select_kama_dahana_dates,
 )
 
@@ -1079,6 +1080,45 @@ class NarakaChaturdashiRuleTests(unittest.TestCase):
                     self.moonrises,
                 ),
                 [date(2030, 11, 7)],
+            )
+
+
+class DeepavaliRuleTests(unittest.TestCase):
+    rule = festival_rule("Deepavali")
+
+    def test_neither_pradosha_uses_later_sunrise_date(self):
+        records = [
+            (date(2030, 11, 7), "K14", "7", False, 1.0, 10.0, 10.5),
+            (date(2030, 11, 8), "K15", "7", False, 1.0, 11.0, 11.5),
+            (date(2030, 11, 9), "S1", "8", False, 1.0, 12.0, 12.5),
+        ]
+        with patch(
+            "festival_rules.tithi_overlap_hours",
+            return_value=0.0,
+        ):
+            self.assertEqual(
+                select_deepavali_dates(records, self.rule),
+                [date(2030, 11, 8)],
+            )
+
+    def test_neither_pradosha_handles_skipped_amavasya(self):
+        records = [
+            (date(2030, 11, 7), "K14", "7", False, 1.0, 10.0, 10.5),
+            (date(2030, 11, 8), "S1", "8", False, 1.0, 11.0, 11.5),
+        ]
+        with (
+            patch(
+                "festival_rules.tithi_overlap_hours",
+                return_value=0.0,
+            ),
+            patch(
+                "festival_rules.tithi_intervals",
+                return_value=[(10.6, 10.9)],
+            ),
+        ):
+            self.assertEqual(
+                select_deepavali_dates(records, self.rule),
+                [date(2030, 11, 8)],
             )
 
 
