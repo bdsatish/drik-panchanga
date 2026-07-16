@@ -23,6 +23,8 @@ from festival_rules import (
     MAHANAVAMI_PUJA_NUMBER,
     VIJAYA_DASAMI_NUMBER,
     DASARA_NUMBER,
+    AYUDHA_PUJA_NUMBER,
+    DURGA_ASHTAMI_NUMBER,
 )
 import panchanga
 
@@ -756,8 +758,9 @@ def build_pdf(location, start_year, start_month, output_path):
     excluded_festivals = {
         GITA_JAYANTI_NUMBER, 
         DHANVANTARI_JAYANTI_NUMBER,
-        MAHANAVAMI_PUJA_NUMBER,
+        AYUDHA_PUJA_NUMBER, # Exclude Ayudha Puja (Observance), keep Mahanavami (Puja)
         DASARA_NUMBER, # Exclude Dasara (Observance), keep Vijayadashami (Puja)
+        DURGA_ASHTAMI_NUMBER, # Exclude Durga Ashtami (Observance), keep Durga Ashtami (Puja)
     }
     for civil_date in list(festivals_by_date.keys()):
         festivals_by_date[civil_date] = [
