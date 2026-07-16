@@ -223,7 +223,7 @@ FESTIVAL_RULES = (
         "https://www.transliteral.org/pages/z80513005728/view",
     ),
     FestivalRule(34,
-        "Holika Dahana",
+        "Kama Dahana (Holi)",
         12,
         "S15",
         "dharmasindhu",
@@ -280,7 +280,7 @@ VASANTA_PANCHAMI_NUMBER = 30
 RATHA_SAPTAMI_NUMBER = 31
 VSN_JAYANTI_NUMBER = 32
 MAHA_SHIVARATRI_NUMBER = 33
-HOLIKA_DAHANA_NUMBER = 34
+KAMA_DAHANA_NUMBER = 34
 DHANVANTARI_JAYANTI_NUMBER = 35
 ONE_GHATI_HOURS = 24 / 60
 SIX_GHATI_HOURS = 6 * ONE_GHATI_HOURS
@@ -1202,11 +1202,11 @@ def select_ratha_saptami_dates(records, rule):
     ]
 
 
-def select_holika_dahana_dates(records, rule):
-    """Select Holika Dahana (Phalguna Purnima during Pradosha).
+def select_kama_dahana_dates(records, rule):
+    """Select Kama Dahana (Phalguna Purnima during Pradosha).
 
     The government and many South Indian calendars observe Holi on the day
-    of Holika Dahana (Kamadahana), which is Pradosha-vyapini Phalguna Purnima.
+    of Kama Dahana (Holi), which is Pradosha-vyapini Phalguna Purnima.
     If Purnima occupies Pradosha on both days, the later day is used.
     
     Source:
@@ -2035,8 +2035,8 @@ def resolve_festivals(months, month_data):
             matches = select_vasanta_panchami_dates(records, rule)
         elif rule.number == RATHA_SAPTAMI_NUMBER:
             matches = select_ratha_saptami_dates(records, rule)
-        elif rule.number == HOLIKA_DAHANA_NUMBER:
-            matches = select_holika_dahana_dates(records, rule)
+        elif rule.number == KAMA_DAHANA_NUMBER:
+            matches = select_kama_dahana_dates(records, rule)
         elif rule.number == MAHA_SHIVARATRI_NUMBER:
             matches = select_maha_shivaratri_dates(records, rule)
         elif rule.number == DHANA_TRAYODASHI_NUMBER:

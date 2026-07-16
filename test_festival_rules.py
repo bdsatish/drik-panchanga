@@ -12,7 +12,7 @@ from festival_rules import (
     select_bali_padyami_dates,
     select_gowri_habba_dates,
     select_guru_purnima_dates,
-    select_holika_dahana_dates,
+    select_kama_dahana_dates,
     select_janmashtami_dates,
     select_maha_shivaratri_dates,
     select_naga_panchami_dates,
@@ -33,7 +33,7 @@ from festival_rules import (
     select_mahalaya_amavasya_dates,
     select_mahanavami_puja_dates,
     select_dasara_dates,
-    select_holika_dahana_dates,
+    select_kama_dahana_dates,
 )
 
 
@@ -870,8 +870,8 @@ class RathaSaptamiRuleTests(unittest.TestCase):
             )
 
 
-class HolikaDahanaRuleTests(unittest.TestCase):
-    rule = festival_rule("Holika Dahana")
+class KamaDahanaRuleTests(unittest.TestCase):
+    rule = festival_rule("Kama Dahana (Holi)")
     records = [
         (date(2030, 3, 20), "S15", "12", False, 3.0, 10.0, 10.5),
         (date(2030, 3, 21), "S15", "12", False, 3.0, 11.0, 11.5),
@@ -883,7 +883,7 @@ class HolikaDahanaRuleTests(unittest.TestCase):
             side_effect=[1.0, 1.0],
         ):
             self.assertEqual(
-                select_holika_dahana_dates(self.records, self.rule),
+                select_kama_dahana_dates(self.records, self.rule),
                 [date(2030, 3, 21)],
             )
 
@@ -893,7 +893,7 @@ class HolikaDahanaRuleTests(unittest.TestCase):
             side_effect=[1.0, 0.0],
         ):
             self.assertEqual(
-                select_holika_dahana_dates(self.records, self.rule),
+                select_kama_dahana_dates(self.records, self.rule),
                 [date(2030, 3, 20)],
             )
 
