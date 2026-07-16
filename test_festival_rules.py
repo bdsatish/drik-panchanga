@@ -785,12 +785,33 @@ class AyudhaPujaRuleTests(unittest.TestCase):
             [date(2034, 10, 21)],
         )
 
-    def test_does_not_guess_when_navami_is_skipped_at_sunrise(self):
+    def test_kshaya_navami_uses_the_civil_day_containing_navami(self):
         records = [
             record(date(2030, 10, 4), "S8", masa="7"),
             record(date(2030, 10, 5), "S10", masa="7"),
         ]
-        self.assertEqual(select_ayudha_puja_dates(records, self.rule), [])
+        with patch(
+            "festival_rules.tithi_intervals",
+            return_value=[(0.1, 0.9)],
+        ):
+            self.assertEqual(
+                select_ayudha_puja_dates(records, self.rule),
+                [date(2030, 10, 4)],
+            )
+
+    def test_2005_helsinki_kshaya_navami_uses_october_11(self):
+        records = [
+            (date(2005, 10, 11), "S8", "7", False, 1.0, 10.0, 10.5),
+            (date(2005, 10, 12), "S10", "7", False, 1.0, 11.0, 11.5),
+        ]
+        with patch(
+            "festival_rules.tithi_intervals",
+            return_value=[(10.1, 10.9)],
+        ):
+            self.assertEqual(
+                select_ayudha_puja_dates(records, self.rule),
+                [date(2005, 10, 11)],
+            )
 
     def test_excludes_adhika_asvina(self):
         records = [

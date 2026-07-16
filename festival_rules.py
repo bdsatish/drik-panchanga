@@ -1736,25 +1736,40 @@ def select_ayudha_puja_dates(records, rule):
     years that window can begin after astronomical Navami has ended, while
     the sunrise-defined festival day remains Ayudha Puja.
 
-    This selector intentionally handles only the sourced udaya-vyapini and
-    vriddhi rules. A kshaya Navami, present at neither sunrise, needs a
-    separately sourced fallback and must not be silently guessed here.
+    If Navami is skipped at sunrise, the observance falls on the civil day
+    whose sunrise-to-sunrise span contains Navami. Drik Panchang's Helsinki
+    2005 result is a regression example: Navami ran from Oct 11 08:59 to
+    Oct 12 06:43, and Ayudha Puja was Oct 11.
 
     Sources:
     https://www.drikpanchang.com/navratri/durga-puja/ayudha-puja-date-time.html
     https://www.drikpanchang.com/navratri/durga-puja/ayudha-puja-date-time.html?year=2000
     https://www.drikpanchang.com/navratri/durga-puja/ayudha-puja-date-time.html?year=2034
+    https://www.drikpanchang.com/navratri/durga-puja/ayudha-puja-date-time.html?year=2005&geoname-id=658225
     https://vishwakosh.marathi.gov.in/22879/
     """
+    rule_records = sorted(records_for_rule(records, rule))
     sunrise_candidates = [
         (record[0], record[4])
-        for record in records_for_rule(records, rule)
+        for record in rule_records
         if record[1] == rule.tithi
     ]
-    return [
-        group[0][0]
-        for group in group_consecutive_candidates(sunrise_candidates)
-    ]
+    if sunrise_candidates:
+        return [
+            group[0][0]
+            for group in group_consecutive_candidates(sunrise_candidates)
+        ]
+
+    records_by_date = {record[0]: record for record in records}
+    for record in rule_records:
+        following_record = records_by_date.get(
+            record[0] + timedelta(days=1)
+        )
+        if following_record is None:
+            continue
+        if tithi_intervals(record[5], following_record[5], 9):
+            return [record[0]]
+    return []
 
 
 def select_mahanavami_puja_dates(records, rule):
