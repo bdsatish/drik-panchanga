@@ -204,6 +204,14 @@ FESTIVAL_RULES = (
         "dharmasindhu",
         "https://nepaljyotish.org/en/blog/dharmasindhu-vrata-nirnaya/",
     ),
+    FestivalRule(
+        30,
+        "Makara Sankranti",
+        0,
+        "Solar",
+        "dharmasindhu",
+        "https://www.kamakoti.org/kamakoti/dharmasindhu/bookview.php?chapnum=11",
+    ),
 )
 
 # The popular Friday-before-Sravana-Purnima rule was not found in Dharma
@@ -240,6 +248,7 @@ VASANTA_PANCHAMI_NUMBER = 24
 RATHA_SAPTAMI_NUMBER = 25
 HOLI_NUMBER = 28
 DHANTERAS_NUMBER = 29
+MAKARA_SANKRANTI_NUMBER = 30
 MAHA_SHIVARATRI_NUMBER = 27
 ONE_GHATI_HOURS = 24 / 60
 SIX_GHATI_HOURS = 6 * ONE_GHATI_HOURS
@@ -1663,6 +1672,47 @@ def select_dhanteras_dates(records, rule):
     return selected
 
 
+def select_makara_sankranti_dates(records, rule):
+    """Resolve Makara Sankranti date.
+
+    If the Sun enters Makara (sidereal longitude 270 degrees) before local sunset,
+    the festival is observed on that day. If it enters after sunset, it is
+    observed on the following day.
+
+    Source:
+    https://www.kamakoti.org/kamakoti/dharmasindhu/bookview.php?chapnum=11
+    """
+    jan_records = [r for r in records if r[0].month == 1]
+    if not jan_records:
+        return []
+
+    years = sorted(list(set(r[0].year for r in jan_records)))
+    selected = []
+    for year in years:
+        jd_start = panchanga.gregorian_to_jd(panchanga.Date(year, 1, 13))
+        jd_end = panchanga.gregorian_to_jd(panchanga.Date(year, 1, 16))
+
+        low = jd_start
+        high = jd_end
+        for _ in range(50):
+            mid = (low + high) / 2
+            lon = panchanga.solar_longitude(mid)
+            if 250 < lon < 270:
+                low = mid
+            else:
+                high = mid
+        sankranti_jd = mid
+
+        year_records = [r for r in jan_records if r[0].year == year]
+        for record in year_records:
+            civil_date, _, _, _, _, _, sunset_jd = record
+            if sunset_jd > sankranti_jd:
+                selected.append(civil_date)
+                break
+
+    return selected
+
+
 def select_dipavali_dates(records, rule):
     """Apply Dharma Sindhu's Pradosha-vyapini Amavasya rule.
 
@@ -1774,6 +1824,8 @@ def resolve_festivals(months, month_data):
             matches = select_maha_shivaratri_dates(records, rule)
         elif rule.number == DHANTERAS_NUMBER:
             matches = select_dhanteras_dates(records, rule)
+        elif rule.number == MAKARA_SANKRANTI_NUMBER:
+            matches = select_makara_sankranti_dates(records, rule)
         elif rule.tithi == "S1":
             matches = []
             for index, (

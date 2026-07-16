@@ -27,6 +27,7 @@ from festival_rules import (
     select_vasanta_panchami_dates,
     select_vijaya_dasami_dates,
     select_dhanteras_dates,
+    select_makara_sankranti_dates,
 )
 
 
@@ -910,6 +911,41 @@ class DhanterasRuleTests(unittest.TestCase):
             self.assertEqual(
                 select_dhanteras_dates(self.records, self.rule),
                 [date(2030, 11, 6)],
+            )
+
+
+class MakaraSankrantiRuleTests(unittest.TestCase):
+    rule = festival_rule("Makara Sankranti")
+    records = [
+        (date(2030, 1, 13), "S1", "0", False, 1.0, 2462510.0, 2462510.5),
+        (date(2030, 1, 14), "S2", "0", False, 1.0, 2462511.0, 2462511.5),
+        (date(2030, 1, 15), "S3", "0", False, 1.0, 2462512.0, 2462512.5),
+    ]
+
+    def test_sankranti_before_sunset_uses_same_day(self):
+        with patch(
+            "panchanga.solar_longitude",
+            side_effect=lambda jd: 270.0 if jd >= 2462511.2 else 269.0, # Sankranti at 11.2, which is before sunset 11.5
+        ), patch(
+            "panchanga.gregorian_to_jd",
+            side_effect=lambda d: 2462510.0 if d.day == 13 else 2462513.0,
+        ):
+            self.assertEqual(
+                select_makara_sankranti_dates(self.records, self.rule),
+                [date(2030, 1, 14)],
+            )
+
+    def test_sankranti_after_sunset_uses_next_day(self):
+        with patch(
+            "panchanga.solar_longitude",
+            side_effect=lambda jd: 270.0 if jd >= 2462511.6 else 269.0, # Sankranti at 11.6, which is after sunset 11.5
+        ), patch(
+            "panchanga.gregorian_to_jd",
+            side_effect=lambda d: 2462510.0 if d.day == 13 else 2462513.0,
+        ):
+            self.assertEqual(
+                select_makara_sankranti_dates(self.records, self.rule),
+                [date(2030, 1, 15)],
             )
 
 
