@@ -244,8 +244,9 @@ FESTIVAL_RULES = (
         "https://www.transliteral.org/pages/z80513004113/view",
     ),
     # Vishnu-Sahasranama Jayanti was not found in Dharma Sindhu; Bhishma
-    # Ashtami is present but is a different observance.
-    FestivalRule(32, "VSN Jayanti", 11, "S11", "unresolved"),
+    # Ashtami is present but is a different observance. Resolve the supplied
+    # community tithi with the documented generic udaya-marker policy.
+    FestivalRule(32, "VSN Jayanti", 11, "S11", "generic-udaya"),
     FestivalRule(33,
         "Maha Shivaratri",
         11,
@@ -1809,6 +1810,15 @@ def select_vasavi_atmarpana_dates(records, rule):
     return select_udaya_vyapini_dates(records, rule, 2)
 
 
+def select_vsn_jayanti_dates(records, rule):
+    """Apply generic udaya handling to the Magha Shukla Ekadashi marker.
+
+    This is a commemorative Jayanti marker, not an Ekadashi fast, so it does
+    not reuse the later-sunrise fasting hierarchy.
+    """
+    return select_udaya_vyapini_dates(records, rule, 11)
+
+
 def select_mahanavami_puja_dates(records, rule):
     """Apply Dharma Sindhu's Mahanavami puja/upavasa decision.
 
@@ -2313,6 +2323,8 @@ def resolve_festivals(months, month_data):
             matches = select_makara_sankranti_dates(records, rule)
         elif rule.number == VASAVI_ATMARPANA_NUMBER:
             matches = select_vasavi_atmarpana_dates(records, rule)
+        elif rule.number == VSN_JAYANTI_NUMBER:
+            matches = select_vsn_jayanti_dates(records, rule)
         elif rule.number == DHANVANTARI_JAYANTI_NUMBER:
             matches = select_dhanvantari_jayanti_dates(records, rule)
         elif rule.number == MAHALAYA_AMAVASYA_NUMBER:
