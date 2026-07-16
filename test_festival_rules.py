@@ -24,6 +24,7 @@ from festival_rules import (
     select_rigveda_upakarma_dates,
     select_taittiriya_apastamba_upakarma_dates,
     select_ugadi_dates,
+    select_vasavi_atmarpana_dates,
     select_vasavi_jayanti_dates,
     select_vaikuntha_ekadashi_dates,
     select_vasanta_panchami_dates,
@@ -165,9 +166,9 @@ class RuleStatusTests(unittest.TestCase):
         self.assertEqual(rule.status, "unresolved")
         self.assertIsNone(rule.source)
 
-    def test_vasavi_atmarpana_is_not_attributed_to_dharma_sindhu(self):
+    def test_vasavi_atmarpana_uses_documented_generic_udaya_policy(self):
         rule = festival_rule("Vasavi Atmarpana")
-        self.assertEqual(rule.status, "unresolved")
+        self.assertEqual(rule.status, "generic-udaya")
         self.assertIsNone(rule.source)
 
     def test_vsn_jayanti_is_not_attributed_to_dharma_sindhu(self):
@@ -225,6 +226,46 @@ class VasaviJayantiRuleTests(unittest.TestCase):
             self.assertEqual(
                 select_vasavi_jayanti_dates(records, self.rule),
                 [date(2030, 5, 4)],
+            )
+
+
+class VasaviAtmarpanaRuleTests(unittest.TestCase):
+    rule = festival_rule("Vasavi Atmarpana")
+
+    def test_selects_single_sunrise_vyapini_dwitiya(self):
+        records = [
+            record(date(2030, 2, 4), "S1", masa="11"),
+            record(date(2030, 2, 5), "S2", masa="11"),
+            record(date(2030, 2, 6), "S3", masa="11"),
+        ]
+        self.assertEqual(
+            select_vasavi_atmarpana_dates(records, self.rule),
+            [date(2030, 2, 5)],
+        )
+
+    def test_vriddhi_dwitiya_uses_first_sunrise(self):
+        records = [
+            record(date(2030, 2, 4), "S2", masa="11"),
+            record(date(2030, 2, 5), "S2", masa="11"),
+            record(date(2030, 2, 6), "S3", masa="11"),
+        ]
+        self.assertEqual(
+            select_vasavi_atmarpana_dates(records, self.rule),
+            [date(2030, 2, 4)],
+        )
+
+    def test_kshaya_dwitiya_uses_civil_day_containing_dwitiya(self):
+        records = [
+            record(date(2030, 2, 4), "S1", masa="11"),
+            record(date(2030, 2, 5), "S3", masa="11"),
+        ]
+        with patch(
+            "festival_rules.tithi_intervals",
+            return_value=[(0.1, 0.9)],
+        ):
+            self.assertEqual(
+                select_vasavi_atmarpana_dates(records, self.rule),
+                [date(2030, 2, 4)],
             )
 
 

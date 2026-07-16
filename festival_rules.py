@@ -225,8 +225,10 @@ FESTIVAL_RULES = (
         "https://www.kamakoti.org/kamakoti/dharmasindhu/bookview.php?chapnum=11",
     ),
     # No Vasavi Atmarpana observance was found in Dharma Sindhu's Magha
-    # section. Preserve the supplied community date provisionally.
-    FestivalRule(29, "Vasavi Atmarpana", 11, "S2", "unresolved"),
+    # section. Resolve the supplied community tithi with the documented
+    # generic sunrise, first-sunrise vriddhi, and contained-tithi kshaya
+    # policy.
+    FestivalRule(29, "Vasavi Atmarpana", 11, "S2", "generic-udaya"),
     FestivalRule(30,
         "Vasanta Panchami",
         11,
@@ -1802,6 +1804,11 @@ def select_vasavi_jayanti_dates(records, rule):
     return select_udaya_vyapini_dates(records, rule, 10)
 
 
+def select_vasavi_atmarpana_dates(records, rule):
+    """Apply the generic udaya-marker convention to Magha Shukla Dwitiya."""
+    return select_udaya_vyapini_dates(records, rule, 2)
+
+
 def select_mahanavami_puja_dates(records, rule):
     """Apply Dharma Sindhu's Mahanavami puja/upavasa decision.
 
@@ -2304,6 +2311,8 @@ def resolve_festivals(months, month_data):
             matches = select_dhana_trayodashi_dates(records, rule)
         elif rule.number == MAKARA_SANKRANTI_NUMBER:
             matches = select_makara_sankranti_dates(records, rule)
+        elif rule.number == VASAVI_ATMARPANA_NUMBER:
+            matches = select_vasavi_atmarpana_dates(records, rule)
         elif rule.number == DHANVANTARI_JAYANTI_NUMBER:
             matches = select_dhanvantari_jayanti_dates(records, rule)
         elif rule.number == MAHALAYA_AMAVASYA_NUMBER:
