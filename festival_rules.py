@@ -862,63 +862,48 @@ def select_taittiriya_apastamba_upakarma_dates(records, rule):
 
 
 def select_janmashtami_dates(records, rule):
-    """Resolve Dharma Sindhu Janmashtami at Nishitha.
+    """Resolve Vaishnava Janmashtami (non-Smarta).
 
-    Nishitha is the eighth muhurta of the local night. A sole Nishitha-
-    vyapini Ashtami is used; if Ashtami occupies both Nishithas, or neither,
-    the later day is used. Rohini joined to Ashtami at Nishitha is preferred
-    when available. Monday and Wednesday add merit but do not change dates.
-    This is Dharma Sindhu Janmashtami, not a Gaudiya rule or either
-    Sri-Vaishnava Sri-Jayanthi reckoning.
+    Vaishnavas strictly avoid observing Janmashtami on a day tainted by
+    Saptami at sunrise (Saptami-viddha). The observance falls on the day
+    where Ashtami is present at sunrise (Shuddha Ashtami), or Navami if
+    Ashtami started after sunrise on the previous day.
 
     Sources:
-    https://www.transliteral.org/pages/z80421220129/view
-    https://www.transliteral.org/pages/z80421220717/view
-    https://www.transliteral.org/pages/z80421221115/view
+    https://ramanuja.org/sri/BhaktiListArchives/Article?p=aug2001%2F0207.html
     """
     rule_records = records_for_rule(records, rule)
     by_date = {record[0]: record for record in records}
-    nishitha_candidates = []
-    rohini_candidates = []
+    
+    candidates = []
     for record in rule_records:
         next_record = by_date.get(record[0] + timedelta(days=1))
         if next_record is None:
             continue
-        night_length = next_record[5] - record[6]
-        nishitha_start = record[6] + night_length * 7 / 15
-        nishitha_end = record[6] + night_length * 8 / 15
-        overlap = tithi_overlap_hours(
-            nishitha_start,
-            nishitha_end,
-            23,
-        )
+            
+        # Check if Ashtami (23) is active between this sunrise and next sunrise
+        overlap = tithi_overlap_hours(record[5], next_record[5], 23)
         if overlap > 0:
-            candidate = (record[0], overlap)
-            nishitha_candidates.append(candidate)
-            if has_tithi_nakshatra(
-                nishitha_start,
-                nishitha_end,
-                23,
-                4,
-            ):
-                rohini_candidates.append(candidate)
-
-    candidates = rohini_candidates or nishitha_candidates
-    if candidates:
-        return [
-            group[-1][0]
-            for group in group_consecutive_candidates(candidates)
-        ]
-
-    daytime_candidates = [
-        (record[0], 1)
-        for record in rule_records
-        if tithi_overlap_hours(record[5], record[6], 23) > 0
-    ]
-    return [
-        group[-1][0]
-        for group in group_consecutive_candidates(daytime_candidates)
-    ]
+            # 22 is Saptami, 23 is Ashtami
+            tithi_at_sunrise = tithi_number_at(record[5])
+            if tithi_at_sunrise == 22:
+                # Saptami at sunrise -> Saptami-viddha, reject.
+                # We must observe on the next day.
+                next_date = record[0] + timedelta(days=1)
+                if next_date not in candidates:
+                    candidates.append(next_date)
+            else:
+                # Shuddha Ashtami (Ashtami at sunrise)
+                if record[0] not in candidates:
+                    candidates.append(record[0])
+                
+    selected = []
+    for group in group_consecutive_candidates([(date, 1) for date in candidates]):
+        # If multiple dates (e.g. Ashtami spans two sunrises),
+        # pick the first one.
+        selected.append(group[0][0])
+        
+    return selected
 
 
 def select_vijaya_dasami_dates(records, rule):
