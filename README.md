@@ -388,8 +388,7 @@ BCE) and [Surya Siddhanta](https://archive.org/details/in.ernet.dli.2015.69065)
 
 #### TODO ####
 
-* Festivals
-* Amritakala, varjyam
+* Amritakala
 * gettext translations
 * Harmonize all functions to use UT aka UT1 instead of UTC or ET
   (`swe.jdut1_to_utc() <==> swe.utc_to_jd()[1]`, `swe.utc_time_zone()`,  etc.)

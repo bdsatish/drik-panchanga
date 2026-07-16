@@ -705,6 +705,97 @@ def abhijit_muhurta(jd, place):
   # to local time
   return [(start_time - jd) * 24 + tz, (end_time - jd) * 24 + tz]
 
+def varjyam(jd, place):
+  """Varjyam (Vishaghati) timings for the day.
+  Returns a list of [start_time, end_time] in [h, m, s] format for all 
+  varjyam periods that overlap with the day (sunrise to next sunrise).
+  
+  Reference for starting ghatis:
+  http://www.reliableastrology.com/nakVishGhati.htm
+  https://www.drikpanchang.com/tutorials/panchang-utilities/nakshatra-thyajyam.html
+  """
+  VARJYAM_START_GHATIS = [
+      0,
+      50, 24, 30, 40, 14, 21, 30, 20, 32,
+      30, 20, 18, 21, 20, 14, 14, 10, 14,
+      56, 24, 20, 10, 10, 18, 16, 24, 30
+  ]
+  tz = place.timezone
+  srise1 = sunrise(jd, place)[0] - tz / 24.
+  srise2 = sunrise(jd + 1, place)[0] - tz / 24.
+
+  naks = set()
+  for t in [srise1, srise1 + 0.5, srise2]:
+      naks.add(nakshatra_pada(lunar_longitude(t))[0])
+  
+  varjyam_periods = []
+  
+  for nak in naks:
+      prev_nak = 27 if nak == 1 else nak - 1
+      start_lon = nakshatra_end_point(prev_nak)
+      end_lon = nakshatra_end_point(nak)
+      
+      t_start = None
+      t = srise1 - 1.5
+      while t <= srise2:
+          lon1 = lunar_longitude(t)
+          lon2 = lunar_longitude(t + 0.1)
+          if lon2 < lon1 - 180: lon2 += 360
+          
+          targ = start_lon
+          while targ < lon1 - 180: targ += 360
+          while targ > lon1 + 180: targ -= 360
+          
+          if (lon1 - targ) * (lon2 - targ) <= 0:
+              def f_start(x, base_lon=lon1, target=targ):
+                  l = lunar_longitude(x)
+                  while l < base_lon - 180: l += 360
+                  while l > base_lon + 180: l -= 360
+                  return l - target
+              t_start = bisection_search(f_start, t, t + 0.1)
+              break
+          t += 0.1
+          
+      if t_start is None:
+          continue
+          
+      t_end = None
+      t = t_start
+      while t <= t_start + 1.5:
+          lon1 = lunar_longitude(t)
+          lon2 = lunar_longitude(t + 0.1)
+          if lon2 < lon1 - 180: lon2 += 360
+          
+          targ = end_lon
+          while targ < lon1 - 180: targ += 360
+          while targ > lon1 + 180: targ -= 360
+          
+          if (lon1 - targ) * (lon2 - targ) <= 0:
+              def f_end(x, base_lon=lon1, target=targ):
+                  l = lunar_longitude(x)
+                  while l < base_lon - 180: l += 360
+                  while l > base_lon + 180: l -= 360
+                  return l - target
+              t_end = bisection_search(f_end, t, t + 0.1)
+              break
+          t += 0.1
+          
+      if t_end is None:
+          continue
+          
+      duration = t_end - t_start
+      start_ghati = VARJYAM_START_GHATIS[nak]
+      v_start = t_start + (start_ghati / 60.0) * duration
+      v_end = v_start + (4.0 / 60.0) * duration
+      
+      if v_end > srise1 and v_start < srise2:
+          local_start = (v_start - jd) * 24 + tz
+          local_end = (v_end - jd) * 24 + tz
+          varjyam_periods.append([to_dms(local_start), to_dms(local_end)])
+          
+  varjyam_periods.sort(key=lambda x: x[0])
+  return varjyam_periods
+
 # 'jd' can be any time: ex, 2015-09-19 14:20 UTC
 # today = swe.julday(2015, 9, 19, 14 + 20./60)
 def planetary_positions(jd, place):
@@ -833,6 +924,18 @@ def all_tests():
   assert(vaara(date2) == 5)
   print(sunrise(date4, shillong)[1])   # On this day, Nakshatra and Yoga are skipped!
   assert(karana(date2, helsinki) == [14, [12, 54, 20]])   # Expected: 14, Vanija, ends 12:54:20
+  varjyam_tests()
+  return
+
+def varjyam_tests():
+  print(sys._getframe().f_code.co_name)
+  # Test with known values for New Delhi on 2026-07-17
+  jd = gregorian_to_jd(Date(2026, 7, 17))
+  delhi = Place(28.6139, 77.2090, 5.5)
+  v = varjyam(jd, delhi)
+  # Expected: [[[7, 13, 45], [8, 44, 35]], [[26, 23, 30], [27, 57, 12]]]
+  print(v)
+  assert(len(v) == 2)
   return
 
 def tithi_tests():
