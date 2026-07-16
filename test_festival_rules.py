@@ -731,8 +731,8 @@ class JanmashtamiRuleTests(unittest.TestCase):
     def test_saptami_viddha_rejected(self):
         # 22 is Saptami, 23 is Ashtami
         with patch(
-            "festival_rules.tithi_overlap_hours",
-            side_effect=[1.0, 1.0, 0.0], # Ashtami active on Day 1 and Day 2
+            "festival_rules.tithi_intervals",
+            side_effect=[[(10.0, 11.0)], [(11.0, 12.0)]],
         ), patch(
             "festival_rules.tithi_number_at",
             side_effect=[22, 23], # Day 1 is Saptami at sunrise, Day 2 is Ashtami at sunrise
@@ -744,8 +744,8 @@ class JanmashtamiRuleTests(unittest.TestCase):
 
     def test_shuddha_ashtami_accepted(self):
         with patch(
-            "festival_rules.tithi_overlap_hours",
-            side_effect=[1.0, 1.0, 0.0], # Ashtami active on Day 1 and Day 2
+            "festival_rules.tithi_intervals",
+            side_effect=[[(10.0, 11.0)], [(11.0, 12.0)]],
         ), patch(
             "festival_rules.tithi_number_at",
             side_effect=[23, 23], # Both days have Ashtami at sunrise
@@ -753,6 +753,24 @@ class JanmashtamiRuleTests(unittest.TestCase):
             self.assertEqual(
                 select_janmashtami_dates(self.records, self.rule),
                 [date(2030, 9, 1)],
+            )
+
+    def test_kshaya_ashtami_uses_following_navami_day(self):
+        records = [
+            (date(2052, 8, 17), "K7", "5", False, 1.0, 10.0, 10.5),
+            (date(2052, 8, 18), "K9", "5", False, 1.0, 11.0, 11.5),
+            (date(2052, 8, 19), "K10", "5", False, 1.0, 12.0, 12.5),
+        ]
+        with patch(
+            "festival_rules.tithi_intervals",
+            side_effect=[[(10.1, 10.9)], []],
+        ), patch(
+            "festival_rules.tithi_number_at",
+            return_value=22,
+        ):
+            self.assertEqual(
+                select_janmashtami_dates(records, self.rule),
+                [date(2052, 8, 18)],
             )
 
 

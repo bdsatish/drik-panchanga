@@ -978,9 +978,10 @@ def select_janmashtami_dates(records, rule):
         if next_record is None:
             continue
             
-        # Check if Ashtami (23) is active between this sunrise and next sunrise
-        overlap = tithi_overlap_hours(record[5], next_record[5], 23)
-        if overlap > 0:
+        # This full sunrise-to-sunrise window can contain a kshaya Ashtami
+        # even when neither endpoint is Ashtami.
+        intervals = tithi_intervals(record[5], next_record[5], 23)
+        if intervals:
             # 22 is Saptami, 23 is Ashtami
             tithi_at_sunrise = tithi_number_at(record[5])
             if tithi_at_sunrise == 22:
