@@ -1730,40 +1730,59 @@ def select_ayudha_puja_dates(records, rule):
 
 
 def select_mahanavami_puja_dates(records, rule):
-    """Apply Dharma Sindhu's Purva-viddha rule for Mahanavami.
+    """Apply Dharma Sindhu's Mahanavami puja/upavasa decision.
 
-    If Navami prevails for at least three muhurtas before sunset on the
-    previous day (Ashtami), Mahanavami is observed on that previous day.
-    Otherwise, it is observed on the day Navami is present at sunrise.
+    An Ashtami-viddha Navami is used only when Navami occupies the final
+    three muhurtas (six fixed ghatis) before sunset. A shorter evening
+    Navami belongs to the following date. Otherwise the first
+    sunrise-vyapini Navami is used; a Navami skipped at sunrise also falls
+    on the following date.
+
+    This marker excludes Navami Mahabali, which prefers Dashami-viddha
+    Navami, and Sandhi Puja, which belongs to the exact Ashtami-Navami
+    junction.
+
+    Sources:
+    https://www.transliteral.org/pages/z80501061410/view
+    https://archive.org/details/in.ernet.dli.2015.513461/page/n98/mode/1up
     """
-    rule_records = records_for_rule(records, rule)
-    
-    candidates = []
+    rule_records = sorted(records_for_rule(records, rule))
+    evening_candidates = []
     for record in rule_records:
-        civil_date, day_tithi, _, _, _, sunrise_jd, sunset_jd = record
-        
-        overlap = tithi_overlap_hours(sunrise_jd, sunset_jd, 9)
-        if overlap > 0:
-            day_length = sunset_jd - sunrise_jd
-            three_muhurtas = 3 * (day_length / 15)
-            
-            # Score 2: Navami is active 3 muhurtas before sunset
-            if tithi_number_at(sunset_jd - three_muhurtas + 1e-5) == 9:
-                candidates.append((civil_date, 2))
-            # Score 1: Navami is at sunrise
-            elif day_tithi == rule.tithi:
-                candidates.append((civil_date, 1))
-            # Score 0: Navami is just present (e.g. Kshaya starting late)
-            else:
-                candidates.append((civil_date, 0))
-                
-    selected = []
-    for group in group_consecutive_candidates(candidates):
-        max_score = max(c[1] for c in group)
-        best_date = next(c[0] for c in group if c[1] == max_score)
-        selected.append(best_date)
-        
-    return selected
+        sunset_jd = record[6]
+        overlap = tithi_overlap_hours(
+            sunset_jd - SIX_GHATI_HOURS / 24,
+            sunset_jd,
+            9,
+        )
+        if overlap >= SIX_GHATI_HOURS - 1e-8:
+            evening_candidates.append((record[0], overlap))
+    if evening_candidates:
+        return [
+            group[0][0]
+            for group in group_consecutive_candidates(evening_candidates)
+        ]
+
+    sunrise_candidates = [
+        (record[0], record[4])
+        for record in rule_records
+        if record[1] == rule.tithi
+    ]
+    if sunrise_candidates:
+        return [
+            group[0][0]
+            for group in group_consecutive_candidates(sunrise_candidates)
+        ]
+
+    records_by_date = {record[0]: record for record in records}
+    for record in rule_records:
+        following_date = record[0] + timedelta(days=1)
+        following_record = records_by_date.get(following_date)
+        if following_record is None:
+            continue
+        if tithi_intervals(record[5], following_record[5], 9):
+            return [following_date]
+    return []
 
 
 def select_dasara_dates(records, rule):

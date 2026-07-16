@@ -1301,19 +1301,16 @@ class MahalayaAmavasyaRuleTests(unittest.TestCase):
 
 class MahanavamiPujaRuleTests(unittest.TestCase):
     rule = festival_rule("Mahanavami (Puja)")
-    
+
     def test_purva_viddha_navami_uses_previous_day(self):
         records = [
-            (date(2024, 10, 10), "S7", "7", False, 1.0, 10.0, 10.5), # Saptami
-            (date(2024, 10, 11), "S8", "7", False, 1.0, 11.0, 11.5), # Ashtami
-            (date(2024, 10, 12), "S9", "7", False, 1.0, 12.0, 12.5), # Navami
+            (date(2024, 10, 10), "S7", "7", False, 1.0, 10.0, 10.5),
+            (date(2024, 10, 11), "S8", "7", False, 1.0, 11.0, 11.5),
+            (date(2024, 10, 12), "S9", "7", False, 1.0, 12.0, 12.5),
         ]
         with patch(
             "festival_rules.tithi_overlap_hours",
-            side_effect=[0.0, 2.0, 12.0], # Navami overlap on 10, 11, 12
-        ), patch(
-            "festival_rules.tithi_number_at",
-            side_effect=[9, 10], # At sunset - 3 muhurtas on Oct 11 it is Navami, on Oct 12 it is Dashami
+            side_effect=[0.0, 2.4, 0.0],
         ):
             self.assertEqual(
                 select_mahanavami_puja_dates(records, self.rule),
@@ -1328,14 +1325,59 @@ class MahanavamiPujaRuleTests(unittest.TestCase):
         ]
         with patch(
             "festival_rules.tithi_overlap_hours",
-            side_effect=[0.0, 0.5, 12.0], # Navami overlap on 10, 11, 12
-        ), patch(
-            "festival_rules.tithi_number_at",
-            side_effect=[8, 10], # At sunset - 3 muhurtas on Oct 11 it is Ashtami, on Oct 12 it is Dashami
+            side_effect=[0.0, 0.5, 0.0],
         ):
             self.assertEqual(
                 select_mahanavami_puja_dates(records, self.rule),
                 [date(2024, 10, 12)],
+            )
+
+    def test_six_fixed_ghatis_are_required_at_high_latitude(self):
+        records = [
+            (date(2037, 10, 16), "S8", "7", False, 1.0, 10.0, 10.4),
+            (date(2037, 10, 17), "S9", "7", False, 1.0, 11.0, 11.4),
+        ]
+        with patch(
+            "festival_rules.tithi_overlap_hours",
+            side_effect=[2.17, 0.0],
+        ):
+            self.assertEqual(
+                select_mahanavami_puja_dates(records, self.rule),
+                [date(2037, 10, 17)],
+            )
+
+    def test_skipped_short_navami_uses_following_day(self):
+        records = [
+            (date(2030, 10, 5), "S8", "7", False, 1.0, 10.0, 10.5),
+            (date(2030, 10, 6), "S10", "7", False, 1.0, 11.0, 11.5),
+        ]
+        with (
+            patch(
+                "festival_rules.tithi_overlap_hours",
+                side_effect=[0.5, 0.0],
+            ),
+            patch(
+                "festival_rules.tithi_intervals",
+                return_value=[(10.3, 10.8)],
+            ),
+        ):
+            self.assertEqual(
+                select_mahanavami_puja_dates(records, self.rule),
+                [date(2030, 10, 6)],
+            )
+
+    def test_vriddhi_navami_uses_first_sunrise_day(self):
+        records = [
+            (date(2030, 10, 5), "S9", "7", False, 24.0, 10.0, 10.5),
+            (date(2030, 10, 6), "S9", "7", False, 2.0, 11.0, 11.5),
+        ]
+        with patch(
+            "festival_rules.tithi_overlap_hours",
+            return_value=0.0,
+        ):
+            self.assertEqual(
+                select_mahanavami_puja_dates(records, self.rule),
+                [date(2030, 10, 5)],
             )
 
 
