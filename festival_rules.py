@@ -242,6 +242,14 @@ FESTIVAL_RULES = (
         "dharmasindhu",
         "https://www.drikpanchang.com/navratri/durga-puja/bengal/maha-navami-date-time.html",
     ),
+    FestivalRule(
+        35,
+        "Durga Ashtami (Puja)",
+        7,
+        "S8",
+        "dharmasindhu",
+        "https://www.transliteral.org/pages/z80501061410/view",
+    ),
 )
 
 # The popular Friday-before-Sravana-Purnima rule was not found in Dharma
@@ -287,6 +295,7 @@ MAHA_SHIVARATRI_NUMBER = 31
 HOLIKA_DAHANA_NUMBER = 32
 DHANVANTARI_JAYANTI_NUMBER = 33
 MAHANAVAMI_PUJA_NUMBER = 34
+DURGA_ASHTAMI_PUJA_NUMBER = 35
 ONE_GHATI_HOURS = 24 / 60
 SIX_GHATI_HOURS = 6 * ONE_GHATI_HOURS
 ARUNODAYA_HOURS = 4 * ONE_GHATI_HOURS
@@ -1939,6 +1948,36 @@ def select_mahalaya_amavasya_dates(records, rule):
     return selected
 
 
+def select_durga_ashtami_puja_dates(records, rule):
+    """Apply Dharma Sindhu's rule for Durga Ashtami (Puja).
+
+    Ashtami joined with Navami is preferred. If Ashtami ends on a day after
+    at least one ghati past sunrise, that day is selected. If it ends before
+    one ghati past sunrise, the previous day is selected (even if Saptami-viddha).
+    """
+    candidates = []
+    for record in records_for_rule(records, rule):
+        civil_date, _, _, _, _, sunrise_jd, _ = record
+        overlap = tithi_overlap_hours(sunrise_jd, sunrise_jd + 1, 8)
+        if overlap > 0:
+            candidates.append(record)
+
+    selected = []
+    for group in group_consecutive_candidates([(r[0], 1) for r in candidates]):
+        group_records = [r for r in candidates if r[0] in [c[0] for c in group]]
+        last_record = group_records[-1]
+        last_sunrise_jd = last_record[5]
+        
+        if tithi_number_at(last_sunrise_jd + ONE_GHATI_HOURS / 24) == 8:
+            selected.append(last_record[0])
+        else:
+            if len(group_records) > 1:
+                selected.append(group_records[-2][0])
+            else:
+                selected.append(group_records[0][0])
+    return selected
+
+
 def select_durga_ashtami_dates(candidates):
     """Apply Dharma Sindhu's rule to Ashtami at consecutive sunrises.
 
@@ -2084,6 +2123,8 @@ def resolve_festivals(months, month_data):
                 )
             ]
             matches = select_durga_ashtami_dates(candidates)
+        elif rule.number == DURGA_ASHTAMI_PUJA_NUMBER:
+            matches = select_durga_ashtami_puja_dates(records, rule)
         elif rule.number == GOWRI_HABBA_NUMBER:
             matches = select_gowri_habba_dates(records, rule)
         elif rule.number == AYUDHA_PUJA_NUMBER:
