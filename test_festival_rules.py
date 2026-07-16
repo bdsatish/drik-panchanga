@@ -7,7 +7,9 @@ from unittest.mock import patch
 from festival_rules import (
     FESTIVAL_RULES,
     VARAMAHALAKSHMI_RULE,
+    format_festival_dates,
     nakshatra_overlaps,
+    resolve_festivals,
     select_aksaya_trtiya_dates,
     select_ayudha_puja_dates,
     select_bali_padyami_dates,
@@ -1108,6 +1110,39 @@ class VaikunthaEkadashiRuleTests(unittest.TestCase):
     def test_rule_is_regional_with_dharma_sindhu_ekadashi_mechanics(self):
         self.assertEqual(self.rule.status, "regional")
         self.assertIn("drikpanchang.com", self.rule.source)
+
+    def test_rule_allows_a_dhanur_season_without_an_occurrence(self):
+        self.assertTrue(self.rule.allow_empty)
+
+    def test_empty_occurrence_is_rendered_as_none(self):
+        with patch(
+            "festival_rules.FESTIVAL_RULES",
+            (self.rule,),
+        ), patch(
+            "festival_rules.select_vaikuntha_ekadashi_dates",
+            return_value=[],
+        ):
+            festivals_by_date, entries = resolve_festivals([], {})
+
+        entry = next(item for item in entries if item[0] == self.rule.number)
+        self.assertEqual(festivals_by_date, {})
+        self.assertEqual(entry[1], "None")
+        self.assertEqual(format_festival_dates([]), "None")
+
+    def test_empty_nonoptional_festival_remains_an_error(self):
+        janmashtami = festival_rule("Janmashtami")
+        with patch(
+            "festival_rules.FESTIVAL_RULES",
+            (janmashtami,),
+        ), patch(
+            "festival_rules.select_janmashtami_dates",
+            return_value=[],
+        ):
+            with self.assertRaisesRegex(
+                RuntimeError,
+                "No calendar date found for Janmashtami",
+            ):
+                resolve_festivals([], {})
 
     def test_chooses_margasirsa_or_pusya_candidate_in_dhanur(self):
         margasirsa = date(2030, 12, 10)

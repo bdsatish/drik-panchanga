@@ -16,6 +16,7 @@ class FestivalRule:
     tithi: str
     status: str = "provisional"
     source: str | None = None
+    allow_empty: bool = False
 
 
 FESTIVAL_RULES = (
@@ -217,6 +218,7 @@ FESTIVAL_RULES = (
             "https://www.drikpanchang.com/ekadashis/vaikuntha/"
             "vaikuntha-ekadashi-date-time.html"
         ),
+        allow_empty=True,
     ),
     FestivalRule(28,
         "Makara Sankranti",
@@ -330,6 +332,8 @@ PRADOSHA_HOURS = 6 * ONE_GHATI_HOURS
 
 def format_festival_dates(dates):
     dates = sorted(dates)
+    if not dates:
+        return "None"
     if (
         len(dates) > 1
         and len({(value.year, value.month) for value in dates}) == 1
@@ -2478,7 +2482,7 @@ def resolve_festivals(months, month_data):
                     and not is_adhika
                 )
             ]
-        if not matches:
+        if not matches and not rule.allow_empty:
             raise RuntimeError(f"No calendar date found for {rule.name}")
         dates_by_number[rule.number] = matches
         names_by_number[rule.number] = rule.name
