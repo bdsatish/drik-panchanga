@@ -40,6 +40,7 @@ from festival_rules import (
     select_naraka_chaturdashi_dates,
     select_dasara_dates,
     select_deepavali_dates,
+    select_gita_jayanti_dates,
     select_kama_dahana_dates,
 )
 
@@ -162,9 +163,9 @@ class RuleStatusTests(unittest.TestCase):
         self.assertEqual(rule.status, "regional")
         self.assertIn("drikpanchang.com", rule.source)
 
-    def test_gita_jayanti_is_not_attributed_to_dharma_sindhu(self):
+    def test_gita_jayanti_uses_documented_generic_udaya_policy(self):
         rule = festival_rule("Gita Jayanti")
-        self.assertEqual(rule.status, "unresolved")
+        self.assertEqual(rule.status, "generic-udaya")
         self.assertIsNone(rule.source)
 
     def test_vasavi_atmarpana_uses_documented_generic_udaya_policy(self):
@@ -307,6 +308,46 @@ class VsnJayantiRuleTests(unittest.TestCase):
             self.assertEqual(
                 select_vsn_jayanti_dates(records, self.rule),
                 [date(2030, 2, 4)],
+            )
+
+
+class GitaJayantiRuleTests(unittest.TestCase):
+    rule = festival_rule("Gita Jayanti")
+
+    def test_selects_single_sunrise_vyapini_ekadashi(self):
+        records = [
+            record(date(2030, 12, 4), "S10", masa="9"),
+            record(date(2030, 12, 5), "S11", masa="9"),
+            record(date(2030, 12, 6), "S12", masa="9"),
+        ]
+        self.assertEqual(
+            select_gita_jayanti_dates(records, self.rule),
+            [date(2030, 12, 5)],
+        )
+
+    def test_vriddhi_ekadashi_marker_uses_first_sunrise(self):
+        records = [
+            record(date(2030, 12, 4), "S11", masa="9"),
+            record(date(2030, 12, 5), "S11", masa="9"),
+            record(date(2030, 12, 6), "S12", masa="9"),
+        ]
+        self.assertEqual(
+            select_gita_jayanti_dates(records, self.rule),
+            [date(2030, 12, 4)],
+        )
+
+    def test_kshaya_ekadashi_uses_civil_day_containing_ekadashi(self):
+        records = [
+            record(date(2030, 12, 4), "S10", masa="9"),
+            record(date(2030, 12, 5), "S12", masa="9"),
+        ]
+        with patch(
+            "festival_rules.tithi_intervals",
+            return_value=[(0.1, 0.9)],
+        ):
+            self.assertEqual(
+                select_gita_jayanti_dates(records, self.rule),
+                [date(2030, 12, 4)],
             )
 
 

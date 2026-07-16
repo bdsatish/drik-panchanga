@@ -205,8 +205,9 @@ FESTIVAL_RULES = (
         "https://www.transliteral.org/pages/z80505062407/view",
     ),
     # No Gita-Jayanti observance was found in Dharma Sindhu's Margashirsha
-    # section. Preserve the supplied community date provisionally.
-    FestivalRule(26, "Gita Jayanti", 9, "S11", "unresolved"),
+    # section. Resolve the supplied community tithi with the documented
+    # generic udaya-marker policy.
+    FestivalRule(26, "Gita Jayanti", 9, "S11", "generic-udaya"),
     FestivalRule(27,
         "Vaikuntha Ekadashi",
         9,
@@ -1819,6 +1820,15 @@ def select_vsn_jayanti_dates(records, rule):
     return select_udaya_vyapini_dates(records, rule, 11)
 
 
+def select_gita_jayanti_dates(records, rule):
+    """Apply generic udaya handling to Margashirsha Shukla Ekadashi.
+
+    This is a commemorative Jayanti marker, not an Ekadashi fast, so it does
+    not reuse the later-sunrise fasting hierarchy.
+    """
+    return select_udaya_vyapini_dates(records, rule, 11)
+
+
 def select_mahanavami_puja_dates(records, rule):
     """Apply Dharma Sindhu's Mahanavami puja/upavasa decision.
 
@@ -2303,6 +2313,8 @@ def resolve_festivals(months, month_data):
             matches = select_vijaya_dasami_dates(records, rule)
         elif rule.number == BALI_PADYAMI_NUMBER:
             matches = select_bali_padyami_dates(records, rule)
+        elif rule.number == GITA_JAYANTI_NUMBER:
+            matches = select_gita_jayanti_dates(records, rule)
         elif rule.number == VAIKUNTHA_EKADASHI_NUMBER:
             matches = select_vaikuntha_ekadashi_dates(
                 months,
