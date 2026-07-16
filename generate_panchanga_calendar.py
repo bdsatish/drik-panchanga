@@ -26,6 +26,13 @@ MONTH_COUNT = 13
 DEFAULT_CITIES_PATH = Path(__file__).with_name("cities.json")
 RULESET_VERSION = "Dharma-sindhu DS-1.3"
 LAYOUT_VERSION = "A4-1.1"
+PDF_AUTHOR = "Satish BD"
+PDF_AUTHOR_EMAIL = "bdsatish@gmail.com"
+PDF_COPYRIGHT = (
+    "Copyright © Satish BD. Licensed under the GNU Affero GPL "
+    "version 3 (or later)."
+)
+PDF_SOURCE_URL = "https://github.com/bdsatish/drik-panchanga"
 
 
 @dataclass(frozen=True)
@@ -65,6 +72,53 @@ YOGA_KEY_LINE = (
     "17 Vyatipata, 18 Variyana, 19 Parigha, 20 Siva, 21 Siddha, "
     "22 Sadhya, 23 Subha, 24 Sukla, 25 Brahma, 26 Aindra, 27 Vaidhrti"
 )
+
+
+def embed_pdf_metadata(pdf, *, title, subject):
+    """Set Info dictionary fields, including custom copyright/email/URL keys."""
+    from reportlab.pdfbase.pdfdoc import (
+        PDFDate,
+        PDFDictionary,
+        PDFName,
+        PDFString,
+    )
+
+    pdf.setTitle(title)
+    pdf.setAuthor(PDF_AUTHOR)
+    pdf.setSubject(subject)
+    pdf.setCreator(PDF_SOURCE_URL)
+    pdf.setKeywords(
+        f"ruleset={RULESET_VERSION}; layout={LAYOUT_VERSION}; "
+        f"ayanamsa=True Citra; author-email={PDF_AUTHOR_EMAIL}; "
+        f"copyright={PDF_COPYRIGHT}; url={PDF_SOURCE_URL}"
+    )
+
+    info = pdf._doc.info
+    info.author_email = PDF_AUTHOR_EMAIL
+    info.copyright = PDF_COPYRIGHT
+    info.url = PDF_SOURCE_URL
+
+    def format_info(document, self=info):
+        dates = PDFDate(
+            ts=document._timeStamp,
+            dateFormatter=self._dateFormatter,
+        )
+        return PDFDictionary({
+            "Title": PDFString(self.title),
+            "Author": PDFString(self.author),
+            "AuthorEmail": PDFString(self.author_email),
+            "Copyright": PDFString(self.copyright),
+            "URL": PDFString(self.url),
+            "ModDate": dates,
+            "CreationDate": dates,
+            "Producer": PDFString(self.producer),
+            "Creator": PDFString(self.creator),
+            "Subject": PDFString(self.subject),
+            "Keywords": PDFString(self.keywords),
+            "Trapped": PDFName(self.trapped),
+        }).format(document)
+
+    info.format = format_info
 
 
 def month_range(start_year, start_month, count=MONTH_COUNT):
@@ -712,17 +766,13 @@ def build_pdf(location, start_year, start_month, output_path):
     page_width, page_height = landscape(A4)
     output_path = Path(output_path)
     pdf = canvas.Canvas(str(output_path), pagesize=(page_width, page_height))
-    pdf.setTitle(
-        f"{location.name} Panchanga {month_span_label(months)}"
-    )
-    pdf.setAuthor("drik-panchanga")
-    pdf.setKeywords(
-        f"ruleset={RULESET_VERSION}; layout={LAYOUT_VERSION}; "
-        "ayanamsa=True Citra"
-    )
-    pdf.setSubject(
-        f"Daily tithi, True Citra nakshatra, yoga, and amanta masa at "
-        f"{location.name} sunrise"
+    embed_pdf_metadata(
+        pdf,
+        title=f"{location.name} Panchanga {month_span_label(months)}",
+        subject=(
+            f"Daily tithi, True Citra nakshatra, yoga, and amanta masa at "
+            f"{location.name} sunrise"
+        ),
     )
 
     draw_page_header(pdf, location, months)
