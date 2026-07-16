@@ -679,6 +679,15 @@ def has_nakshatra(start_jd, end_jd, nakshatra_number):
     return False
 
 
+def nakshatra_overlaps(start_jd, end_jd, nakshatra_number):
+    """Test a short ritual window without sampling over a boundary."""
+    epsilon = 1e-10
+    return (
+        nakshatra_number_at(start_jd + epsilon) == nakshatra_number
+        or nakshatra_number_at(end_jd - epsilon) == nakshatra_number
+    )
+
+
 def upakarma_date_is_contaminated(records_by_date, selected_date):
     """Check Dharma Sindhu's principal eight-yama eclipse/sankranti window."""
     selected_record = records_by_date[selected_date]
@@ -1019,21 +1028,18 @@ def select_smarta_janmashtami_dates(records, rule):
 def select_vijaya_dasami_dates(records, rule):
     """Resolve Aparahna-vyapini Vijaya Dashami with Shravana exceptions.
 
-    If Dashami occupies Aparahna on both days, the earlier day is used; if
-    only one day qualifies, that day is used. Shravana on exactly one of two
-    qualifying days gives that day priority. When neither Aparahna contains
-    Dashami, the earlier day remains normal, except that a later Dashami of
-    at least three muhurtas joined to Shravana in Aparahna is selected.
-
-    This rule matches TTD calendar for all years 2021-2026, even though
-    SRS Mutt and Sringeri Mutt calendars differ (e.g. in 2022).
+    If only one day has Dashami in Aparahna, that day is normally used. If
+    both or neither do, Shravana in exactly one Aparahna selects that date;
+    otherwise the earlier date is used. One exception moves an
+    earlier-Aparahna decision to the later date when sunrise Dashami remains
+    there for at least three muhurtas and Shravana occupies its Aparahna.
 
     Source:
     https://www.transliteral.org/pages/z80501062120/view
+    https://archive.org/details/in.ernet.dli.2015.513461/page/n100/mode/1up
     """
-    rule_records = records_for_rule(records, rule)
-    aparahna_candidates = []
-    shravana_dates = set()
+    rule_records = sorted(records_for_rule(records, rule))
+    details_by_date = {}
     for record in rule_records:
         sunrise_jd, sunset_jd = record[5:7]
         day_length = sunset_jd - sunrise_jd
@@ -1041,41 +1047,55 @@ def select_vijaya_dasami_dates(records, rule):
             sunrise_jd + day_length * 3 / 5,
             sunrise_jd + day_length * 4 / 5,
         )
-        if tithi_overlap_hours(*aparahna, 10) > 0:
-            aparahna_candidates.append((record[0], 1))
-        if has_nakshatra(*aparahna, 22):
-            shravana_dates.add(record[0])
-
-    if aparahna_candidates:
-        selected = []
-        for group in group_consecutive_candidates(aparahna_candidates):
-            with_shravana = [
-                candidate[0]
-                for candidate in group
-                if candidate[0] in shravana_dates
-            ]
-            selected.append(
-                with_shravana[0]
-                if len(with_shravana) == 1
-                else group[0][0]
-            )
-        return selected
+        details_by_date[record[0]] = {
+            "record": record,
+            "dashami_in_daytime": (
+                tithi_overlap_hours(sunrise_jd, sunset_jd, 10) > 0
+            ),
+            "dashami_in_aparahna": (
+                tithi_overlap_hours(*aparahna, 10) > 0
+            ),
+            "shravana_in_aparahna": nakshatra_overlaps(
+                *aparahna,
+                22,
+            ),
+        }
 
     daytime_candidates = [
-        (record[0], record[4])
-        for record in rule_records
-        if tithi_overlap_hours(record[5], record[6], 10) > 0
+        (civil_date, details["record"][4])
+        for civil_date, details in details_by_date.items()
+        if details["dashami_in_daytime"]
     ]
     selected = []
     for group in group_consecutive_candidates(daytime_candidates):
-        later_date, later_remainder = group[-1]
-        if (
-            later_remainder >= SIX_GHATI_HOURS
-            and later_date in shravana_dates
-        ):
-            selected.append(later_date)
+        group_dates = [candidate[0] for candidate in group]
+        aparahna_dates = [
+            civil_date
+            for civil_date in group_dates
+            if details_by_date[civil_date]["dashami_in_aparahna"]
+        ]
+        shravana_dates = [
+            civil_date
+            for civil_date in group_dates
+            if details_by_date[civil_date]["shravana_in_aparahna"]
+        ]
+
+        if len(aparahna_dates) == 1:
+            selected_date = aparahna_dates[0]
+            if selected_date == group_dates[0] and len(group_dates) > 1:
+                later_date = group_dates[-1]
+                later_record = details_by_date[later_date]["record"]
+                if (
+                    later_record[1] == rule.tithi
+                    and later_record[4] >= SIX_GHATI_HOURS
+                    and later_date in shravana_dates
+                ):
+                    selected_date = later_date
+            selected.append(selected_date)
+        elif len(shravana_dates) == 1:
+            selected.append(shravana_dates[0])
         else:
-            selected.append(group[0][0])
+            selected.append(group_dates[0])
     return selected
 
 

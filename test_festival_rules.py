@@ -7,6 +7,7 @@ from unittest.mock import patch
 from festival_rules import (
     FESTIVAL_RULES,
     VARAMAHALAKSHMI_RULE,
+    nakshatra_overlaps,
     select_aksaya_trtiya_dates,
     select_ayudha_puja_dates,
     select_bali_padyami_dates,
@@ -614,12 +615,19 @@ class VijayaDasamiRuleTests(unittest.TestCase):
         (date(2030, 10, 6), "S10", "7", False, 3.0, 11.0, 11.5),
     ]
 
+    def test_shravana_boundary_overlap_is_detected_without_sampling(self):
+        with patch(
+            "festival_rules.nakshatra_number_at",
+            side_effect=[21, 22],
+        ):
+            self.assertTrue(nakshatra_overlaps(10.0, 10.1, 22))
+
     def test_both_aparahnas_use_earlier_day_without_shravana(self):
         with patch(
             "festival_rules.tithi_overlap_hours",
-            side_effect=[1.0, 1.0],
+            side_effect=[1.0, 1.0, 1.0, 1.0],
         ), patch(
-            "festival_rules.has_nakshatra",
+            "festival_rules.nakshatra_overlaps",
             side_effect=[False, False],
         ):
             self.assertEqual(
@@ -630,14 +638,104 @@ class VijayaDasamiRuleTests(unittest.TestCase):
     def test_only_later_aparahna_uses_later_day(self):
         with patch(
             "festival_rules.tithi_overlap_hours",
-            side_effect=[0.0, 1.0],
+            side_effect=[1.0, 0.0, 1.0, 1.0],
         ), patch(
-            "festival_rules.has_nakshatra",
+            "festival_rules.nakshatra_overlaps",
             side_effect=[False, False],
         ):
             self.assertEqual(
                 select_vijaya_dasami_dates(self.records, self.rule),
                 [date(2030, 10, 6)],
+            )
+
+    def test_both_aparahnas_use_only_shravana_day(self):
+        with patch(
+            "festival_rules.tithi_overlap_hours",
+            side_effect=[1.0, 1.0, 1.0, 1.0],
+        ), patch(
+            "festival_rules.nakshatra_overlaps",
+            side_effect=[False, True],
+        ):
+            self.assertEqual(
+                select_vijaya_dasami_dates(self.records, self.rule),
+                [date(2030, 10, 6)],
+            )
+
+    def test_neither_aparahna_uses_only_shravana_day(self):
+        with patch(
+            "festival_rules.tithi_overlap_hours",
+            side_effect=[1.0, 0.0, 1.0, 0.0],
+        ), patch(
+            "festival_rules.nakshatra_overlaps",
+            side_effect=[False, True],
+        ):
+            self.assertEqual(
+                select_vijaya_dasami_dates(self.records, self.rule),
+                [date(2030, 10, 6)],
+            )
+
+    def test_neither_aparahna_without_shravana_uses_earlier_day(self):
+        with patch(
+            "festival_rules.tithi_overlap_hours",
+            side_effect=[1.0, 0.0, 1.0, 0.0],
+        ), patch(
+            "festival_rules.nakshatra_overlaps",
+            side_effect=[False, False],
+        ):
+            self.assertEqual(
+                select_vijaya_dasami_dates(self.records, self.rule),
+                [date(2030, 10, 5)],
+            )
+
+    def test_later_three_muhurta_dashami_with_shravana_overrides_earlier(self):
+        records = [
+            (date(2030, 10, 5), "S9", "7", False, 3.0, 10.0, 10.5),
+            (date(2030, 10, 6), "S10", "7", False, 3.0, 11.0, 11.5),
+        ]
+        with patch(
+            "festival_rules.tithi_overlap_hours",
+            side_effect=[1.0, 1.0, 1.0, 0.0],
+        ), patch(
+            "festival_rules.nakshatra_overlaps",
+            side_effect=[False, True],
+        ):
+            self.assertEqual(
+                select_vijaya_dasami_dates(records, self.rule),
+                [date(2030, 10, 6)],
+            )
+
+    def test_later_non_dashami_remainder_does_not_trigger_exception(self):
+        records = [
+            (date(2030, 10, 5), "S9", "7", False, 3.0, 10.0, 10.5),
+            (date(2030, 10, 6), "S9", "7", False, 3.0, 11.0, 11.5),
+        ]
+        with patch(
+            "festival_rules.tithi_overlap_hours",
+            side_effect=[1.0, 1.0, 1.0, 0.0],
+        ), patch(
+            "festival_rules.nakshatra_overlaps",
+            side_effect=[False, True],
+        ):
+            self.assertEqual(
+                select_vijaya_dasami_dates(records, self.rule),
+                [date(2030, 10, 5)],
+            )
+
+    def test_later_short_dashami_does_not_trigger_exception(self):
+        records = [
+            (date(2030, 10, 5), "S9", "7", False, 3.0, 10.0, 10.5),
+            (date(2030, 10, 6), "S10", "7", False, 2.0, 11.0, 11.5),
+        ]
+        with patch(
+            "festival_rules.tithi_overlap_hours",
+            side_effect=[1.0, 1.0, 1.0, 0.0],
+        ), patch(
+            "festival_rules.nakshatra_overlaps",
+            side_effect=[False, True],
+        ):
+            self.assertEqual(
+                select_vijaya_dasami_dates(records, self.rule),
+                [date(2030, 10, 5)],
             )
 
 
