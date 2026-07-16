@@ -219,6 +219,14 @@ FESTIVAL_RULES = (
         "K13",
         "regional",
     ),
+    FestivalRule(
+        32,
+        "Mahalaya Amavasya",
+        6,
+        "K15",
+        "dharmasindhu",
+        "http://hindupanchang.blogspot.com/2008/03/",
+    ),
 )
 
 # The popular Friday-before-Sravana-Purnima rule was not found in Dharma
@@ -259,6 +267,7 @@ DHANA_TRAYODASHI_NUMBER = 29
 MAKARA_SANKRANTI_NUMBER = 30
 MAHA_SHIVARATRI_NUMBER = 27
 DHANVANTARI_JAYANTHI_NUMBER = 31
+MAHALAYA_AMAVASYA_NUMBER = 32
 ONE_GHATI_HOURS = 24 / 60
 SIX_GHATI_HOURS = 6 * ONE_GHATI_HOURS
 ARUNODAYA_HOURS = 4 * ONE_GHATI_HOURS
@@ -1833,6 +1842,38 @@ def select_deepavali_dates(records, rule):
     return selected
 
 
+def select_mahalaya_amavasya_dates(records, rule):
+    """Apply Dharma Sindhu's Aparahna-vyapini rule for Mahalaya Amavasya.
+
+    Mahalaya (Sarvapitri) Amavasya is the Amavasya of Bhadrapada (Krishna 15).
+    The Shraddha is performed when the tithi prevails during the Aparahna kala
+    (the fourth fifth of the daytime). If it prevails in Aparahna on two days,
+    the day with the greater overlap is selected.
+
+    Sources:
+    http://hindupanchang.blogspot.com/2008/03/
+    https://www.onlinejyotish.com/astrology-tools/shraddha-tithi.php
+    """
+    candidates = []
+    for record in records_for_rule(records, rule):
+        civil_date, _, _, _, _, sunrise_jd, sunset_jd = record
+        day_length = sunset_jd - sunrise_jd
+        aparahna_start = sunrise_jd + day_length * 3 / 5
+        aparahna_end = sunrise_jd + day_length * 4 / 5
+        overlap = tithi_overlap_hours(
+            aparahna_start,
+            aparahna_end,
+            30, # K15
+        )
+        if overlap > 0:
+            candidates.append((civil_date, overlap))
+
+    selected = []
+    for group in group_consecutive_candidates(candidates):
+        selected.append(max(group, key=lambda candidate: candidate[1])[0])
+    return selected
+
+
 def select_durga_ashtami_dates(candidates):
     """Apply Dharma Sindhu's rule to Ashtami at consecutive sunrises.
 
@@ -1914,6 +1955,8 @@ def resolve_festivals(months, month_data):
             matches = select_makara_sankranti_dates(records, rule)
         elif rule.number == DHANVANTARI_JAYANTHI_NUMBER:
             matches = select_dhanvantari_jayanthi_dates(records, rule)
+        elif rule.number == MAHALAYA_AMAVASYA_NUMBER:
+            matches = select_mahalaya_amavasya_dates(records, rule)
         elif rule.tithi == "S1":
             matches = []
             for index, (

@@ -30,6 +30,7 @@ from festival_rules import (
     select_makara_sankranti_dates,
     select_smarta_janmashtami_dates,
     select_dhanvantari_jayanthi_dates,
+    select_mahalaya_amavasya_dates,
 )
 
 
@@ -999,6 +1000,35 @@ class MakaraSankrantiRuleTests(unittest.TestCase):
             self.assertEqual(
                 select_makara_sankranti_dates(self.records, self.rule),
                 [date(2030, 1, 15)],
+            )
+
+
+class MahalayaAmavasyaRuleTests(unittest.TestCase):
+    rule = festival_rule("Mahalaya Amavasya")
+    records = [
+        (date(2030, 9, 26), "K14", "6", False, 1.0, 10.0, 10.5),
+        (date(2030, 9, 27), "K15", "6", False, 1.0, 11.0, 11.5),
+        (date(2030, 9, 28), "K15", "6", False, 1.0, 12.0, 12.5),
+    ]
+
+    def test_two_aparahnas_use_greater_overlap(self):
+        with patch(
+            "festival_rules.tithi_overlap_hours",
+            side_effect=[0.5, 1.0, 0.0],
+        ):
+            self.assertEqual(
+                select_mahalaya_amavasya_dates(self.records, self.rule),
+                [date(2030, 9, 27)],
+            )
+
+    def test_one_aparahna_uses_that_day(self):
+        with patch(
+            "festival_rules.tithi_overlap_hours",
+            side_effect=[0.0, 1.0, 0.0],
+        ):
+            self.assertEqual(
+                select_mahalaya_amavasya_dates(self.records, self.rule),
+                [date(2030, 9, 27)],
             )
 
 
