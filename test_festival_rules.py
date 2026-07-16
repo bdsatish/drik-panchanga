@@ -174,6 +174,18 @@ class RuleStatusTests(unittest.TestCase):
         self.assertEqual(rule.status, "unresolved")
         self.assertIsNone(rule.source)
 
+    def test_implemented_rules_are_not_left_provisional(self):
+        for name in (
+            "Ganesha Chaturthi",
+            "Durga Ashtami",
+            "Naraka Chaturdashi",
+            "Deepavali",
+        ):
+            with self.subTest(name=name):
+                rule = festival_rule(name)
+                self.assertEqual(rule.status, "dharmasindhu")
+                self.assertIsNotNone(rule.source)
+
 
 class NarasimhaJayantiRuleTests(unittest.TestCase):
     rule = FESTIVAL_RULES[4]
