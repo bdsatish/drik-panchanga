@@ -12,7 +12,7 @@ from festival_rules import (
     select_bali_padyami_dates,
     select_gowri_habba_dates,
     select_guru_purnima_dates,
-    select_holi_dates,
+    select_holika_dahana_dates,
     select_janmashtami_dates,
     select_maha_shivaratri_dates,
     select_naga_panchami_dates,
@@ -33,6 +33,7 @@ from festival_rules import (
     select_mahalaya_amavasya_dates,
     select_mahanavami_puja_dates,
     select_dasara_dates,
+    select_holika_dahana_dates,
 )
 
 
@@ -869,31 +870,31 @@ class RathaSaptamiRuleTests(unittest.TestCase):
             )
 
 
-class HoliRuleTests(unittest.TestCase):
-    rule = festival_rule("Holi")
+class HolikaDahanaRuleTests(unittest.TestCase):
+    rule = festival_rule("Holika Dahana")
     records = [
-        (date(2030, 3, 20), "K1", "12", False, 3.0, 10.0, 10.5),
-        (date(2030, 3, 21), "K1", "12", False, 3.0, 11.0, 11.5),
+        (date(2030, 3, 20), "S15", "12", False, 3.0, 10.0, 10.5),
+        (date(2030, 3, 21), "S15", "12", False, 3.0, 11.0, 11.5),
     ]
 
-    def test_two_pratipada_mornings_use_earlier_day(self):
+    def test_two_pradosha_purnimas_use_later_day(self):
         with patch(
             "festival_rules.tithi_overlap_hours",
             side_effect=[1.0, 1.0],
         ):
             self.assertEqual(
-                select_holi_dates(self.records, self.rule),
-                [date(2030, 3, 20)],
+                select_holika_dahana_dates(self.records, self.rule),
+                [date(2030, 3, 21)],
             )
 
-    def test_only_later_morning_uses_later_day(self):
+    def test_only_earlier_pradosha_uses_earlier_day(self):
         with patch(
             "festival_rules.tithi_overlap_hours",
-            side_effect=[0.0, 1.0],
+            side_effect=[1.0, 0.0],
         ):
             self.assertEqual(
-                select_holi_dates(self.records, self.rule),
-                [date(2030, 3, 21)],
+                select_holika_dahana_dates(self.records, self.rule),
+                [date(2030, 3, 20)],
             )
 
 

@@ -221,11 +221,11 @@ FESTIVAL_RULES = (
     ),
     FestivalRule(
         32,
-        "Holi",
+        "Holika Dahana",
         12,
-        "K1",
+        "S15",
         "dharmasindhu",
-        "https://www.transliteral.org/pages/z80505120438/view",
+        "https://www.kamakoti.org/kamakoti/dharmasindhu/bookview.php?chapnum=13",
     ),
     FestivalRule(
         33,
@@ -284,7 +284,7 @@ VASANTA_PANCHAMI_NUMBER = 28
 RATHA_SAPTAMI_NUMBER = 29
 VSN_JAYANTI_NUMBER = 30
 MAHA_SHIVARATRI_NUMBER = 31
-HOLI_NUMBER = 32
+HOLIKA_DAHANA_NUMBER = 32
 DHANVANTARI_JAYANTI_NUMBER = 33
 MAHANAVAMI_PUJA_NUMBER = 34
 ONE_GHATI_HOURS = 24 / 60
@@ -1204,43 +1204,36 @@ def select_ratha_saptami_dates(records, rule):
     ]
 
 
-def select_holi_dates(records, rule):
-    """Select the color-festival morning after Holika Dahana.
+def select_holika_dahana_dates(records, rule):
+    """Select Holika Dahana (Phalguna Purnima during Pradosha).
 
-    The listed Holi marker denotes Dharma Sindhu's Vasantotsava/color
-    observance on Phalguna Krishna Pratipada morning, not the preceding
-    Purnima-Pradosha Holika Dahana. If Pratipada occupies both mornings, the
-    earlier morning is selected.
-
-    Sources:
-    https://www.transliteral.org/pages/z80505120438/view
-    https://kamakoti.org/kamakoti/dharmasindhu/bookview.php?chapnum=13
+    The government and many South Indian calendars observe Holi on the day
+    of Holika Dahana (Kamadahana), which is Pradosha-vyapini Phalguna Purnima.
+    If Purnima occupies Pradosha on both days, the later day is used.
+    
+    Source:
+    https://www.kamakoti.org/kamakoti/dharmasindhu/bookview.php?chapnum=13
     """
-    rule_records = records_for_rule(records, rule)
-    morning_candidates = []
-    for record in rule_records:
-        sunrise_jd, sunset_jd = record[5:7]
-        if tithi_overlap_hours(
-            sunrise_jd,
-            sunrise_jd + (sunset_jd - sunrise_jd) / 2,
-            16,
-        ) > 0:
-            morning_candidates.append((record[0], 1))
-    if morning_candidates:
-        return [
-            group[0][0]
-            for group in group_consecutive_candidates(morning_candidates)
-        ]
+    candidates = []
+    for record in records_for_rule(records, rule):
+        civil_date, _, _, _, _, _, sunset_jd = record
+        overlap = tithi_overlap_hours(
+            sunset_jd,
+            sunset_jd + PRADOSHA_HOURS / 24,
+            15,
+        )
+        if overlap > 0:
+            candidates.append((civil_date, overlap))
 
-    daytime_candidates = [
-        (record[0], 1)
-        for record in rule_records
-        if tithi_overlap_hours(record[5], record[6], 16) > 0
-    ]
-    return [
-        group[0][0]
-        for group in group_consecutive_candidates(daytime_candidates)
-    ]
+    selected = []
+    for group in group_consecutive_candidates(candidates):
+        qualified = [
+            candidate
+            for candidate in group
+            if candidate[1] >= ONE_GHATI_HOURS
+        ]
+        selected.append((qualified or group)[-1][0])
+    return selected
 
 
 def select_maha_shivaratri_dates(records, rule):
@@ -2014,8 +2007,8 @@ def resolve_festivals(months, month_data):
             matches = select_vasanta_panchami_dates(records, rule)
         elif rule.number == RATHA_SAPTAMI_NUMBER:
             matches = select_ratha_saptami_dates(records, rule)
-        elif rule.number == HOLI_NUMBER:
-            matches = select_holi_dates(records, rule)
+        elif rule.number == HOLIKA_DAHANA_NUMBER:
+            matches = select_holika_dahana_dates(records, rule)
         elif rule.number == MAHA_SHIVARATRI_NUMBER:
             matches = select_maha_shivaratri_dates(records, rule)
         elif rule.number == DHANA_TRAYODASHI_NUMBER:
