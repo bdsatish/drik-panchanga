@@ -924,6 +924,66 @@ def select_janmashtami_dates(records, rule):
     return selected
 
 
+def select_smarta_janmashtami_dates(records, rule):
+    """Resolve Dharma Sindhu Janmashtami at Nishitha.
+
+    Nishitha is the eighth muhurta of the local night. A sole Nishitha-
+    vyapini Ashtami is used; if Ashtami occupies both Nishithas, or neither,
+    the later day is used. Rohini joined to Ashtami at Nishitha is preferred
+    when available. Monday and Wednesday add merit but do not change dates.
+    This is Dharma Sindhu Janmashtami, not a Gaudiya rule or either
+    Sri-Vaishnava Sri-Jayanthi reckoning.
+
+    Sources:
+    https://www.transliteral.org/pages/z80421220129/view
+    https://www.transliteral.org/pages/z80421220717/view
+    https://www.transliteral.org/pages/z80421221115/view
+    """
+    rule_records = records_for_rule(records, rule)
+    by_date = {record[0]: record for record in records}
+    nishitha_candidates = []
+    rohini_candidates = []
+    for record in rule_records:
+        next_record = by_date.get(record[0] + timedelta(days=1))
+        if next_record is None:
+            continue
+        night_length = next_record[5] - record[6]
+        nishitha_start = record[6] + night_length * 7 / 15
+        nishitha_end = record[6] + night_length * 8 / 15
+        overlap = tithi_overlap_hours(
+            nishitha_start,
+            nishitha_end,
+            23,
+        )
+        if overlap > 0:
+            candidate = (record[0], overlap)
+            nishitha_candidates.append(candidate)
+            if has_tithi_nakshatra(
+                nishitha_start,
+                nishitha_end,
+                23,
+                4,
+            ):
+                rohini_candidates.append(candidate)
+
+    candidates = rohini_candidates or nishitha_candidates
+    if candidates:
+        return [
+            group[-1][0]
+            for group in group_consecutive_candidates(candidates)
+        ]
+
+    daytime_candidates = [
+        (record[0], 1)
+        for record in rule_records
+        if tithi_overlap_hours(record[5], record[6], 23) > 0
+    ]
+    return [
+        group[-1][0]
+        for group in group_consecutive_candidates(daytime_candidates)
+    ]
+
+
 def select_vijaya_dasami_dates(records, rule):
     """Resolve Aparahna-vyapini Vijaya Dashami with Shravana exceptions.
 

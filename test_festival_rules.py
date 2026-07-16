@@ -28,6 +28,7 @@ from festival_rules import (
     select_vijaya_dasami_dates,
     select_dhanteras_dates,
     select_makara_sankranti_dates,
+    select_smarta_janmashtami_dates,
 )
 
 
@@ -497,6 +498,42 @@ class JanmashtamiRuleTests(unittest.TestCase):
         ):
             self.assertEqual(
                 select_janmashtami_dates(self.records, self.rule),
+                [date(2030, 9, 1)],
+            )
+
+
+class SmartaJanmashtamiRuleTests(unittest.TestCase):
+    rule = festival_rule("Janmashtami")
+    records = [
+        (date(2030, 8, 31), "K7", "5", False, 1.0, 9.0, 9.5),
+        (date(2030, 9, 1), "K8", "5", False, 1.0, 10.0, 10.5),
+        (date(2030, 9, 2), "K8", "5", False, 1.0, 11.0, 11.5),
+        (date(2030, 9, 3), "K9", "5", False, 1.0, 12.0, 12.5),
+    ]
+
+    def test_two_nishitha_ashtamis_use_later_day(self):
+        with patch(
+            "festival_rules.tithi_overlap_hours",
+            side_effect=[0.0, 1.0, 1.0, 0.0],
+        ), patch(
+            "festival_rules.has_tithi_nakshatra",
+            side_effect=[False, False],
+        ):
+            self.assertEqual(
+                select_smarta_janmashtami_dates(self.records, self.rule),
+                [date(2030, 9, 2)],
+            )
+
+    def test_nishitha_rohini_yoga_has_priority(self):
+        with patch(
+            "festival_rules.tithi_overlap_hours",
+            side_effect=[0.0, 1.0, 1.0, 0.0],
+        ), patch(
+            "festival_rules.has_tithi_nakshatra",
+            side_effect=[True, False],
+        ):
+            self.assertEqual(
+                select_smarta_janmashtami_dates(self.records, self.rule),
                 [date(2030, 9, 1)],
             )
 
