@@ -26,6 +26,7 @@ from festival_rules import (
     select_ugadi_dates,
     select_vasavi_atmarpana_dates,
     select_vasavi_jayanti_dates,
+    select_varamahalakshmi_dates,
     select_vaikuntha_ekadashi_dates,
     select_vasanta_panchami_dates,
     select_vijaya_dasami_dates,
@@ -154,8 +155,8 @@ class RuleStatusTests(unittest.TestCase):
         self.assertEqual(rule.status, "generic-udaya")
         self.assertIsNone(rule.source)
 
-    def test_varamahalakshmi_is_not_attributed_to_dharma_sindhu(self):
-        self.assertEqual(VARAMAHALAKSHMI_RULE.status, "unresolved")
+    def test_varamahalakshmi_uses_ttd_regional_rule(self):
+        self.assertEqual(VARAMAHALAKSHMI_RULE.status, "regional")
         self.assertIsNone(VARAMAHALAKSHMI_RULE.source)
 
     def test_ayudha_puja_is_documented_as_a_regional_rule(self):
@@ -348,6 +349,55 @@ class GitaJayantiRuleTests(unittest.TestCase):
             self.assertEqual(
                 select_gita_jayanti_dates(records, self.rule),
                 [date(2030, 12, 4)],
+            )
+
+
+class VaramahalakshmiRuleTests(unittest.TestCase):
+    def test_uses_immediately_preceding_friday(self):
+        records = [
+            record(date(2030, 8, 9), "S14", masa="5"),
+            record(date(2030, 8, 10), "S15", masa="5"),
+            record(date(2030, 8, 11), "K1", masa="5"),
+        ]
+        self.assertEqual(
+            select_varamahalakshmi_dates(records),
+            [date(2030, 8, 9)],
+        )
+
+    def test_friday_purnima_moves_seven_days_earlier(self):
+        records = [
+            record(date(2030, 8, 15), "S14", masa="5"),
+            record(date(2030, 8, 16), "S15", masa="5"),
+            record(date(2030, 8, 17), "K1", masa="5"),
+        ]
+        self.assertEqual(
+            select_varamahalakshmi_dates(records),
+            [date(2030, 8, 9)],
+        )
+
+    def test_vriddhi_purnima_uses_first_sunrise_as_anchor(self):
+        records = [
+            record(date(2030, 8, 8), "S14", masa="5"),
+            record(date(2030, 8, 9), "S15", masa="5"),
+            record(date(2030, 8, 10), "S15", masa="5"),
+        ]
+        self.assertEqual(
+            select_varamahalakshmi_dates(records),
+            [date(2030, 8, 2)],
+        )
+
+    def test_kshaya_purnima_uses_containing_day_as_anchor(self):
+        records = [
+            record(date(2030, 8, 10), "S14", masa="5"),
+            record(date(2030, 8, 11), "K1", masa="6"),
+        ]
+        with patch(
+            "festival_rules.tithi_intervals",
+            return_value=[(0.1, 0.9)],
+        ):
+            self.assertEqual(
+                select_varamahalakshmi_dates(records),
+                [date(2030, 8, 9)],
             )
 
 

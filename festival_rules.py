@@ -271,14 +271,20 @@ FESTIVAL_RULES = (
 
 )
 
-# The popular Friday-before-Sravana-Purnima rule was not found in Dharma
-# Sindhu. Preserve it provisionally, but keep its provenance unresolved.
+# This regional rule was not found in Dharma Sindhu. TTD and Sringeri
+# calendars move the vrata seven days earlier when Shravana Purnima itself
+# is Friday; SRS Mutt and Drik Panchang instead use that Purnima Friday.
+# Prefer the user's TTD convention: the last Friday strictly BEFORE the
+# amanta, non-adhika Shravana Purnima, independently of Upakarma deferrals.
+# E.g. In 2026, Sarvana-S15 is Friday Aug 28. It overlaps with Yajur Upakarma
+# so, husband/wife would be both burdened. Moving it to Aug 21 reduces
+# workload and practically makes sense. TTD and Sringeri calendars do so.
 VARAMAHALAKSHMI_RULE = FestivalRule(
     8,
     "Varamahalakshmi Vrata",
     5,
-    "Friday before S15",
-    "unresolved",
+    "Last Friday strictly before S15",
+    "regional",
 )
 VARAMAHALAKSHMI_NUMBER = VARAMAHALAKSHMI_RULE.number
 VARAMAHALAKSHMI_NAME = VARAMAHALAKSHMI_RULE.name
@@ -1758,6 +1764,44 @@ def select_udaya_vyapini_dates(records, rule, tithi_number):
     return []
 
 
+def select_varamahalakshmi_dates(records):
+    """Select the last Friday strictly before amanta Shravana Purnima."""
+    shravana_records = sorted(
+        record
+        for record in records
+        if record[2] == "5" and not record[3]
+    )
+    purnima_candidates = [
+        (record[0], record[4])
+        for record in shravana_records
+        if record[1] == "S15"
+    ]
+    anchors = [
+        group[0][0]
+        for group in group_consecutive_candidates(purnima_candidates)
+    ]
+
+    if not anchors:
+        records_by_date = {record[0]: record for record in records}
+        for record in shravana_records:
+            following_record = records_by_date.get(
+                record[0] + timedelta(days=1)
+            )
+            if following_record is None:
+                continue
+            if tithi_intervals(record[5], following_record[5], 15):
+                anchors.append(record[0])
+                break
+
+    selected = []
+    for purnima_date in anchors:
+        vrata_date = purnima_date - timedelta(days=1)
+        while vrata_date.weekday() != calendar.FRIDAY:
+            vrata_date -= timedelta(days=1)
+        selected.append(vrata_date)
+    return selected
+
+
 def select_ayudha_puja_dates(records, rule):
     """Select shuddha Ashvina S9 by the South Indian sunrise convention.
 
@@ -2440,13 +2484,9 @@ def resolve_festivals(months, month_data):
         dates_by_number[rule.number] = matches
         names_by_number[rule.number] = rule.name
 
-    vrata_dates = []
-    for sravana_purnima_date in dates_by_number[YAJUR_UPAKARMA_NUMBER]:
-        vrata_date = sravana_purnima_date - timedelta(days=1)
-        while vrata_date.weekday() != calendar.FRIDAY:
-            vrata_date -= timedelta(days=1)
-        vrata_dates.append(vrata_date)
-    dates_by_number[VARAMAHALAKSHMI_NUMBER] = sorted(set(vrata_dates))
+    dates_by_number[VARAMAHALAKSHMI_NUMBER] = (
+        select_varamahalakshmi_dates(records)
+    )
     names_by_number[VARAMAHALAKSHMI_NUMBER] = VARAMAHALAKSHMI_NAME
 
     numbers_by_date = {}
