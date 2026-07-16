@@ -26,6 +26,7 @@ from festival_rules import (
     select_vaikuntha_ekadashi_dates,
     select_vasanta_panchami_dates,
     select_vijaya_dasami_dates,
+    select_dhanteras_dates,
 )
 
 
@@ -880,6 +881,35 @@ class MahaShivaratriRuleTests(unittest.TestCase):
             self.assertEqual(
                 select_maha_shivaratri_dates(self.records, self.rule),
                 [date(2030, 3, 5)],
+            )
+
+
+class DhanterasRuleTests(unittest.TestCase):
+    rule = festival_rule("Dhanteras")
+    records = [
+        (date(2030, 11, 5), "K12", "7", False, 1.0, 10.0, 10.5),
+        (date(2030, 11, 6), "K13", "7", False, 1.0, 11.0, 11.5),
+        (date(2030, 11, 7), "K13", "7", False, 1.0, 12.0, 12.5),
+    ]
+
+    def test_two_pradoshas_use_later_day(self):
+        with patch(
+            "festival_rules.tithi_overlap_hours",
+            side_effect=[0.0, 1.0, 1.0],
+        ):
+            self.assertEqual(
+                select_dhanteras_dates(self.records, self.rule),
+                [date(2030, 11, 7)],
+            )
+
+    def test_one_pradosha_uses_that_day(self):
+        with patch(
+            "festival_rules.tithi_overlap_hours",
+            side_effect=[0.0, 1.0, 0.0],
+        ):
+            self.assertEqual(
+                select_dhanteras_dates(self.records, self.rule),
+                [date(2030, 11, 6)],
             )
 
 

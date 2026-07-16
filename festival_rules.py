@@ -196,6 +196,14 @@ FESTIVAL_RULES = (
         "dharmasindhu",
         "https://www.transliteral.org/pages/z80505120438/view",
     ),
+    FestivalRule(
+        29,
+        "Dhanteras",
+        7,
+        "K13",
+        "dharmasindhu",
+        "https://nepaljyotish.org/en/blog/dharmasindhu-vrata-nirnaya/",
+    ),
 )
 
 # The popular Friday-before-Sravana-Purnima rule was not found in Dharma
@@ -231,6 +239,7 @@ VAIKUNTHA_EKADASHI_NUMBER = 22
 VASANTA_PANCHAMI_NUMBER = 24
 RATHA_SAPTAMI_NUMBER = 25
 HOLI_NUMBER = 28
+DHANTERAS_NUMBER = 29
 MAHA_SHIVARATRI_NUMBER = 27
 ONE_GHATI_HOURS = 24 / 60
 SIX_GHATI_HOURS = 6 * ONE_GHATI_HOURS
@@ -1621,6 +1630,39 @@ def select_naraka_caturdasi_dates(records, rule):
     return selected
 
 
+def select_dhanteras_dates(records, rule):
+    """Apply Dharma Sindhu's Pradosha-vyapini Trayodashi rule for Dhanteras.
+
+    Dhanteras is assigned to the local evening on which Krishna Trayodashi
+    occupies at least one ghati of Pradosha. When both consecutive evenings
+    qualify, the later date is selected; when only the earlier evening
+    qualifies, that date is retained.
+
+    Sources:
+    https://nepaljyotish.org/en/blog/dharmasindhu-vrata-nirnaya/
+    """
+    candidates = []
+    for record in records_for_rule(records, rule):
+        civil_date, _, _, _, _, _, sunset_jd = record
+        overlap = tithi_overlap_hours(
+            sunset_jd,
+            sunset_jd + PRADOSHA_HOURS / 24,
+            28, # K13
+        )
+        if overlap > 0:
+            candidates.append((civil_date, overlap))
+
+    selected = []
+    for group in group_consecutive_candidates(candidates):
+        qualified = [
+            candidate
+            for candidate in group
+            if candidate[1] >= ONE_GHATI_HOURS
+        ]
+        selected.append((qualified or group)[-1][0])
+    return selected
+
+
 def select_dipavali_dates(records, rule):
     """Apply Dharma Sindhu's Pradosha-vyapini Amavasya rule.
 
@@ -1730,6 +1772,8 @@ def resolve_festivals(months, month_data):
             matches = select_holi_dates(records, rule)
         elif rule.number == MAHA_SHIVARATRI_NUMBER:
             matches = select_maha_shivaratri_dates(records, rule)
+        elif rule.number == DHANTERAS_NUMBER:
+            matches = select_dhanteras_dates(records, rule)
         elif rule.tithi == "S1":
             matches = []
             for index, (
