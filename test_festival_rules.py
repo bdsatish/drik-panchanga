@@ -31,6 +31,7 @@ from festival_rules import (
     select_makara_sankranti_dates,
     select_smarta_janmashtami_dates,
     select_dhanvantari_jayanti_dates,
+    select_durga_ashtami_puja_dates,
     select_mahalaya_amavasya_dates,
     select_mahanavami_puja_dates,
     select_naraka_chaturdashi_dates,
@@ -1296,6 +1297,116 @@ class MahalayaAmavasyaRuleTests(unittest.TestCase):
             self.assertEqual(
                 select_mahalaya_amavasya_dates(self.records, self.rule),
                 [date(2030, 9, 27)],
+            )
+
+
+class DurgaAshtamiPujaRuleTests(unittest.TestCase):
+    rule = festival_rule("Durga Ashtami (Puja)")
+
+    def test_navami_yukta_ashtami_with_one_ghati_uses_later_day(self):
+        records = [
+            (date(2030, 10, 4), "S7", "7", False, 1.0, 10.0, 10.5),
+            (date(2030, 10, 5), "S8", "7", False, 1.0, 11.0, 11.5),
+            (date(2030, 10, 6), "S9", "7", False, 1.0, 12.0, 12.5),
+            (date(2030, 10, 7), "S10", "7", False, 1.0, 13.0, 13.5),
+        ]
+        with (
+            patch(
+                "festival_rules.tithi_intervals",
+                side_effect=[
+                    [(10.8, 11.0)],
+                    [(11.0, 11.5)],
+                    [],
+                ],
+            ),
+            patch(
+                "festival_rules.tithi_number_at",
+                return_value=8,
+            ),
+        ):
+            self.assertEqual(
+                select_durga_ashtami_puja_dates(records, self.rule),
+                [date(2030, 10, 5)],
+            )
+
+    def test_short_later_ashtami_uses_saptami_yukta_day(self):
+        records = [
+            (date(2030, 10, 4), "S7", "7", False, 1.0, 10.0, 10.5),
+            (date(2030, 10, 5), "S8", "7", False, 0.2, 11.0, 11.5),
+            (date(2030, 10, 6), "S9", "7", False, 1.0, 12.0, 12.5),
+        ]
+        with (
+            patch(
+                "festival_rules.tithi_intervals",
+                side_effect=[
+                    [(10.8, 11.0)],
+                    [(11.0, 11.01)],
+                ],
+            ),
+            patch(
+                "festival_rules.tithi_number_at",
+                return_value=9,
+            ),
+        ):
+            self.assertEqual(
+                select_durga_ashtami_puja_dates(records, self.rule),
+                [date(2030, 10, 4)],
+            )
+
+    def test_complete_ashtami_uses_full_previous_day(self):
+        records = [
+            (date(2030, 10, 4), "S7", "7", False, 1.0, 10.0, 10.5),
+            (date(2030, 10, 5), "S8", "7", False, 24.0, 11.0, 11.5),
+            (date(2030, 10, 6), "S8", "7", False, 2.0, 12.0, 12.5),
+            (date(2030, 10, 7), "S9", "7", False, 1.0, 13.0, 13.5),
+        ]
+        with patch(
+            "festival_rules.tithi_intervals",
+            side_effect=[
+                [(10.8, 11.0)],
+                [(11.0, 12.0)],
+                [(12.0, 12.1)],
+            ],
+        ):
+            self.assertEqual(
+                select_durga_ashtami_puja_dates(records, self.rule),
+                [date(2030, 10, 5)],
+            )
+
+    def test_navami_kshaya_uses_saptami_yukta_day(self):
+        records = [
+            (date(2030, 10, 4), "S7", "7", False, 1.0, 10.0, 10.5),
+            (date(2030, 10, 5), "S8", "7", False, 3.0, 11.0, 11.5),
+            (date(2030, 10, 6), "S10", "7", False, 1.0, 12.0, 12.5),
+        ]
+        with patch(
+            "festival_rules.tithi_intervals",
+            side_effect=[
+                [(10.8, 11.0)],
+                [(11.0, 11.3)],
+            ],
+        ):
+            self.assertEqual(
+                select_durga_ashtami_puja_dates(records, self.rule),
+                [date(2030, 10, 4)],
+            )
+
+    def test_ashtami_kshaya_uses_saptami_yukta_day(self):
+        records = [
+            (date(2030, 10, 4), "S7", "7", False, 1.0, 10.0, 10.5),
+            (date(2030, 10, 5), "S9", "7", False, 1.0, 11.0, 11.5),
+            (date(2030, 10, 6), "S10", "7", False, 1.0, 12.0, 12.5),
+        ]
+        with patch(
+            "festival_rules.tithi_intervals",
+            side_effect=[
+                [(10.2, 10.8)],
+                [],
+            ],
+        ):
+            self.assertEqual(
+                select_durga_ashtami_puja_dates(records, self.rule),
+                [date(2030, 10, 4)],
             )
 
 

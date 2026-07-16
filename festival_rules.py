@@ -2084,33 +2084,68 @@ def select_mahalaya_amavasya_dates(records, rule):
 
 
 def select_durga_ashtami_puja_dates(records, rule):
-    """Apply Dharma Sindhu's rule for Durga Ashtami (Puja).
+    """Apply Dharma Sindhu's Maha Ashtami civil-date hierarchy.
 
-    Ashtami joined with Navami is preferred. If Ashtami ends on a day after
-    at least one ghati past sunrise, that day is selected. If it ends before
-    one ghati past sunrise, the previous day is selected (even if Saptami-viddha).
+    A complete sunrise-to-sunrise Ashtami has first priority. Otherwise a
+    Navami-yukta sunrise Ashtami is used only when at least one ghati
+    remains. A shorter remnant, an Ashtami skipped at sunrise, or a
+    following Navami skipped at sunrise sends the festival to the earlier,
+    Saptami-yukta civil date.
+
+    Sources:
+    https://www.transliteral.org/pages/z80501061410/view
+    https://www.transliteral.org/pages/z80504211648/view
     """
-    candidates = []
-    for record in records_for_rule(records, rule):
-        civil_date, _, _, _, _, sunrise_jd, _ = record
-        overlap = tithi_overlap_hours(sunrise_jd, sunrise_jd + 1, 8)
-        if overlap > 0:
-            candidates.append(record)
+    rule_records = sorted(records_for_rule(records, rule))
+    records_by_date = {record[0]: record for record in records}
+    touched_dates = []
+    complete_dates = []
 
-    selected = []
-    for group in group_consecutive_candidates([(r[0], 1) for r in candidates]):
-        group_records = [r for r in candidates if r[0] in [c[0] for c in group]]
-        last_record = group_records[-1]
-        last_sunrise_jd = last_record[5]
-        
-        if tithi_number_at(last_sunrise_jd + ONE_GHATI_HOURS / 24) == 8:
-            selected.append(last_record[0])
-        else:
-            if len(group_records) > 1:
-                selected.append(group_records[-2][0])
-            else:
-                selected.append(group_records[0][0])
-    return selected
+    for record in rule_records:
+        following_record = records_by_date.get(
+            record[0] + timedelta(days=1)
+        )
+        if following_record is None:
+            continue
+        sunrise_jd = record[5]
+        following_sunrise_jd = following_record[5]
+        intervals = tithi_intervals(
+            sunrise_jd,
+            following_sunrise_jd,
+            8,
+        )
+        if not intervals:
+            continue
+        touched_dates.append(record[0])
+        if (
+            intervals[0][0] <= sunrise_jd + 1e-10
+            and intervals[-1][1] >= following_sunrise_jd - 1e-10
+        ):
+            complete_dates.append(record[0])
+
+    if complete_dates:
+        return [complete_dates[0]]
+    if not touched_dates:
+        return []
+
+    if not any(record[1] == "S9" for record in rule_records):
+        return [touched_dates[0]]
+
+    sunrise_candidates = [
+        record for record in rule_records if record[1] == rule.tithi
+    ]
+    if not sunrise_candidates:
+        return [touched_dates[0]]
+
+    later_record = sunrise_candidates[-1]
+    if (
+        tithi_number_at(
+            later_record[5] + ONE_GHATI_HOURS / 24
+        )
+        == 8
+    ):
+        return [later_record[0]]
+    return [touched_dates[0]]
 
 
 def select_durga_ashtami_dates(candidates):
