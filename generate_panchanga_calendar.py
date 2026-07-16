@@ -20,6 +20,8 @@ from festival_rules import (
     resolve_festivals,
     GITA_JAYANTI_NUMBER,
     DHANVANTARI_JAYANTHI_NUMBER,
+    MAHANAVAMI_PUJA_NUMBER,
+    VIJAYA_DASAMI_NUMBER,
 )
 import panchanga
 
@@ -750,7 +752,12 @@ def build_pdf(location, start_year, start_month, output_path):
     )
     
     # Exclude certain festivals from the generated PDF
-    excluded_festivals = {GITA_JAYANTI_NUMBER, DHANVANTARI_JAYANTHI_NUMBER}
+    excluded_festivals = {
+        GITA_JAYANTI_NUMBER, 
+        DHANVANTARI_JAYANTHI_NUMBER,
+        MAHANAVAMI_PUJA_NUMBER,
+        VIJAYA_DASAMI_NUMBER, # This is Vijayadashami (Puja)
+    }
     for civil_date in list(festivals_by_date.keys()):
         festivals_by_date[civil_date] = [
             num for num in festivals_by_date[civil_date] if num not in excluded_festivals

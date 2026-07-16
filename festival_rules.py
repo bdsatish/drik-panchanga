@@ -125,7 +125,7 @@ FESTIVAL_RULES = (
     # Dharma Sindhu's distinct Mahanavami puja/upavasa decision.
     FestivalRule(
         17,
-        "Ayudha puja",
+        "Ayudha Puja (Observance)",
         7,
         "S9",
         "regional",
@@ -136,7 +136,7 @@ FESTIVAL_RULES = (
     ),
     FestivalRule(
         18,
-        "Vijaya dasami",
+        "Vijayadashami (Puja)",
         7,
         "S10",
         "dharmasindhu",
@@ -227,6 +227,21 @@ FESTIVAL_RULES = (
         "K13",
         "regional",
     ),
+    FestivalRule(
+        33,
+        "Mahanavami (Puja)",
+        7,
+        "S9",
+        "dharmasindhu",
+        "https://www.drikpanchang.com/navratri/durga-puja/bengal/maha-navami-date-time.html",
+    ),
+    FestivalRule(
+        34,
+        "Dussehra (Observance)",
+        7,
+        "S10",
+        "regional",
+    ),
 )
 
 # The popular Friday-before-Sravana-Purnima rule was not found in Dharma
@@ -270,6 +285,8 @@ VSN_JAYANTHI_NUMBER = 29
 MAHA_SHIVARATRI_NUMBER = 30
 HOLI_NUMBER = 31
 DHANVANTARI_JAYANTHI_NUMBER = 32
+MAHANAVAMI_PUJA_NUMBER = 33
+DUSSEHRA_OBSERVANCE_NUMBER = 34
 ONE_GHATI_HOURS = 24 / 60
 SIX_GHATI_HOURS = 6 * ONE_GHATI_HOURS
 ARUNODAYA_HOURS = 4 * ONE_GHATI_HOURS
@@ -1691,6 +1708,56 @@ def select_ayudha_puja_dates(records, rule):
     ]
 
 
+def select_mahanavami_puja_dates(records, rule):
+    """Apply Dharma Sindhu's Purva-viddha rule for Mahanavami.
+
+    If Navami prevails for at least three muhurtas before sunset on the
+    previous day (Ashtami), Mahanavami is observed on that previous day.
+    Otherwise, it is observed on the day Navami is present at sunrise.
+    """
+    rule_records = records_for_rule(records, rule)
+    
+    candidates = []
+    for record in rule_records:
+        civil_date, day_tithi, _, _, _, sunrise_jd, sunset_jd = record
+        
+        overlap = tithi_overlap_hours(sunrise_jd, sunset_jd, 9)
+        if overlap > 0:
+            day_length = sunset_jd - sunrise_jd
+            three_muhurtas = 3 * (day_length / 15)
+            
+            # Score 2: Navami is active 3 muhurtas before sunset
+            if tithi_number_at(sunset_jd - three_muhurtas + 1e-5) == 9:
+                candidates.append((civil_date, 2))
+            # Score 1: Navami is at sunrise
+            elif day_tithi == rule.tithi:
+                candidates.append((civil_date, 1))
+            # Score 0: Navami is just present (e.g. Kshaya starting late)
+            else:
+                candidates.append((civil_date, 0))
+                
+    selected = []
+    for group in group_consecutive_candidates(candidates):
+        max_score = max(c[1] for c in group)
+        best_date = next(c[0] for c in group if c[1] == max_score)
+        selected.append(best_date)
+        
+    return selected
+
+
+def select_dussehra_observance_dates(records, rule):
+    """Select Udaya-vyapini Dashami for public observance."""
+    sunrise_candidates = [
+        (record[0], record[4])
+        for record in records_for_rule(records, rule)
+        if record[1] == rule.tithi
+    ]
+    return [
+        group[0][0]
+        for group in group_consecutive_candidates(sunrise_candidates)
+    ]
+
+
 def select_naraka_chaturdashi_dates(records, rule):
     """Select K14 during Arunodaya for the South Indian pre-dawn observance.
 
@@ -1959,6 +2026,10 @@ def resolve_festivals(months, month_data):
             matches = select_dhanvantari_jayanthi_dates(records, rule)
         elif rule.number == MAHALAYA_AMAVASYA_NUMBER:
             matches = select_mahalaya_amavasya_dates(records, rule)
+        elif rule.number == MAHANAVAMI_PUJA_NUMBER:
+            matches = select_mahanavami_puja_dates(records, rule)
+        elif rule.number == DUSSEHRA_OBSERVANCE_NUMBER:
+            matches = select_dussehra_observance_dates(records, rule)
         elif rule.tithi == "S1":
             matches = []
             for index, (
