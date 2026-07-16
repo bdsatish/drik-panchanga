@@ -334,11 +334,16 @@ def sunset(jd, place):
 
 def moonrise(jd, place):
   """Moonrise when centre of disc is at horizon for given date and place"""
+  rise = moonrise_jd(jd, place)
+  return to_dms((rise - jd) * 24)
+
+def moonrise_jd(jd, place):
+  """Local Julian day of the first moonrise after local midnight."""
   lat, lon, tz = place
   result = swe.rise_trans(jd - tz/24, swe.MOON, geopos = (lon, lat, 0), rsmi = _rise_flags + swe.CALC_RISE)
   rise = result[1][0]  # julian-day number
   # Convert to local time
-  return to_dms((rise - jd) * 24 + tz)
+  return rise + tz/24.
 
 def moonset(jd, place):
   """Moonset when centre of disc is at horizon for given date and place"""

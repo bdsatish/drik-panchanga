@@ -278,6 +278,13 @@ def daily_values(year, month, location):
             sunset_jd = sunset_result[0]
             if not jd - 1 <= sunset_jd <= jd + 2:
                 raise RuntimeError("no local sunset")
+            try:
+                moonrise_jd = panchanga.moonrise_jd(jd, place)
+                if not jd - 1 <= moonrise_jd <= jd + 2:
+                    moonrise_jd = None
+            except Exception:
+                # At high latitudes the Moon might not rise on a civil date.
+                moonrise_jd = None
             tithi_result = panchanga.tithi(jd, place)
             tithi_number = tithi_result[0]
             tithi_hours_after_sunrise = (
@@ -303,6 +310,11 @@ def daily_values(year, month, location):
                 sunrise_jd - place.timezone / 24,
                 sunset_jd - place.timezone / 24,
                 yoga_number,
+                (
+                    moonrise_jd - place.timezone / 24
+                    if moonrise_jd is not None
+                    else None
+                ),
             )
         )
     return result
@@ -323,6 +335,7 @@ def mark_masa_starts(months, month_data):
             _,
             _,
             yoga,
+            _moonrise,
         ) in month_data[(year, month)]:
             is_masa_start = masa != previous_masa
             marked_values.append(

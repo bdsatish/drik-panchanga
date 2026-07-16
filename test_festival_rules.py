@@ -32,6 +32,7 @@ from festival_rules import (
     select_dhanvantari_jayanti_dates,
     select_mahalaya_amavasya_dates,
     select_mahanavami_puja_dates,
+    select_naraka_chaturdashi_dates,
     select_dasara_dates,
     select_kama_dahana_dates,
 )
@@ -953,6 +954,96 @@ class DhanaTrayodashiRuleTests(unittest.TestCase):
             self.assertEqual(
                 select_dhana_trayodashi_dates(self.records, self.rule),
                 [date(2030, 11, 6)],
+            )
+
+
+class NarakaChaturdashiRuleTests(unittest.TestCase):
+    rule = festival_rule("Naraka Chaturdashi")
+    records = [
+        (date(2030, 11, 6), "K13", "7", False, 1.0, 10.0, 10.5),
+        (date(2030, 11, 7), "K14", "7", False, 1.0, 11.0, 11.5),
+        (date(2030, 11, 8), "K15", "7", False, 1.0, 12.0, 12.5),
+    ]
+    moonrises = {
+        date(2030, 11, 6): 9.8,
+        date(2030, 11, 7): 10.8,
+        date(2030, 11, 8): 11.8,
+    }
+
+    def test_two_moonrise_vyapini_dates_use_earlier_day(self):
+        with patch(
+            "festival_rules.tithi_number_at",
+            side_effect=[29, 29, 30],
+        ):
+            self.assertEqual(
+                select_naraka_chaturdashi_dates(
+                    self.records,
+                    self.rule,
+                    self.moonrises,
+                ),
+                [date(2030, 11, 6)],
+            )
+
+    def test_only_later_moonrise_vyapini_uses_later_day(self):
+        with patch(
+            "festival_rules.tithi_number_at",
+            side_effect=[28, 29, 30],
+        ):
+            self.assertEqual(
+                select_naraka_chaturdashi_dates(
+                    self.records,
+                    self.rule,
+                    self.moonrises,
+                ),
+                [date(2030, 11, 7)],
+            )
+
+    def test_neither_moonrise_uses_actual_predawn_chaturdashi(self):
+        with (
+            patch(
+                "festival_rules.tithi_number_at",
+                side_effect=[28, 30, 30],
+            ),
+            patch(
+                "festival_rules.tithi_intervals",
+                return_value=[(9.9, 10.7)],
+            ),
+            patch(
+                "festival_rules.tithi_overlap_hours",
+                return_value=0.1,
+            ),
+        ):
+            self.assertEqual(
+                select_naraka_chaturdashi_dates(
+                    self.records,
+                    self.rule,
+                    self.moonrises,
+                ),
+                [date(2030, 11, 6)],
+            )
+
+    def test_neither_moonrise_without_predawn_overlap_uses_later_day(self):
+        with (
+            patch(
+                "festival_rules.tithi_number_at",
+                side_effect=[28, 30, 30],
+            ),
+            patch(
+                "festival_rules.tithi_intervals",
+                return_value=[(10.1, 10.7)],
+            ),
+            patch(
+                "festival_rules.tithi_overlap_hours",
+                return_value=0.0,
+            ),
+        ):
+            self.assertEqual(
+                select_naraka_chaturdashi_dates(
+                    self.records,
+                    self.rule,
+                    self.moonrises,
+                ),
+                [date(2030, 11, 7)],
             )
 
 

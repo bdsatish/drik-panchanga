@@ -1364,6 +1364,7 @@ def collect_records(months, month_data):
             sunrise_jd,
             sunset_jd,
             _yoga,
+            _moonrise_jd,
         ) in month_data[(year, month)]:
             records.append(
                 (
@@ -1377,6 +1378,15 @@ def collect_records(months, month_data):
                 )
             )
     return records
+
+
+def collect_moonrise_jds(months, month_data):
+    """Map civil dates to the first local moonrise, expressed as UTC JD."""
+    return {
+        CivilDate(year, month, values[0]): values[9]
+        for year, month in months
+        for values in month_data[(year, month)]
+    }
 
 
 def tithi_intervals(start_jd, end_jd, target_tithi):
@@ -1749,32 +1759,81 @@ def select_dasara_dates(records, rule):
     ]
 
 
-def select_naraka_chaturdashi_dates(records, rule):
-    """Select K14 during Arunodaya for the South Indian pre-dawn observance.
+def select_naraka_chaturdashi_dates(records, rule, moonrise_jds=None):
+    """Select Dharma Sindhu's moonrise-vyapini Naraka Chaturdashi.
 
-    Arunodaya is the four-ghati (96-minute) period before local sunrise.
-    If K14 touches Arunodaya on two successive dates, the date with greater
-    K14 coverage of the ritual window is selected.
+    The principal bath is after the pre-dawn moonrise. If Caturdashi
+    occupies both successive moonrises, the earlier civil date is used.
+    When it occupies neither, a Caturdashi portion between the first
+    moonrise and sunrise belongs to the earlier date; otherwise the bath
+    belongs to the later moonrise, even if Amavasya then prevails.
+
+    If a physical moonrise is unavailable, the prescribed secondary
+    pre-sunrise and morning periods provide a location-safe fallback.
 
     Sources:
-    https://www.kamakoti.org/kamakoti/dharmasindhu/bookview.php?chapnum=8
-    https://www.drikpanchang.com/diwali/naraka-chaturdashi/info/naraka-chaturdashi.html
+    https://www.transliteral.org/pages/z80505062049/view
+    https://archive.org/details/in.ernet.dli.2015.383127/page/n193/mode/2up
     """
-    candidates = []
-    for record in records_for_rule(records, rule):
-        civil_date, _, _, _, _, sunrise_jd, _ = record
+    rule_records = sorted(records_for_rule(records, rule))
+    moonrise_jds = moonrise_jds or {}
+    moonrise_records = [
+        (record, moonrise_jds.get(record[0]))
+        for record in rule_records
+        if moonrise_jds.get(record[0]) is not None
+    ]
+
+    moonrise_candidates = [
+        (record[0], 1)
+        for record, moonrise_jd in moonrise_records
+        if tithi_number_at(moonrise_jd) == 29
+    ]
+    if moonrise_candidates:
+        return [
+            group[0][0]
+            for group in group_consecutive_candidates(moonrise_candidates)
+        ]
+
+    records_by_date = {record[0]: record for record in rule_records}
+    for record, first_moonrise_jd in moonrise_records:
+        following_date = record[0] + timedelta(days=1)
+        following_record = records_by_date.get(following_date)
+        following_moonrise_jd = moonrise_jds.get(following_date)
+        if following_record is None or following_moonrise_jd is None:
+            continue
+        if not tithi_intervals(first_moonrise_jd, following_moonrise_jd, 29):
+            continue
+
+        sunrise_jd = record[5]
+        if (
+            first_moonrise_jd < sunrise_jd
+            and tithi_overlap_hours(first_moonrise_jd, sunrise_jd, 29) > 0
+        ):
+            return [record[0]]
+        return [following_date]
+
+    secondary_candidates = []
+    for record in rule_records:
+        sunrise_jd = record[5]
         overlap = tithi_overlap_hours(
             sunrise_jd - ARUNODAYA_HOURS / 24,
             sunrise_jd,
             29,
         )
         if overlap > 0:
-            candidates.append((civil_date, overlap))
+            secondary_candidates.append((record[0], overlap))
+    if secondary_candidates:
+        return [
+            group[0][0]
+            for group in group_consecutive_candidates(secondary_candidates)
+        ]
 
-    selected = []
-    for group in group_consecutive_candidates(candidates):
-        selected.append(max(group, key=lambda candidate: candidate[1])[0])
-    return selected
+    morning_candidates = [
+        record[0]
+        for record in rule_records
+        if tithi_overlap_hours(record[5], record[6], 29) > 0
+    ]
+    return morning_candidates[:1]
 
 
 def select_dhana_trayodashi_dates(records, rule):
@@ -1994,9 +2053,11 @@ def resolve_festivals(months, month_data):
 
     Each raw daily record is:
     day, tithi, nakshatra, masa, is_adhika, tithi-hours-after-sunrise,
-    sunrise UTC Julian day, sunset UTC Julian day, yoga.
+    sunrise UTC Julian day, sunset UTC Julian day, yoga,
+    moonrise UTC Julian day.
     """
     records = collect_records(months, month_data)
+    moonrise_jds = collect_moonrise_jds(months, month_data)
 
     dates_by_number = {}
     names_by_number = {}
@@ -2116,7 +2177,11 @@ def resolve_festivals(months, month_data):
         elif rule.number == AYUDHA_PUJA_NUMBER:
             matches = select_ayudha_puja_dates(records, rule)
         elif rule.number == NARAKA_CHATURDASHI_NUMBER:
-            matches = select_naraka_chaturdashi_dates(records, rule)
+            matches = select_naraka_chaturdashi_dates(
+                records,
+                rule,
+                moonrise_jds,
+            )
         elif rule.number == DEEPAVALI_NUMBER:
             matches = select_deepavali_dates(records, rule)
         else:
