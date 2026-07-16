@@ -127,6 +127,24 @@ environment and install `pyswisseph`, ReportLab, and their dependencies:
 source .venv/bin/activate
 ```
 
+Swiss Ephemeris needs the `.se1` data files. By default `setup_venv.sh`
+and `panchanga.py` use a per-user data directory:
+
+- Linux / macOS: `~/.local/share/swisseph` (or `$XDG_DATA_HOME/swisseph`)
+- Windows: `%LOCALAPPDATA%\swisseph`
+
+If that directory has no `.se1` files, setup asks before sparse-cloning
+~100 MB from
+[aloistr/swisseph](https://github.com/aloistr/swisseph/tree/master/ephe).
+Declining is fine — setup still finishes — but planetary calculations will
+fail or use the coarser Moshier fallback until the files are present. The
+venv exports `SE_EPHE_PATH` on activate. To use an existing copy:
+
+```
+SE_EPHE_PATH=/path/to/ephemeris/files ./setup_venv.sh
+source .venv/bin/activate
+```
+
 Select a city and the first month of the 13-month range:
 
 ```

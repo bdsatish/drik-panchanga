@@ -29,6 +29,8 @@ Use Swiss ephemeris to calculate tithi, nakshatra, etc.
 from __future__ import division
 from math import ceil
 from collections import namedtuple as struct
+import os
+import sys
 import swisseph as swe
 
 # ------- Global options ----------
@@ -37,6 +39,26 @@ coordinate_flag = swe.FLG_SIDEREAL
 nakshatra_system = 'equal'
 chosen_ayanamsa = 'Lahiri'
 # ---------
+
+def default_se_ephe_path():
+  """User-writable directory for Swiss Ephemeris .se1 files.
+
+  Not the same as pyswisseph's compile-time defaults (C:\\sweph\\ephe on
+  Windows, /usr/share/swisseph on Unix). This is where setup_venv.sh stores
+  a downloaded copy:
+
+  - Windows: %LOCALAPPDATA%\\swisseph
+  - Unix/macOS: $XDG_DATA_HOME/swisseph or ~/.local/share/swisseph
+  """
+  if sys.platform == 'win32':
+    base = os.environ.get('LOCALAPPDATA')
+    if not base:
+      base = os.path.join(os.path.expanduser('~'), 'AppData', 'Local')
+    return os.path.join(base, 'swisseph')
+  base = os.environ.get('XDG_DATA_HOME')
+  if not base:
+    base = os.path.join(os.path.expanduser('~'), '.local', 'share')
+  return os.path.join(base, 'swisseph')
 
 Date = struct('Date', ['year', 'month', 'day'])
 Place = struct('Place', ['latitude', 'longitude', 'timezone'])
@@ -166,8 +188,9 @@ norm360 = lambda angle: angle % 360
 # i.e if Rahu is in Pisces, Ketu is in Virgo etc
 ketu = lambda rahu: (rahu + 180) % 360
 
-# Set env variable SE_EPHE_PATH to /usr/share/libswe/ephe
-swe.set_ephe_path('/usr/share/libswe/ephe')
+# Ephemeris .se1 files: SE_EPHE_PATH, else platform user-data dir (see
+# default_se_ephe_path).
+swe.set_ephe_path(os.environ.get('SE_EPHE_PATH') or default_se_ephe_path())
 init_swisseph = lambda: None
 
 def function(point):
