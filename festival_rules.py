@@ -343,14 +343,28 @@ VSN_JAYANTI_NUMBER = 32
 MAHA_SHIVARATRI_NUMBER = 33
 KAMA_DAHANA_NUMBER = 34
 DHANVANTARI_JAYANTI_NUMBER = 35
+PRATAH_KALA = "pratah"
+SANGAVA_KALA = "sangava"
 PURVAHNA_KALA = "purvahna"
 MADHYAHNA_KALA = "madhyahna"
 APARAHNA_KALA = "aparahna"
-SUNSET_KALA = "sunset"
 SAYAHNA_KALA = "sayahna"
-RATRI_KALA = "ratri"
-PURVODAYA_KALA = "purvodaya"
+SUNSET_KALA = "sunset"
+PRADOSHA_KALA = "pradosha"
+PURVARATRI_KALA = "purvaratri"
+MADHYARATRI_KALA = "madhyaratri"
+GADHARATRI_KALA = "gadharatri"
+ARUNODAYA_KALA = "arunodaya"
+# Compatibility aliases for callers of the earlier experimental vocabulary.
+RATRI_KALA = MADHYARATRI_KALA
+PURVODAYA_KALA = ARUNODAYA_KALA
 SUNRISE_KALA = "sunrise"
+NIGHT_KALAS = {
+    PRADOSHA_KALA,
+    PURVARATRI_KALA,
+    MADHYARATRI_KALA,
+    GADHARATRI_KALA,
+}
 GENERIC_KALA_BY_FESTIVAL = {
     UGADI_NUMBER: SUNRISE_KALA,
     RIG_UPAKARMA_NUMBER: PURVAHNA_KALA,
@@ -361,16 +375,18 @@ GENERIC_KALA_BY_FESTIVAL = {
     BALI_PADYAMI_NUMBER: MADHYAHNA_KALA,
     RAKSHA_BANDHAN_NUMBER: APARAHNA_KALA,
     MAHALAYA_AMAVASYA_NUMBER: APARAHNA_KALA,
+    # Sayahna is the source-derived final-six-ghati approximation, but it
+    # regressed Helsinki holdout agreement without improving Tirupati holdout.
     MAHANAVAMI_PUJA_NUMBER: APARAHNA_KALA,
     VIJAYA_DASAMI_NUMBER: APARAHNA_KALA,
     NARASIMHA_JAYANTI_NUMBER: SUNSET_KALA,
-    DHANA_TRAYODASHI_NUMBER: SAYAHNA_KALA,
-    DEEPAVALI_NUMBER: SAYAHNA_KALA,
-    KAMA_DAHANA_NUMBER: SAYAHNA_KALA,
-    JANMASHTAMI_NUMBER: RATRI_KALA,
-    MAHA_SHIVARATRI_NUMBER: RATRI_KALA,
-    NARAKA_CHATURDASHI_NUMBER: PURVODAYA_KALA,
-    RATHA_SAPTAMI_NUMBER: PURVODAYA_KALA,
+    DHANA_TRAYODASHI_NUMBER: PRADOSHA_KALA,
+    DEEPAVALI_NUMBER: PRADOSHA_KALA,
+    KAMA_DAHANA_NUMBER: PRADOSHA_KALA,
+    JANMASHTAMI_NUMBER: MADHYARATRI_KALA,
+    MAHA_SHIVARATRI_NUMBER: MADHYARATRI_KALA,
+    NARAKA_CHATURDASHI_NUMBER: ARUNODAYA_KALA,
+    RATHA_SAPTAMI_NUMBER: ARUNODAYA_KALA,
 }
 UPAKARMA_CONTAMINATION_VALIDATOR = "upakarma-contamination"
 GENERIC_KALA_VALIDITY_BY_FESTIVAL = {
@@ -380,7 +396,7 @@ GENERIC_KALA_VALIDITY_BY_FESTIVAL = {
     ),
 }
 GENERIC_KALA_NAME_BY_FESTIVAL = {
-    JANMASHTAMI_NUMBER: "Janmashtami (Ratri Kala)",
+    JANMASHTAMI_NUMBER: "Janmashtami (Madhyaratri Kala)",
 }
 ONE_GHATI_HOURS = 24 / 60
 SIX_GHATI_HOURS = 6 * ONE_GHATI_HOURS
@@ -1809,13 +1825,11 @@ def generic_kala_window(
     kala,
     preceding_record=None,
 ):
-    """Return a point or one-third local day/night window for ``kala``.
+    """Return a named slot from the proportional day/night grids.
 
-    Purvahna, Madhyahna, and Aparahna are consecutive thirds from sunrise
-    through sunset. Sayahna and Ratri are the first two thirds after that
-    sunset. Purvodaya is the final night-third immediately before the labelled
-    date's sunrise. It is an experimental lay label, not Dharma Sindhu's
-    technical four-ghati Arunodaya.
+    Daylight slots are Pratah, Sangava, Madhyahna, Aparahna, and Sayahna.
+    Night slots are Pradosha, Purvaratri, Madhyaratri, Gadharatri, and
+    Arunodaya. Purvahna is the explicit Pratah-plus-Sangava span.
     """
     sunrise_jd, sunset_jd = record[5:7]
     if kala == SUNRISE_KALA:
@@ -1823,36 +1837,42 @@ def generic_kala_window(
     if kala == SUNSET_KALA:
         return sunset_jd, sunset_jd
 
-    if kala in {PURVAHNA_KALA, MADHYAHNA_KALA, APARAHNA_KALA}:
-        boundaries = [
-            sunrise_jd + (sunset_jd - sunrise_jd) * part / 3
-            for part in range(4)
-        ]
-        index = {
-            PURVAHNA_KALA: 0,
-            MADHYAHNA_KALA: 1,
-            APARAHNA_KALA: 2,
-        }[kala]
-        return boundaries[index], boundaries[index + 1]
+    day_boundaries = [
+        sunrise_jd + (sunset_jd - sunrise_jd) * part / 5
+        for part in range(6)
+    ]
+    if kala == PURVAHNA_KALA:
+        return day_boundaries[0], day_boundaries[2]
+    day_index = {
+        PRATAH_KALA: 0,
+        SANGAVA_KALA: 1,
+        MADHYAHNA_KALA: 2,
+        APARAHNA_KALA: 3,
+        SAYAHNA_KALA: 4,
+    }.get(kala)
+    if day_index is not None:
+        return day_boundaries[day_index], day_boundaries[day_index + 1]
 
-    if kala == PURVODAYA_KALA:
+    if kala == ARUNODAYA_KALA:
         if preceding_record is None:
-            raise ValueError("purvodaya requires the preceding sunset")
+            raise ValueError("arunodaya requires the preceding sunset")
         preceding_sunset_jd = preceding_record[6]
-        night_third = (sunrise_jd - preceding_sunset_jd) / 3
-        return sunrise_jd - night_third, sunrise_jd
+        night_fifth = (sunrise_jd - preceding_sunset_jd) / 5
+        return sunrise_jd - night_fifth, sunrise_jd
 
-    if kala in {SAYAHNA_KALA, RATRI_KALA}:
+    if kala in NIGHT_KALAS:
         if following_record is None:
             raise ValueError(f"{kala} requires the following sunrise")
         following_sunrise_jd = following_record[5]
         boundaries = [
-            sunset_jd + (following_sunrise_jd - sunset_jd) * part / 3
-            for part in range(4)
+            sunset_jd + (following_sunrise_jd - sunset_jd) * part / 5
+            for part in range(6)
         ]
         index = {
-            SAYAHNA_KALA: 0,
-            RATRI_KALA: 1,
+            PRADOSHA_KALA: 0,
+            PURVARATRI_KALA: 1,
+            MADHYARATRI_KALA: 2,
+            GADHARATRI_KALA: 3,
         }[kala]
         return boundaries[index], boundaries[index + 1]
 
@@ -1929,11 +1949,11 @@ def select_generic_kala_festival_dates(records, rule):
             if record is None:
                 continue
             if (
-                kala in {SAYAHNA_KALA, RATRI_KALA}
+                kala in NIGHT_KALAS
                 and following_record is None
             ):
                 continue
-            if kala == PURVODAYA_KALA and preceding_record is None:
+            if kala == ARUNODAYA_KALA and preceding_record is None:
                 continue
             window = generic_kala_window(
                 record,

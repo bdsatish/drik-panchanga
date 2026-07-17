@@ -12,9 +12,15 @@ from festival_rules import (
     GENERIC_KALA_FESTIVAL_POLICY,
     GENERIC_KALA_VALIDITY_BY_FESTIVAL,
     GENERIC_UDAYA_FESTIVAL_POLICY,
+    ARUNODAYA_KALA,
+    GADHARATRI_KALA,
     MADHYAHNA_KALA,
-    PURVODAYA_KALA,
-    RATRI_KALA,
+    MADHYARATRI_KALA,
+    PRADOSHA_KALA,
+    PRATAH_KALA,
+    PURVAHNA_KALA,
+    PURVARATRI_KALA,
+    SANGAVA_KALA,
     SAYAHNA_KALA,
     SUNRISE_KALA,
     SUNSET_KALA,
@@ -239,28 +245,56 @@ class GenericKalaPolicyTests(unittest.TestCase):
             for offset in range(3)
         ]
 
-    def test_day_and_night_are_divided_into_thirds(self):
+    def test_day_and_night_use_uniform_five_part_grid(self):
         first, second = self.days[:2]
         self.assertEqual(
+            generic_kala_window(first, second, PRATAH_KALA),
+            (9.0, 9.0 + 1 / 10),
+        )
+        self.assertEqual(
+            generic_kala_window(first, second, SANGAVA_KALA),
+            (9.0 + 1 / 10, 9.0 + 2 / 10),
+        )
+        self.assertEqual(
+            generic_kala_window(first, second, PURVAHNA_KALA),
+            (9.0, 9.0 + 2 / 10),
+        )
+        self.assertEqual(
             generic_kala_window(first, second, MADHYAHNA_KALA),
-            (9.0 + 1 / 6, 9.0 + 2 / 6),
+            (9.0 + 2 / 10, 9.0 + 3 / 10),
+        )
+        self.assertEqual(
+            generic_kala_window(first, second, APARAHNA_KALA),
+            (9.0 + 3 / 10, 9.0 + 4 / 10),
         )
         self.assertEqual(
             generic_kala_window(first, second, SAYAHNA_KALA),
-            (9.5, 9.5 + 1 / 6),
+            (9.0 + 4 / 10, 9.5),
         )
         self.assertEqual(
-            generic_kala_window(first, second, RATRI_KALA),
-            (9.5 + 1 / 6, 9.5 + 2 / 6),
+            generic_kala_window(first, second, PRADOSHA_KALA),
+            (9.5, 9.5 + 1 / 10),
+        )
+        self.assertEqual(
+            generic_kala_window(first, second, PURVARATRI_KALA),
+            (9.5 + 1 / 10, 9.5 + 2 / 10),
+        )
+        self.assertEqual(
+            generic_kala_window(first, second, MADHYARATRI_KALA),
+            (9.5 + 2 / 10, 9.5 + 3 / 10),
+        )
+        self.assertEqual(
+            generic_kala_window(first, second, GADHARATRI_KALA),
+            (9.5 + 3 / 10, 9.5 + 4 / 10),
         )
         self.assertEqual(
             generic_kala_window(
                 second,
                 self.days[2],
-                PURVODAYA_KALA,
+                ARUNODAYA_KALA,
                 first,
             ),
-            (9.5 + 2 / 6, 10.0),
+            (9.5 + 4 / 10, 10.0),
         )
 
     def test_agreed_festival_kala_assignments(self):
@@ -286,7 +320,15 @@ class GenericKalaPolicyTests(unittest.TestCase):
         )
         self.assertEqual(
             generic_kala_for_rule(festival_rule("Naraka Chaturdashi")),
-            PURVODAYA_KALA,
+            ARUNODAYA_KALA,
+        )
+        self.assertEqual(
+            generic_kala_for_rule(festival_rule("Dhana Trayodashi")),
+            PRADOSHA_KALA,
+        )
+        self.assertEqual(
+            generic_kala_for_rule(festival_rule("Janmashtami")),
+            MADHYARATRI_KALA,
         )
 
     def test_greater_kala_overlap_wins_competing_date(self):
@@ -420,7 +462,7 @@ class GenericKalaPolicyTests(unittest.TestCase):
         entry = next(item for item in entries if item[0] == rule.number)
         self.assertEqual(entry[1], "Apr 11")
 
-    def test_janmashtami_label_describes_experimental_ratri_window(self):
+    def test_janmashtami_label_describes_madhyaratri_window(self):
         rule = festival_rule("Janmashtami")
         selected_date = self.days[1][0]
         with patch(
@@ -443,7 +485,7 @@ class GenericKalaPolicyTests(unittest.TestCase):
             )
 
         entry = next(item for item in entries if item[0] == rule.number)
-        self.assertEqual(entry[2], "Janmashtami (Ratri Kala)")
+        self.assertEqual(entry[2], "Janmashtami (Madhyaratri Kala)")
 
 
 class UgadiRuleTests(unittest.TestCase):

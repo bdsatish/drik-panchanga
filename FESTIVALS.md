@@ -56,41 +56,42 @@ This policy retains a common resolver but assigns a simple ritual period to
 each festival type. It is more expressive than Generic Udaya without
 introducing festival-specific competition rules.
 
-### Lay kala divisions
+The ten-slot model is identified as `Generic-kala EXP-2.0` in generated PDFs.
 
-The actual local interval from sunrise to sunset is divided into three equal
-parts:
+### Granular kala slots
 
-1. Purvahna
-2. Madhyahna
-3. Aparahna
+The actual local intervals of daylight and night are each divided into five
+equal proportional parts. Festival windows use this one predictable grid:
 
-The local night is treated as three corresponding parts:
+- Daylight: Pratah, Sangava, Madhyahna, Aparahna, and Sayahna.
+- Night: Pradosha, Purvaratri, Madhyaratri, Apararatri, and Arunodaya.
+- Purvahna is the explicit Pratah-plus-Sangava span.
 
-1. Sayahna: first third after sunset
-2. Ratri: middle third after sunset
-3. Purvodaya: final third immediately before the labelled date's sunrise
+Sunrise and sunset are also available as exact points. Every boundary scales
+with local day or night length; the policy does not mix proportional divisions
+with fixed-ghati widths.
 
-Sunrise and sunset are also available as exact points.
-
-These thirds vary with local day and night length. They are each four hours
-(ten ghatis) only when day and night are both twelve hours long.
-
-`Purvodaya` is an experimental lay label. It must not be confused with Dharma
-Sindhu's technical four-ghati Arunodaya. Likewise, Ratri is a broad night
-third, not the narrower technical Nishitha.
+These names provide a one-to-one ritual vocabulary for the ten addressable
+slots. Their numerical boundaries remain the experiment's uniform
+proportional grid; they do not claim that every Dharma Sindhu use of a named
+kala has exactly that width.
 
 ### Festival assignments
 
 | Kala | Festivals |
 |---|---|
-| Purvahna | Rig Upakarma, Vasanta Panchami |
+| Pratah | None directly assigned |
+| Sangava | None directly assigned |
+| Purvahna (Pratah + Sangava) | Rig Upakarma, Vasanta Panchami |
 | Madhyahna | Rama Navami, Akshaya Tritiya, Ganesha Chaturthi, Bali Padyami |
 | Aparahna | Raksha Bandhan, Mahalaya Amavasya, Mahanavami (Puja), Vijayadashami (Puja) |
+| Sayahna | None directly assigned |
 | Sunset | Narasimha Jayanti |
-| Sayahna | Dhana Trayodashi, Deepavali, Kama Dahana (Holi) |
-| Ratri | Janmashtami, Maha Shivaratri |
-| Purvodaya | Naraka Chaturdashi, Ratha Saptami |
+| Pradosha | Dhana Trayodashi, Deepavali, Kama Dahana (Holi) |
+| Purvaratri | None directly assigned |
+| Madhyaratri | Janmashtami, Maha Shivaratri |
+| Apararatri | None directly assigned |
+| Arunodaya | Naraka Chaturdashi, Ratha Saptami |
 | Sunrise | Ugadi and every otherwise unclassified plain-tithi festival |
 
 Rig Upakarma is nakshatra-based rather than a plain-tithi festival. Its
@@ -98,8 +99,16 @@ dedicated selector is therefore retained, although Purvahna is its conceptual
 assignment.
 
 Under this policy, Janmashtami is displayed as
-`Janmashtami (Ratri Kala)` to distinguish the broad experimental night-window
+`Janmashtami (Madhyaratri Kala)` to distinguish the experimental night-slot
 date from the traditional Vaishnava date.
+
+Mahanavami's source-derived final-six-ghati window initially suggested
+Sayahna. A 2026–2075 exploratory comparison and an independent 2076–2125
+holdout comparison rejected that reassignment: Sayahna reduced Helsinki
+matches from 50/50 to 45/50 in exploration and from 48/50 to 45/50 in
+holdout, while Tirupati improved from 46/50 to 50/50 in exploration but tied
+49/50 in holdout. Aparahna was therefore retained rather than fitting one
+location.
 
 ### Common competition rule
 
@@ -190,15 +199,25 @@ reference, with one deliberate substitution: Janmashtami uses Dharma Sindhu's
 Smarta Nishitha selector. The PDF's Vaishnava Janmashtami variant is omitted
 from this comparison.
 
+Mapping decisions use 2026–2075 as the exploratory range and 2076–2125 as
+independent holdout validation at both locations. A neighboring slot is
+accepted only when ritually supportable and when its exploratory gain does not
+regress either holdout.
+
 The figures below are exact occurrence-date matches for plain-tithi festivals.
 Traditional is 100% by definition because it supplies the reference dates.
 
 | Location and scope | Traditional | Generic Udaya | Generic Kala |
 |---|---:|---:|---:|
-| Helsinki, all plain-tithi rules | 100% | 81.72% | 96.19% |
-| Helsinki, PDF-visible subset | 100% | 78.87% | 95.76% |
-| Tirupati, all plain-tithi rules | 100% | 80.68% | 95.92% |
-| Tirupati, PDF-visible subset | 100% | 77.31% | 95.80% |
+| Helsinki, all plain-tithi rules | 100% | 81.72% | 97.17% |
+| Helsinki, PDF-visible subset | 100% | 78.87% | 96.77% |
+| Tirupati, all plain-tithi rules | 100% | 80.68% | 96.54% |
+| Tirupati, PDF-visible subset | 100% | 77.31% | 96.29% |
+
+The measured PDF-visible ceiling of this ten-slot allocation is therefore
+96.77% in Helsinki and 96.29% in Tirupati, short of the 99% goal. Closing that
+gap would require changing mappings that fail holdout or adding the
+festival-specific rules this experiment intentionally avoids.
 
 The Helsinki comparison used 99 successfully resolved traditional reference
 years; 2072 was excluded because the traditional resolver returned no Kama
