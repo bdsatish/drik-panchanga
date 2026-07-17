@@ -712,6 +712,26 @@ class YajurUpakarmaRuleTests(unittest.TestCase):
                 [date(2030, 8, 14)],
             )
 
+    def test_kshaya_purnima_uses_civil_day_containing_purnima(self):
+        records = [
+            (date(2031, 8, 2), "S14", "5", False, 1.0, 10.0, 10.5),
+            (date(2031, 8, 3), "K1", "5", False, 1.0, 11.0, 11.5),
+        ]
+        with patch(
+            "festival_rules.tithi_intervals",
+            return_value=[(10.1, 10.9)],
+        ), patch(
+            "festival_rules.eclipse_or_sankranti_in_window",
+            return_value=False,
+        ):
+            self.assertEqual(
+                select_taittiriya_apastamba_upakarma_dates(
+                    records,
+                    self.rule,
+                ),
+                [date(2031, 8, 2)],
+            )
+
 
 class RakshaBandhanRuleTests(unittest.TestCase):
     rule = festival_rule("Raksha Bandhan")

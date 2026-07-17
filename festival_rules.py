@@ -902,7 +902,8 @@ def select_taittiriya_apastamba_upakarma_dates(records, rule):
     Yajurvedins use the earlier day. For a split Purnima beginning after the
     first daytime muhurta, Taittiriyas use the later day when at least two
     muhurtas (four ghatis) remain after its sunrise; a shorter remainder uses
-    the earlier day. Adhika-masa Upakarma is forbidden.
+    the earlier day. If Purnima is skipped at sunrise, the civil day containing
+    it is used. Adhika-masa Upakarma is forbidden.
 
     An eclipse or sankranti between the preceding and following local night
     midpoints contaminates the selected day. Apastambas then use Bhadrapada
@@ -920,7 +921,7 @@ def select_taittiriya_apastamba_upakarma_dates(records, rule):
         for record in rule_records
         if record[1] == rule.tithi
     ]
-    selected = []
+    selected_dates = []
     for group in group_consecutive_candidates(sunrise_candidates):
         if len(group) > 1:
             selected_date = group[0][0]
@@ -945,7 +946,25 @@ def select_taittiriya_apastamba_upakarma_dates(records, rule):
                     or remainder < 4 * ONE_GHATI_HOURS
                 ):
                     selected_date = previous_date
+        selected_dates.append(selected_date)
 
+    if not selected_dates:
+        kshaya_candidates = []
+        for record in rule_records:
+            following_record = by_date.get(
+                record[0] + timedelta(days=1)
+            )
+            if following_record is None:
+                continue
+            if tithi_intervals(record[5], following_record[5], 15):
+                kshaya_candidates.append((record[0], 1))
+        selected_dates = [
+            group[0][0]
+            for group in group_consecutive_candidates(kshaya_candidates)
+        ]
+
+    selected = []
+    for selected_date in selected_dates:
         selected_record = by_date[selected_date]
         previous_record = by_date.get(selected_date - timedelta(days=1))
         next_record = by_date.get(selected_date + timedelta(days=1))
