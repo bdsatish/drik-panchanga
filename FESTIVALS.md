@@ -1,14 +1,15 @@
 # Festival Date Policies
 
-The calendar provides four festival-date policies, ordered here from the
+The calendar provides five festival-date policies, ordered here from the
 simplest and most uniform to the most detailed:
 
 1. `generic-udaya`
-2. `generic-anchor`
-3. `generic-kala`
-4. `traditional` (Dharma-Sindhu-oriented)
+2. `generic-midpoint`
+3. `generic-anchor`
+4. `generic-kala`
+5. `traditional` (Dharma-Sindhu-oriented)
 
-The traditional policy remains the default. The three generic policies are
+The traditional policy remains the default. The four generic policies are
 experimental alternatives for studying how much of traditional festival
 reckoning can be reproduced with a small common rule set.
 
@@ -49,7 +50,31 @@ Rules that are not plain masa-and-tithi markers—such as solar Sankranti,
 Vaikuntha Ekadashi, Rig Upakarma, and Varamahalakshmi Vrata—continue to use
 their dedicated selectors.
 
-## 2. Generic Anchor Point
+## 2. Generic Midpoint
+
+CLI value: `generic-midpoint`
+
+For each eligible tithi occurrence, this policy computes the astronomical
+midpoint of the complete tithi interval and assigns the festival to the
+half-open sunrise-day containing it:
+
+`sunrise <= tithi midpoint < following sunrise`
+
+An exact midpoint at sunrise therefore belongs to the newly starting date.
+Masa and adhika filtering are identical to the other generic policies.
+
+For ordinary tithi lengths and approximately 24-hour sunrise-days, midpoint
+ownership is equivalent to selecting the sunrise-day with the greatest tithi
+overlap. A difference would require an abnormally short ownership day or a
+boundary tie, so a separate majority-day policy is not implemented.
+
+This is a pure baseline: it does not apply Generic Kala's Yajur Upakarma
+validity overlay. Non-plain-tithi rules retain their dedicated selectors.
+
+The policy is identified as `Generic-midpoint EXP-1.0` in generated PDFs.
+Accuracy benchmarking is intentionally deferred.
+
+## 3. Generic Anchor Point
 
 CLI value: `generic-anchor`
 
@@ -84,7 +109,7 @@ policy.
 The policy is identified as `Generic-anchor EXP-1.0` in generated PDFs.
 Accuracy benchmarking is intentionally deferred.
 
-## 3. Generic Kala
+## 4. Generic Kala
 
 CLI value: `generic-kala`
 
@@ -181,7 +206,7 @@ policy as the uniform sunrise-only baseline.
 The policy intentionally ignores festival-specific purva-viddha,
 para-viddha, minimum-ghati, nakshatra, Bhadra, and similar tie-breakers.
 
-## 4. Dharma Sindhu / Traditional
+## 5. Dharma Sindhu / Traditional
 
 CLI value: `traditional`
 
@@ -218,6 +243,7 @@ consulted when textual provenance matters.
 | Policy | Festival-specific kala | Festival-specific competition | Intended use |
 |---|---:|---:|---|
 | Generic Udaya | No | No | Simplest universal sunrise marker |
+| Generic Midpoint | No | No | Tithi-center ownership baseline |
 | Generic Anchor | Yes, from five exact instants | No | Exact-point alternative to kala windows |
 | Generic Kala | Yes, from a small fixed vocabulary | No | Experimental balance of simplicity and ritual timing |
 | Traditional | Yes | Yes | Normal calendar generation and highest textual fidelity |

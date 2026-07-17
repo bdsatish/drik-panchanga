@@ -10,11 +10,13 @@ import panchanga
 
 TRADITIONAL_FESTIVAL_POLICY = "traditional"
 GENERIC_UDAYA_FESTIVAL_POLICY = "generic-udaya"
+GENERIC_MIDPOINT_FESTIVAL_POLICY = "generic-midpoint"
 GENERIC_KALA_FESTIVAL_POLICY = "generic-kala"
 GENERIC_ANCHOR_FESTIVAL_POLICY = "generic-anchor"
 FESTIVAL_POLICIES = (
     TRADITIONAL_FESTIVAL_POLICY,
     GENERIC_UDAYA_FESTIVAL_POLICY,
+    GENERIC_MIDPOINT_FESTIVAL_POLICY,
     GENERIC_KALA_FESTIVAL_POLICY,
     GENERIC_ANCHOR_FESTIVAL_POLICY,
 )
@@ -1846,6 +1848,54 @@ def eligible_generic_occurrences(occurrences, rule):
     return occurrences
 
 
+def select_generic_midpoint_festival_dates(records, rule):
+    """Assign each eligible tithi to the sunrise-day containing its midpoint."""
+    target_tithi = plain_tithi_number(rule.tithi)
+    if target_tithi is None:
+        raise ValueError(f"{rule.name} does not have a plain tithi rule")
+
+    records = sorted(records)
+    records_by_date = {record[0]: record for record in records}
+    occurrences = eligible_generic_occurrences(
+        generic_udaya_occurrences(records, target_tithi),
+        rule,
+    )
+
+    selected = []
+    for owner_date, _, _ in occurrences:
+        owner_record = records_by_date.get(owner_date)
+        if owner_record is None:
+            continue
+        intervals = tithi_intervals(
+            owner_record[5] - 1.25,
+            owner_record[5] + 2.25,
+            target_tithi,
+        )
+        if not intervals:
+            continue
+        reference = owner_record[5] + 0.5
+        target_interval = min(
+            intervals,
+            key=lambda interval: abs(
+                (interval[0] + interval[1]) / 2 - reference
+            ),
+        )
+        tithi_midpoint = sum(target_interval) / 2
+
+        for offset in (-1, 0, 1):
+            civil_date = owner_date + timedelta(days=offset)
+            record = records_by_date.get(civil_date)
+            following_record = records_by_date.get(
+                civil_date + timedelta(days=1)
+            )
+            if record is None or following_record is None:
+                continue
+            if record[5] <= tithi_midpoint < following_record[5]:
+                selected.append(civil_date)
+                break
+    return sorted(set(selected))
+
+
 def generic_kala_for_rule(rule):
     """Return the lay ritual period assigned by the generic-kala experiment."""
     return GENERIC_KALA_BY_FESTIVAL.get(rule.number, SUNRISE_KALA)
@@ -3042,6 +3092,7 @@ def resolve_festivals(
         festival_policy
         in {
             GENERIC_UDAYA_FESTIVAL_POLICY,
+            GENERIC_MIDPOINT_FESTIVAL_POLICY,
             GENERIC_KALA_FESTIVAL_POLICY,
             GENERIC_ANCHOR_FESTIVAL_POLICY,
         }
@@ -3066,6 +3117,11 @@ def resolve_festivals(
             and plain_tithi_number(rule.tithi) is not None
         ):
             matches = select_generic_udaya_festival_dates(records, rule)
+        elif (
+            festival_policy == GENERIC_MIDPOINT_FESTIVAL_POLICY
+            and plain_tithi_number(rule.tithi) is not None
+        ):
+            matches = select_generic_midpoint_festival_dates(records, rule)
         elif (
             festival_policy == GENERIC_KALA_FESTIVAL_POLICY
             and plain_tithi_number(rule.tithi) is not None
@@ -3225,6 +3281,7 @@ def resolve_festivals(
             ]
         if festival_policy in {
             GENERIC_UDAYA_FESTIVAL_POLICY,
+            GENERIC_MIDPOINT_FESTIVAL_POLICY,
             GENERIC_KALA_FESTIVAL_POLICY,
             GENERIC_ANCHOR_FESTIVAL_POLICY,
         }:
@@ -3248,6 +3305,7 @@ def resolve_festivals(
     varamahalakshmi_dates = select_varamahalakshmi_dates(records)
     if festival_policy in {
         GENERIC_UDAYA_FESTIVAL_POLICY,
+        GENERIC_MIDPOINT_FESTIVAL_POLICY,
         GENERIC_KALA_FESTIVAL_POLICY,
         GENERIC_ANCHOR_FESTIVAL_POLICY,
     }:
