@@ -141,6 +141,25 @@ class AkshayaTritiyaRuleTests(unittest.TestCase):
                 [date(2030, 5, 5)],
             )
 
+    def test_excludes_adhika_vaishakha_from_public_festival_marker(self):
+        records = [
+            record(
+                date(2030, 4, 6),
+                "S3",
+                masa="2",
+                is_adhika=True,
+            ),
+            record(date(2030, 5, 6), "S3", masa="2"),
+        ]
+        with patch(
+            "festival_rules.tithi_overlap_hours",
+            return_value=1.0,
+        ):
+            self.assertEqual(
+                select_aksaya_trtiya_dates(records, self.rule),
+                [date(2030, 5, 6)],
+            )
+
 
 class RuleStatusTests(unittest.TestCase):
     def test_festival_markers_remain_sequential(self):

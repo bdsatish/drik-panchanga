@@ -499,16 +499,14 @@ def select_aksaya_trtiya_dates(records, rule):
     Akshaya Tritiya's japa, homa, tarpana, and dana follow the Shukla-Yugadi
     decision. Dharma Sindhu prefers the seventh through ninth daytime
     muhurtas. If only one civil day overlaps that window, use it; if both or
-    neither do, use the later day. Yugadi rites are prescribed in both
-    adhika and shuddha Vaishakha, so this selector does not discard adhika
-    records.
+    neither do, use the later day. Although Yugadi Shraddha is prescribed in
+    both adhika and nija Vaishakha, this public Akshaya Tritiya marker belongs
+    only to nija Vaishakha.
 
     Source:
     https://www.transliteral.org/pages/z80421210038/view
     """
-    rule_records = [
-        record for record in records if record[2] == str(rule.masa)
-    ]
+    rule_records = records_for_rule(records, rule)
     candidates = []
     for record in rule_records:
         civil_date, _, _, _, _, sunrise_jd, sunset_jd = record
