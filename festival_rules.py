@@ -1,514 +1,215 @@
 """Festival definitions and observance-date rules for the PDF calendar."""
 
 import calendar
-from dataclasses import dataclass, replace
-from datetime import date as CivilDate
 from datetime import timedelta
 
 import panchanga
 
+from _festival_rules import astronomy as _astronomy
+from _festival_rules import ekadashi as _ekadashi
+from _festival_rules import generic as _generic
+from _festival_rules import records as _records
+from _festival_rules import upakarma as _upakarma
+from _festival_rules.catalog import *
+from _festival_rules.config import *
+from _festival_rules.model import *
 
-TRADITIONAL_FESTIVAL_POLICY = "traditional"
-GENERIC_UDAYA_FESTIVAL_POLICY = "generic-udaya"
-GENERIC_MIDPOINT_FESTIVAL_POLICY = "generic-midpoint"
-GENERIC_KALA_FESTIVAL_POLICY = "generic-kala"
-GENERIC_ANCHOR_FESTIVAL_POLICY = "generic-anchor"
-FESTIVAL_POLICIES = (
-    TRADITIONAL_FESTIVAL_POLICY,
-    GENERIC_UDAYA_FESTIVAL_POLICY,
-    GENERIC_MIDPOINT_FESTIVAL_POLICY,
-    GENERIC_KALA_FESTIVAL_POLICY,
-    GENERIC_ANCHOR_FESTIVAL_POLICY,
-)
-
-
-@dataclass(frozen=True)
-class FestivalRule:
-    number: int
-    name: str
-    masa: int
-    tithi: str
-    status: str = "provisional"
-    source: str | None = None
-    allow_empty: bool = False
-
-
-@dataclass(frozen=True)
-class GenericKalaValidityOverlay:
-    """Post-selection constraint and same-policy fallback definition."""
-
-    validator: str
-    fallback_masa_offset: int | None = None
-
-
-FESTIVAL_RULES = (
-    FestivalRule(
-        1,
-        "Ugadi",
-        1,
-        "S1",
-        "dharmasindhu",
-        "https://www.transliteral.org/pages/z80421204850/view",
-    ),
-    FestivalRule(
-        2,
-        "Rama Navami",
-        1,
-        "S9",
-        "dharmasindhu",
-        "https://www.transliteral.org/pages/z80421205021/view",
-    ),
-    FestivalRule(
-        3,
-        "Akshaya Tritiya",
-        2,
-        "S3",
-        "dharmasindhu",
-        "https://www.transliteral.org/pages/z80421210038/view",
-    ),
-    # No Vasavi/Kanyaka Parameshwari observance was found in Dharma Sindhu.
-    # Resolve the supplied community tithi with the generic udaya policy:
-    # one sunrise uses that date, vriddhi uses the first sunrise, and kshaya
-    # uses the civil day whose sunrise-to-sunrise span contains Dashami.
-    FestivalRule(4, "Vasavi Jayanti", 2, "S10", "generic-udaya"),
-    FestivalRule(
-        5,
-        "Narasimha Jayanti",
-        2,
-        "S14",
-        "dharmasindhu",
-        "https://www.transliteral.org/pages/z80421210345/view",
-    ),
-    FestivalRule(
-        6,
-        "Guru Purnima",
-        4,
-        "S15",
-        "dharmasindhu",
-        "https://www.transliteral.org/pages/z80421213928/view",
-    ),
-    FestivalRule(
-        7,
-        "Naga Panchami",
-        5,
-        "S5",
-        "dharmasindhu",
-        "https://www.transliteral.org/pages/z80422074237/view",
-    ),
-    FestivalRule(
-        9,
-        "Rig Upakarma",
-        5,
-        "Shravana nakshatra",
-        "dharmasindhu",
-        "https://www.transliteral.org/pages/z80422074617/view",
-    ),
-    FestivalRule(
-        10,
-        "Yajur Upakarma",
-        5,
-        "S15",
-        "dharmasindhu",
-        "https://www.transliteral.org/pages/z80421215029/view",
-        True,
-    ),
-    FestivalRule(
-        11,
-        "Raksha Bandhan",
-        5,
-        "S15",
-        "dharmasindhu",
-        "https://www.transliteral.org/pages/z80421215617/view",
-    ),
-    FestivalRule(
-        12,
-        "Janmashtami",
-        5,
-        "K8",
-        "dharmasindhu",
-        "https://www.transliteral.org/pages/z80421220129/view",
-    ),
-    FestivalRule(
-        13,
-        "Swarna Gowri Vrata",
-        6,
-        "S3",
-        "dharmasindhu",
-        "https://www.transliteral.org/pages/z80503220901/view",
-    ),
-    FestivalRule(
-        14,
-        "Ganesha Chaturthi",
-        6,
-        "S4",
-        "dharmasindhu",
-        "https://www.kamakoti.org/kamakoti/dharmasindhu/bookview.php?chapnum=7",
-    ),
-    FestivalRule(
-        15,
-        "Mahalaya Amavasya",
-        6,
-        "K15",
-        "dharmasindhu",
-        "http://hindupanchang.blogspot.com/2008/03/",
-    ),
-    FestivalRule(
-        16,
-        "Durga Ashtami",
-        7,
-        "S8",
-        "dharmasindhu",
-        "https://www.transliteral.org/pages/z80501061410/view",
-    ),
-    # This is the regional South Indian/Khande-Navami observance, rather than
-    # Dharma Sindhu's distinct Mahanavami puja/upavasa decision.
-    FestivalRule(17,
-        "Durga Ashtami (Puja)",
-        7,
-        "S8",
-        "dharmasindhu",
-        "https://www.transliteral.org/pages/z80501061410/view",
-    ),    FestivalRule(18,
-        "Ayudha Puja",
-        7,
-        "S9",
-        "regional",
-        (
-            "https://www.drikpanchang.com/navratri/durga-puja/"
-            "ayudha-puja-date-time.html"
-        ),
-    ),
-    FestivalRule(19,
-        "Mahanavami (Puja)",
-        7,
-        "S9",
-        "dharmasindhu",
-        "https://www.drikpanchang.com/navratri/durga-puja/bengal/maha-navami-date-time.html",
-    ),
-    FestivalRule(20,
-        "Vijayadashami (Puja)",
-        7,
-        "S10",
-        "dharmasindhu",
-        "https://www.transliteral.org/pages/z80501062120/view",
-    ),
-    FestivalRule(21,
-        "Dasara",
-        7,
-        "S10",
-        "regional",
-    ),
-    FestivalRule(22,
-        "Dhana Trayodashi",
-        7,
-        "K13",
-        "dharmasindhu",
-        "https://nepaljyotish.org/en/blog/dharmasindhu-vrata-nirnaya/",
-    ),
-    FestivalRule(
-        23,
-        "Naraka Chaturdashi",
-        7,
-        "K14",
-        "dharmasindhu",
-        "https://www.transliteral.org/pages/z80505062049/view",
-    ),
-    FestivalRule(
-        24,
-        "Deepavali",
-        7,
-        "K15",
-        "dharmasindhu",
-        "https://www.kamakoti.org/kamakoti/dharmasindhu/bookview.php?chapnum=8",
-    ),
-    FestivalRule(25,
-        "Bali Padyami",
-        8,
-        "S1",
-        "dharmasindhu",
-        "https://www.transliteral.org/pages/z80505062407/view",
-    ),
-    # No Gita-Jayanti observance was found in Dharma Sindhu's Margashirsha
-    # section. Resolve the supplied community tithi with the documented
-    # generic udaya-marker policy.
-    FestivalRule(26, "Gita Jayanti", 9, "S11", "generic-udaya"),
-    FestivalRule(27,
-        "Vaikuntha Ekadashi",
-        9,
-        "Dhanur-masa S11",
-        "regional",
-        (
-            "https://www.drikpanchang.com/ekadashis/vaikuntha/"
-            "vaikuntha-ekadashi-date-time.html"
-        ),
-        allow_empty=True,
-    ),
-    FestivalRule(28,
-        "Makara Sankranti",
-        0,
-        "Solar",
-        "dharmasindhu",
-        "https://www.kamakoti.org/kamakoti/dharmasindhu/bookview.php?chapnum=11",
-    ),
-    # No Vasavi Atmarpana observance was found in Dharma Sindhu's Magha
-    # section. Resolve the supplied community tithi with the documented
-    # generic sunrise, first-sunrise vriddhi, and contained-tithi kshaya
-    # policy.
-    FestivalRule(29, "Vasavi Atmarpana", 11, "S2", "generic-udaya"),
-    FestivalRule(30,
-        "Vasanta Panchami",
-        11,
-        "S5",
-        "dharmasindhu",
-        "https://www.transliteral.org/pages/z80513003421/view",
-    ),
-    FestivalRule(31,
-        "Ratha Saptami",
-        11,
-        "S7",
-        "dharmasindhu",
-        "https://www.transliteral.org/pages/z80513004113/view",
-    ),
-    # Vishnu-Sahasranama Jayanti was not found in Dharma Sindhu; Bhishma
-    # Ashtami is present but is a different observance. Resolve the supplied
-    # community tithi with the documented generic udaya-marker policy.
-    FestivalRule(32, "VSN Jayanti", 11, "S11", "generic-udaya"),
-    FestivalRule(33,
-        "Maha Shivaratri",
-        11,
-        "K14",
-        "dharmasindhu",
-        "https://www.transliteral.org/pages/z80513005728/view",
-    ),
-    FestivalRule(34,
-        "Kama Dahana (Holi)",
-        12,
-        "S15",
-        "dharmasindhu",
-        "https://www.kamakoti.org/kamakoti/dharmasindhu/bookview.php?chapnum=13",
-    ),
-    FestivalRule(35,
-        "Dhanvantari Jayanti",
-        7,
-        "K13",
-        "regional",
-    ),
-
-)
-
-# This regional rule was not found in Dharma Sindhu. TTD and Sringeri
-# calendars move the vrata seven days earlier when Shravana Purnima itself
-# is Friday; SRS Mutt and Drik Panchang instead use that Purnima Friday.
-# Prefer the user's TTD convention: the last Friday strictly BEFORE the
-# amanta, non-adhika Shravana Purnima, independently of Upakarma deferrals.
-# E.g. In 2026, Sarvana-S15 is Friday Aug 28. It overlaps with Yajur Upakarma
-# so, husband/wife would be both burdened. Moving it to Aug 21 reduces
-# workload and practically makes sense. TTD and Sringeri calendars do so.
-VARAMAHALAKSHMI_RULE = FestivalRule(
-    8,
-    "Varamahalakshmi Vrata",
-    5,
-    "Last Friday strictly before S15",
-    "regional",
-)
-VARAMAHALAKSHMI_NUMBER = VARAMAHALAKSHMI_RULE.number
-VARAMAHALAKSHMI_NAME = VARAMAHALAKSHMI_RULE.name
-UGADI_NUMBER = 1
-RAMA_NAVAMI_NUMBER = 2
-AKSAYA_TRTIYA_NUMBER = 3
-VASAVI_JAYANTI_NUMBER = 4
-NARASIMHA_JAYANTI_NUMBER = 5
-GURU_PURNIMA_NUMBER = 6
-NAGA_PANCHAMI_NUMBER = 7
-RIG_UPAKARMA_NUMBER = 9
-YAJUR_UPAKARMA_NUMBER = 10
-RAKSHA_BANDHAN_NUMBER = 11
-JANMASHTAMI_NUMBER = 12
-GOWRI_HABBA_NUMBER = 13
-GANESHA_CATURTHI_NUMBER = 14
-MAHALAYA_AMAVASYA_NUMBER = 15
-DURGA_ASHTAMI_NUMBER = 16
-DURGA_ASHTAMI_PUJA_NUMBER = 17
-AYUDHA_PUJA_NUMBER = 18
-MAHANAVAMI_PUJA_NUMBER = 19
-VIJAYA_DASAMI_NUMBER = 20
-DASARA_NUMBER = 21
-DHANA_TRAYODASHI_NUMBER = 22
-NARAKA_CHATURDASHI_NUMBER = 23
-DEEPAVALI_NUMBER = 24
-BALI_PADYAMI_NUMBER = 25
-GITA_JAYANTI_NUMBER = 26
-VAIKUNTHA_EKADASHI_NUMBER = 27
-MAKARA_SANKRANTI_NUMBER = 28
-VASAVI_ATMARPANA_NUMBER = 29
-VASANTA_PANCHAMI_NUMBER = 30
-RATHA_SAPTAMI_NUMBER = 31
-VSN_JAYANTI_NUMBER = 32
-MAHA_SHIVARATRI_NUMBER = 33
-KAMA_DAHANA_NUMBER = 34
-DHANVANTARI_JAYANTI_NUMBER = 35
-PRATAH_KALA = "pratah"
-SANGAVA_KALA = "sangava"
-PURVAHNA_KALA = "purvahna"
-MADHYAHNA_KALA = "madhyahna"
-APARAHNA_KALA = "aparahna"
-SAYAHNA_KALA = "sayahna"
-SUNSET_KALA = "sunset"
-PRADOSHA_KALA = "pradosha"
-PURVARATRI_KALA = "purvaratri"
-MADHYARATRI_KALA = "madhyaratri"
-GADHARATRI_KALA = "gadharatri"
-ARUNODAYA_KALA = "arunodaya"
-# Compatibility aliases for callers of the earlier experimental vocabulary.
-RATRI_KALA = MADHYARATRI_KALA
-PURVODAYA_KALA = ARUNODAYA_KALA
-SUNRISE_KALA = "sunrise"
-NIGHT_KALAS = {
-    PRADOSHA_KALA,
-    PURVARATRI_KALA,
-    MADHYARATRI_KALA,
-    GADHARATRI_KALA,
-}
-GENERIC_KALA_BY_FESTIVAL = {
-    UGADI_NUMBER: SUNRISE_KALA,
-    RIG_UPAKARMA_NUMBER: PURVAHNA_KALA,
-    VASANTA_PANCHAMI_NUMBER: PURVAHNA_KALA,
-    RAMA_NAVAMI_NUMBER: MADHYAHNA_KALA,
-    AKSAYA_TRTIYA_NUMBER: MADHYAHNA_KALA,
-    GANESHA_CATURTHI_NUMBER: MADHYAHNA_KALA,
-    BALI_PADYAMI_NUMBER: MADHYAHNA_KALA,
-    RAKSHA_BANDHAN_NUMBER: APARAHNA_KALA,
-    MAHALAYA_AMAVASYA_NUMBER: APARAHNA_KALA,
-    # Sayahna is the source-derived final-six-ghati approximation, but it
-    # regressed Helsinki holdout agreement without improving Tirupati holdout.
-    MAHANAVAMI_PUJA_NUMBER: APARAHNA_KALA,
-    VIJAYA_DASAMI_NUMBER: APARAHNA_KALA,
-    NARASIMHA_JAYANTI_NUMBER: SUNSET_KALA,
-    DHANA_TRAYODASHI_NUMBER: PRADOSHA_KALA,
-    DEEPAVALI_NUMBER: PRADOSHA_KALA,
-    KAMA_DAHANA_NUMBER: PRADOSHA_KALA,
-    JANMASHTAMI_NUMBER: MADHYARATRI_KALA,
-    MAHA_SHIVARATRI_NUMBER: MADHYARATRI_KALA,
-    NARAKA_CHATURDASHI_NUMBER: ARUNODAYA_KALA,
-    RATHA_SAPTAMI_NUMBER: ARUNODAYA_KALA,
-}
-UPAKARMA_CONTAMINATION_VALIDATOR = "upakarma-contamination"
-GENERIC_KALA_VALIDITY_BY_FESTIVAL = {
-    YAJUR_UPAKARMA_NUMBER: GenericKalaValidityOverlay(
-        UPAKARMA_CONTAMINATION_VALIDATOR,
-        fallback_masa_offset=1,
-    ),
-}
-GENERIC_KALA_NAME_BY_FESTIVAL = {
-    JANMASHTAMI_NUMBER: "Janmashtami (Madhyaratri Kala)",
-}
-SUNRISE_ANCHOR = "sunrise"
-DAY_MIDPOINT_ANCHOR = "day-midpoint"
-SUNSET_ANCHOR = "sunset"
-NIGHT_MIDPOINT_ANCHOR = "night-midpoint"
-PREDAWN_ANCHOR = "pre-dawn"
-GENERIC_ANCHOR_BY_FESTIVAL = {
-    UGADI_NUMBER: SUNRISE_ANCHOR,
-    YAJUR_UPAKARMA_NUMBER: SUNRISE_ANCHOR,
-    RIG_UPAKARMA_NUMBER: DAY_MIDPOINT_ANCHOR,
-    VASANTA_PANCHAMI_NUMBER: DAY_MIDPOINT_ANCHOR,
-    RAMA_NAVAMI_NUMBER: DAY_MIDPOINT_ANCHOR,
-    AKSAYA_TRTIYA_NUMBER: DAY_MIDPOINT_ANCHOR,
-    GANESHA_CATURTHI_NUMBER: DAY_MIDPOINT_ANCHOR,
-    BALI_PADYAMI_NUMBER: DAY_MIDPOINT_ANCHOR,
-    RAKSHA_BANDHAN_NUMBER: DAY_MIDPOINT_ANCHOR,
-    MAHALAYA_AMAVASYA_NUMBER: DAY_MIDPOINT_ANCHOR,
-    MAHANAVAMI_PUJA_NUMBER: DAY_MIDPOINT_ANCHOR,
-    VIJAYA_DASAMI_NUMBER: DAY_MIDPOINT_ANCHOR,
-    NARASIMHA_JAYANTI_NUMBER: SUNSET_ANCHOR,
-    DHANA_TRAYODASHI_NUMBER: SUNSET_ANCHOR,
-    DEEPAVALI_NUMBER: SUNSET_ANCHOR,
-    KAMA_DAHANA_NUMBER: SUNSET_ANCHOR,
-    JANMASHTAMI_NUMBER: NIGHT_MIDPOINT_ANCHOR,
-    MAHA_SHIVARATRI_NUMBER: NIGHT_MIDPOINT_ANCHOR,
-    NARAKA_CHATURDASHI_NUMBER: PREDAWN_ANCHOR,
-    RATHA_SAPTAMI_NUMBER: PREDAWN_ANCHOR,
-}
-GENERIC_ANCHOR_NAME_BY_FESTIVAL = {
-    JANMASHTAMI_NUMBER: "Janmashtami (Night-Midpoint Anchor)",
-}
-ONE_GHATI_HOURS = 24 / 60
-SIX_GHATI_HOURS = 6 * ONE_GHATI_HOURS
-ARUNODAYA_HOURS = 4 * ONE_GHATI_HOURS
-PRADOSHA_HOURS = 6 * ONE_GHATI_HOURS
-
-
-def format_festival_dates(dates):
-    dates = sorted(dates)
-    if not dates:
-        return "None"
-    if (
-        len(dates) > 1
-        and len({(value.year, value.month) for value in dates}) == 1
-        and all(
-            right == left + timedelta(days=1)
-            for left, right in zip(dates, dates[1:])
-        )
-    ):
-        return (
-            f"{calendar.month_abbr[dates[0].month]} "
-            f"{dates[0].day:02d}-{dates[-1].day:02d}"
-        )
-    return ",".join(
-        f"{calendar.month_abbr[value.month]} {value.day:02d}"
-        for value in dates
-    )
+format_festival_dates = _records.format_festival_dates
+group_consecutive_candidates = _records.group_consecutive_candidates
+records_for_rule = _records.records_for_rule
+collect_records = _records.collect_records
+collect_moonrise_jds = _records.collect_moonrise_jds
+plain_tithi_number = _records.plain_tithi_number
 
 
 def tithi_number_at(jd):
-    """Return the tithi prevailing at an arbitrary UTC Julian instant."""
-    return int(panchanga.lunar_phase(jd) // 12) + 1
+    return _astronomy.tithi_number_at(jd, panchanga)
 
 
 def tithi_overlap_hours(start_jd, end_jd, target_tithi):
-    """Measure target-tithi overlap with a short ritual-time window."""
-    epsilon = 1e-10
-    start_matches = tithi_number_at(start_jd + epsilon) == target_tithi
-    end_matches = tithi_number_at(end_jd - epsilon) == target_tithi
-    if start_matches and end_matches:
-        return (end_jd - start_jd) * 24
-    if not start_matches and not end_matches:
-        return 0
-
-    low, high = start_jd, end_jd
-    for _ in range(50):
-        middle = (low + high) / 2
-        middle_matches = tithi_number_at(middle) == target_tithi
-        if start_matches:
-            if middle_matches:
-                low = middle
-            else:
-                high = middle
-        elif middle_matches:
-            high = middle
-        else:
-            low = middle
-    if start_matches:
-        return (low - start_jd) * 24
-    return (end_jd - high) * 24
+    return _astronomy.tithi_overlap_hours(
+        start_jd,
+        end_jd,
+        target_tithi,
+        tithi_number_at,
+    )
 
 
-def group_consecutive_candidates(candidates):
-    groups = []
-    for candidate in sorted(candidates):
-        if groups and candidate[0] == groups[-1][-1][0] + timedelta(days=1):
-            groups[-1].append(candidate)
-        else:
-            groups.append([candidate])
-    return groups
+intervals_overlap = _astronomy.intervals_overlap
 
 
-def records_for_rule(records, rule):
-    return [
-        record
-        for record in records
-        if record[2] == str(rule.masa) and not record[3]
-    ]
+def locally_visible_eclipse_in_window(start_jd, end_jd, geopos):
+    return _astronomy.locally_visible_eclipse_in_window(
+        start_jd,
+        end_jd,
+        geopos,
+        panchanga=panchanga,
+        overlap_checker=intervals_overlap,
+    )
+
+
+def eclipse_or_sankranti_in_window(start_jd, end_jd, geopos):
+    return _astronomy.eclipse_or_sankranti_in_window(
+        start_jd,
+        end_jd,
+        geopos,
+        panchanga=panchanga,
+        eclipse_checker=locally_visible_eclipse_in_window,
+    )
+
+
+def karana_index_at(jd):
+    return _astronomy.karana_index_at(jd, panchanga)
+
+
+def is_vishti_at(jd):
+    return _astronomy.is_vishti_at(jd, karana_index_at)
+
+
+def has_bhadra_free_purnima(start_jd, end_jd):
+    return _astronomy.has_bhadra_free_purnima(
+        start_jd,
+        end_jd,
+        tithi_number_at,
+        is_vishti_at,
+    )
+
+
+def nakshatra_number_at(jd):
+    return _astronomy.nakshatra_number_at(jd, panchanga)
+
+
+def nakshatra_overlap_hours(start_jd, end_jd, target_nakshatra):
+    return _astronomy.nakshatra_overlap_hours(
+        start_jd,
+        end_jd,
+        target_nakshatra,
+        nakshatra_number_at,
+    )
+
+
+def has_tithi_nakshatra(
+    start_jd,
+    end_jd,
+    tithi_number,
+    nakshatra_number,
+):
+    return _astronomy.has_tithi_nakshatra(
+        start_jd,
+        end_jd,
+        tithi_number,
+        nakshatra_number,
+        tithi_at=tithi_number_at,
+        nakshatra_at=nakshatra_number_at,
+    )
+
+
+def has_nakshatra(start_jd, end_jd, nakshatra_number):
+    return _astronomy.has_nakshatra(
+        start_jd,
+        end_jd,
+        nakshatra_number,
+        nakshatra_number_at,
+    )
+
+
+def nakshatra_overlaps(start_jd, end_jd, nakshatra_number):
+    return _astronomy.nakshatra_overlaps(
+        start_jd,
+        end_jd,
+        nakshatra_number,
+        nakshatra_number_at,
+    )
+
+
+def tithi_intervals(start_jd, end_jd, target_tithi):
+    return _astronomy.tithi_intervals(
+        start_jd,
+        end_jd,
+        target_tithi,
+        tithi_number_at,
+    )
+
+
+def generic_udaya_occurrences(records, target_tithi):
+    return _records.generic_udaya_occurrences(
+        records,
+        target_tithi,
+        plain_tithi_number=plain_tithi_number,
+        interval_finder=tithi_intervals,
+    )
+
+
+def eligible_generic_occurrences(occurrences, rule):
+    return _records.eligible_generic_occurrences(
+        occurrences,
+        rule,
+        UGADI_NUMBER,
+    )
+
+
+def upakarma_date_is_contaminated(records_by_date, selected_date, geopos):
+    return _upakarma.date_is_contaminated(
+        records_by_date,
+        selected_date,
+        geopos,
+        contamination_checker=eclipse_or_sankranti_in_window,
+    )
+
+
+def select_rigveda_upakarma_dates(records, rule, geopos):
+    return _upakarma.select_rigveda_dates(
+        records,
+        rule,
+        geopos,
+        one_ghati_hours=ONE_GHATI_HOURS,
+        nakshatra_at=nakshatra_number_at,
+        nakshatra_overlap=nakshatra_overlap_hours,
+        group_candidates=group_consecutive_candidates,
+        is_contaminated=upakarma_date_is_contaminated,
+    )
+
+
+def select_taittiriya_purnima_dates(records, masa):
+    return _upakarma.select_taittiriya_purnima_dates(
+        records,
+        masa,
+        one_ghati_hours=ONE_GHATI_HOURS,
+        group_candidates=group_consecutive_candidates,
+        interval_finder=tithi_intervals,
+    )
+
+
+def select_taittiriya_apastamba_upakarma_dates(records, rule, geopos):
+    return _upakarma.select_taittiriya_apastamba_dates(
+        records,
+        rule,
+        geopos,
+        select_purnima=select_taittiriya_purnima_dates,
+        is_contaminated=upakarma_date_is_contaminated,
+    )
+
+
+def resolve_dharma_sindhu_vaishnava_ekadashi_dates(months, month_data):
+    return _ekadashi.resolve_vaishnava_dates(
+        months,
+        month_data,
+        collect_records=collect_records,
+        interval_finder=tithi_intervals,
+        tithi_at=tithi_number_at,
+        arunodaya_hours=ARUNODAYA_HOURS,
+    )
+
+
+def select_vaikuntha_ekadashi_dates(months, month_data, records=None):
+    return _ekadashi.select_vaikuntha_dates(
+        months,
+        month_data,
+        records,
+        collect_records=collect_records,
+        resolve_upavasa=resolve_dharma_sindhu_vaishnava_ekadashi_dates,
+        raasi_at=panchanga.raasi,
+    )
 
 
 def select_ugadi_dates(records, rule):
@@ -762,457 +463,6 @@ def select_naga_panchami_dates(records, rule):
     if selected:
         return selected
     return select_udaya_vyapini_dates(records, rule, 5)
-
-
-def intervals_overlap(first_start, first_end, second_start, second_end):
-    """Return whether two non-empty Julian-day intervals overlap."""
-    return max(first_start, second_start) < min(first_end, second_end)
-
-
-def locally_visible_eclipse_in_window(start_jd, end_jd, geopos):
-    """Return whether a non-penumbral local eclipse overlaps the window."""
-    search_start = start_jd - 1
-
-    lunar_flags, lunar_times, _ = panchanga.swe.lun_eclipse_when_loc(
-        search_start,
-        geopos,
-    )
-    is_purely_penumbral = (
-        lunar_flags & panchanga.swe.ECL_PENUMBRAL
-        and not lunar_flags
-        & (panchanga.swe.ECL_PARTIAL | panchanga.swe.ECL_TOTAL)
-    )
-    if not is_purely_penumbral:
-        lunar_start, lunar_end = lunar_times[2], lunar_times[3]
-        moonrise, moonset = lunar_times[8], lunar_times[9]
-        if moonrise and lunar_start <= moonrise <= lunar_end:
-            lunar_start = moonrise
-        if moonset and lunar_start <= moonset <= lunar_end:
-            lunar_end = moonset
-        if (
-            lunar_start
-            and lunar_end
-            and intervals_overlap(
-                start_jd,
-                end_jd,
-                lunar_start,
-                lunar_end,
-            )
-        ):
-            return True
-
-    _, solar_times, _ = panchanga.swe.sol_eclipse_when_loc(
-        search_start,
-        geopos,
-    )
-    solar_start, solar_end = solar_times[1], solar_times[4]
-    sunrise, sunset = solar_times[5], solar_times[6]
-    if sunrise and solar_start <= sunrise <= solar_end:
-        solar_start = sunrise
-    if sunset and solar_start <= sunset <= solar_end:
-        solar_end = sunset
-    return bool(
-        solar_start
-        and solar_end
-        and intervals_overlap(
-            start_jd,
-            end_jd,
-            solar_start,
-            solar_end,
-        )
-    )
-
-
-def eclipse_or_sankranti_in_window(start_jd, end_jd, geopos):
-    """Return whether Dharma Sindhu's eight-yama window is contaminated."""
-    start_rasi = int(panchanga.solar_longitude(start_jd) // 30)
-    end_rasi = int(panchanga.solar_longitude(end_jd) // 30)
-    if start_rasi != end_rasi:
-        return True
-
-    return locally_visible_eclipse_in_window(start_jd, end_jd, geopos)
-
-
-def karana_index_at(jd):
-    """Return the half-tithi index, 1 through 60, at an arbitrary instant."""
-    return int(panchanga.lunar_phase(jd) // 6) + 1
-
-
-def is_vishti_at(jd):
-    index = karana_index_at(jd)
-    return 2 <= index <= 57 and (index - 2) % 7 == 6
-
-
-def has_bhadra_free_purnima(start_jd, end_jd):
-    """Check a ritual window for a Purnima instant outside Vishti/Bhadra."""
-    for index in range(97):
-        instant = start_jd + (end_jd - start_jd) * index / 96
-        if tithi_number_at(instant) == 15 and not is_vishti_at(instant):
-            return True
-    return False
-
-
-def nakshatra_number_at(jd):
-    """Return the equal 27-part nakshatra at an arbitrary UTC instant."""
-    return int(panchanga.lunar_longitude(jd) // (360 / 27)) + 1
-
-
-def nakshatra_overlap_hours(start_jd, end_jd, target_nakshatra):
-    """Measure one nakshatra's overlap with a short ritual-time window."""
-    epsilon = 1e-10
-    start_matches = (
-        nakshatra_number_at(start_jd + epsilon) == target_nakshatra
-    )
-    end_matches = (
-        nakshatra_number_at(end_jd - epsilon) == target_nakshatra
-    )
-    if start_matches and end_matches:
-        return (end_jd - start_jd) * 24
-    if not start_matches and not end_matches:
-        return 0
-
-    low, high = start_jd, end_jd
-    for _ in range(50):
-        middle = (low + high) / 2
-        middle_matches = (
-            nakshatra_number_at(middle) == target_nakshatra
-        )
-        if start_matches:
-            if middle_matches:
-                low = middle
-            else:
-                high = middle
-        elif middle_matches:
-            high = middle
-        else:
-            low = middle
-    if start_matches:
-        return (low - start_jd) * 24
-    return (end_jd - high) * 24
-
-
-def has_tithi_nakshatra(start_jd, end_jd, tithi_number, nakshatra_number):
-    """Check whether a short ritual window contains a tithi/nakshatra yoga."""
-    for index in range(97):
-        instant = start_jd + (end_jd - start_jd) * index / 96
-        if (
-            tithi_number_at(instant) == tithi_number
-            and nakshatra_number_at(instant) == nakshatra_number
-        ):
-            return True
-    return False
-
-
-def has_nakshatra(start_jd, end_jd, nakshatra_number):
-    for index in range(97):
-        instant = start_jd + (end_jd - start_jd) * index / 96
-        if nakshatra_number_at(instant) == nakshatra_number:
-            return True
-    return False
-
-
-def nakshatra_overlaps(start_jd, end_jd, nakshatra_number):
-    """Test a short ritual window without sampling over a boundary."""
-    epsilon = 1e-10
-    return (
-        nakshatra_number_at(start_jd + epsilon) == nakshatra_number
-        or nakshatra_number_at(end_jd - epsilon) == nakshatra_number
-    )
-
-
-def upakarma_date_is_contaminated(records_by_date, selected_date, geopos):
-    """Check Dharma Sindhu's principal eight-yama eclipse/sankranti window."""
-    selected_record = records_by_date[selected_date]
-    previous_record = records_by_date.get(selected_date - timedelta(days=1))
-    next_record = records_by_date.get(selected_date + timedelta(days=1))
-    if previous_record is None or next_record is None:
-        return False
-    previous_midnight = (previous_record[6] + selected_record[5]) / 2
-    following_midnight = (selected_record[6] + next_record[5]) / 2
-    return eclipse_or_sankranti_in_window(
-        previous_midnight,
-        following_midnight,
-        geopos,
-    )
-
-
-def select_rigveda_upakarma_dates(records, rule, geopos):
-    """Resolve the Bahvrca/Rigveda Upakarma prescribed by Dharma Sindhu.
-
-    The primary time is Shravana nakshatra in shuddha Shravana Shukla
-    Paksha, and the rite is performed in Purvahna. This is intentionally
-    distinct from Yajurveda Upakarma, whose primary time is Purnima.
-
-    Dharma Sindhu gives detailed rules when Shravana crosses civil days:
-
-    * If Shravana prevails at two consecutive sunrises, use the later day
-      when at least three muhurtas (six ghatis, 2.4 hours) remain after its
-      sunrise; otherwise use the earlier, fully occupied day.
-    * If the first sunrise has Uttara Ashadha and Shravana prevails only at
-      the following sunrise, use that following day when at least two
-      muhurtas (four ghatis, 1.6 hours) remain.
-    * A shorter following-day remainder is rejected as Uttara-Ashadha-
-      viddha, and the secondary Panchami/Hasta times are used.
-
-    Shravana is the primary option. If it is unavailable or contaminated,
-    Shukla Panchami joined with Hasta is preferred; either Panchami or Hasta
-    alone is also accepted. Panchami and Hasta are primarily sunrise-vyapini
-    with at least three muhurtas remaining; a shorter sunrise remainder sends
-    the observance to the preceding, purva-viddha day. Shravana-masa options
-    precede the corresponding Bhadrapada fallbacks.
-
-    Upakarma is not performed in adhika masa. An eclipse or sankranti in the
-    principal eight-yama window—from the preceding local midnight through
-    the following local midnight—contaminates a candidate. The stricter
-    separately reported opinion about an eclipse/sankranti touching the
-    selected nakshatra or tithi outside that window is not used, matching the
-    existing Yajurveda resolver.
-
-    Sources:
-    https://www.transliteral.org/pages/z80422074617/view
-    https://www.transliteral.org/pages/z80421215344/view
-    Dharma Sindhu, second pariccheda, printed pp. 97-102:
-    https://archive.org/details/dharma-sindhu-hindi
-    """
-    records_by_date = {record[0]: record for record in records}
-    three_muhurtas = 6 * ONE_GHATI_HOURS
-    two_muhurtas = 4 * ONE_GHATI_HOURS
-
-    def month_records(masa):
-        return [
-            record
-            for record in records
-            if (
-                record[2] == str(masa)
-                and not record[3]
-                and record[1].startswith("S")
-            )
-        ]
-
-    def shravana_candidates(candidate_records):
-        candidates = []
-        for record in candidate_records:
-            sunrise_jd = record[5]
-            if nakshatra_number_at(sunrise_jd + 1e-10) != 22:
-                continue
-            candidates.append(
-                (
-                    record[0],
-                    nakshatra_overlap_hours(
-                        sunrise_jd,
-                        sunrise_jd + three_muhurtas / 24,
-                        22,
-                    ),
-                )
-            )
-
-        selected = []
-        for group in group_consecutive_candidates(candidates):
-            if len(group) > 1:
-                selected.append(
-                    group[-1][0]
-                    if group[-1][1] + 1e-9 >= three_muhurtas
-                    else group[0][0]
-                )
-            elif group[0][1] + 1e-9 >= two_muhurtas:
-                selected.append(group[0][0])
-        return selected
-
-    def sunrise_fallback_dates(candidate_records, kind):
-        candidates = []
-        for record in candidate_records:
-            civil_date, tithi, _, _, tithi_remainder, sunrise_jd, _ = record
-            if kind == "panchami":
-                if tithi != "S5":
-                    continue
-                remainder = tithi_remainder
-            else:
-                if nakshatra_number_at(sunrise_jd + 1e-10) != 13:
-                    continue
-                remainder = nakshatra_overlap_hours(
-                    sunrise_jd,
-                    sunrise_jd + three_muhurtas / 24,
-                    13,
-                )
-            candidates.append(
-                civil_date
-                if remainder + 1e-9 >= three_muhurtas
-                else civil_date - timedelta(days=1)
-            )
-        return sorted(set(candidates))
-
-    shravana_month = month_records(rule.masa)
-    for selected_date in shravana_candidates(shravana_month):
-        if not upakarma_date_is_contaminated(
-            records_by_date,
-            selected_date,
-            geopos,
-        ):
-            return [selected_date]
-
-    # Prefer a Panchami-Hasta conjunction, then Panchami, then Hasta. The
-    # same order is tried first in Shravana and then in Bhadrapada.
-    for masa in (rule.masa, rule.masa + 1):
-        candidates = month_records(masa)
-        if masa != rule.masa:
-            for selected_date in shravana_candidates(candidates):
-                if not upakarma_date_is_contaminated(
-                    records_by_date,
-                    selected_date,
-                    geopos,
-                ):
-                    return [selected_date]
-        panchami_dates = sunrise_fallback_dates(candidates, "panchami")
-        hasta_dates = sunrise_fallback_dates(candidates, "hasta")
-        common_dates = sorted(set(panchami_dates) & set(hasta_dates))
-        ordered_dates = common_dates + [
-            value
-            for value in panchami_dates + hasta_dates
-            if value not in common_dates
-        ]
-        for selected_date in ordered_dates:
-            if (
-                selected_date in records_by_date
-                and not upakarma_date_is_contaminated(
-                    records_by_date,
-                    selected_date,
-                    geopos,
-                )
-            ):
-                return [selected_date]
-    return []
-
-
-def select_taittiriya_purnima_dates(records, masa):
-    """Resolve each non-adhika Purnima using the Taittiriya hierarchy."""
-    by_date = {record[0]: record for record in records}
-    masa_records = sorted(
-        record
-        for record in records
-        if record[2] == str(masa) and not record[3]
-    )
-    segments = []
-    for record in masa_records:
-        if (
-            segments
-            and record[0] == segments[-1][-1][0] + timedelta(days=1)
-        ):
-            segments[-1].append(record)
-        else:
-            segments.append([record])
-
-    selected_dates = []
-    for segment in segments:
-        sunrise_candidates = [
-            (record[0], record[4])
-            for record in segment
-            if record[1] == "S15"
-        ]
-        if sunrise_candidates:
-            for group in group_consecutive_candidates(sunrise_candidates):
-                if len(group) > 1:
-                    selected_dates.append(group[0][0])
-                    continue
-
-                later_date, remainder = group[0]
-                previous_date = later_date - timedelta(days=1)
-                previous_record = by_date.get(previous_date)
-                later_record = by_date[later_date]
-                selected_date = later_date
-                if previous_record is not None:
-                    intervals = tithi_intervals(
-                        previous_record[5],
-                        later_record[5],
-                        15,
-                    )
-                    purnima_start = (
-                        intervals[0][0] if intervals else later_record[5]
-                    )
-                    first_muhurta_end = (
-                        previous_record[5]
-                        + 2 * ONE_GHATI_HOURS / 24
-                    )
-                    if (
-                        purnima_start <= first_muhurta_end
-                        or remainder < 4 * ONE_GHATI_HOURS
-                    ):
-                        selected_date = previous_date
-                selected_dates.append(selected_date)
-            continue
-
-        # A sunrise-skipped Purnima belongs to the preceding sunrise day.
-        for record in segment:
-            following_record = by_date.get(
-                record[0] + timedelta(days=1)
-            )
-            if following_record is None:
-                continue
-            if tithi_intervals(record[5], following_record[5], 15):
-                selected_dates.append(record[0])
-                break
-
-    return selected_dates
-
-
-def select_taittiriya_apastamba_upakarma_dates(records, rule, geopos):
-    """Resolve Taittiriya-Apastamba Yajur Upakarma.
-
-    Shravana Purnima is primary. If Purnima covers both sunrises, all
-    Yajurvedins use the earlier day. For a split Purnima beginning after the
-    first fixed muhurta, Taittiriyas use the later day when at least two
-    muhurtas (four ghatis) remain after its sunrise; a shorter remainder uses
-    the earlier day. If Purnima is skipped at sunrise, the civil day containing
-    it is used. Adhika-masa Upakarma is forbidden.
-
-    An eclipse or sankranti between the preceding and following local night
-    midpoints contaminates the selected day. Apastambas then use Bhadrapada
-    Purnima, resolved and validated by the same rules. If both dates are
-    defective, no date is returned rather than silently retaining a defective
-    date. This implements Dharma Sindhu's principal eight-yama opinion, not
-    its separately reported stricter element-touch opinion.
-
-    Sources:
-    https://www.transliteral.org/pages/z80421215029/view
-    https://www.transliteral.org/pages/z80421215344/view
-    """
-    by_date = {record[0]: record for record in records}
-    selected_dates = select_taittiriya_purnima_dates(records, rule.masa)
-    fallback_dates = select_taittiriya_purnima_dates(
-        records,
-        rule.masa + 1,
-    )
-
-    selected = []
-    for selected_date in selected_dates:
-        if not upakarma_date_is_contaminated(
-            by_date,
-            selected_date,
-            geopos,
-        ):
-            selected.append(selected_date)
-            continue
-
-        fallback_date = next(
-            (
-                candidate
-                for candidate in fallback_dates
-                if (
-                    selected_date < candidate
-                    <= selected_date + timedelta(days=45)
-                )
-            ),
-            None,
-        )
-        if (
-            fallback_date is not None
-            and not upakarma_date_is_contaminated(
-                by_date,
-                fallback_date,
-                geopos,
-            )
-        ):
-            selected.append(fallback_date)
-    return selected
 
 
 def select_janmashtami_dates(records, rule):
@@ -1687,462 +937,65 @@ def select_raksha_bandhan_dates(records, rule):
     return selected
 
 
-def collect_records(months, month_data):
-    records = []
-    for year, month in months:
-        for (
-            day,
-            tithi,
-            _,
-            masa,
-            is_adhika,
-            tithi_hours_after_sunrise,
-            sunrise_jd,
-            sunset_jd,
-            _yoga,
-            _moonrise_jd,
-        ) in month_data[(year, month)]:
-            records.append(
-                (
-                    CivilDate(year, month, day),
-                    tithi,
-                    masa,
-                    is_adhika,
-                    tithi_hours_after_sunrise,
-                    sunrise_jd,
-                    sunset_jd,
-                )
-            )
-    return records
-
-
-def collect_moonrise_jds(months, month_data):
-    """Map civil dates to the first local moonrise, expressed as UTC JD."""
-    return {
-        CivilDate(year, month, values[0]): values[9]
-        for year, month in months
-        for values in month_data[(year, month)]
-    }
-
-
-def tithi_intervals(start_jd, end_jd, target_tithi):
-    """Find target-tithi intervals by bracketing each phase transition."""
-    step = 0.25
-    intervals = []
-    cursor = start_jd
-    active = tithi_number_at(cursor) == target_tithi
-    interval_start = cursor if active else None
-
-    while cursor < end_jd:
-        following = min(cursor + step, end_jd)
-        following_active = tithi_number_at(following) == target_tithi
-        if active != following_active:
-            low, high = cursor, following
-            for _ in range(50):
-                middle = (low + high) / 2
-                middle_active = tithi_number_at(middle) == target_tithi
-                if middle_active == active:
-                    low = middle
-                else:
-                    high = middle
-            boundary = (low + high) / 2
-            if following_active:
-                interval_start = boundary
-            else:
-                intervals.append((interval_start, boundary))
-                interval_start = None
-        cursor = following
-        active = following_active
-
-    if interval_start is not None:
-        intervals.append((interval_start, end_jd))
-    return intervals
-
-
-def plain_tithi_number(tithi):
-    """Convert a plain S1..S15 or K1..K15 code to 1..30."""
-    if not isinstance(tithi, str) or len(tithi) < 2:
-        return None
-    paksha = tithi[0]
-    if paksha not in {"S", "K"}:
-        return None
-    try:
-        paksha_tithi = int(tithi[1:])
-    except ValueError:
-        return None
-    if not 1 <= paksha_tithi <= 15:
-        return None
-    return paksha_tithi if paksha == "S" else paksha_tithi + 15
-
-
-def generic_udaya_occurrences(records, target_tithi):
-    """Return sunrise-owned occurrences with their amanta-masa metadata."""
-    records = sorted(records)
-    occurrences = []
-    sunrise_candidates = [
-        (record[0], record[2], record[3])
-        for record in records
-        if plain_tithi_number(record[1]) == target_tithi
-    ]
-    for group in group_consecutive_candidates(sunrise_candidates):
-        occurrences.append(group[0])
-
-    sunrise_dates = {occurrence[0] for occurrence in occurrences}
-    for record, following_record in zip(records, records[1:]):
-        if following_record[0] != record[0] + timedelta(days=1):
-            continue
-        start_tithi = plain_tithi_number(record[1])
-        end_tithi = plain_tithi_number(following_record[1])
-        if start_tithi is None or end_tithi is None:
-            continue
-        skipped = [
-            (start_tithi + offset - 1) % 30 + 1
-            for offset in range(1, (end_tithi - start_tithi) % 30)
-        ]
-        if target_tithi not in skipped:
-            continue
-        if not tithi_intervals(record[5], following_record[5], target_tithi):
-            continue
-
-        # Amanta masa changes at Shukla Pratipada. For a skipped Shukla
-        # tithi, the following sunrise therefore owns the new masa metadata;
-        # for a skipped Krishna tithi, the preceding sunrise retains it.
-        masa_record = following_record if target_tithi <= 15 else record
-        occurrence = (record[0], masa_record[2], masa_record[3])
-        if occurrence[0] not in sunrise_dates:
-            occurrences.append(occurrence)
-
-    return sorted(set(occurrences))
-
-
 def select_generic_udaya_festival_dates(records, rule):
     """Apply the experimental sunrise-ownership policy to a plain tithi."""
-    target_tithi = plain_tithi_number(rule.tithi)
-    if target_tithi is None:
-        raise ValueError(f"{rule.name} does not have a plain tithi rule")
-
-    occurrences = eligible_generic_occurrences(
-        generic_udaya_occurrences(records, target_tithi),
+    return _generic.select_udaya_festival_dates(
+        records,
         rule,
+        plain_tithi_number=plain_tithi_number,
+        occurrence_finder=generic_udaya_occurrences,
+        eligibility_filter=eligible_generic_occurrences,
     )
-    return [occurrence[0] for occurrence in occurrences]
-
-
-def eligible_generic_occurrences(occurrences, rule):
-    """Filter generic occurrences by masa and the calendar's adhika policy."""
-    occurrences = [
-        occurrence
-        for occurrence in occurrences
-        if occurrence[1] in {str(rule.masa), f"A{rule.masa}"}
-    ]
-    if rule.number == UGADI_NUMBER and any(
-        occurrence[2] for occurrence in occurrences
-    ):
-        occurrences = [
-            occurrence for occurrence in occurrences if occurrence[2]
-        ]
-    else:
-        occurrences = [
-            occurrence for occurrence in occurrences if not occurrence[2]
-        ]
-    return occurrences
 
 
 def select_generic_midpoint_festival_dates(records, rule):
     """Assign each eligible tithi to the sunrise-day containing its midpoint."""
-    target_tithi = plain_tithi_number(rule.tithi)
-    if target_tithi is None:
-        raise ValueError(f"{rule.name} does not have a plain tithi rule")
-
-    records = sorted(records)
-    records_by_date = {record[0]: record for record in records}
-    occurrences = eligible_generic_occurrences(
-        generic_udaya_occurrences(records, target_tithi),
+    return _generic.select_midpoint_festival_dates(
+        records,
         rule,
+        plain_tithi_number=plain_tithi_number,
+        occurrence_finder=generic_udaya_occurrences,
+        eligibility_filter=eligible_generic_occurrences,
+        interval_finder=tithi_intervals,
     )
 
-    selected = []
-    for owner_date, _, _ in occurrences:
-        owner_record = records_by_date.get(owner_date)
-        if owner_record is None:
-            continue
-        intervals = tithi_intervals(
-            owner_record[5] - 1.25,
-            owner_record[5] + 2.25,
-            target_tithi,
-        )
-        if not intervals:
-            continue
-        reference = owner_record[5] + 0.5
-        target_interval = min(
-            intervals,
-            key=lambda interval: abs(
-                (interval[0] + interval[1]) / 2 - reference
-            ),
-        )
-        tithi_midpoint = sum(target_interval) / 2
 
-        for offset in (-1, 0, 1):
-            civil_date = owner_date + timedelta(days=offset)
-            record = records_by_date.get(civil_date)
-            following_record = records_by_date.get(
-                civil_date + timedelta(days=1)
-            )
-            if record is None or following_record is None:
-                continue
-            if record[5] <= tithi_midpoint < following_record[5]:
-                selected.append(civil_date)
-                break
-    return sorted(set(selected))
-
-
-def generic_kala_for_rule(rule):
-    """Return the lay ritual period assigned by the generic-kala experiment."""
-    return GENERIC_KALA_BY_FESTIVAL.get(rule.number, SUNRISE_KALA)
-
-
-def generic_kala_window(
-    record,
-    following_record,
-    kala,
-    preceding_record=None,
-):
-    """Return a named slot from the proportional day/night grids.
-
-    Daylight slots are Pratah, Sangava, Madhyahna, Aparahna, and Sayahna.
-    Night slots are Pradosha, Purvaratri, Madhyaratri, Gadharatri, and
-    Arunodaya. Purvahna is the explicit Pratah-plus-Sangava span.
-    """
-    sunrise_jd, sunset_jd = record[5:7]
-    if kala == SUNRISE_KALA:
-        return sunrise_jd, sunrise_jd
-    if kala == SUNSET_KALA:
-        return sunset_jd, sunset_jd
-
-    day_boundaries = [
-        sunrise_jd + (sunset_jd - sunrise_jd) * part / 5
-        for part in range(6)
-    ]
-    if kala == PURVAHNA_KALA:
-        return day_boundaries[0], day_boundaries[2]
-    day_index = {
-        PRATAH_KALA: 0,
-        SANGAVA_KALA: 1,
-        MADHYAHNA_KALA: 2,
-        APARAHNA_KALA: 3,
-        SAYAHNA_KALA: 4,
-    }.get(kala)
-    if day_index is not None:
-        return day_boundaries[day_index], day_boundaries[day_index + 1]
-
-    if kala == ARUNODAYA_KALA:
-        if preceding_record is None:
-            raise ValueError("arunodaya requires the preceding sunset")
-        preceding_sunset_jd = preceding_record[6]
-        night_fifth = (sunrise_jd - preceding_sunset_jd) / 5
-        return sunrise_jd - night_fifth, sunrise_jd
-
-    if kala in NIGHT_KALAS:
-        if following_record is None:
-            raise ValueError(f"{kala} requires the following sunrise")
-        following_sunrise_jd = following_record[5]
-        boundaries = [
-            sunset_jd + (following_sunrise_jd - sunset_jd) * part / 5
-            for part in range(6)
-        ]
-        index = {
-            PRADOSHA_KALA: 0,
-            PURVARATRI_KALA: 1,
-            MADHYARATRI_KALA: 2,
-            GADHARATRI_KALA: 3,
-        }[kala]
-        return boundaries[index], boundaries[index + 1]
-
-    raise ValueError(f"Unknown generic kala: {kala}")
-
-
-def generic_kala_score(kala_window, target_interval, civil_date):
-    """Score one date by kala coverage, then centrality, then earlier date."""
-    kala_start, kala_end = kala_window
-    tithi_start, tithi_end = target_interval
-    kala_midpoint = (kala_start + kala_end) / 2
-    tithi_midpoint = (tithi_start + tithi_end) / 2
-    if kala_start == kala_end:
-        coverage = float(tithi_start <= kala_start < tithi_end)
-    else:
-        overlap = max(
-            0.0,
-            min(kala_end, tithi_end) - max(kala_start, tithi_start),
-        )
-        coverage = overlap / (kala_end - kala_start)
-    return coverage, -abs(kala_midpoint - tithi_midpoint), -civil_date.toordinal()
+generic_kala_for_rule = _generic.kala_for_rule
+generic_kala_window = _generic.kala_window
+generic_kala_score = _generic.kala_score
 
 
 def select_generic_kala_festival_dates(records, rule):
-    """Resolve a plain tithi using one kala mapping and one common tie-break.
-
-    The date maximizing proportional tithi coverage of the assigned kala is
-    selected. Equal coverage prefers the kala midpoint nearest the tithi
-    midpoint; an exact final tie uses the earlier civil date. If neither date
-    overlaps the kala, midpoint proximity acts as the missing-window fallback.
-    """
-    target_tithi = plain_tithi_number(rule.tithi)
-    if target_tithi is None:
-        raise ValueError(f"{rule.name} does not have a plain tithi rule")
-
-    records = sorted(records)
-    records_by_date = {record[0]: record for record in records}
-    occurrences = eligible_generic_occurrences(
-        generic_udaya_occurrences(records, target_tithi),
+    """Resolve a plain tithi through the private Generic Kala engine."""
+    return _generic.select_kala_festival_dates(
+        records,
         rule,
+        plain_tithi_number=plain_tithi_number,
+        occurrence_finder=generic_udaya_occurrences,
+        eligibility_filter=eligible_generic_occurrences,
+        interval_finder=tithi_intervals,
+        kala_for_rule=generic_kala_for_rule,
+        kala_window=generic_kala_window,
+        kala_score=generic_kala_score,
     )
-    kala = generic_kala_for_rule(rule)
-    if kala == SUNRISE_KALA:
-        return [occurrence[0] for occurrence in occurrences]
-
-    selected = []
-    for owner_date, _, _ in occurrences:
-        owner_record = records_by_date.get(owner_date)
-        if owner_record is None:
-            continue
-        scan_start = owner_record[5] - 1.25
-        scan_end = owner_record[5] + 2.25
-        intervals = tithi_intervals(scan_start, scan_end, target_tithi)
-        if not intervals:
-            continue
-        reference = owner_record[5] + 0.5
-        target_interval = min(
-            intervals,
-            key=lambda interval: abs(
-                (interval[0] + interval[1]) / 2 - reference
-            ),
-        )
-
-        candidates = []
-        for offset in (-1, 0, 1):
-            civil_date = owner_date + timedelta(days=offset)
-            record = records_by_date.get(civil_date)
-            following_record = records_by_date.get(
-                civil_date + timedelta(days=1)
-            )
-            preceding_record = records_by_date.get(
-                civil_date - timedelta(days=1)
-            )
-            if record is None:
-                continue
-            if (
-                kala in NIGHT_KALAS
-                and following_record is None
-            ):
-                continue
-            if kala == ARUNODAYA_KALA and preceding_record is None:
-                continue
-            window = generic_kala_window(
-                record,
-                following_record,
-                kala,
-                preceding_record,
-            )
-            candidates.append(
-                (
-                    generic_kala_score(
-                        window,
-                        target_interval,
-                        civil_date,
-                    ),
-                    civil_date,
-                )
-            )
-        if candidates:
-            selected.append(max(candidates)[1])
-    return sorted(set(selected))
 
 
-def generic_anchor_for_rule(rule):
-    """Return the exact instant assigned by the generic-anchor experiment."""
-    return GENERIC_ANCHOR_BY_FESTIVAL.get(rule.number, SUNRISE_ANCHOR)
-
-
-def generic_anchor_jd(record, following_record, anchor):
-    """Return one exact local anchor as a Julian day."""
-    sunrise_jd, sunset_jd = record[5:7]
-    if anchor == SUNRISE_ANCHOR:
-        return sunrise_jd
-    if anchor == DAY_MIDPOINT_ANCHOR:
-        return (sunrise_jd + sunset_jd) / 2
-    if anchor == SUNSET_ANCHOR:
-        return sunset_jd
-    if anchor == NIGHT_MIDPOINT_ANCHOR:
-        if following_record is None:
-            raise ValueError("night midpoint requires the following sunrise")
-        return (sunset_jd + following_record[5]) / 2
-    if anchor == PREDAWN_ANCHOR:
-        return sunrise_jd - ARUNODAYA_HOURS / 24
-    raise ValueError(f"Unknown generic anchor: {anchor}")
+generic_anchor_for_rule = _generic.anchor_for_rule
+generic_anchor_jd = _generic.anchor_jd
 
 
 def select_generic_anchor_festival_dates(records, rule):
-    """Resolve a plain tithi using one exact anchor and one common fallback."""
-    target_tithi = plain_tithi_number(rule.tithi)
-    if target_tithi is None:
-        raise ValueError(f"{rule.name} does not have a plain tithi rule")
-
-    records = sorted(records)
-    records_by_date = {record[0]: record for record in records}
-    occurrences = eligible_generic_occurrences(
-        generic_udaya_occurrences(records, target_tithi),
+    """Resolve a plain tithi through the private Generic Anchor engine."""
+    return _generic.select_anchor_festival_dates(
+        records,
         rule,
+        plain_tithi_number=plain_tithi_number,
+        occurrence_finder=generic_udaya_occurrences,
+        eligibility_filter=eligible_generic_occurrences,
+        interval_finder=tithi_intervals,
+        anchor_for_rule=generic_anchor_for_rule,
+        anchor_jd=generic_anchor_jd,
     )
-    anchor = generic_anchor_for_rule(rule)
-
-    selected = []
-    for owner_date, _, _ in occurrences:
-        owner_record = records_by_date.get(owner_date)
-        if owner_record is None:
-            continue
-        intervals = tithi_intervals(
-            owner_record[5] - 1.25,
-            owner_record[5] + 2.25,
-            target_tithi,
-        )
-        if not intervals:
-            continue
-        reference = owner_record[5] + 0.5
-        target_interval = min(
-            intervals,
-            key=lambda interval: abs(
-                (interval[0] + interval[1]) / 2 - reference
-            ),
-        )
-        tithi_midpoint = sum(target_interval) / 2
-
-        candidates = []
-        for offset in (-1, 0, 1):
-            civil_date = owner_date + timedelta(days=offset)
-            record = records_by_date.get(civil_date)
-            if record is None:
-                continue
-            following_record = records_by_date.get(
-                civil_date + timedelta(days=1)
-            )
-            if (
-                anchor == NIGHT_MIDPOINT_ANCHOR
-                and following_record is None
-            ):
-                continue
-            anchor_jd = generic_anchor_jd(record, following_record, anchor)
-            contains_anchor = (
-                target_interval[0] <= anchor_jd < target_interval[1]
-            )
-            score = (
-                int(contains_anchor),
-                -abs(anchor_jd - tithi_midpoint),
-                -civil_date.toordinal(),
-            )
-            candidates.append((score, civil_date))
-        if candidates:
-            selected.append(max(candidates)[1])
-    return sorted(set(selected))
 
 
 def generic_kala_date_is_valid(
@@ -2171,208 +1024,13 @@ def select_valid_generic_kala_festival_dates(
     geopos=None,
 ):
     """Resolve by kala, then reject defects and retry with the same policy."""
-    selected_dates = select_generic_kala_festival_dates(records, rule)
-    overlay = GENERIC_KALA_VALIDITY_BY_FESTIVAL.get(rule.number)
-    if overlay is None:
-        return selected_dates
-
-    records_by_date = {record[0]: record for record in records}
-    fallback_dates = []
-    if overlay.fallback_masa_offset is not None:
-        fallback_rule = replace(
-            rule,
-            masa=rule.masa + overlay.fallback_masa_offset,
-        )
-        fallback_dates = select_generic_kala_festival_dates(
-            records,
-            fallback_rule,
-        )
-
-    validated = []
-    for selected_date in selected_dates:
-        if generic_kala_date_is_valid(
-            records_by_date,
-            selected_date,
-            overlay,
-            geopos,
-        ):
-            validated.append(selected_date)
-            continue
-
-        fallback_date = next(
-            (
-                candidate
-                for candidate in fallback_dates
-                if (
-                    selected_date < candidate
-                    <= selected_date + timedelta(days=45)
-                )
-            ),
-            None,
-        )
-        if (
-            fallback_date is not None
-            and generic_kala_date_is_valid(
-                records_by_date,
-                fallback_date,
-                overlay,
-                geopos,
-            )
-        ):
-            validated.append(fallback_date)
-    return validated
-
-
-def resolve_dharma_sindhu_vaishnava_ekadashi_dates(months, month_data):
-    """Resolve Dharma Sindhu Vaishnava Ekadashi upavasa dates.
-
-    Dharma Sindhu distinguishes Vaishnavas from Smartas by Dashami-vedha:
-
-    * Arunodaya is the four-ghati (96-minute) period before local sunrise.
-      If even a trace of Dashami remains after Arunodaya begins, Ekadashi is
-      viddha for Vaishnavas; that civil day is rejected and upavasa moves to
-      the following day (Dvadashi).
-    * A shuddha Ekadashi also moves to the following day when Ekadashi has
-      adhikya (it remains after the next sunrise), when Dvadashi has adhikya
-      (it remains after the subsequent sunrise), or when both have adhikya.
-    * Only a shuddha occurrence with neither Ekadashi nor Dvadashi adhikya
-      is observed on the first day.
-    * Both Shukla and Krishna Ekadashis are included. An adhika masa therefore
-      contributes its own two observances. This function selects upavasa dates
-      only; it intentionally does not calculate the following day's Parana.
-
-    Dharma Sindhu, "Vaishnava vrata-day determination" and its summary:
-    https://www.transliteral.org/pages/z80422042154/view
-    https://www.transliteral.org/pages/z80422042403/view
-
-    Sri Vaishnava sources confirm the four-ghati Arunodaya/Dashami rule while
-    cautioning that exceptional Ekadashi/Dvadashi growth and loss cases can
-    depend on one's acharya, family, or regional practice:
-    https://ibiblio.org/sripedia/srirangasri/archives/jul01/msg00084.html
-    https://www.ibiblio.org/sripedia/ramanuja/archives/jan06/msg00060.html
-
-    Therefore this is deliberately the pure Dharma Sindhu fallback requested
-    for this calendar. It does not import the Gaudiya/ISKCON GCal rules for
-    named nakshatra Mahadvadashis, Pakshavardhini, or other Gaurabda-specific
-    decisions.
-    """
-    records = collect_records(months, month_data)
-    sunrises = [(record[0], record[5]) for record in records]
-    if len(sunrises) < 3:
-        return []
-
-    scan_start = sunrises[0][1] - 1
-    scan_end = sunrises[-1][1] + 1
-    selected = []
-    epsilon = 1 / (86400 * 10)
-
-    for ekadashi_tithi in (11, 26):
-        dashami_tithi = ekadashi_tithi - 1
-        dvadashi_tithi = ekadashi_tithi + 1
-        for ekadashi_start, _ in tithi_intervals(
-            scan_start,
-            scan_end,
-            ekadashi_tithi,
-        ):
-            first_sunrise_index = next(
-                (
-                    index
-                    for index, (_, sunrise_jd) in enumerate(sunrises)
-                    if sunrise_jd >= ekadashi_start
-                ),
-                None,
-            )
-            if (
-                first_sunrise_index is None
-                or first_sunrise_index + 2 >= len(sunrises)
-            ):
-                continue
-
-            first_date, first_sunrise = sunrises[first_sunrise_index]
-            second_date, second_sunrise = sunrises[first_sunrise_index + 1]
-            _, third_sunrise = sunrises[first_sunrise_index + 2]
-            arunodaya = first_sunrise - ARUNODAYA_HOURS / 24
-
-            is_dashami_viddha = (
-                tithi_number_at(arunodaya + epsilon) == dashami_tithi
-            )
-            ekadashi_has_adhikya = (
-                tithi_number_at(second_sunrise + epsilon)
-                == ekadashi_tithi
-            )
-            dvadashi_has_adhikya = (
-                tithi_number_at(third_sunrise + epsilon)
-                == dvadashi_tithi
-            )
-            selected.append(
-                second_date
-                if (
-                    is_dashami_viddha
-                    or ekadashi_has_adhikya
-                    or dvadashi_has_adhikya
-                )
-                else first_date
-            )
-
-    return sorted(set(selected))
-
-
-def select_vaikuntha_ekadashi_dates(months, month_data, records=None):
-    """Select the Dharma-sindhu Vaishnava fast in solar Dhanur masa.
-
-    Vaikuntha (Mukkoti) Ekadashi is a regional/Sri-Vaishnava observance, and
-    no separately named Vaikuntha-Ekadashi rule was found in Dharma Sindhu's
-    Margashirsha or Pausha sections. Its calendrical definition is the Shukla
-    Ekadashi fast that falls in the sidereal solar month of Dhanur. It can
-    therefore belong to lunar Margashirsha or Pausha.
-
-    The festival marker reuses this calendar's existing pure Dharma Sindhu
-    Vaishnava Ekadashi resolver. Consequently Dashami at the four-ghati
-    Arunodaya, Ekadashi/Dvadashi adhikya, and a resulting shift of the fast
-    to Dvadashi are handled identically to every teal-underlined Ekadashi.
-    No ISKCON/Gaudiya Mahadvadashi categories are introduced.
-
-    The solar test is made at local sunrise on the resolved fast day using
-    panchanga.raasi(); Dhanur is rasi 9. Sunrise is appropriate because the
-    Ekadashi upavasa day runs from local sunrise, and a shifted Vaishnava
-    fast may have Dvadashi rather than S11 at that sunrise. The candidate
-    must still be in Shukla Paksha and lunar masa 9 or 10. Adhika lunar masa
-    is not rejected: the controlling definition is solar Dhanur, not the
-    shuddha/adhika label.
-
-    No occurrence is manufactured when neither candidate falls in Dhanur,
-    and all qualifying occurrences are retained. Hence a Gregorian year can
-    contain zero, one, or two dates, while an arbitrary 13-month PDF range
-    may also contain portions of two Dhanur seasons.
-
-    Sources:
-    Dharma Sindhu Vaishnava Ekadashi decision:
-    https://www.transliteral.org/pages/z80422042154/view
-    https://www.transliteral.org/pages/z80422042403/view
-    Regional Dhanur-masa definition:
-    https://www.drikpanchang.com/ekadashis/vaikuntha/vaikuntha-ekadashi-date-time.html
-    https://www.sadagopan.org/ebook/pdf/Vratams.pdf
-    """
-    if records is None:
-        records = collect_records(months, month_data)
-    records_by_date = {record[0]: record for record in records}
-    upavasa_dates = resolve_dharma_sindhu_vaishnava_ekadashi_dates(
-        months,
-        month_data,
+    return _generic.select_valid_kala_festival_dates(
+        records,
+        rule,
+        geopos,
+        selector=select_generic_kala_festival_dates,
+        validator=generic_kala_date_is_valid,
     )
-    selected = []
-    for upavasa_date in upavasa_dates:
-        record = records_by_date.get(upavasa_date)
-        if record is None:
-            continue
-        _, tithi, masa, _, _, sunrise_jd, _ = record
-        if (
-            masa in {"9", "10"}
-            and tithi.startswith("S")
-            and panchanga.raasi(sunrise_jd) == 9
-        ):
-            selected.append(upavasa_date)
-    return selected
 
 
 def select_ganesha_caturthi_dates(records, rule):
