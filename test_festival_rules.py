@@ -5,12 +5,21 @@ import unittest
 from unittest.mock import patch
 
 from festival_rules import (
+    APARAHNA_KALA,
     FESTIVAL_RULES,
+    GENERIC_KALA_FESTIVAL_POLICY,
     GENERIC_UDAYA_FESTIVAL_POLICY,
+    MADHYAHNA_KALA,
+    PURVODAYA_KALA,
+    RATRI_KALA,
+    SAYAHNA_KALA,
+    SUNSET_KALA,
     FestivalRule,
     VARAMAHALAKSHMI_RULE,
     format_festival_dates,
     generic_udaya_occurrences,
+    generic_kala_for_rule,
+    generic_kala_window,
     nakshatra_overlaps,
     plain_tithi_number,
     resolve_festivals,
@@ -50,6 +59,7 @@ from festival_rules import (
     select_deepavali_dates,
     select_gita_jayanti_dates,
     select_generic_udaya_festival_dates,
+    select_generic_kala_festival_dates,
     select_kama_dahana_dates,
 )
 
@@ -204,6 +214,146 @@ class GenericUdayaPolicyTests(unittest.TestCase):
 
         entry = next(item for item in entries if item[0] == rule.number)
         self.assertEqual(entry[1], "Apr 11")
+
+
+class GenericKalaPolicyTests(unittest.TestCase):
+    def setUp(self):
+        self.days = [
+            (
+                date(2030, 4, 10 + offset),
+                "S9",
+                "1",
+                False,
+                1.0,
+                9.0 + offset,
+                9.5 + offset,
+            )
+            for offset in range(3)
+        ]
+
+    def test_day_and_night_are_divided_into_thirds(self):
+        first, second = self.days[:2]
+        self.assertEqual(
+            generic_kala_window(first, second, MADHYAHNA_KALA),
+            (9.0 + 1 / 6, 9.0 + 2 / 6),
+        )
+        self.assertEqual(
+            generic_kala_window(first, second, SAYAHNA_KALA),
+            (9.5, 9.5 + 1 / 6),
+        )
+        self.assertEqual(
+            generic_kala_window(first, second, RATRI_KALA),
+            (9.5 + 1 / 6, 9.5 + 2 / 6),
+        )
+        self.assertEqual(
+            generic_kala_window(
+                second,
+                self.days[2],
+                PURVODAYA_KALA,
+                first,
+            ),
+            (9.5 + 2 / 6, 10.0),
+        )
+
+    def test_agreed_festival_kala_assignments(self):
+        self.assertEqual(
+            generic_kala_for_rule(festival_rule("Rama Navami")),
+            MADHYAHNA_KALA,
+        )
+        self.assertEqual(
+            generic_kala_for_rule(festival_rule("Mahanavami (Puja)")),
+            APARAHNA_KALA,
+        )
+        self.assertEqual(
+            generic_kala_for_rule(festival_rule("Narasimha Jayanti")),
+            SUNSET_KALA,
+        )
+        self.assertEqual(
+            generic_kala_for_rule(festival_rule("Naraka Chaturdashi")),
+            PURVODAYA_KALA,
+        )
+
+    def test_greater_kala_overlap_wins_competing_date(self):
+        rule = festival_rule("Rama Navami")
+        with patch(
+            "festival_rules.generic_udaya_occurrences",
+            return_value=[(date(2030, 4, 11), "1", False)],
+        ), patch(
+            "festival_rules.tithi_intervals",
+            return_value=[(10.30, 11.25)],
+        ):
+            self.assertEqual(
+                select_generic_kala_festival_dates(self.days, rule),
+                [date(2030, 4, 12)],
+            )
+
+    def test_midpoint_distance_resolves_missing_window(self):
+        rule = festival_rule("Rama Navami")
+        with patch(
+            "festival_rules.generic_udaya_occurrences",
+            return_value=[(date(2030, 4, 11), "1", False)],
+        ), patch(
+            "festival_rules.tithi_intervals",
+            return_value=[(10.85, 10.95)],
+        ):
+            self.assertEqual(
+                select_generic_kala_festival_dates(self.days, rule),
+                [date(2030, 4, 12)],
+            )
+
+    def test_policy_bypasses_traditional_plain_tithi_selector(self):
+        rule = festival_rule("Rama Navami")
+        selected_date = date(2030, 4, 11)
+        with patch(
+            "festival_rules.FESTIVAL_RULES",
+            (rule,),
+        ), patch(
+            "festival_rules.collect_records",
+            return_value=[self.days[1]],
+        ), patch(
+            "festival_rules.collect_moonrise_jds",
+            return_value={},
+        ), patch(
+            "festival_rules.select_generic_kala_festival_dates",
+            return_value=[selected_date],
+        ) as selector, patch(
+            "festival_rules.select_rama_navami_dates",
+            side_effect=AssertionError("traditional selector called"),
+        ):
+            _, entries = resolve_festivals(
+                [],
+                {},
+                GENERIC_KALA_FESTIVAL_POLICY,
+            )
+
+        selector.assert_called_once_with([self.days[1]], rule)
+        entry = next(item for item in entries if item[0] == rule.number)
+        self.assertEqual(entry[1], "Apr 11")
+
+    def test_janmashtami_label_describes_experimental_ratri_window(self):
+        rule = festival_rule("Janmashtami")
+        selected_date = self.days[1][0]
+        with patch(
+            "festival_rules.FESTIVAL_RULES",
+            (rule,),
+        ), patch(
+            "festival_rules.collect_records",
+            return_value=[self.days[1]],
+        ), patch(
+            "festival_rules.collect_moonrise_jds",
+            return_value={},
+        ), patch(
+            "festival_rules.select_generic_kala_festival_dates",
+            return_value=[selected_date],
+        ):
+            _, entries = resolve_festivals(
+                [],
+                {},
+                GENERIC_KALA_FESTIVAL_POLICY,
+            )
+
+        entry = next(item for item in entries if item[0] == rule.number)
+        self.assertEqual(entry[2], "Janmashtami (Ratri Kala)")
 
 
 class UgadiRuleTests(unittest.TestCase):

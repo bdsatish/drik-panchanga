@@ -17,6 +17,7 @@ from reportlab.pdfgen import canvas
 
 from festival_rules import (
     FESTIVAL_POLICIES,
+    GENERIC_KALA_FESTIVAL_POLICY,
     GENERIC_UDAYA_FESTIVAL_POLICY,
     TRADITIONAL_FESTIVAL_POLICY,
     resolve_dharma_sindhu_vaishnava_ekadashi_dates,
@@ -37,6 +38,7 @@ MONTH_COUNT = 13
 DEFAULT_CITIES_PATH = Path(__file__).with_name("cities.json")
 RULESET_VERSION = "Dharma-sindhu DS-1.3"
 GENERIC_UDAYA_RULESET_VERSION = "Generic-udaya EXP-1.0"
+GENERIC_KALA_RULESET_VERSION = "Generic-kala EXP-1.0"
 LAYOUT_VERSION = "A4-1.1"
 PDF_AUTHOR = "Satish BD"
 PDF_AUTHOR_EMAIL = "bdsatish@gmail.com"
@@ -52,6 +54,8 @@ def ruleset_version(festival_policy):
         return RULESET_VERSION
     if festival_policy == GENERIC_UDAYA_FESTIVAL_POLICY:
         return GENERIC_UDAYA_RULESET_VERSION
+    if festival_policy == GENERIC_KALA_FESTIVAL_POLICY:
+        return GENERIC_KALA_RULESET_VERSION
     raise ValueError(f"Unknown festival policy: {festival_policy}")
 
 

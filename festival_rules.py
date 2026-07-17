@@ -10,9 +10,11 @@ import panchanga
 
 TRADITIONAL_FESTIVAL_POLICY = "traditional"
 GENERIC_UDAYA_FESTIVAL_POLICY = "generic-udaya"
+GENERIC_KALA_FESTIVAL_POLICY = "generic-kala"
 FESTIVAL_POLICIES = (
     TRADITIONAL_FESTIVAL_POLICY,
     GENERIC_UDAYA_FESTIVAL_POLICY,
+    GENERIC_KALA_FESTIVAL_POLICY,
 )
 
 
@@ -332,6 +334,37 @@ VSN_JAYANTI_NUMBER = 32
 MAHA_SHIVARATRI_NUMBER = 33
 KAMA_DAHANA_NUMBER = 34
 DHANVANTARI_JAYANTI_NUMBER = 35
+PURVAHNA_KALA = "purvahna"
+MADHYAHNA_KALA = "madhyahna"
+APARAHNA_KALA = "aparahna"
+SUNSET_KALA = "sunset"
+SAYAHNA_KALA = "sayahna"
+RATRI_KALA = "ratri"
+PURVODAYA_KALA = "purvodaya"
+SUNRISE_KALA = "sunrise"
+GENERIC_KALA_BY_FESTIVAL = {
+    RIG_UPAKARMA_NUMBER: PURVAHNA_KALA,
+    VASANTA_PANCHAMI_NUMBER: PURVAHNA_KALA,
+    RAMA_NAVAMI_NUMBER: MADHYAHNA_KALA,
+    AKSAYA_TRTIYA_NUMBER: MADHYAHNA_KALA,
+    GANESHA_CATURTHI_NUMBER: MADHYAHNA_KALA,
+    BALI_PADYAMI_NUMBER: MADHYAHNA_KALA,
+    RAKSHA_BANDHAN_NUMBER: APARAHNA_KALA,
+    MAHALAYA_AMAVASYA_NUMBER: APARAHNA_KALA,
+    MAHANAVAMI_PUJA_NUMBER: APARAHNA_KALA,
+    VIJAYA_DASAMI_NUMBER: APARAHNA_KALA,
+    NARASIMHA_JAYANTI_NUMBER: SUNSET_KALA,
+    DHANA_TRAYODASHI_NUMBER: SAYAHNA_KALA,
+    DEEPAVALI_NUMBER: SAYAHNA_KALA,
+    KAMA_DAHANA_NUMBER: SAYAHNA_KALA,
+    JANMASHTAMI_NUMBER: RATRI_KALA,
+    MAHA_SHIVARATRI_NUMBER: RATRI_KALA,
+    NARAKA_CHATURDASHI_NUMBER: PURVODAYA_KALA,
+    RATHA_SAPTAMI_NUMBER: PURVODAYA_KALA,
+}
+GENERIC_KALA_NAME_BY_FESTIVAL = {
+    JANMASHTAMI_NUMBER: "Janmashtami (Ratri Kala)",
+}
 ONE_GHATI_HOURS = 24 / 60
 SIX_GHATI_HOURS = 6 * ONE_GHATI_HOURS
 ARUNODAYA_HOURS = 4 * ONE_GHATI_HOURS
@@ -1601,9 +1634,18 @@ def select_generic_udaya_festival_dates(records, rule):
     if target_tithi is None:
         raise ValueError(f"{rule.name} does not have a plain tithi rule")
 
+    occurrences = eligible_generic_occurrences(
+        generic_udaya_occurrences(records, target_tithi),
+        rule,
+    )
+    return [occurrence[0] for occurrence in occurrences]
+
+
+def eligible_generic_occurrences(occurrences, rule):
+    """Filter generic occurrences by masa and the calendar's adhika policy."""
     occurrences = [
         occurrence
-        for occurrence in generic_udaya_occurrences(records, target_tithi)
+        for occurrence in occurrences
         if occurrence[1] in {str(rule.masa), f"A{rule.masa}"}
     ]
     if rule.number == UGADI_NUMBER and any(
@@ -1616,7 +1658,162 @@ def select_generic_udaya_festival_dates(records, rule):
         occurrences = [
             occurrence for occurrence in occurrences if not occurrence[2]
         ]
-    return [occurrence[0] for occurrence in occurrences]
+    return occurrences
+
+
+def generic_kala_for_rule(rule):
+    """Return the lay ritual period assigned by the generic-kala experiment."""
+    return GENERIC_KALA_BY_FESTIVAL.get(rule.number, SUNRISE_KALA)
+
+
+def generic_kala_window(
+    record,
+    following_record,
+    kala,
+    preceding_record=None,
+):
+    """Return a point or one-third local day/night window for ``kala``.
+
+    Purvahna, Madhyahna, and Aparahna are consecutive thirds from sunrise
+    through sunset. Sayahna and Ratri are the first two thirds after that
+    sunset. Purvodaya is the final night-third immediately before the labelled
+    date's sunrise. It is an experimental lay label, not Dharma Sindhu's
+    technical four-ghati Arunodaya.
+    """
+    sunrise_jd, sunset_jd = record[5:7]
+    if kala == SUNRISE_KALA:
+        return sunrise_jd, sunrise_jd
+    if kala == SUNSET_KALA:
+        return sunset_jd, sunset_jd
+
+    if kala in {PURVAHNA_KALA, MADHYAHNA_KALA, APARAHNA_KALA}:
+        boundaries = [
+            sunrise_jd + (sunset_jd - sunrise_jd) * part / 3
+            for part in range(4)
+        ]
+        index = {
+            PURVAHNA_KALA: 0,
+            MADHYAHNA_KALA: 1,
+            APARAHNA_KALA: 2,
+        }[kala]
+        return boundaries[index], boundaries[index + 1]
+
+    if kala == PURVODAYA_KALA:
+        if preceding_record is None:
+            raise ValueError("purvodaya requires the preceding sunset")
+        preceding_sunset_jd = preceding_record[6]
+        night_third = (sunrise_jd - preceding_sunset_jd) / 3
+        return sunrise_jd - night_third, sunrise_jd
+
+    if kala in {SAYAHNA_KALA, RATRI_KALA}:
+        if following_record is None:
+            raise ValueError(f"{kala} requires the following sunrise")
+        following_sunrise_jd = following_record[5]
+        boundaries = [
+            sunset_jd + (following_sunrise_jd - sunset_jd) * part / 3
+            for part in range(4)
+        ]
+        index = {
+            SAYAHNA_KALA: 0,
+            RATRI_KALA: 1,
+        }[kala]
+        return boundaries[index], boundaries[index + 1]
+
+    raise ValueError(f"Unknown generic kala: {kala}")
+
+
+def generic_kala_score(kala_window, target_interval, civil_date):
+    """Score one date by kala coverage, then centrality, then earlier date."""
+    kala_start, kala_end = kala_window
+    tithi_start, tithi_end = target_interval
+    kala_midpoint = (kala_start + kala_end) / 2
+    tithi_midpoint = (tithi_start + tithi_end) / 2
+    if kala_start == kala_end:
+        coverage = float(tithi_start <= kala_start < tithi_end)
+    else:
+        overlap = max(
+            0.0,
+            min(kala_end, tithi_end) - max(kala_start, tithi_start),
+        )
+        coverage = overlap / (kala_end - kala_start)
+    return coverage, -abs(kala_midpoint - tithi_midpoint), -civil_date.toordinal()
+
+
+def select_generic_kala_festival_dates(records, rule):
+    """Resolve a plain tithi using one kala mapping and one common tie-break.
+
+    The date maximizing proportional tithi coverage of the assigned kala is
+    selected. Equal coverage prefers the kala midpoint nearest the tithi
+    midpoint; an exact final tie uses the earlier civil date. If neither date
+    overlaps the kala, midpoint proximity acts as the missing-window fallback.
+    """
+    target_tithi = plain_tithi_number(rule.tithi)
+    if target_tithi is None:
+        raise ValueError(f"{rule.name} does not have a plain tithi rule")
+
+    records = sorted(records)
+    records_by_date = {record[0]: record for record in records}
+    occurrences = eligible_generic_occurrences(
+        generic_udaya_occurrences(records, target_tithi),
+        rule,
+    )
+    kala = generic_kala_for_rule(rule)
+    selected = []
+    for owner_date, _, _ in occurrences:
+        owner_record = records_by_date.get(owner_date)
+        if owner_record is None:
+            continue
+        scan_start = owner_record[5] - 1.25
+        scan_end = owner_record[5] + 2.25
+        intervals = tithi_intervals(scan_start, scan_end, target_tithi)
+        if not intervals:
+            continue
+        reference = owner_record[5] + 0.5
+        target_interval = min(
+            intervals,
+            key=lambda interval: abs(
+                (interval[0] + interval[1]) / 2 - reference
+            ),
+        )
+
+        candidates = []
+        for offset in (-1, 0, 1):
+            civil_date = owner_date + timedelta(days=offset)
+            record = records_by_date.get(civil_date)
+            following_record = records_by_date.get(
+                civil_date + timedelta(days=1)
+            )
+            preceding_record = records_by_date.get(
+                civil_date - timedelta(days=1)
+            )
+            if record is None:
+                continue
+            if (
+                kala in {SAYAHNA_KALA, RATRI_KALA}
+                and following_record is None
+            ):
+                continue
+            if kala == PURVODAYA_KALA and preceding_record is None:
+                continue
+            window = generic_kala_window(
+                record,
+                following_record,
+                kala,
+                preceding_record,
+            )
+            candidates.append(
+                (
+                    generic_kala_score(
+                        window,
+                        target_interval,
+                        civil_date,
+                    ),
+                    civil_date,
+                )
+            )
+        if candidates:
+            selected.append(max(candidates)[1])
+    return sorted(set(selected))
 
 
 def resolve_dharma_sindhu_vaishnava_ekadashi_dates(months, month_data):
@@ -2484,7 +2681,8 @@ def resolve_festivals(
     target_records = collect_records(months, month_data)
     target_dates = {record[0] for record in target_records}
     if (
-        festival_policy == GENERIC_UDAYA_FESTIVAL_POLICY
+        festival_policy
+        in {GENERIC_UDAYA_FESTIVAL_POLICY, GENERIC_KALA_FESTIVAL_POLICY}
         and context_months is not None
     ):
         resolution_months = context_months
@@ -2506,6 +2704,11 @@ def resolve_festivals(
             and plain_tithi_number(rule.tithi) is not None
         ):
             matches = select_generic_udaya_festival_dates(records, rule)
+        elif (
+            festival_policy == GENERIC_KALA_FESTIVAL_POLICY
+            and plain_tithi_number(rule.tithi) is not None
+        ):
+            matches = select_generic_kala_festival_dates(records, rule)
         elif rule.number == UGADI_NUMBER:
             matches = select_ugadi_dates(records, rule)
         elif rule.number == RAMA_NAVAMI_NUMBER:
@@ -2637,17 +2840,27 @@ def resolve_festivals(
                     and not is_adhika
                 )
             ]
-        if festival_policy == GENERIC_UDAYA_FESTIVAL_POLICY:
+        if festival_policy in {
+            GENERIC_UDAYA_FESTIVAL_POLICY,
+            GENERIC_KALA_FESTIVAL_POLICY,
+        }:
             matches = [
                 civil_date for civil_date in matches if civil_date in target_dates
             ]
         if not matches and not rule.allow_empty:
             raise RuntimeError(f"No calendar date found for {rule.name}")
         dates_by_number[rule.number] = matches
-        names_by_number[rule.number] = rule.name
+        names_by_number[rule.number] = (
+            GENERIC_KALA_NAME_BY_FESTIVAL.get(rule.number, rule.name)
+            if festival_policy == GENERIC_KALA_FESTIVAL_POLICY
+            else rule.name
+        )
 
     varamahalakshmi_dates = select_varamahalakshmi_dates(records)
-    if festival_policy == GENERIC_UDAYA_FESTIVAL_POLICY:
+    if festival_policy in {
+        GENERIC_UDAYA_FESTIVAL_POLICY,
+        GENERIC_KALA_FESTIVAL_POLICY,
+    }:
         varamahalakshmi_dates = [
             civil_date
             for civil_date in varamahalakshmi_dates
