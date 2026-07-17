@@ -2073,20 +2073,8 @@ def select_dhana_trayodashi_dates(records, rule):
 
 
 def select_dhanvantari_jayanti_dates(records, rule):
-    """Select Udaya-vyapini Krishna Trayodashi for Dhanvantari Jayanti.
-
-    The festival belongs to the civil day on which Krishna Trayodashi
-    prevails at local sunrise.
-    """
-    sunrise_candidates = [
-        (record[0], record[4])
-        for record in records_for_rule(records, rule)
-        if record[1] == rule.tithi
-    ]
-    return [
-        group[0][0]
-        for group in group_consecutive_candidates(sunrise_candidates)
-    ]
+    """Select generic Udaya-vyapini K13 for Dhanvantari Jayanti."""
+    return select_udaya_vyapini_dates(records, rule, 28)
 
 
 def select_makara_sankranti_dates(records, rule):

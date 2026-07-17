@@ -1554,6 +1554,30 @@ class DhanvantariJayantiRuleTests(unittest.TestCase):
             [date(2030, 11, 6)],
         )
 
+    def test_vriddhi_trayodashi_uses_first_sunrise(self):
+        records = [
+            record(date(2030, 11, 6), "K13", masa="7"),
+            record(date(2030, 11, 7), "K13", masa="7"),
+        ]
+        self.assertEqual(
+            select_dhanvantari_jayanti_dates(records, self.rule),
+            [date(2030, 11, 6)],
+        )
+
+    def test_kshaya_trayodashi_uses_civil_day_containing_trayodashi(self):
+        records = [
+            (date(2064, 11, 4), "K12", "7", False, 1.0, 10.0, 10.5),
+            (date(2064, 11, 5), "K14", "7", False, 1.0, 11.0, 11.5),
+        ]
+        with patch(
+            "festival_rules.tithi_intervals",
+            return_value=[(10.1, 10.9)],
+        ):
+            self.assertEqual(
+                select_dhanvantari_jayanti_dates(records, self.rule),
+                [date(2064, 11, 4)],
+            )
+
 
 class MakaraSankrantiRuleTests(unittest.TestCase):
     rule = festival_rule("Makara Sankranti")
