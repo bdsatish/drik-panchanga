@@ -1,7 +1,7 @@
 """Festival definitions and observance-date rules for the PDF calendar."""
 
 import calendar
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date as CivilDate
 from datetime import timedelta
 
@@ -27,6 +27,14 @@ class FestivalRule:
     status: str = "provisional"
     source: str | None = None
     allow_empty: bool = False
+
+
+@dataclass(frozen=True)
+class GenericKalaValidityOverlay:
+    """Post-selection constraint and same-policy fallback definition."""
+
+    validator: str
+    fallback_masa_offset: int | None = None
 
 
 FESTIVAL_RULES = (
@@ -363,6 +371,13 @@ GENERIC_KALA_BY_FESTIVAL = {
     MAHA_SHIVARATRI_NUMBER: RATRI_KALA,
     NARAKA_CHATURDASHI_NUMBER: PURVODAYA_KALA,
     RATHA_SAPTAMI_NUMBER: PURVODAYA_KALA,
+}
+UPAKARMA_CONTAMINATION_VALIDATOR = "upakarma-contamination"
+GENERIC_KALA_VALIDITY_BY_FESTIVAL = {
+    YAJUR_UPAKARMA_NUMBER: GenericKalaValidityOverlay(
+        UPAKARMA_CONTAMINATION_VALIDATOR,
+        fallback_masa_offset=1,
+    ),
 }
 GENERIC_KALA_NAME_BY_FESTIVAL = {
     JANMASHTAMI_NUMBER: "Janmashtami (Ratri Kala)",
@@ -1941,6 +1956,84 @@ def select_generic_kala_festival_dates(records, rule):
     return sorted(set(selected))
 
 
+def generic_kala_date_is_valid(
+    records_by_date,
+    selected_date,
+    overlay,
+    geopos,
+):
+    """Apply one post-selection constraint without changing kala scoring."""
+    if overlay.validator == UPAKARMA_CONTAMINATION_VALIDATOR:
+        if geopos is None:
+            raise ValueError(
+                "Upakarma validity requires a geographic position"
+            )
+        return not upakarma_date_is_contaminated(
+            records_by_date,
+            selected_date,
+            geopos,
+        )
+    raise ValueError(f"Unknown Generic Kala validator: {overlay.validator}")
+
+
+def select_valid_generic_kala_festival_dates(
+    records,
+    rule,
+    geopos=None,
+):
+    """Resolve by kala, then reject defects and retry with the same policy."""
+    selected_dates = select_generic_kala_festival_dates(records, rule)
+    overlay = GENERIC_KALA_VALIDITY_BY_FESTIVAL.get(rule.number)
+    if overlay is None:
+        return selected_dates
+
+    records_by_date = {record[0]: record for record in records}
+    fallback_dates = []
+    if overlay.fallback_masa_offset is not None:
+        fallback_rule = replace(
+            rule,
+            masa=rule.masa + overlay.fallback_masa_offset,
+        )
+        fallback_dates = select_generic_kala_festival_dates(
+            records,
+            fallback_rule,
+        )
+
+    validated = []
+    for selected_date in selected_dates:
+        if generic_kala_date_is_valid(
+            records_by_date,
+            selected_date,
+            overlay,
+            geopos,
+        ):
+            validated.append(selected_date)
+            continue
+
+        fallback_date = next(
+            (
+                candidate
+                for candidate in fallback_dates
+                if (
+                    selected_date < candidate
+                    <= selected_date + timedelta(days=45)
+                )
+            ),
+            None,
+        )
+        if (
+            fallback_date is not None
+            and generic_kala_date_is_valid(
+                records_by_date,
+                fallback_date,
+                overlay,
+                geopos,
+            )
+        ):
+            validated.append(fallback_date)
+    return validated
+
+
 def resolve_dharma_sindhu_vaishnava_ekadashi_dates(months, month_data):
     """Resolve Dharma Sindhu Vaishnava Ekadashi upavasa dates.
 
@@ -2834,7 +2927,11 @@ def resolve_festivals(
             festival_policy == GENERIC_KALA_FESTIVAL_POLICY
             and plain_tithi_number(rule.tithi) is not None
         ):
-            matches = select_generic_kala_festival_dates(records, rule)
+            matches = select_valid_generic_kala_festival_dates(
+                records,
+                rule,
+                geopos,
+            )
         elif rule.number == UGADI_NUMBER:
             matches = select_ugadi_dates(records, rule)
         elif rule.number == RAMA_NAVAMI_NUMBER:

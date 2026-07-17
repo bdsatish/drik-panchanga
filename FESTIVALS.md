@@ -117,6 +117,22 @@ Every other assigned kala uses the same competition rule:
    missing-window fallback.
 5. Use the earlier date only for an exact final tie.
 
+### Validity overlays
+
+A validity overlay is a narrow post-selection constraint. It does not change
+the common kala overlap score or its tie-breaks. It can only accept the
+selected date, retry a declared fallback with the same Generic Kala resolver,
+or return no date.
+
+Yajur Upakarma currently has one such overlay. Its Sunrise-selected Shravana
+Purnima is rejected when a locally visible non-penumbral eclipse or Sankranti
+occurs in Dharma Sindhu's eight-yama window. The fallback is Bhadrapada
+Purnima, independently selected by the same Sunrise rule and checked by the
+same overlay. If both dates are defective, the result is `None`.
+
+Generic Udaya intentionally does not apply this overlay, preserving that
+policy as the uniform sunrise-only baseline.
+
 The policy intentionally ignores festival-specific purva-viddha,
 para-viddha, minimum-ghati, nakshatra, Bhadra, and similar tie-breakers.
 
@@ -179,10 +195,10 @@ Traditional is 100% by definition because it supplies the reference dates.
 
 | Location and scope | Traditional | Generic Udaya | Generic Kala |
 |---|---:|---:|---:|
-| Helsinki, all plain-tithi rules | 100% | 81.43% | 95.80% |
-| Helsinki, PDF-visible subset | 100% | 78.51% | 95.27% |
-| Tirupati, all plain-tithi rules | 100% | 80.45% | 95.49% |
-| Tirupati, PDF-visible subset | 100% | 77.02% | 95.27% |
+| Helsinki, all plain-tithi rules | 100% | 81.72% | 96.19% |
+| Helsinki, PDF-visible subset | 100% | 78.87% | 95.76% |
+| Tirupati, all plain-tithi rules | 100% | 80.68% | 95.92% |
+| Tirupati, PDF-visible subset | 100% | 77.31% | 95.80% |
 
 The Helsinki comparison used 99 successfully resolved traditional reference
 years; 2072 was excluded because the traditional resolver returned no Kama
@@ -199,3 +215,8 @@ implemented Vaishnava Janmashtami rule under the traditional policy.
 
 Ugadi uses explicit first-sunrise ownership under both generic policies and
 matched every evaluated traditional occurrence at both locations.
+
+For Yajur Upakarma, Generic Kala's Sunrise resolver plus validity overlay
+matched 95 of 99 evaluated Helsinki occurrences and 83 of 98 Tirupati
+occurrences. Generic Udaya, which deliberately omits the overlay, matched 92
+and 77 respectively.

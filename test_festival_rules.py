@@ -10,6 +10,7 @@ from festival_rules import (
     APARAHNA_KALA,
     FESTIVAL_RULES,
     GENERIC_KALA_FESTIVAL_POLICY,
+    GENERIC_KALA_VALIDITY_BY_FESTIVAL,
     GENERIC_UDAYA_FESTIVAL_POLICY,
     MADHYAHNA_KALA,
     PURVODAYA_KALA,
@@ -23,6 +24,7 @@ from festival_rules import (
     format_festival_dates,
     generic_udaya_occurrences,
     generic_kala_for_rule,
+    generic_kala_date_is_valid,
     generic_kala_window,
     nakshatra_overlaps,
     plain_tithi_number,
@@ -65,6 +67,7 @@ from festival_rules import (
     select_gita_jayanti_dates,
     select_generic_udaya_festival_dates,
     select_generic_kala_festival_dates,
+    select_valid_generic_kala_festival_dates,
     select_kama_dahana_dates,
 )
 
@@ -274,6 +277,10 @@ class GenericKalaPolicyTests(unittest.TestCase):
             APARAHNA_KALA,
         )
         self.assertEqual(
+            generic_kala_for_rule(festival_rule("Yajur Upakarma")),
+            SUNRISE_KALA,
+        )
+        self.assertEqual(
             generic_kala_for_rule(festival_rule("Narasimha Jayanti")),
             SUNSET_KALA,
         )
@@ -321,6 +328,68 @@ class GenericKalaPolicyTests(unittest.TestCase):
             select_generic_kala_festival_dates(records, rule),
             [date(2030, 3, 20)],
         )
+
+    def test_yajur_defect_retries_bhadrapada_with_same_kala(self):
+        rule = festival_rule("Yajur Upakarma")
+        shravana_date = date(2030, 8, 15)
+        bhadrapada_date = date(2030, 9, 14)
+        with patch(
+            "festival_rules.select_generic_kala_festival_dates",
+            side_effect=[[shravana_date], [bhadrapada_date]],
+        ) as selector, patch(
+            "festival_rules.generic_kala_date_is_valid",
+            side_effect=[False, True],
+        ):
+            self.assertEqual(
+                select_valid_generic_kala_festival_dates(
+                    [],
+                    rule,
+                    (0.0, 0.0, 0.0),
+                ),
+                [bhadrapada_date],
+            )
+
+        fallback_rule = selector.call_args_list[1].args[1]
+        self.assertEqual(fallback_rule.masa, rule.masa + 1)
+        self.assertEqual(
+            generic_kala_for_rule(fallback_rule),
+            SUNRISE_KALA,
+        )
+
+    def test_yajur_returns_none_when_fallback_is_also_defective(self):
+        rule = festival_rule("Yajur Upakarma")
+        with patch(
+            "festival_rules.select_generic_kala_festival_dates",
+            side_effect=[
+                [date(2030, 8, 15)],
+                [date(2030, 9, 14)],
+            ],
+        ), patch(
+            "festival_rules.generic_kala_date_is_valid",
+            side_effect=[False, False],
+        ):
+            self.assertEqual(
+                select_valid_generic_kala_festival_dates(
+                    [],
+                    rule,
+                    (0.0, 0.0, 0.0),
+                ),
+                [],
+            )
+
+    def test_upakarma_overlay_requires_geographic_position(self):
+        rule = festival_rule("Yajur Upakarma")
+        overlay = GENERIC_KALA_VALIDITY_BY_FESTIVAL[rule.number]
+        with self.assertRaisesRegex(
+            ValueError,
+            "requires a geographic position",
+        ):
+            generic_kala_date_is_valid(
+                {},
+                date(2030, 8, 15),
+                overlay,
+                None,
+            )
 
     def test_policy_bypasses_traditional_plain_tithi_selector(self):
         rule = festival_rule("Rama Navami")
