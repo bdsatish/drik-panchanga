@@ -168,6 +168,7 @@ class GenericAnchorPolicyTests(unittest.TestCase):
 
     def test_context_date_outside_target_range_is_filtered(self):
         rule = festival_rule("Yajur Upakarma")
+        geopos = (77.0, 13.0, 0.0)
         with patch(
             "festival_rules.FESTIVAL_RULES",
             (rule,),
@@ -178,17 +179,24 @@ class GenericAnchorPolicyTests(unittest.TestCase):
             "festival_rules.collect_moonrise_jds",
             return_value={},
         ), patch(
-            "festival_rules.select_generic_anchor_festival_dates",
+            "festival_rules.select_valid_generic_festival_dates",
             return_value=[self.days[0][0]],
-        ):
+        ) as selector:
             _, entries = resolve_festivals(
                 [],
                 {},
                 GENERIC_ANCHOR_FESTIVAL_POLICY,
                 context_months=[(2030, 4)],
                 context_data={(2030, 4): []},
+                geopos=geopos,
             )
 
+        selector.assert_called_once_with(
+            self.days,
+            rule,
+            geopos,
+            selector=select_generic_anchor_festival_dates,
+        )
         entry = next(item for item in entries if item[0] == rule.number)
         self.assertEqual(entry[1], "None")
 

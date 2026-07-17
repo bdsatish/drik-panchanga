@@ -1004,32 +1004,29 @@ def generic_kala_date_is_valid(
     overlay,
     geopos,
 ):
-    """Apply one post-selection constraint without changing kala scoring."""
-    if overlay.validator == UPAKARMA_CONTAMINATION_VALIDATOR:
-        if geopos is None:
-            raise ValueError(
-                "Upakarma validity requires a geographic position"
-            )
-        return not upakarma_date_is_contaminated(
-            records_by_date,
-            selected_date,
-            geopos,
-        )
-    raise ValueError(f"Unknown Generic Kala validator: {overlay.validator}")
+    return _generic.date_is_valid(
+        records_by_date,
+        selected_date,
+        overlay,
+        geopos,
+        contamination_validator=UPAKARMA_CONTAMINATION_VALIDATOR,
+        contamination_checker=upakarma_date_is_contaminated,
+    )
 
 
-def select_valid_generic_kala_festival_dates(
-    records,
-    rule,
-    geopos=None,
-):
-    """Resolve by kala, then reject defects and retry with the same policy."""
-    return _generic.select_valid_kala_festival_dates(
+def select_valid_generic_festival_dates(records, rule, geopos=None, *, selector):
+    return _generic.select_valid_festival_dates(
+        records, rule, geopos, selector=selector,
+        validator=generic_kala_date_is_valid,
+    )
+
+
+def select_valid_generic_kala_festival_dates(records, rule, geopos=None):
+    return select_valid_generic_festival_dates(
         records,
         rule,
         geopos,
         selector=select_generic_kala_festival_dates,
-        validator=generic_kala_date_is_valid,
     )
 
 
@@ -1779,7 +1776,12 @@ def resolve_festivals(
             festival_policy == GENERIC_MIDPOINT_FESTIVAL_POLICY
             and plain_tithi_number(rule.tithi) is not None
         ):
-            matches = select_generic_midpoint_festival_dates(records, rule)
+            matches = select_valid_generic_festival_dates(
+                records,
+                rule,
+                geopos,
+                selector=select_generic_midpoint_festival_dates,
+            )
         elif (
             festival_policy == GENERIC_KALA_FESTIVAL_POLICY
             and plain_tithi_number(rule.tithi) is not None
@@ -1793,7 +1795,12 @@ def resolve_festivals(
             festival_policy == GENERIC_ANCHOR_FESTIVAL_POLICY
             and plain_tithi_number(rule.tithi) is not None
         ):
-            matches = select_generic_anchor_festival_dates(records, rule)
+            matches = select_valid_generic_festival_dates(
+                records,
+                rule,
+                geopos,
+                selector=select_generic_anchor_festival_dates,
+            )
         elif rule.number == UGADI_NUMBER:
             matches = select_ugadi_dates(records, rule)
         elif rule.number == RAMA_NAVAMI_NUMBER:

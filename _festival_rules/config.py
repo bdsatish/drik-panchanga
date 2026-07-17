@@ -70,12 +70,15 @@ GENERIC_KALA_BY_FESTIVAL = {
 }
 
 UPAKARMA_CONTAMINATION_VALIDATOR = "upakarma-contamination"
-GENERIC_KALA_VALIDITY_BY_FESTIVAL = {
+GENERIC_VALIDITY_BY_FESTIVAL = {
     YAJUR_UPAKARMA_NUMBER: GenericKalaValidityOverlay(
         UPAKARMA_CONTAMINATION_VALIDATOR,
         fallback_masa_offset=1,
     ),
 }
+# Compatibility name retained for callers written before the overlay became
+# shared by the Midpoint, Anchor, and Kala policies.
+GENERIC_KALA_VALIDITY_BY_FESTIVAL = GENERIC_VALIDITY_BY_FESTIVAL
 GENERIC_KALA_NAME_BY_FESTIVAL = {
     JANMASHTAMI_NUMBER: "Janmashtami (Madhyaratri Kala)",
 }

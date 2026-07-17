@@ -68,11 +68,11 @@ ownership is equivalent to selecting the sunrise-day with the greatest tithi
 overlap. A difference would require an abnormally short ownership day or a
 boundary tie, so a separate majority-day policy is not implemented.
 
-This is a pure baseline: it does not apply Generic Kala's Yajur Upakarma
-validity overlay. Non-plain-tithi rules retain their dedicated selectors.
+Yajur Upakarma applies the shared eclipse/Sankranti validity overlay after
+midpoint selection. Non-plain-tithi rules retain their dedicated selectors.
 
 The policy is identified as `Generic-midpoint EXP-1.0` in generated PDFs.
-Accuracy benchmarking is intentionally deferred.
+Its benchmark results are recorded in the benchmark snapshot below.
 
 ## 3. Generic Anchor Point
 
@@ -101,13 +101,14 @@ anchor lies inside the tithi. If multiple anchors qualify, the one nearest the
 tithi midpoint wins; if none qualify, the nearest anchor supplies the common
 fallback. An exact final tie uses the earlier date.
 
-This policy does not inherit Generic Kala's Yajur Upakarma validity overlay.
-Rig Upakarma and other non-plain-tithi rules retain their dedicated selectors.
+Yajur Upakarma applies the shared eclipse/Sankranti validity overlay after
+anchor selection. Rig Upakarma and other non-plain-tithi rules retain their
+dedicated selectors.
 Janmashtami is displayed as `Janmashtami (Night-Midpoint Anchor)` under this
 policy.
 
 The policy is identified as `Generic-anchor EXP-1.0` in generated PDFs.
-Accuracy benchmarking is intentionally deferred.
+Its benchmark results are recorded in the benchmark snapshot below.
 
 ## 4. Generic Kala
 
@@ -189,16 +190,16 @@ Every other assigned kala uses the same competition rule:
 
 ### Validity overlays
 
-A validity overlay is a narrow post-selection constraint. It does not change
-the common kala overlap score or its tie-breaks. It can only accept the
-selected date, retry a declared fallback with the same Generic Kala resolver,
-or return no date.
+A validity overlay is a narrow post-selection constraint shared by Generic
+Midpoint, Generic Anchor, and Generic Kala. It does not change the underlying
+policy's score or tie-breaks. It can only accept the selected date, retry a
+declared fallback with the same policy resolver, or return no date.
 
-Yajur Upakarma currently has one such overlay. Its Sunrise-selected Shravana
-Purnima is rejected when a locally visible non-penumbral eclipse or Sankranti
-occurs in Dharma Sindhu's eight-yama window. The fallback is Bhadrapada
-Purnima, independently selected by the same Sunrise rule and checked by the
-same overlay. If both dates are defective, the result is `None`.
+Yajur Upakarma currently has one such overlay. Its selected Shravana Purnima
+is rejected when a locally visible non-penumbral eclipse or Sankranti occurs
+in Dharma Sindhu's eight-yama window. The fallback is Bhadrapada Purnima,
+independently selected by the same policy and checked by the same overlay. If
+both dates are defective, the result is `None`.
 
 Generic Udaya intentionally does not apply this overlay, preserving that
 policy as the uniform sunrise-only baseline.
@@ -276,6 +277,29 @@ Traditional is 100% by definition because it supplies the reference dates.
 | Helsinki, PDF-visible subset | 100% | 78.87% | 96.77% |
 | Tirupati, all plain-tithi rules | 100% | 80.68% | 96.54% |
 | Tirupati, PDF-visible subset | 100% | 77.31% | 96.29% |
+
+Generic Midpoint and Generic Anchor were subsequently compared with the same
+traditional reference over the same 2026–2125 calendar-year range. This
+baseline was limited to PDF-visible plain-tithi festivals and additionally
+excluded Yajur Upakarma and Raksha Bandhan. Raksha Bandhan is already hidden
+from the PDF, but was retained as an explicit exclusion. Unchanged dedicated
+selectors were not counted because they would artificially inflate agreement.
+
+| Location | Traditional | Generic Midpoint | Generic Anchor |
+|---|---:|---:|---:|
+| Helsinki | 100% | 68.69% (1632/2376) | 94.74% (2251/2376) |
+| Tirupati | 100% | 71.73% (1687/2352) | 95.28% (2241/2352) |
+
+This second comparison used the same successfully resolved reference years:
+99 for Helsinki, excluding the 2072 Kama Dahana failure, and 98 for Tirupati,
+excluding the 2055 and 2118 Ganesha Chaturthi failures.
+
+Yajur Upakarma was also benchmarked separately for all 100 years after sharing
+its eclipse/Sankranti validity overlay with both policies. Generic Midpoint
+matched 59% in Helsinki and 55% in Tirupati; Generic Anchor matched 86% and
+80%, respectively. Compared with the same policies without the overlay,
+Anchor improved by four and six matches, while Midpoint was unchanged in
+Helsinki and improved by one match in Tirupati.
 
 The measured PDF-visible ceiling of this ten-slot allocation is therefore
 96.77% in Helsinki and 96.29% in Tirupati, short of the 99% goal. Closing that

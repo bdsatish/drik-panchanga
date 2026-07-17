@@ -11,7 +11,7 @@ from .config import (
     GADHARATRI_KALA,
     GENERIC_ANCHOR_BY_FESTIVAL,
     GENERIC_KALA_BY_FESTIVAL,
-    GENERIC_KALA_VALIDITY_BY_FESTIVAL,
+    GENERIC_VALIDITY_BY_FESTIVAL,
     MADHYAHNA_KALA,
     MADHYARATRI_KALA,
     NIGHT_KALAS,
@@ -343,7 +343,30 @@ def select_anchor_festival_dates(
     return sorted(set(selected))
 
 
-def select_valid_kala_festival_dates(
+def date_is_valid(
+    records_by_date,
+    selected_date,
+    overlay,
+    geopos,
+    *,
+    contamination_validator,
+    contamination_checker,
+):
+    """Apply one shared post-selection constraint."""
+    if overlay.validator == contamination_validator:
+        if geopos is None:
+            raise ValueError(
+                "Upakarma validity requires a geographic position"
+            )
+        return not contamination_checker(
+            records_by_date,
+            selected_date,
+            geopos,
+        )
+    raise ValueError(f"Unknown generic policy validator: {overlay.validator}")
+
+
+def select_valid_festival_dates(
     records,
     rule,
     geopos,
@@ -351,9 +374,9 @@ def select_valid_kala_festival_dates(
     selector,
     validator,
 ):
-    """Resolve by kala, then reject defects and retry with the same policy."""
+    """Resolve, then reject defects and retry with the same policy."""
     selected_dates = selector(records, rule)
-    overlay = GENERIC_KALA_VALIDITY_BY_FESTIVAL.get(rule.number)
+    overlay = GENERIC_VALIDITY_BY_FESTIVAL.get(rule.number)
     if overlay is None:
         return selected_dates
 
@@ -395,3 +418,6 @@ def select_valid_kala_festival_dates(
         ):
             validated.append(fallback_date)
     return validated
+
+
+select_valid_kala_festival_dates = select_valid_festival_dates

@@ -120,9 +120,10 @@ class GenericMidpointPolicyTests(unittest.TestCase):
             [date(2030, 4, 11)],
         )
 
-    def test_policy_uses_context_records_without_kala_overlay(self):
+    def test_policy_uses_context_records_with_shared_validity_overlay(self):
         rule = festival_rule("Yajur Upakarma")
         selected_date = self.days[1][0]
+        geopos = (77.0, 13.0, 0.0)
         with patch(
             "festival_rules.FESTIVAL_RULES",
             (rule,),
@@ -133,21 +134,24 @@ class GenericMidpointPolicyTests(unittest.TestCase):
             "festival_rules.collect_moonrise_jds",
             return_value={},
         ), patch(
-            "festival_rules.select_generic_midpoint_festival_dates",
+            "festival_rules.select_valid_generic_festival_dates",
             return_value=[selected_date],
-        ) as selector, patch(
-            "festival_rules.generic_kala_date_is_valid",
-            side_effect=AssertionError("Generic Kala overlay called"),
-        ):
+        ) as selector:
             _, entries = resolve_festivals(
                 [],
                 {},
                 GENERIC_MIDPOINT_FESTIVAL_POLICY,
                 context_months=[(2030, 4)],
                 context_data={(2030, 4): []},
+                geopos=geopos,
             )
 
-        selector.assert_called_once_with(self.days, rule)
+        selector.assert_called_once_with(
+            self.days,
+            rule,
+            geopos,
+            selector=select_generic_midpoint_festival_dates,
+        )
         entry = next(item for item in entries if item[0] == rule.number)
         self.assertEqual(entry[1], "Apr 11")
 
