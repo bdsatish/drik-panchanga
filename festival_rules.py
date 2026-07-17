@@ -343,6 +343,7 @@ RATRI_KALA = "ratri"
 PURVODAYA_KALA = "purvodaya"
 SUNRISE_KALA = "sunrise"
 GENERIC_KALA_BY_FESTIVAL = {
+    UGADI_NUMBER: SUNRISE_KALA,
     RIG_UPAKARMA_NUMBER: PURVAHNA_KALA,
     VASANTA_PANCHAMI_NUMBER: PURVAHNA_KALA,
     RAMA_NAVAMI_NUMBER: MADHYAHNA_KALA,
@@ -445,7 +446,7 @@ def records_for_rule(records, rule):
 
 
 def select_ugadi_dates(records, rule):
-    """Select the Chaitra year-opening Pratipada at local sunrise.
+    """Select every Chaitra year-opening Pratipada in the supplied range.
 
     Dharma Sindhu takes sunrise-vyapini Pratipada. If Pratipada occurs at
     both sunrises, or at neither sunrise because it is skipped, the earlier
@@ -455,35 +456,59 @@ def select_ugadi_dates(records, rule):
     Source:
     https://www.transliteral.org/pages/z80421204850/view
     """
-    chaitra_records = [
-        record for record in records if record[2] == str(rule.masa)
-    ]
-    if not chaitra_records:
-        return []
+    chaitra_masas = {str(rule.masa), f"A{rule.masa}"}
+    segments = []
+    for record in sorted(records):
+        if record[2] not in chaitra_masas:
+            continue
+        if (
+            segments
+            and record[0] == segments[-1][-1][0] + timedelta(days=1)
+            and record[2:4] == segments[-1][-1][2:4]
+        ):
+            segments[-1].append(record)
+        else:
+            segments.append([record])
 
-    preferred_is_adhika = any(record[3] for record in chaitra_records)
-    chaitra_records = [
-        record
-        for record in chaitra_records
-        if record[3] == preferred_is_adhika
-    ]
-    sunrise_matches = [
-        record[0] for record in chaitra_records if record[1] == rule.tithi
-    ]
-    if sunrise_matches:
-        return [min(sunrise_matches)]
+    occurrences = []
+    for segment in segments:
+        sunrise_matches = [
+            record[0] for record in segment if record[1] == rule.tithi
+        ]
+        if sunrise_matches:
+            occurrence_date = min(sunrise_matches)
+        else:
+            first_visible_shukla = next(
+                (
+                    record[0]
+                    for record in segment
+                    if record[1].startswith("S")
+                ),
+                None,
+            )
+            if first_visible_shukla is None:
+                continue
+            occurrence_date = first_visible_shukla - timedelta(days=1)
+        occurrences.append(
+            (
+                occurrence_date,
+                segment[0][3] or segment[0][2].startswith("A"),
+            )
+        )
 
-    first_visible_shukla = next(
-        (
-            record[0]
-            for record in chaitra_records
-            if record[1].startswith("S")
-        ),
-        None,
+    # Adhika Chaitra is immediately followed by nija Chaitra. Retain the
+    # adhika year-opening occurrence and suppress only that paired nija one;
+    # a later Chaitra belonging to another lunisolar year remains eligible.
+    adhika_dates = [value for value, is_adhika in occurrences if is_adhika]
+    return sorted(
+        value
+        for value, is_adhika in occurrences
+        if is_adhika
+        or not any(
+            0 < (value - adhika_date).days <= 35
+            for adhika_date in adhika_dates
+        )
     )
-    if first_visible_shukla is None:
-        return []
-    return [first_visible_shukla - timedelta(days=1)]
 
 
 def select_rama_navami_dates(records, rule):
@@ -1758,6 +1783,9 @@ def select_generic_kala_festival_dates(records, rule):
         rule,
     )
     kala = generic_kala_for_rule(rule)
+    if kala == SUNRISE_KALA:
+        return [occurrence[0] for occurrence in occurrences]
+
     selected = []
     for owner_date, _, _ in occurrences:
         owner_record = records_by_date.get(owner_date)

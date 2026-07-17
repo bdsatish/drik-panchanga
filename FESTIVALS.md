@@ -91,7 +91,7 @@ third, not the narrower technical Nishitha.
 | Sayahna | Dhana Trayodashi, Deepavali, Kama Dahana (Holi) |
 | Ratri | Janmashtami, Maha Shivaratri |
 | Purvodaya | Naraka Chaturdashi, Ratha Saptami |
-| Sunrise | Every otherwise unclassified plain-tithi festival |
+| Sunrise | Ugadi and every otherwise unclassified plain-tithi festival |
 
 Rig Upakarma is nakshatra-based rather than a plain-tithi festival. Its
 dedicated selector is therefore retained, although Purvahna is its conceptual
@@ -103,7 +103,11 @@ date from the traditional Vaishnava date.
 
 ### Common competition rule
 
-The same rule resolves every plain-tithi festival:
+Sunrise uses the Generic Udaya ownership rule: one sunrise uses that date,
+vriddhi uses the first sunrise, and kshaya uses the containing
+sunrise-to-sunrise day.
+
+Every other assigned kala uses the same competition rule:
 
 1. Calculate the proportional overlap between the target tithi and the
    assigned kala on each candidate date.
@@ -163,29 +167,35 @@ undefined.
 
 ## Benchmark snapshot
 
-The generic policies were compared over the 2026–2125 range using the
-traditional resolver as the reference, with one deliberate substitution:
-Janmashtami uses Dharma Sindhu's Smarta Nishitha selector. The PDF's
-Vaishnava Janmashtami variant is omitted from this comparison.
+The generic policies were compared over the 2026–2125 range using
+non-overlapping January–December windows, so each physical festival
+occurrence is counted only once. The traditional resolver supplies the
+reference, with one deliberate substitution: Janmashtami uses Dharma Sindhu's
+Smarta Nishitha selector. The PDF's Vaishnava Janmashtami variant is omitted
+from this comparison.
 
-The figures below are exact annual date-set matches for plain-tithi festivals.
+The figures below are exact occurrence-date matches for plain-tithi festivals.
 Traditional is 100% by definition because it supplies the reference dates.
 
 | Location and scope | Traditional | Generic Udaya | Generic Kala |
 |---|---:|---:|---:|
-| Helsinki, all plain-tithi rules | 100% | 78.29% | 91.77% |
-| Helsinki, PDF-visible subset | 100% | 74.60% | 90.72% |
-| Tirupati, all plain-tithi rules | 100% | 77.06% | 91.74% |
-| Tirupati, PDF-visible subset | 100% | 72.82% | 91.10% |
+| Helsinki, all plain-tithi rules | 100% | 81.43% | 95.80% |
+| Helsinki, PDF-visible subset | 100% | 78.51% | 95.27% |
+| Tirupati, all plain-tithi rules | 100% | 80.45% | 95.49% |
+| Tirupati, PDF-visible subset | 100% | 77.02% | 95.27% |
 
-The Tirupati comparison used 98 successfully resolved traditional reference
-years. The traditional resolver returned no Ganesha Chaturthi date in the
-2055 and 2118 calendar ranges, so those two reference years were excluded.
+The Helsinki comparison used 99 successfully resolved traditional reference
+years; 2072 was excluded because the traditional resolver returned no Kama
+Dahana date. The Tirupati comparison used 98 years; 2055 and 2118 were
+excluded because the traditional resolver returned no Ganesha Chaturthi date.
 
 These percentages measure agreement with this project's traditional resolver,
 not independent proof that either generic policy is religiously authoritative.
 For Janmashtami specifically, Generic Kala's broad Ratri window matched the
-Smarta Nishitha result in 99 of 100 Helsinki years and 94 of 98 evaluated
+Smarta Nishitha result in 98 of 99 evaluated Helsinki years and 94 of 98
 Tirupati years. Generic Udaya matched only 17 and 32 years respectively. This
 does not change normal PDF generation, which continues to use the separately
 implemented Vaishnava Janmashtami rule under the traditional policy.
+
+Ugadi uses explicit first-sunrise ownership under both generic policies and
+matched every evaluated traditional occurrence at both locations.

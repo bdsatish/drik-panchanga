@@ -13,6 +13,7 @@ from festival_rules import (
     PURVODAYA_KALA,
     RATRI_KALA,
     SAYAHNA_KALA,
+    SUNRISE_KALA,
     SUNSET_KALA,
     FestivalRule,
     VARAMAHALAKSHMI_RULE,
@@ -257,6 +258,10 @@ class GenericKalaPolicyTests(unittest.TestCase):
 
     def test_agreed_festival_kala_assignments(self):
         self.assertEqual(
+            generic_kala_for_rule(festival_rule("Ugadi")),
+            SUNRISE_KALA,
+        )
+        self.assertEqual(
             generic_kala_for_rule(festival_rule("Rama Navami")),
             MADHYAHNA_KALA,
         )
@@ -300,6 +305,18 @@ class GenericKalaPolicyTests(unittest.TestCase):
                 select_generic_kala_festival_dates(self.days, rule),
                 [date(2030, 4, 12)],
             )
+
+    def test_sunrise_kala_uses_first_sunrise_for_vriddhi_tithi(self):
+        rule = festival_rule("Ugadi")
+        records = [
+            record(date(2030, 3, 20), "S1"),
+            record(date(2030, 3, 21), "S1"),
+            record(date(2030, 3, 22), "S2"),
+        ]
+        self.assertEqual(
+            select_generic_kala_festival_dates(records, rule),
+            [date(2030, 3, 20)],
+        )
 
     def test_policy_bypasses_traditional_plain_tithi_selector(self):
         rule = festival_rule("Rama Navami")
@@ -378,12 +395,27 @@ class UgadiRuleTests(unittest.TestCase):
 
     def test_prefers_adhika_chaitra_year_opening(self):
         records = [
-            record(date(2030, 3, 20), "S1", is_adhika=True),
+            record(
+                date(2030, 3, 20),
+                "S1",
+                masa="A1",
+                is_adhika=True,
+            ),
             record(date(2030, 4, 19), "S1"),
         ]
         self.assertEqual(
             select_ugadi_dates(records, self.rule),
             [date(2030, 3, 20)],
+        )
+
+    def test_returns_each_ugadi_in_a_multi_year_display_range(self):
+        records = [
+            record(date(2030, 3, 20), "S1"),
+            record(date(2031, 3, 9), "S1"),
+        ]
+        self.assertEqual(
+            select_ugadi_dates(records, self.rule),
+            [date(2030, 3, 20), date(2031, 3, 9)],
         )
 
 
