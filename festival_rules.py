@@ -1396,7 +1396,8 @@ def select_raksha_bandhan_dates(records, rule):
     When Purnima remains for more than three muhurtas (six ghatis) after
     sunrise, that day is used. A shorter next-sunrise remainder sends the
     observance to the preceding day's Bhadra-free Pradosha. Unlike Upakarma,
-    eclipse and sankranti do not prohibit Raksha Bandhan.
+    eclipse and sankranti do not prohibit Raksha Bandhan. If Purnima is skipped
+    at sunrise, use its civil day subject to the same Bhadra-free ritual window.
 
     Sources:
     https://www.transliteral.org/pages/z80421215617/view
@@ -1408,7 +1409,7 @@ def select_raksha_bandhan_dates(records, rule):
         for record in records_for_rule(records, rule)
         if record[1] == rule.tithi
     ]
-    selected = []
+    selected_dates = []
     for group in group_consecutive_candidates(candidates):
         later_date, remainder = group[-1]
         selected_date = (
@@ -1416,6 +1417,25 @@ def select_raksha_bandhan_dates(records, rule):
             if remainder > SIX_GHATI_HOURS
             else later_date - timedelta(days=1)
         )
+        selected_dates.append(selected_date)
+
+    if not selected_dates:
+        kshaya_candidates = []
+        for record in records_for_rule(records, rule):
+            following_record = by_date.get(
+                record[0] + timedelta(days=1)
+            )
+            if following_record is None:
+                continue
+            if tithi_intervals(record[5], following_record[5], 15):
+                kshaya_candidates.append((record[0], 1))
+        selected_dates = [
+            group[0][0]
+            for group in group_consecutive_candidates(kshaya_candidates)
+        ]
+
+    selected = []
+    for selected_date in selected_dates:
         selected_record = by_date.get(selected_date)
         if selected_record is not None:
             sunrise_jd, sunset_jd = selected_record[5:7]
