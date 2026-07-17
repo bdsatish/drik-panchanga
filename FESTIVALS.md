@@ -1,13 +1,14 @@
 # Festival Date Policies
 
-The calendar provides three festival-date policies, ordered here from the
+The calendar provides four festival-date policies, ordered here from the
 simplest and most uniform to the most detailed:
 
 1. `generic-udaya`
-2. `generic-kala`
-3. `traditional` (Dharma-Sindhu-oriented)
+2. `generic-anchor`
+3. `generic-kala`
+4. `traditional` (Dharma-Sindhu-oriented)
 
-The traditional policy remains the default. The two generic policies are
+The traditional policy remains the default. The three generic policies are
 experimental alternatives for studying how much of traditional festival
 reckoning can be reproduced with a small common rule set.
 
@@ -48,7 +49,42 @@ Rules that are not plain masa-and-tithi markers—such as solar Sankranti,
 Vaikuntha Ekadashi, Rig Upakarma, and Varamahalakshmi Vrata—continue to use
 their dedicated selectors.
 
-## 2. Generic Kala
+## 2. Generic Anchor Point
+
+CLI value: `generic-anchor`
+
+This policy replaces kala windows with five exact local instants:
+
+- Sunrise.
+- Day midpoint, halfway from sunrise to sunset.
+- Sunset.
+- Night midpoint, halfway from sunset to the following sunrise.
+- Technical Arunodaya start, four ghatis (96 minutes) before sunrise.
+
+The current ritual classifications collapse into this reduced vocabulary:
+
+| Anchor | Festivals |
+|---|---|
+| Sunrise | Ugadi, Yajur Upakarma, and every otherwise unclassified plain-tithi festival |
+| Day midpoint | Vasanta Panchami, Rama Navami, Akshaya Tritiya, Ganesha Chaturthi, Bali Padyami, Raksha Bandhan, Mahalaya Amavasya, Mahanavami (Puja), Vijayadashami (Puja) |
+| Sunset | Narasimha Jayanti, Dhana Trayodashi, Deepavali, Kama Dahana (Holi) |
+| Night midpoint | Janmashtami, Maha Shivaratri |
+| Arunodaya start | Naraka Chaturdashi, Ratha Saptami |
+
+For each target tithi occurrence, the resolver selects a candidate date whose
+anchor lies inside the tithi. If multiple anchors qualify, the one nearest the
+tithi midpoint wins; if none qualify, the nearest anchor supplies the common
+fallback. An exact final tie uses the earlier date.
+
+This policy does not inherit Generic Kala's Yajur Upakarma validity overlay.
+Rig Upakarma and other non-plain-tithi rules retain their dedicated selectors.
+Janmashtami is displayed as `Janmashtami (Night-Midpoint Anchor)` under this
+policy.
+
+The policy is identified as `Generic-anchor EXP-1.0` in generated PDFs.
+Accuracy benchmarking is intentionally deferred.
+
+## 3. Generic Kala
 
 CLI value: `generic-kala`
 
@@ -145,7 +181,7 @@ policy as the uniform sunrise-only baseline.
 The policy intentionally ignores festival-specific purva-viddha,
 para-viddha, minimum-ghati, nakshatra, Bhadra, and similar tie-breakers.
 
-## 3. Dharma Sindhu / Traditional
+## 4. Dharma Sindhu / Traditional
 
 CLI value: `traditional`
 
@@ -182,6 +218,7 @@ consulted when textual provenance matters.
 | Policy | Festival-specific kala | Festival-specific competition | Intended use |
 |---|---:|---:|---|
 | Generic Udaya | No | No | Simplest universal sunrise marker |
+| Generic Anchor | Yes, from five exact instants | No | Exact-point alternative to kala windows |
 | Generic Kala | Yes, from a small fixed vocabulary | No | Experimental balance of simplicity and ritual timing |
 | Traditional | Yes | Yes | Normal calendar generation and highest textual fidelity |
 
@@ -192,7 +229,7 @@ undefined.
 
 ## Benchmark snapshot
 
-The generic policies were compared over the 2026–2125 range using
+Generic Udaya and Generic Kala were compared over the 2026–2125 range using
 non-overlapping January–December windows, so each physical festival
 occurrence is counted only once. The traditional resolver supplies the
 reference, with one deliberate substitution: Janmashtami uses Dharma Sindhu's
@@ -232,8 +269,8 @@ Tirupati years. Generic Udaya matched only 17 and 32 years respectively. This
 does not change normal PDF generation, which continues to use the separately
 implemented Vaishnava Janmashtami rule under the traditional policy.
 
-Ugadi uses explicit first-sunrise ownership under both generic policies and
-matched every evaluated traditional occurrence at both locations.
+Ugadi uses explicit first-sunrise ownership under Generic Udaya and Generic
+Kala and matched every evaluated traditional occurrence at both locations.
 
 For Yajur Upakarma, Generic Kala's Sunrise resolver plus validity overlay
 matched 95 of 99 evaluated Helsinki occurrences and 83 of 98 Tirupati

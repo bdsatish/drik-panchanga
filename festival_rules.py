@@ -11,10 +11,12 @@ import panchanga
 TRADITIONAL_FESTIVAL_POLICY = "traditional"
 GENERIC_UDAYA_FESTIVAL_POLICY = "generic-udaya"
 GENERIC_KALA_FESTIVAL_POLICY = "generic-kala"
+GENERIC_ANCHOR_FESTIVAL_POLICY = "generic-anchor"
 FESTIVAL_POLICIES = (
     TRADITIONAL_FESTIVAL_POLICY,
     GENERIC_UDAYA_FESTIVAL_POLICY,
     GENERIC_KALA_FESTIVAL_POLICY,
+    GENERIC_ANCHOR_FESTIVAL_POLICY,
 )
 
 
@@ -397,6 +399,36 @@ GENERIC_KALA_VALIDITY_BY_FESTIVAL = {
 }
 GENERIC_KALA_NAME_BY_FESTIVAL = {
     JANMASHTAMI_NUMBER: "Janmashtami (Madhyaratri Kala)",
+}
+SUNRISE_ANCHOR = "sunrise"
+DAY_MIDPOINT_ANCHOR = "day-midpoint"
+SUNSET_ANCHOR = "sunset"
+NIGHT_MIDPOINT_ANCHOR = "night-midpoint"
+PREDAWN_ANCHOR = "pre-dawn"
+GENERIC_ANCHOR_BY_FESTIVAL = {
+    UGADI_NUMBER: SUNRISE_ANCHOR,
+    YAJUR_UPAKARMA_NUMBER: SUNRISE_ANCHOR,
+    RIG_UPAKARMA_NUMBER: DAY_MIDPOINT_ANCHOR,
+    VASANTA_PANCHAMI_NUMBER: DAY_MIDPOINT_ANCHOR,
+    RAMA_NAVAMI_NUMBER: DAY_MIDPOINT_ANCHOR,
+    AKSAYA_TRTIYA_NUMBER: DAY_MIDPOINT_ANCHOR,
+    GANESHA_CATURTHI_NUMBER: DAY_MIDPOINT_ANCHOR,
+    BALI_PADYAMI_NUMBER: DAY_MIDPOINT_ANCHOR,
+    RAKSHA_BANDHAN_NUMBER: DAY_MIDPOINT_ANCHOR,
+    MAHALAYA_AMAVASYA_NUMBER: DAY_MIDPOINT_ANCHOR,
+    MAHANAVAMI_PUJA_NUMBER: DAY_MIDPOINT_ANCHOR,
+    VIJAYA_DASAMI_NUMBER: DAY_MIDPOINT_ANCHOR,
+    NARASIMHA_JAYANTI_NUMBER: SUNSET_ANCHOR,
+    DHANA_TRAYODASHI_NUMBER: SUNSET_ANCHOR,
+    DEEPAVALI_NUMBER: SUNSET_ANCHOR,
+    KAMA_DAHANA_NUMBER: SUNSET_ANCHOR,
+    JANMASHTAMI_NUMBER: NIGHT_MIDPOINT_ANCHOR,
+    MAHA_SHIVARATRI_NUMBER: NIGHT_MIDPOINT_ANCHOR,
+    NARAKA_CHATURDASHI_NUMBER: PREDAWN_ANCHOR,
+    RATHA_SAPTAMI_NUMBER: PREDAWN_ANCHOR,
+}
+GENERIC_ANCHOR_NAME_BY_FESTIVAL = {
+    JANMASHTAMI_NUMBER: "Janmashtami (Night-Midpoint Anchor)",
 }
 ONE_GHATI_HOURS = 24 / 60
 SIX_GHATI_HOURS = 6 * ONE_GHATI_HOURS
@@ -1976,6 +2008,93 @@ def select_generic_kala_festival_dates(records, rule):
     return sorted(set(selected))
 
 
+def generic_anchor_for_rule(rule):
+    """Return the exact instant assigned by the generic-anchor experiment."""
+    return GENERIC_ANCHOR_BY_FESTIVAL.get(rule.number, SUNRISE_ANCHOR)
+
+
+def generic_anchor_jd(record, following_record, anchor):
+    """Return one exact local anchor as a Julian day."""
+    sunrise_jd, sunset_jd = record[5:7]
+    if anchor == SUNRISE_ANCHOR:
+        return sunrise_jd
+    if anchor == DAY_MIDPOINT_ANCHOR:
+        return (sunrise_jd + sunset_jd) / 2
+    if anchor == SUNSET_ANCHOR:
+        return sunset_jd
+    if anchor == NIGHT_MIDPOINT_ANCHOR:
+        if following_record is None:
+            raise ValueError("night midpoint requires the following sunrise")
+        return (sunset_jd + following_record[5]) / 2
+    if anchor == PREDAWN_ANCHOR:
+        return sunrise_jd - ARUNODAYA_HOURS / 24
+    raise ValueError(f"Unknown generic anchor: {anchor}")
+
+
+def select_generic_anchor_festival_dates(records, rule):
+    """Resolve a plain tithi using one exact anchor and one common fallback."""
+    target_tithi = plain_tithi_number(rule.tithi)
+    if target_tithi is None:
+        raise ValueError(f"{rule.name} does not have a plain tithi rule")
+
+    records = sorted(records)
+    records_by_date = {record[0]: record for record in records}
+    occurrences = eligible_generic_occurrences(
+        generic_udaya_occurrences(records, target_tithi),
+        rule,
+    )
+    anchor = generic_anchor_for_rule(rule)
+
+    selected = []
+    for owner_date, _, _ in occurrences:
+        owner_record = records_by_date.get(owner_date)
+        if owner_record is None:
+            continue
+        intervals = tithi_intervals(
+            owner_record[5] - 1.25,
+            owner_record[5] + 2.25,
+            target_tithi,
+        )
+        if not intervals:
+            continue
+        reference = owner_record[5] + 0.5
+        target_interval = min(
+            intervals,
+            key=lambda interval: abs(
+                (interval[0] + interval[1]) / 2 - reference
+            ),
+        )
+        tithi_midpoint = sum(target_interval) / 2
+
+        candidates = []
+        for offset in (-1, 0, 1):
+            civil_date = owner_date + timedelta(days=offset)
+            record = records_by_date.get(civil_date)
+            if record is None:
+                continue
+            following_record = records_by_date.get(
+                civil_date + timedelta(days=1)
+            )
+            if (
+                anchor == NIGHT_MIDPOINT_ANCHOR
+                and following_record is None
+            ):
+                continue
+            anchor_jd = generic_anchor_jd(record, following_record, anchor)
+            contains_anchor = (
+                target_interval[0] <= anchor_jd < target_interval[1]
+            )
+            score = (
+                int(contains_anchor),
+                -abs(anchor_jd - tithi_midpoint),
+                -civil_date.toordinal(),
+            )
+            candidates.append((score, civil_date))
+        if candidates:
+            selected.append(max(candidates)[1])
+    return sorted(set(selected))
+
+
 def generic_kala_date_is_valid(
     records_by_date,
     selected_date,
@@ -2921,7 +3040,11 @@ def resolve_festivals(
     target_dates = {record[0] for record in target_records}
     if (
         festival_policy
-        in {GENERIC_UDAYA_FESTIVAL_POLICY, GENERIC_KALA_FESTIVAL_POLICY}
+        in {
+            GENERIC_UDAYA_FESTIVAL_POLICY,
+            GENERIC_KALA_FESTIVAL_POLICY,
+            GENERIC_ANCHOR_FESTIVAL_POLICY,
+        }
         and context_months is not None
     ):
         resolution_months = context_months
@@ -2952,6 +3075,11 @@ def resolve_festivals(
                 rule,
                 geopos,
             )
+        elif (
+            festival_policy == GENERIC_ANCHOR_FESTIVAL_POLICY
+            and plain_tithi_number(rule.tithi) is not None
+        ):
+            matches = select_generic_anchor_festival_dates(records, rule)
         elif rule.number == UGADI_NUMBER:
             matches = select_ugadi_dates(records, rule)
         elif rule.number == RAMA_NAVAMI_NUMBER:
@@ -3098,6 +3226,7 @@ def resolve_festivals(
         if festival_policy in {
             GENERIC_UDAYA_FESTIVAL_POLICY,
             GENERIC_KALA_FESTIVAL_POLICY,
+            GENERIC_ANCHOR_FESTIVAL_POLICY,
         }:
             matches = [
                 civil_date for civil_date in matches if civil_date in target_dates
@@ -3105,16 +3234,22 @@ def resolve_festivals(
         if not matches and not rule.allow_empty:
             raise RuntimeError(f"No calendar date found for {rule.name}")
         dates_by_number[rule.number] = matches
-        names_by_number[rule.number] = (
-            GENERIC_KALA_NAME_BY_FESTIVAL.get(rule.number, rule.name)
-            if festival_policy == GENERIC_KALA_FESTIVAL_POLICY
-            else rule.name
-        )
+        if festival_policy == GENERIC_KALA_FESTIVAL_POLICY:
+            name = GENERIC_KALA_NAME_BY_FESTIVAL.get(rule.number, rule.name)
+        elif festival_policy == GENERIC_ANCHOR_FESTIVAL_POLICY:
+            name = GENERIC_ANCHOR_NAME_BY_FESTIVAL.get(
+                rule.number,
+                rule.name,
+            )
+        else:
+            name = rule.name
+        names_by_number[rule.number] = name
 
     varamahalakshmi_dates = select_varamahalakshmi_dates(records)
     if festival_policy in {
         GENERIC_UDAYA_FESTIVAL_POLICY,
         GENERIC_KALA_FESTIVAL_POLICY,
+        GENERIC_ANCHOR_FESTIVAL_POLICY,
     }:
         varamahalakshmi_dates = [
             civil_date
