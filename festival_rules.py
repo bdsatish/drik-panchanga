@@ -1933,16 +1933,8 @@ def select_mahanavami_puja_dates(records, rule):
 
 
 def select_dasara_dates(records, rule):
-    """Select Udaya-vyapini Dashami for public observance."""
-    sunrise_candidates = [
-        (record[0], record[4])
-        for record in records_for_rule(records, rule)
-        if record[1] == rule.tithi
-    ]
-    return [
-        group[0][0]
-        for group in group_consecutive_candidates(sunrise_candidates)
-    ]
+    """Select the generic Udaya-vyapini Dashami public observance."""
+    return select_udaya_vyapini_dates(records, rule, 10)
 
 
 def select_naraka_chaturdashi_dates(records, rule, moonrise_jds=None):

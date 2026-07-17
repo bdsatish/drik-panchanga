@@ -1813,7 +1813,7 @@ class MahanavamiPujaRuleTests(unittest.TestCase):
 
 class DasaraRuleTests(unittest.TestCase):
     rule = festival_rule("Dasara")
-    
+
     def test_selects_sunrise_vyapini_dashami(self):
         records = [
             (date(2024, 10, 12), "S9", "7", False, 1.0, 10.0, 10.5),
@@ -1823,6 +1823,30 @@ class DasaraRuleTests(unittest.TestCase):
             select_dasara_dates(records, self.rule),
             [date(2024, 10, 13)],
         )
+
+    def test_vriddhi_dashami_uses_first_sunrise(self):
+        records = [
+            record(date(2030, 10, 5), "S10", masa="7"),
+            record(date(2030, 10, 6), "S10", masa="7"),
+        ]
+        self.assertEqual(
+            select_dasara_dates(records, self.rule),
+            [date(2030, 10, 5)],
+        )
+
+    def test_kshaya_dashami_uses_civil_day_containing_dashami(self):
+        records = [
+            (date(2075, 10, 18), "S9", "7", False, 1.0, 10.0, 10.5),
+            (date(2075, 10, 19), "S11", "7", False, 1.0, 11.0, 11.5),
+        ]
+        with patch(
+            "festival_rules.tithi_intervals",
+            return_value=[(10.1, 10.9)],
+        ):
+            self.assertEqual(
+                select_dasara_dates(records, self.rule),
+                [date(2075, 10, 18)],
+            )
 
 
 if __name__ == "__main__":
