@@ -698,21 +698,73 @@ def select_naga_panchami_dates(records, rule):
     return select_udaya_vyapini_dates(records, rule, 5)
 
 
-def eclipse_or_sankranti_in_window(start_jd, end_jd):
+def intervals_overlap(first_start, first_end, second_start, second_end):
+    """Return whether two non-empty Julian-day intervals overlap."""
+    return max(first_start, second_start) < min(first_end, second_end)
+
+
+def locally_visible_eclipse_in_window(start_jd, end_jd, geopos):
+    """Return whether a non-penumbral local eclipse overlaps the window."""
+    search_start = start_jd - 1
+
+    lunar_flags, lunar_times, _ = panchanga.swe.lun_eclipse_when_loc(
+        search_start,
+        geopos,
+    )
+    is_purely_penumbral = (
+        lunar_flags & panchanga.swe.ECL_PENUMBRAL
+        and not lunar_flags
+        & (panchanga.swe.ECL_PARTIAL | panchanga.swe.ECL_TOTAL)
+    )
+    if not is_purely_penumbral:
+        lunar_start, lunar_end = lunar_times[2], lunar_times[3]
+        moonrise, moonset = lunar_times[8], lunar_times[9]
+        if moonrise and lunar_start <= moonrise <= lunar_end:
+            lunar_start = moonrise
+        if moonset and lunar_start <= moonset <= lunar_end:
+            lunar_end = moonset
+        if (
+            lunar_start
+            and lunar_end
+            and intervals_overlap(
+                start_jd,
+                end_jd,
+                lunar_start,
+                lunar_end,
+            )
+        ):
+            return True
+
+    _, solar_times, _ = panchanga.swe.sol_eclipse_when_loc(
+        search_start,
+        geopos,
+    )
+    solar_start, solar_end = solar_times[1], solar_times[4]
+    sunrise, sunset = solar_times[5], solar_times[6]
+    if sunrise and solar_start <= sunrise <= solar_end:
+        solar_start = sunrise
+    if sunset and solar_start <= sunset <= solar_end:
+        solar_end = sunset
+    return bool(
+        solar_start
+        and solar_end
+        and intervals_overlap(
+            start_jd,
+            end_jd,
+            solar_start,
+            solar_end,
+        )
+    )
+
+
+def eclipse_or_sankranti_in_window(start_jd, end_jd, geopos):
     """Return whether Dharma Sindhu's eight-yama window is contaminated."""
     start_rasi = int(panchanga.solar_longitude(start_jd) // 30)
     end_rasi = int(panchanga.solar_longitude(end_jd) // 30)
     if start_rasi != end_rasi:
         return True
 
-    for finder in (
-        panchanga.swe.lun_eclipse_when,
-        panchanga.swe.sol_eclipse_when_glob,
-    ):
-        _, eclipse_times = finder(start_jd - 2)
-        if start_jd <= eclipse_times[0] <= end_jd:
-            return True
-    return False
+    return locally_visible_eclipse_in_window(start_jd, end_jd, geopos)
 
 
 def karana_index_at(jd):
@@ -802,7 +854,7 @@ def nakshatra_overlaps(start_jd, end_jd, nakshatra_number):
     )
 
 
-def upakarma_date_is_contaminated(records_by_date, selected_date):
+def upakarma_date_is_contaminated(records_by_date, selected_date, geopos):
     """Check Dharma Sindhu's principal eight-yama eclipse/sankranti window."""
     selected_record = records_by_date[selected_date]
     previous_record = records_by_date.get(selected_date - timedelta(days=1))
@@ -814,10 +866,11 @@ def upakarma_date_is_contaminated(records_by_date, selected_date):
     return eclipse_or_sankranti_in_window(
         previous_midnight,
         following_midnight,
+        geopos,
     )
 
 
-def select_rigveda_upakarma_dates(records, rule):
+def select_rigveda_upakarma_dates(records, rule, geopos):
     """Resolve the Bahvrca/Rigveda Upakarma prescribed by Dharma Sindhu.
 
     The primary time is Shravana nakshatra in shuddha Shravana Shukla
@@ -927,6 +980,7 @@ def select_rigveda_upakarma_dates(records, rule):
         if not upakarma_date_is_contaminated(
             records_by_date,
             selected_date,
+            geopos,
         ):
             return [selected_date]
 
@@ -939,6 +993,7 @@ def select_rigveda_upakarma_dates(records, rule):
                 if not upakarma_date_is_contaminated(
                     records_by_date,
                     selected_date,
+                    geopos,
                 ):
                     return [selected_date]
         panchami_dates = sunrise_fallback_dates(candidates, "panchami")
@@ -955,13 +1010,14 @@ def select_rigveda_upakarma_dates(records, rule):
                 and not upakarma_date_is_contaminated(
                     records_by_date,
                     selected_date,
+                    geopos,
                 )
             ):
                 return [selected_date]
     return []
 
 
-def select_taittiriya_apastamba_upakarma_dates(records, rule):
+def select_taittiriya_apastamba_upakarma_dates(records, rule, geopos):
     """Resolve Taittiriya-Apastamba Yajur Upakarma.
 
     Shravana Purnima is primary. If Purnima covers both sunrises, all
@@ -1040,6 +1096,7 @@ def select_taittiriya_apastamba_upakarma_dates(records, rule):
             if eclipse_or_sankranti_in_window(
                 previous_midnight,
                 following_midnight,
+                geopos,
             ):
                 fallback_rule = FestivalRule(9, rule.name, 6, "S15")
                 fallback = [
@@ -2693,6 +2750,7 @@ def resolve_festivals(
     *,
     context_months=None,
     context_data=None,
+    geopos=None,
 ):
     """Resolve festivals against daily panchanga and ritual-time windows.
 
@@ -2752,9 +2810,21 @@ def resolve_festivals(
         elif rule.number == NAGA_PANCHAMI_NUMBER:
             matches = select_naga_panchami_dates(records, rule)
         elif rule.number == RIG_UPAKARMA_NUMBER:
-            matches = select_rigveda_upakarma_dates(records, rule)
+            if geopos is None:
+                raise ValueError(
+                    "traditional Rig Upakarma requires a geographic position"
+                )
+            matches = select_rigveda_upakarma_dates(records, rule, geopos)
         elif rule.number == YAJUR_UPAKARMA_NUMBER:
-            matches = select_taittiriya_apastamba_upakarma_dates(records, rule)
+            if geopos is None:
+                raise ValueError(
+                    "traditional Yajur Upakarma requires a geographic position"
+                )
+            matches = select_taittiriya_apastamba_upakarma_dates(
+                records,
+                rule,
+                geopos,
+            )
         elif rule.number == RAKSHA_BANDHAN_NUMBER:
             matches = select_raksha_bandhan_dates(records, rule)
         elif rule.number == JANMASHTAMI_NUMBER:

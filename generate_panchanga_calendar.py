@@ -792,6 +792,7 @@ def build_pdf(
         festival_policy,
         context_months=context_months,
         context_data=context_data,
+        geopos=(location.longitude, location.latitude, 0.0),
     )
     
     # Exclude certain festivals from the generated PDF

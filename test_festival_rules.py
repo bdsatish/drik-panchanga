@@ -4,6 +4,8 @@ from datetime import date
 import unittest
 from unittest.mock import patch
 
+import panchanga
+
 from festival_rules import (
     APARAHNA_KALA,
     FESTIVAL_RULES,
@@ -17,6 +19,7 @@ from festival_rules import (
     SUNSET_KALA,
     FestivalRule,
     VARAMAHALAKSHMI_RULE,
+    eclipse_or_sankranti_in_window,
     format_festival_dates,
     generic_udaya_occurrences,
     generic_kala_for_rule,
@@ -897,7 +900,11 @@ class RigUpakarmaRuleTests(unittest.TestCase):
             return_value=False,
         ):
             self.assertEqual(
-                select_rigveda_upakarma_dates(records, self.rule),
+                select_rigveda_upakarma_dates(
+                    records,
+                    self.rule,
+                    (0.0, 0.0, 0.0),
+                ),
                 [date(2026, 8, 26)],
             )
 
@@ -917,7 +924,11 @@ class RigUpakarmaRuleTests(unittest.TestCase):
             return_value=False,
         ):
             self.assertEqual(
-                select_rigveda_upakarma_dates(records, self.rule),
+                select_rigveda_upakarma_dates(
+                    records,
+                    self.rule,
+                    (0.0, 0.0, 0.0),
+                ),
                 [date(2030, 8, 21)],
             )
 
@@ -937,7 +948,11 @@ class RigUpakarmaRuleTests(unittest.TestCase):
             return_value=False,
         ):
             self.assertEqual(
-                select_rigveda_upakarma_dates(records, self.rule),
+                select_rigveda_upakarma_dates(
+                    records,
+                    self.rule,
+                    (0.0, 0.0, 0.0),
+                ),
                 [date(2030, 8, 20)],
             )
 
@@ -958,7 +973,11 @@ class RigUpakarmaRuleTests(unittest.TestCase):
             side_effect=[True, False],
         ):
             self.assertEqual(
-                select_rigveda_upakarma_dates(records, self.rule),
+                select_rigveda_upakarma_dates(
+                    records,
+                    self.rule,
+                    (0.0, 0.0, 0.0),
+                ),
                 [date(2030, 8, 6)],
             )
 
@@ -975,7 +994,11 @@ class RigUpakarmaRuleTests(unittest.TestCase):
             return_value=False,
         ):
             self.assertEqual(
-                select_rigveda_upakarma_dates(records, self.rule),
+                select_rigveda_upakarma_dates(
+                    records,
+                    self.rule,
+                    (0.0, 0.0, 0.0),
+                ),
                 [date(2030, 8, 5)],
             )
 
@@ -994,8 +1017,88 @@ class RigUpakarmaRuleTests(unittest.TestCase):
             return_value=False,
         ):
             self.assertEqual(
-                select_rigveda_upakarma_dates(records, self.rule),
+                select_rigveda_upakarma_dates(
+                    records,
+                    self.rule,
+                    (0.0, 0.0, 0.0),
+                ),
                 [date(2030, 9, 15)],
+            )
+
+
+class UpakarmaContaminationTests(unittest.TestCase):
+    geopos = (24.94, 60.17, 0.0)
+
+    @staticmethod
+    def eclipse_times(maximum, start, end, rise=0.0, setting=0.0):
+        times = [0.0] * 10
+        times[0] = maximum
+        times[2] = start
+        times[3] = end
+        times[8] = rise
+        times[9] = setting
+        return tuple(times)
+
+    @staticmethod
+    def solar_times(start, end):
+        times = [0.0] * 10
+        times[0] = (start + end) / 2
+        times[1] = start
+        times[4] = end
+        return tuple(times)
+
+    def test_ignores_eclipse_not_visible_at_location(self):
+        with patch(
+            "festival_rules.panchanga.solar_longitude",
+            return_value=10.0,
+        ), patch(
+            "festival_rules.panchanga.swe.lun_eclipse_when_loc",
+            return_value=(
+                panchanga.swe.ECL_PARTIAL,
+                self.eclipse_times(50.0, 49.9, 50.1),
+                (),
+            ),
+        ), patch(
+            "festival_rules.panchanga.swe.sol_eclipse_when_loc",
+            return_value=(0, self.solar_times(60.0, 60.1), ()),
+        ):
+            self.assertFalse(
+                eclipse_or_sankranti_in_window(10.0, 11.0, self.geopos)
+            )
+
+    def test_visible_contacts_count_when_maximum_precedes_window(self):
+        with patch(
+            "festival_rules.panchanga.solar_longitude",
+            return_value=10.0,
+        ), patch(
+            "festival_rules.panchanga.swe.lun_eclipse_when_loc",
+            return_value=(
+                panchanga.swe.ECL_PARTIAL,
+                self.eclipse_times(9.95, 9.9, 10.1),
+                (),
+            ),
+        ):
+            self.assertTrue(
+                eclipse_or_sankranti_in_window(10.0, 11.0, self.geopos)
+            )
+
+    def test_purely_penumbral_lunar_eclipse_is_ignored(self):
+        with patch(
+            "festival_rules.panchanga.solar_longitude",
+            return_value=10.0,
+        ), patch(
+            "festival_rules.panchanga.swe.lun_eclipse_when_loc",
+            return_value=(
+                panchanga.swe.ECL_PENUMBRAL,
+                self.eclipse_times(10.2, 10.1, 10.3),
+                (),
+            ),
+        ), patch(
+            "festival_rules.panchanga.swe.sol_eclipse_when_loc",
+            return_value=(0, self.solar_times(60.0, 60.1), ()),
+        ):
+            self.assertFalse(
+                eclipse_or_sankranti_in_window(10.0, 11.0, self.geopos)
             )
 
 
@@ -1022,6 +1125,7 @@ class YajurUpakarmaRuleTests(unittest.TestCase):
                 select_taittiriya_apastamba_upakarma_dates(
                     self.records(),
                     self.rule,
+                    (0.0, 0.0, 0.0),
                 ),
                 [date(2030, 8, 15)],
             )
@@ -1038,6 +1142,7 @@ class YajurUpakarmaRuleTests(unittest.TestCase):
                 select_taittiriya_apastamba_upakarma_dates(
                     self.records(remainder=1.0),
                     self.rule,
+                    (0.0, 0.0, 0.0),
                 ),
                 [date(2030, 8, 14)],
             )
@@ -1058,6 +1163,7 @@ class YajurUpakarmaRuleTests(unittest.TestCase):
                 select_taittiriya_apastamba_upakarma_dates(
                     records,
                     self.rule,
+                    (0.0, 0.0, 0.0),
                 ),
                 [date(2031, 8, 2)],
             )
