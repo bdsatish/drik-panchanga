@@ -37,6 +37,7 @@ from festival_rules import (
     select_makara_sankranti_dates,
     select_smarta_janmashtami_dates,
     select_dhanvantari_jayanti_dates,
+    select_durga_ashtami_observance_dates,
     select_durga_ashtami_puja_dates,
     select_mahalaya_amavasya_dates,
     select_mahanavami_puja_dates,
@@ -1640,6 +1641,35 @@ class MahalayaAmavasyaRuleTests(unittest.TestCase):
             self.assertEqual(
                 select_mahalaya_amavasya_dates(self.records, self.rule),
                 [date(2030, 9, 27)],
+            )
+
+
+class DurgaAshtamiObservanceRuleTests(unittest.TestCase):
+    rule = festival_rule("Durga Ashtami")
+
+    def test_selects_sunrise_vyapini_ashtami(self):
+        records = [
+            record(date(2030, 10, 4), "S7", masa="7"),
+            record(date(2030, 10, 5), "S8", masa="7"),
+            record(date(2030, 10, 6), "S9", masa="7"),
+        ]
+        self.assertEqual(
+            select_durga_ashtami_observance_dates(records, self.rule),
+            [date(2030, 10, 5)],
+        )
+
+    def test_kshaya_ashtami_uses_civil_day_containing_ashtami(self):
+        records = [
+            (date(2058, 10, 24), "S7", "7", False, 1.0, 10.0, 10.5),
+            (date(2058, 10, 25), "S9", "7", False, 1.0, 11.0, 11.5),
+        ]
+        with patch(
+            "festival_rules.tithi_intervals",
+            return_value=[(10.1, 10.9)],
+        ):
+            self.assertEqual(
+                select_durga_ashtami_observance_dates(records, self.rule),
+                [date(2058, 10, 24)],
             )
 
 

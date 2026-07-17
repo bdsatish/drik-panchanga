@@ -2300,6 +2300,19 @@ def select_durga_ashtami_dates(candidates):
     return selected
 
 
+def select_durga_ashtami_observance_dates(records, rule):
+    """Resolve Durga Ashtami, including a generic kshaya fallback."""
+    candidates = [
+        (record[0], record[4])
+        for record in records_for_rule(records, rule)
+        if record[1] == rule.tithi
+    ]
+    selected = select_durga_ashtami_dates(candidates)
+    if selected:
+        return selected
+    return select_udaya_vyapini_dates(records, rule, 8)
+
+
 def resolve_festivals(months, month_data):
     """Resolve festivals against daily panchanga and ritual-time windows.
 
@@ -2412,24 +2425,7 @@ def resolve_festivals(months, month_data):
         elif rule.number == GANESHA_CATURTHI_NUMBER:
             matches = select_ganesha_caturthi_dates(records, rule)
         elif rule.number == DURGA_ASHTAMI_NUMBER:
-            candidates = [
-                (civil_date, hours_after_sunrise)
-                for (
-                    civil_date,
-                    day_tithi,
-                    masa,
-                    is_adhika,
-                    hours_after_sunrise,
-                    _,
-                    _,
-                ) in records
-                if (
-                    day_tithi == rule.tithi
-                    and masa == str(rule.masa)
-                    and not is_adhika
-                )
-            ]
-            matches = select_durga_ashtami_dates(candidates)
+            matches = select_durga_ashtami_observance_dates(records, rule)
         elif rule.number == DURGA_ASHTAMI_PUJA_NUMBER:
             matches = select_durga_ashtami_puja_dates(records, rule)
         elif rule.number == GOWRI_HABBA_NUMBER:
