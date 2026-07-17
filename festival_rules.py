@@ -8,6 +8,14 @@ from datetime import timedelta
 import panchanga
 
 
+TRADITIONAL_FESTIVAL_POLICY = "traditional"
+GENERIC_UDAYA_FESTIVAL_POLICY = "generic-udaya"
+FESTIVAL_POLICIES = (
+    TRADITIONAL_FESTIVAL_POLICY,
+    GENERIC_UDAYA_FESTIVAL_POLICY,
+)
+
+
 @dataclass(frozen=True)
 class FestivalRule:
     number: int
@@ -1531,6 +1539,86 @@ def tithi_intervals(start_jd, end_jd, target_tithi):
     return intervals
 
 
+def plain_tithi_number(tithi):
+    """Convert a plain S1..S15 or K1..K15 code to 1..30."""
+    if not isinstance(tithi, str) or len(tithi) < 2:
+        return None
+    paksha = tithi[0]
+    if paksha not in {"S", "K"}:
+        return None
+    try:
+        paksha_tithi = int(tithi[1:])
+    except ValueError:
+        return None
+    if not 1 <= paksha_tithi <= 15:
+        return None
+    return paksha_tithi if paksha == "S" else paksha_tithi + 15
+
+
+def generic_udaya_occurrences(records, target_tithi):
+    """Return sunrise-owned occurrences with their amanta-masa metadata."""
+    records = sorted(records)
+    occurrences = []
+    sunrise_candidates = [
+        (record[0], record[2], record[3])
+        for record in records
+        if plain_tithi_number(record[1]) == target_tithi
+    ]
+    for group in group_consecutive_candidates(sunrise_candidates):
+        occurrences.append(group[0])
+
+    sunrise_dates = {occurrence[0] for occurrence in occurrences}
+    for record, following_record in zip(records, records[1:]):
+        if following_record[0] != record[0] + timedelta(days=1):
+            continue
+        start_tithi = plain_tithi_number(record[1])
+        end_tithi = plain_tithi_number(following_record[1])
+        if start_tithi is None or end_tithi is None:
+            continue
+        skipped = [
+            (start_tithi + offset - 1) % 30 + 1
+            for offset in range(1, (end_tithi - start_tithi) % 30)
+        ]
+        if target_tithi not in skipped:
+            continue
+        if not tithi_intervals(record[5], following_record[5], target_tithi):
+            continue
+
+        # Amanta masa changes at Shukla Pratipada. For a skipped Shukla
+        # tithi, the following sunrise therefore owns the new masa metadata;
+        # for a skipped Krishna tithi, the preceding sunrise retains it.
+        masa_record = following_record if target_tithi <= 15 else record
+        occurrence = (record[0], masa_record[2], masa_record[3])
+        if occurrence[0] not in sunrise_dates:
+            occurrences.append(occurrence)
+
+    return sorted(set(occurrences))
+
+
+def select_generic_udaya_festival_dates(records, rule):
+    """Apply the experimental sunrise-ownership policy to a plain tithi."""
+    target_tithi = plain_tithi_number(rule.tithi)
+    if target_tithi is None:
+        raise ValueError(f"{rule.name} does not have a plain tithi rule")
+
+    occurrences = [
+        occurrence
+        for occurrence in generic_udaya_occurrences(records, target_tithi)
+        if occurrence[1] in {str(rule.masa), f"A{rule.masa}"}
+    ]
+    if rule.number == UGADI_NUMBER and any(
+        occurrence[2] for occurrence in occurrences
+    ):
+        occurrences = [
+            occurrence for occurrence in occurrences if occurrence[2]
+        ]
+    else:
+        occurrences = [
+            occurrence for occurrence in occurrences if not occurrence[2]
+        ]
+    return [occurrence[0] for occurrence in occurrences]
+
+
 def resolve_dharma_sindhu_vaishnava_ekadashi_dates(months, month_data):
     """Resolve Dharma Sindhu Vaishnava Ekadashi upavasa dates.
 
@@ -2373,7 +2461,14 @@ def select_durga_ashtami_observance_dates(records, rule):
     return select_udaya_vyapini_dates(records, rule, 8)
 
 
-def resolve_festivals(months, month_data):
+def resolve_festivals(
+    months,
+    month_data,
+    festival_policy=TRADITIONAL_FESTIVAL_POLICY,
+    *,
+    context_months=None,
+    context_data=None,
+):
     """Resolve festivals against daily panchanga and ritual-time windows.
 
     Each raw daily record is:
@@ -2381,13 +2476,37 @@ def resolve_festivals(months, month_data):
     sunrise UTC Julian day, sunset UTC Julian day, yoga,
     moonrise UTC Julian day.
     """
-    records = collect_records(months, month_data)
-    moonrise_jds = collect_moonrise_jds(months, month_data)
+    if festival_policy not in FESTIVAL_POLICIES:
+        raise ValueError(f"Unknown festival policy: {festival_policy}")
+    if (context_months is None) != (context_data is None):
+        raise ValueError("context_months and context_data must be supplied together")
+
+    target_records = collect_records(months, month_data)
+    target_dates = {record[0] for record in target_records}
+    if (
+        festival_policy == GENERIC_UDAYA_FESTIVAL_POLICY
+        and context_months is not None
+    ):
+        resolution_months = context_months
+        resolution_data = context_data
+    else:
+        resolution_months = months
+        resolution_data = month_data
+    records = collect_records(resolution_months, resolution_data)
+    moonrise_jds = collect_moonrise_jds(
+        resolution_months,
+        resolution_data,
+    )
 
     dates_by_number = {}
     names_by_number = {}
     for rule in FESTIVAL_RULES:
-        if rule.number == UGADI_NUMBER:
+        if (
+            festival_policy == GENERIC_UDAYA_FESTIVAL_POLICY
+            and plain_tithi_number(rule.tithi) is not None
+        ):
+            matches = select_generic_udaya_festival_dates(records, rule)
+        elif rule.number == UGADI_NUMBER:
             matches = select_ugadi_dates(records, rule)
         elif rule.number == RAMA_NAVAMI_NUMBER:
             matches = select_rama_navami_dates(records, rule)
@@ -2417,8 +2536,8 @@ def resolve_festivals(months, month_data):
             matches = select_gita_jayanti_dates(records, rule)
         elif rule.number == VAIKUNTHA_EKADASHI_NUMBER:
             matches = select_vaikuntha_ekadashi_dates(
-                months,
-                month_data,
+                resolution_months,
+                resolution_data,
                 records,
             )
         elif rule.number == VASANTA_PANCHAMI_NUMBER:
@@ -2518,14 +2637,23 @@ def resolve_festivals(months, month_data):
                     and not is_adhika
                 )
             ]
+        if festival_policy == GENERIC_UDAYA_FESTIVAL_POLICY:
+            matches = [
+                civil_date for civil_date in matches if civil_date in target_dates
+            ]
         if not matches and not rule.allow_empty:
             raise RuntimeError(f"No calendar date found for {rule.name}")
         dates_by_number[rule.number] = matches
         names_by_number[rule.number] = rule.name
 
-    dates_by_number[VARAMAHALAKSHMI_NUMBER] = (
-        select_varamahalakshmi_dates(records)
-    )
+    varamahalakshmi_dates = select_varamahalakshmi_dates(records)
+    if festival_policy == GENERIC_UDAYA_FESTIVAL_POLICY:
+        varamahalakshmi_dates = [
+            civil_date
+            for civil_date in varamahalakshmi_dates
+            if civil_date in target_dates
+        ]
+    dates_by_number[VARAMAHALAKSHMI_NUMBER] = varamahalakshmi_dates
     names_by_number[VARAMAHALAKSHMI_NUMBER] = VARAMAHALAKSHMI_NAME
 
     numbers_by_date = {}

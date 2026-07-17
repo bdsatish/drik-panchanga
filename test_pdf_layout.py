@@ -9,12 +9,19 @@ import unittest
 from reportlab.pdfgen.canvas import Canvas
 
 from generate_panchanga_calendar import (
+    GENERIC_UDAYA_RULESET_VERSION,
     LAYOUT_VERSION,
     RULESET_VERSION,
+    argument_parser,
     build_pdf,
+    default_output_path,
     ensure_text_fits,
     fitted_font_size,
     load_location,
+)
+from festival_rules import (
+    GENERIC_UDAYA_FESTIVAL_POLICY,
+    TRADITIONAL_FESTIVAL_POLICY,
 )
 
 
@@ -29,6 +36,64 @@ class PdfLayoutTests(unittest.TestCase):
         self.assertEqual(len(page_objects), 1)
         self.assertIn(RULESET_VERSION.encode("ascii"), document)
         self.assertIn(LAYOUT_VERSION.encode("ascii"), document)
+
+    def test_generic_calendar_labels_experimental_ruleset(self):
+        with TemporaryDirectory() as directory:
+            output = Path(directory) / "calendar.pdf"
+            build_pdf(
+                load_location("Helsinki"),
+                2026,
+                6,
+                output,
+                GENERIC_UDAYA_FESTIVAL_POLICY,
+            )
+            document = output.read_bytes()
+
+        self.assertIn(
+            GENERIC_UDAYA_RULESET_VERSION.encode("ascii"),
+            document,
+        )
+        self.assertNotIn(RULESET_VERSION.encode("ascii"), document)
+
+    def test_cli_defaults_to_traditional_policy(self):
+        arguments = argument_parser().parse_args(
+            ["--city", "Helsinki", "--start", "2026-03"]
+        )
+        self.assertEqual(
+            arguments.festival_policy,
+            TRADITIONAL_FESTIVAL_POLICY,
+        )
+
+    def test_cli_accepts_generic_udaya_policy(self):
+        arguments = argument_parser().parse_args(
+            [
+                "--city",
+                "Helsinki",
+                "--start",
+                "2026-03",
+                "--festival-policy",
+                GENERIC_UDAYA_FESTIVAL_POLICY,
+            ]
+        )
+        self.assertEqual(
+            arguments.festival_policy,
+            GENERIC_UDAYA_FESTIVAL_POLICY,
+        )
+
+    def test_generic_default_filename_has_policy_suffix(self):
+        path = default_output_path(
+            load_location("Helsinki"),
+            2026,
+            3,
+            GENERIC_UDAYA_FESTIVAL_POLICY,
+        )
+        self.assertEqual(
+            path.name,
+            (
+                "helsinki_panchanga_generic-udaya_"
+                "2026-03_to_2027-03.pdf"
+            ),
+        )
 
     def test_long_labels_are_fitted_without_overflow(self):
         pdf = Canvas(BytesIO())

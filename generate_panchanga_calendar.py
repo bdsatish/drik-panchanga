@@ -16,6 +16,9 @@ from reportlab.lib.pagesizes import A4, landscape
 from reportlab.pdfgen import canvas
 
 from festival_rules import (
+    FESTIVAL_POLICIES,
+    GENERIC_UDAYA_FESTIVAL_POLICY,
+    TRADITIONAL_FESTIVAL_POLICY,
     resolve_dharma_sindhu_vaishnava_ekadashi_dates,
     resolve_festivals,
     GITA_JAYANTI_NUMBER,
@@ -33,6 +36,7 @@ import panchanga
 MONTH_COUNT = 13
 DEFAULT_CITIES_PATH = Path(__file__).with_name("cities.json")
 RULESET_VERSION = "Dharma-sindhu DS-1.3"
+GENERIC_UDAYA_RULESET_VERSION = "Generic-udaya EXP-1.0"
 LAYOUT_VERSION = "A4-1.1"
 PDF_AUTHOR = "Satish BD"
 PDF_AUTHOR_EMAIL = "bdsatish@gmail.com"
@@ -41,6 +45,14 @@ PDF_COPYRIGHT = (
     "version 3 (or later)."
 )
 PDF_SOURCE_URL = "https://github.com/bdsatish/drik-panchanga"
+
+
+def ruleset_version(festival_policy):
+    if festival_policy == TRADITIONAL_FESTIVAL_POLICY:
+        return RULESET_VERSION
+    if festival_policy == GENERIC_UDAYA_FESTIVAL_POLICY:
+        return GENERIC_UDAYA_RULESET_VERSION
+    raise ValueError(f"Unknown festival policy: {festival_policy}")
 
 
 @dataclass(frozen=True)
@@ -82,7 +94,7 @@ YOGA_KEY_LINE = (
 )
 
 
-def embed_pdf_metadata(pdf, *, title, subject):
+def embed_pdf_metadata(pdf, *, title, subject, ruleset_version):
     """Set Info dictionary fields, including custom copyright/email/URL keys."""
     from reportlab.pdfbase.pdfdoc import (
         PDFDate,
@@ -96,7 +108,7 @@ def embed_pdf_metadata(pdf, *, title, subject):
     pdf.setSubject(subject)
     pdf.setCreator(PDF_SOURCE_URL)
     pdf.setKeywords(
-        f"ruleset={RULESET_VERSION}; layout={LAYOUT_VERSION}; "
+        f"ruleset={ruleset_version}; layout={LAYOUT_VERSION}; "
         f"ayanamsa=True Citra; author-email={PDF_AUTHOR_EMAIL}; "
         f"copyright={PDF_COPYRIGHT}; url={PDF_SOURCE_URL}"
     )
@@ -628,7 +640,7 @@ def coordinate_label(value, positive, negative):
     return f"{abs(value):.5f} {direction}"
 
 
-def draw_page_header(pdf, location, months):
+def draw_page_header(pdf, location, months, ruleset_version):
     page_width, page_height = landscape(A4)
     title = f"{location.name} Panchanga: {month_span_label(months)}"
     pdf.setFillColor(INK)
@@ -668,7 +680,7 @@ def draw_page_header(pdf, location, months):
     pdf.drawRightString(
         page_width - 18,
         page_height - 19,
-        f"Ruleset: {RULESET_VERSION} | Layout: {LAYOUT_VERSION}",
+        f"Ruleset: {ruleset_version} | Layout: {LAYOUT_VERSION}",
     )
 
 
@@ -745,8 +757,15 @@ def draw_page_footer(pdf, festival_entries):
     pdf.drawString(18, 20, YOGA_KEY_LINE)
 
 
-def build_pdf(location, start_year, start_month, output_path):
+def build_pdf(
+    location,
+    start_year,
+    start_month,
+    output_path,
+    festival_policy=TRADITIONAL_FESTIVAL_POLICY,
+):
     panchanga.set_chosen_ayanamsa("citra")
+    selected_ruleset_version = ruleset_version(festival_policy)
     months = list(month_range(start_year, start_month))
     if start_month == 1:
         context_start = (start_year - 1, 12)
@@ -766,6 +785,9 @@ def build_pdf(location, start_year, start_month, output_path):
     festivals_by_date, festival_entries = resolve_festivals(
         months,
         month_data,
+        festival_policy,
+        context_months=context_months,
+        context_data=context_data,
     )
     
     # Exclude certain festivals from the generated PDF
@@ -813,11 +835,12 @@ def build_pdf(location, start_year, start_month, output_path):
         title=f"{location.name} Panchanga {month_span_label(months)}",
         subject=(
             f"Daily tithi, True Citra nakshatra, yoga, and amanta masa at "
-            f"{location.name} sunrise"
+            f"{location.name} sunrise; festival policy={festival_policy}"
         ),
+        ruleset_version=selected_ruleset_version,
     )
 
-    draw_page_header(pdf, location, months)
+    draw_page_header(pdf, location, months, selected_ruleset_version)
 
     margin = 18
     day_column_width = 24
@@ -847,7 +870,12 @@ def build_pdf(location, start_year, start_month, output_path):
     return output_path
 
 
-def default_output_path(location, start_year, start_month):
+def default_output_path(
+    location,
+    start_year,
+    start_month,
+    festival_policy=TRADITIONAL_FESTIVAL_POLICY,
+):
     months = list(month_range(start_year, start_month))
     end_year, end_month = months[-1]
     city_slug = re.sub(
@@ -855,8 +883,13 @@ def default_output_path(location, start_year, start_month):
         "-",
         location.name.casefold(),
     ).strip("-") or "location"
+    policy_suffix = (
+        ""
+        if festival_policy == TRADITIONAL_FESTIVAL_POLICY
+        else f"{festival_policy}_"
+    )
     return Path(
-        f"{city_slug}_panchanga_"
+        f"{city_slug}_panchanga_{policy_suffix}"
         f"{start_year:04d}-{start_month:02d}_to_"
         f"{end_year:04d}-{end_month:02d}.pdf"
     )
@@ -885,6 +918,12 @@ def argument_parser():
         type=Path,
         help="output PDF path (default: generated from city and range)",
     )
+    parser.add_argument(
+        "--festival-policy",
+        choices=FESTIVAL_POLICIES,
+        default=TRADITIONAL_FESTIVAL_POLICY,
+        help="festival date policy (default: traditional)",
+    )
     return parser
 
 
@@ -898,12 +937,14 @@ def main(argv=None):
             location,
             start_year,
             start_month,
+            arguments.festival_policy,
         )
         generated = build_pdf(
             location,
             start_year,
             start_month,
             output_path,
+            arguments.festival_policy,
         )
     except (OSError, ValueError, RuntimeError) as error:
         parser.error(str(error))
