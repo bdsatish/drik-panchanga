@@ -1657,6 +1657,24 @@ class MahalayaAmavasyaRuleTests(unittest.TestCase):
                 [date(2030, 9, 27)],
             )
 
+    def test_neither_aparahna_uses_previous_day_containing_amavasya(self):
+        records = [
+            (date(2045, 10, 9), "K14", "6", False, 1.0, 10.0, 10.5),
+            (date(2045, 10, 10), "K15", "6", False, 1.0, 11.0, 11.5),
+            (date(2045, 10, 11), "S1", "7", False, 1.0, 12.0, 12.5),
+        ]
+        with patch(
+            "festival_rules.tithi_overlap_hours",
+            side_effect=[0.0, 0.0],
+        ), patch(
+            "festival_rules.tithi_intervals",
+            return_value=[(10.4, 11.0)],
+        ):
+            self.assertEqual(
+                select_mahalaya_amavasya_dates(records, self.rule),
+                [date(2045, 10, 9)],
+            )
+
 
 class DurgaAshtamiObservanceRuleTests(unittest.TestCase):
     rule = festival_rule("Durga Ashtami")

@@ -2187,9 +2187,11 @@ def select_mahalaya_amavasya_dates(records, rule):
     Mahalaya (Sarvapitri) Amavasya is the Amavasya of Bhadrapada (Krishna 15).
     The Shraddha is performed when the tithi prevails during the Aparahna kala
     (the fourth fifth of the daytime). If it prevails in Aparahna on two days,
-    the day with the greater overlap is selected.
+    the day with the greater overlap is selected. If neither Aparahna contains
+    Amavasya, the earlier civil day containing the tithi is used.
 
     Sources:
+    https://www.transliteral.org/pages/z130523053523/view
     http://hindupanchang.blogspot.com/2008/03/
     https://www.onlinejyotish.com/astrology-tools/shraddha-tithi.php
     """
@@ -2210,7 +2212,20 @@ def select_mahalaya_amavasya_dates(records, rule):
     selected = []
     for group in group_consecutive_candidates(candidates):
         selected.append(max(group, key=lambda candidate: candidate[1])[0])
-    return selected
+    if selected:
+        return selected
+
+    rule_records = sorted(records_for_rule(records, rule))
+    records_by_date = {record[0]: record for record in records}
+    for record in rule_records:
+        following_record = records_by_date.get(
+            record[0] + timedelta(days=1)
+        )
+        if following_record is None:
+            continue
+        if tithi_intervals(record[5], following_record[5], 30):
+            return [record[0]]
+    return []
 
 
 def select_durga_ashtami_puja_dates(records, rule):
