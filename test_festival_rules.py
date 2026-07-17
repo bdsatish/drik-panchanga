@@ -514,6 +514,20 @@ class NagaPanchamiRuleTests(unittest.TestCase):
             [date(2030, 8, 4)],
         )
 
+    def test_kshaya_panchami_uses_civil_day_containing_panchami(self):
+        records = [
+            (date(2045, 8, 16), "S4", "5", False, 1.0, 10.0, 10.5),
+            (date(2045, 8, 17), "S6", "5", False, 1.0, 11.0, 11.5),
+        ]
+        with patch(
+            "festival_rules.tithi_intervals",
+            return_value=[(10.1, 10.9)],
+        ):
+            self.assertEqual(
+                select_naga_panchami_dates(records, self.rule),
+                [date(2045, 8, 16)],
+            )
+
 
 class RigUpakarmaRuleTests(unittest.TestCase):
     rule = festival_rule("Rig Upakarma")

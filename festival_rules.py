@@ -605,7 +605,8 @@ def select_naga_panchami_dates(records, rule):
 
     The later sunrise day is selected only when Panchami remains for at
     least three muhurtas (six ghatis). A shorter later Panchami is rejected
-    in favor of the preceding Caturthi-viddha Panchami.
+    in favor of the preceding Caturthi-viddha Panchami. If Panchami is
+    skipped at sunrise, use the generic civil day containing the tithi.
 
     Source:
     https://www.transliteral.org/pages/z80422074237/view
@@ -623,7 +624,9 @@ def select_naga_panchami_dates(records, rule):
             selected.append(group[-1][0])
         else:
             selected.append(group[-2][0])
-    return selected
+    if selected:
+        return selected
+    return select_udaya_vyapini_dates(records, rule, 5)
 
 
 def eclipse_or_sankranti_in_window(start_jd, end_jd):
