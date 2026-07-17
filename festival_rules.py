@@ -98,6 +98,7 @@ FESTIVAL_RULES = (
         "S15",
         "dharmasindhu",
         "https://www.transliteral.org/pages/z80421215029/view",
+        True,
     ),
     FestivalRule(
         11,
@@ -1017,96 +1018,135 @@ def select_rigveda_upakarma_dates(records, rule, geopos):
     return []
 
 
-def select_taittiriya_apastamba_upakarma_dates(records, rule, geopos):
-    """Resolve Taittiriya-Apastamba Yajur Upakarma.
-
-    Shravana Purnima is primary. If Purnima covers both sunrises, all
-    Yajurvedins use the earlier day. For a split Purnima beginning after the
-    first daytime muhurta, Taittiriyas use the later day when at least two
-    muhurtas (four ghatis) remain after its sunrise; a shorter remainder uses
-    the earlier day. If Purnima is skipped at sunrise, the civil day containing
-    it is used. Adhika-masa Upakarma is forbidden.
-
-    An eclipse or sankranti between the preceding and following local night
-    midpoints contaminates the selected day. Apastambas then use Bhadrapada
-    Purnima. This implements Dharma Sindhu's principal eight-yama opinion,
-    not its separately reported stricter element-touch opinion.
-
-    Sources:
-    https://www.transliteral.org/pages/z80421215029/view
-    https://www.transliteral.org/pages/z80421215344/view
-    """
-    rule_records = records_for_rule(records, rule)
+def select_taittiriya_purnima_dates(records, masa):
+    """Resolve each non-adhika Purnima using the Taittiriya hierarchy."""
     by_date = {record[0]: record for record in records}
-    sunrise_candidates = [
-        (record[0], record[4])
-        for record in rule_records
-        if record[1] == rule.tithi
-    ]
-    selected_dates = []
-    for group in group_consecutive_candidates(sunrise_candidates):
-        if len(group) > 1:
-            selected_date = group[0][0]
+    masa_records = sorted(
+        record
+        for record in records
+        if record[2] == str(masa) and not record[3]
+    )
+    segments = []
+    for record in masa_records:
+        if (
+            segments
+            and record[0] == segments[-1][-1][0] + timedelta(days=1)
+        ):
+            segments[-1].append(record)
         else:
-            later_date, remainder = group[0]
-            previous_date = later_date - timedelta(days=1)
-            previous_record = by_date.get(previous_date)
-            later_record = by_date[later_date]
-            selected_date = later_date
-            if previous_record is not None:
-                intervals = tithi_intervals(
-                    previous_record[5],
-                    later_record[5],
-                    15,
-                )
-                purnima_start = intervals[0][0] if intervals else later_record[5]
-                first_muhurta_end = previous_record[5] + (
-                    previous_record[6] - previous_record[5]
-                ) / 15
-                if (
-                    purnima_start <= first_muhurta_end
-                    or remainder < 4 * ONE_GHATI_HOURS
-                ):
-                    selected_date = previous_date
-        selected_dates.append(selected_date)
+            segments.append([record])
 
-    if not selected_dates:
-        kshaya_candidates = []
-        for record in rule_records:
+    selected_dates = []
+    for segment in segments:
+        sunrise_candidates = [
+            (record[0], record[4])
+            for record in segment
+            if record[1] == "S15"
+        ]
+        if sunrise_candidates:
+            for group in group_consecutive_candidates(sunrise_candidates):
+                if len(group) > 1:
+                    selected_dates.append(group[0][0])
+                    continue
+
+                later_date, remainder = group[0]
+                previous_date = later_date - timedelta(days=1)
+                previous_record = by_date.get(previous_date)
+                later_record = by_date[later_date]
+                selected_date = later_date
+                if previous_record is not None:
+                    intervals = tithi_intervals(
+                        previous_record[5],
+                        later_record[5],
+                        15,
+                    )
+                    purnima_start = (
+                        intervals[0][0] if intervals else later_record[5]
+                    )
+                    first_muhurta_end = (
+                        previous_record[5]
+                        + 2 * ONE_GHATI_HOURS / 24
+                    )
+                    if (
+                        purnima_start <= first_muhurta_end
+                        or remainder < 4 * ONE_GHATI_HOURS
+                    ):
+                        selected_date = previous_date
+                selected_dates.append(selected_date)
+            continue
+
+        # A sunrise-skipped Purnima belongs to the preceding sunrise day.
+        for record in segment:
             following_record = by_date.get(
                 record[0] + timedelta(days=1)
             )
             if following_record is None:
                 continue
             if tithi_intervals(record[5], following_record[5], 15):
-                kshaya_candidates.append((record[0], 1))
-        selected_dates = [
-            group[0][0]
-            for group in group_consecutive_candidates(kshaya_candidates)
-        ]
+                selected_dates.append(record[0])
+                break
+
+    return selected_dates
+
+
+def select_taittiriya_apastamba_upakarma_dates(records, rule, geopos):
+    """Resolve Taittiriya-Apastamba Yajur Upakarma.
+
+    Shravana Purnima is primary. If Purnima covers both sunrises, all
+    Yajurvedins use the earlier day. For a split Purnima beginning after the
+    first fixed muhurta, Taittiriyas use the later day when at least two
+    muhurtas (four ghatis) remain after its sunrise; a shorter remainder uses
+    the earlier day. If Purnima is skipped at sunrise, the civil day containing
+    it is used. Adhika-masa Upakarma is forbidden.
+
+    An eclipse or sankranti between the preceding and following local night
+    midpoints contaminates the selected day. Apastambas then use Bhadrapada
+    Purnima, resolved and validated by the same rules. If both dates are
+    defective, no date is returned rather than silently retaining a defective
+    date. This implements Dharma Sindhu's principal eight-yama opinion, not
+    its separately reported stricter element-touch opinion.
+
+    Sources:
+    https://www.transliteral.org/pages/z80421215029/view
+    https://www.transliteral.org/pages/z80421215344/view
+    """
+    by_date = {record[0]: record for record in records}
+    selected_dates = select_taittiriya_purnima_dates(records, rule.masa)
+    fallback_dates = select_taittiriya_purnima_dates(
+        records,
+        rule.masa + 1,
+    )
 
     selected = []
     for selected_date in selected_dates:
-        selected_record = by_date[selected_date]
-        previous_record = by_date.get(selected_date - timedelta(days=1))
-        next_record = by_date.get(selected_date + timedelta(days=1))
-        if previous_record is not None and next_record is not None:
-            previous_midnight = (previous_record[6] + selected_record[5]) / 2
-            following_midnight = (selected_record[6] + next_record[5]) / 2
-            if eclipse_or_sankranti_in_window(
-                previous_midnight,
-                following_midnight,
+        if not upakarma_date_is_contaminated(
+            by_date,
+            selected_date,
+            geopos,
+        ):
+            selected.append(selected_date)
+            continue
+
+        fallback_date = next(
+            (
+                candidate
+                for candidate in fallback_dates
+                if (
+                    selected_date < candidate
+                    <= selected_date + timedelta(days=45)
+                )
+            ),
+            None,
+        )
+        if (
+            fallback_date is not None
+            and not upakarma_date_is_contaminated(
+                by_date,
+                fallback_date,
                 geopos,
-            ):
-                fallback_rule = FestivalRule(9, rule.name, 6, "S15")
-                fallback = [
-                    record[0]
-                    for record in records_for_rule(records, fallback_rule)
-                    if record[1] == "S15"
-                ]
-                if fallback:
-                    selected_date = fallback[0]
-        selected.append(selected_date)
+            )
+        ):
+            selected.append(fallback_date)
     return selected
 
 

@@ -42,6 +42,7 @@ from festival_rules import (
     select_ratha_saptami_dates,
     select_rigveda_upakarma_dates,
     select_taittiriya_apastamba_upakarma_dates,
+    select_taittiriya_purnima_dates,
     select_ugadi_dates,
     select_vasavi_atmarpana_dates,
     select_vasavi_jayanti_dates,
@@ -1113,6 +1114,32 @@ class YajurUpakarmaRuleTests(unittest.TestCase):
             (date(2030, 8, 16), "K1", "5", False, 1.0, 12.0, 12.5),
         ]
 
+    @staticmethod
+    def records_with_bhadrapada_fallback():
+        return [
+            (date(2030, 8, 14), "S14", "5", False, 1.0, 10.0, 10.5),
+            (date(2030, 8, 15), "S15", "5", False, 2.0, 11.0, 11.5),
+            (date(2030, 8, 16), "K1", "5", False, 1.0, 12.0, 12.5),
+            (date(2030, 9, 13), "S14", "6", False, 1.0, 40.0, 40.5),
+            (date(2030, 9, 14), "S15", "6", False, 1.0, 41.0, 41.5),
+            (date(2030, 9, 15), "K1", "6", False, 1.0, 42.0, 42.5),
+        ]
+
+    def test_first_muhurta_is_fixed_at_two_ghatis(self):
+        records = [
+            (date(2030, 8, 14), "S14", "5", False, 1.0, 10.0, 10.75),
+            (date(2030, 8, 15), "S15", "5", False, 2.0, 11.0, 11.5),
+            (date(2030, 8, 16), "K1", "5", False, 1.0, 12.0, 12.5),
+        ]
+        with patch(
+            "festival_rules.tithi_intervals",
+            return_value=[(10.04, 11.08)],
+        ):
+            self.assertEqual(
+                select_taittiriya_purnima_dates(records, 5),
+                [date(2030, 8, 15)],
+            )
+
     def test_taittiriyas_use_later_day_with_two_muhurtas(self):
         with patch(
             "festival_rules.tithi_intervals",
@@ -1167,6 +1194,63 @@ class YajurUpakarmaRuleTests(unittest.TestCase):
                 ),
                 [date(2031, 8, 2)],
             )
+
+    def test_bhadrapada_fallback_reuses_short_remnant_rule(self):
+        with patch(
+            "festival_rules.tithi_intervals",
+            side_effect=[
+                [(10.1, 11.2)],
+                [(40.1, 41.05)],
+            ],
+        ), patch(
+            "festival_rules.upakarma_date_is_contaminated",
+            side_effect=[True, False],
+        ):
+            self.assertEqual(
+                select_taittiriya_apastamba_upakarma_dates(
+                    self.records_with_bhadrapada_fallback(),
+                    self.rule,
+                    (0.0, 0.0, 0.0),
+                ),
+                [date(2030, 9, 13)],
+            )
+
+    def test_contaminated_bhadrapada_fallback_returns_no_date(self):
+        with patch(
+            "festival_rules.tithi_intervals",
+            side_effect=[
+                [(10.1, 11.2)],
+                [(40.1, 41.2)],
+            ],
+        ), patch(
+            "festival_rules.upakarma_date_is_contaminated",
+            side_effect=[True, True],
+        ):
+            self.assertEqual(
+                select_taittiriya_apastamba_upakarma_dates(
+                    self.records_with_bhadrapada_fallback(),
+                    self.rule,
+                    (0.0, 0.0, 0.0),
+                ),
+                [],
+            )
+
+    def test_kshaya_bhadrapada_purnima_can_be_fallback(self):
+        records = [
+            (date(2030, 9, 13), "S14", "6", False, 1.0, 40.0, 40.5),
+            (date(2030, 9, 14), "K1", "6", False, 1.0, 41.0, 41.5),
+        ]
+        with patch(
+            "festival_rules.tithi_intervals",
+            return_value=[(40.1, 40.9)],
+        ):
+            self.assertEqual(
+                select_taittiriya_purnima_dates(records, 6),
+                [date(2030, 9, 13)],
+            )
+
+    def test_rule_allows_both_branch_dates_to_be_defective(self):
+        self.assertTrue(self.rule.allow_empty)
 
 
 class RakshaBandhanRuleTests(unittest.TestCase):
