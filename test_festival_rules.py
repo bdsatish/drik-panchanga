@@ -490,6 +490,20 @@ class GuruPurnimaRuleTests(unittest.TestCase):
             [date(2030, 7, 15)],
         )
 
+    def test_kshaya_purnima_uses_civil_day_containing_purnima(self):
+        records = [
+            (date(2083, 7, 28), "S14", "4", False, 1.0, 10.0, 10.5),
+            (date(2083, 7, 29), "K1", "4", False, 1.0, 11.0, 11.5),
+        ]
+        with patch(
+            "festival_rules.tithi_intervals",
+            return_value=[(10.1, 10.9)],
+        ):
+            self.assertEqual(
+                select_guru_purnima_dates(records, self.rule),
+                [date(2083, 7, 28)],
+            )
+
 
 class NagaPanchamiRuleTests(unittest.TestCase):
     rule = FESTIVAL_RULES[6]

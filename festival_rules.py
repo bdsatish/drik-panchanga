@@ -579,6 +579,7 @@ def select_guru_purnima_dates(records, rule):
     Dharma Sindhu's Vyasa-puja decision uses the later sunrise day only when
     Purnima remains for at least three muhurtas (six ghatis) after sunrise;
     when the later remainder is shorter, the previous Purnima day is used.
+    If Purnima is skipped at sunrise, use the civil day containing it.
 
     Sources:
     https://www.transliteral.org/pages/z80421213928/view
@@ -597,7 +598,9 @@ def select_guru_purnima_dates(records, rule):
             selected.append(group[-1][0])
         else:
             selected.append(group[-2][0])
-    return selected
+    if selected:
+        return selected
+    return select_udaya_vyapini_dates(records, rule, 15)
 
 
 def select_naga_panchami_dates(records, rule):
