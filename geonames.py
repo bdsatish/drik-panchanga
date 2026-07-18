@@ -7,10 +7,26 @@
 
 import csv
 import json
+import os
+import urllib.request
+import zipfile
 
-fin = open('/tmp/cities15000.txt', 'r')
+url = 'http://download.geonames.org/export/dump/cities15000.zip'
+zip_path = '/tmp/cities15000.zip'
+txt_path = '/tmp/cities15000.txt'
+script_dir = os.path.dirname(os.path.abspath(__file__))
+
+if not os.path.exists(txt_path):
+    print('Downloading cities15000.zip ...')
+    urllib.request.urlretrieve(url, zip_path)
+    with zipfile.ZipFile(zip_path, 'r') as z:
+        z.extractall('/tmp')
+    os.remove(zip_path)
+    print('Done.')
+
+fin = open(txt_path, 'r')
 reader = csv.reader(fin, 'excel-tab')
-fout = open('/tmp/cities.csv', 'w')
+fout = open(os.path.join(script_dir, 'cities.csv'), 'w')
 cities = {}
 
 for record in reader:
@@ -20,13 +36,14 @@ for record in reader:
      elevation, dem, timezone, modificationdate) = record
 
     # Ignore small cities
-    if int(population) > 50000 and asciiname:
+    if int(population) > 60000 and asciiname:
       cities[asciiname] = {'latitude': float(latitude),
                            'longitude': float(longitude),
                            'timezone': timezone}
       fout.write(u'%s:%s:%s:%s\n' % (asciiname, latitude, longitude, timezone))
 
 fout.close()
-fjson = open('/tmp/cities.json', 'w')
+fjson = open(os.path.join(script_dir, 'cities.json'), 'w')
 json.dump(cities, fjson)
 fjson.close()
+os.remove(txt_path)
