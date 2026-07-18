@@ -318,8 +318,8 @@ def select_anchor_festival_dates(
                 (interval[0] + interval[1]) / 2 - reference
             ),
         )
-        qual = []
-        non = []
+        tithi_midpoint = sum(target_interval) / 2
+        candidates = []
         for offset in (-1, 0, 1):
             civil_date = owner_date + timedelta(days=offset)
             record = records_by_date.get(civil_date)
@@ -331,14 +331,15 @@ def select_anchor_festival_dates(
             if anchor == NIGHT_MIDPOINT_ANCHOR and following_record is None:
                 continue
             point = anchor_jd(record, following_record, anchor)
-            if target_interval[0] <= point < target_interval[1]:
-                qual.append((point, civil_date))
-            else:
-                non.append((point, civil_date))
-        if qual:
-            selected.append(min(qual)[1])
-        elif non:
-            selected.append(min(non)[1])
+            contains_anchor = target_interval[0] <= point < target_interval[1]
+            score = (
+                int(contains_anchor),
+                -abs(point - tithi_midpoint),
+                -civil_date.toordinal(),
+            )
+            candidates.append((score, civil_date))
+        if candidates:
+            selected.append(max(candidates)[1])
     return sorted(set(selected))
 
 

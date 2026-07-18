@@ -110,10 +110,10 @@ class GenericAnchorPolicyTests(unittest.TestCase):
             [date(2030, 4, 11)],
         )
 
-    def test_multiple_contained_anchors_prefer_earlier_anchor(self):
+    def test_multiple_contained_anchors_prefer_nearest_to_tithi_midpoint(self):
         self.assertEqual(
             self.select(festival_rule("Vasavi Jayanti"), (9.0, 10.8)),
-            [date(2030, 4, 10)],
+            [date(2030, 4, 11)],
         )
 
     def test_missing_anchor_uses_nearest_then_earlier_date(self):
