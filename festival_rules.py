@@ -132,11 +132,23 @@ def tithi_intervals(start_jd, end_jd, target_tithi):
 
 
 def generic_udaya_occurrences(records, target_tithi):
+    """Find occurrences where the tithi prevails at sunrise (legacy)."""
     return _records.generic_udaya_occurrences(
         records,
         target_tithi,
         plain_tithi_number=plain_tithi_number,
         interval_finder=tithi_intervals,
+    )
+
+
+def generic_udaya_sunset_sunrise_occurrences(records, target_tithi):
+    """Find occurrences where the tithi prevails at sunrise OR sunset."""
+    return _records.generic_udaya_sunset_sunrise_occurrences(
+        records,
+        target_tithi,
+        plain_tithi_number=plain_tithi_number,
+        interval_finder=tithi_intervals,
+        tithi_number_at=tithi_number_at,
     )
 
 
@@ -938,12 +950,12 @@ def select_raksha_bandhan_dates(records, rule):
 
 
 def select_generic_udaya_festival_dates(records, rule):
-    """Apply the experimental sunrise-ownership policy to a plain tithi."""
+    """Apply the experimental sunrise+sunset ownership policy."""
     return _generic.select_udaya_festival_dates(
         records,
         rule,
         plain_tithi_number=plain_tithi_number,
-        occurrence_finder=generic_udaya_occurrences,
+        occurrence_finder=generic_udaya_sunset_sunrise_occurrences,
         eligibility_filter=eligible_generic_occurrences,
     )
 
