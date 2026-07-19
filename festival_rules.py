@@ -201,6 +201,16 @@ def resolve_dharma_sindhu_vaishnava_ekadashi_dates(months, month_data):
     )
 
 
+def resolve_generic_udaya_ekadashi_dates(months, month_data):
+    """Resolve Ekadashi dates using the generic-udaya vriddhi/kshaya rules."""
+    return _ekadashi.resolve_generic_udaya_dates(
+        months,
+        month_data,
+        collect_records=collect_records,
+        occurrence_finder=generic_udaya_occurrences,
+    )
+
+
 def select_vaikuntha_ekadashi_dates(months, month_data, records=None):
     return _ekadashi.select_vaikuntha_dates(
         months,

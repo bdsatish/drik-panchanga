@@ -1,15 +1,16 @@
-"""Tests for Vaikuntha Ekadashi resolution."""
+"""Tests for Ekadashi resolution engines."""
 
-from datetime import date
+from datetime import date, timedelta
 import unittest
 from unittest.mock import patch
 
 from festival_rules import (
     format_festival_dates,
     resolve_festivals,
+    resolve_generic_udaya_ekadashi_dates,
     select_vaikuntha_ekadashi_dates,
 )
-from festival_test_helpers import festival_rule
+from festival_test_helpers import festival_rule, record
 
 
 class VaikunthaEkadashiRuleTests(unittest.TestCase):
@@ -140,6 +141,54 @@ class VaikunthaEkadashiRuleTests(unittest.TestCase):
                 select_vaikuntha_ekadashi_dates([], {}, records),
                 [first, second],
             )
+
+
+class GenericUdayaEkadashiTests(unittest.TestCase):
+    """resolve_generic_udaya_ekadashi_dates uses vriddhi→first, kshaya→next."""
+
+    def _call(self, records):
+        with patch(
+            "festival_rules.collect_records",
+            return_value=records,
+        ):
+            return resolve_generic_udaya_ekadashi_dates([({}, {})], {})
+
+    def test_normal_single_ekadashi_at_sunrise(self):
+        records = [
+            record(date(2030, 3, 20), "S11"),
+            record(date(2030, 3, 21), "S12"),
+            record(date(2030, 3, 22), "S13"),
+        ]
+        self.assertEqual(self._call(records), [date(2030, 3, 20)])
+
+    def test_vriddhi_ekadashi_uses_first_day(self):
+        records = [
+            record(date(2030, 3, 20), "S11"),
+            record(date(2030, 3, 21), "S11"),
+            record(date(2030, 3, 22), "S12"),
+        ]
+        self.assertEqual(self._call(records), [date(2030, 3, 20)])
+
+    def test_kshaya_ekadashi_uses_next_day(self):
+        records = [
+            (date(2030, 8, 4), "S10", "5", False, 1.0, 10.0, 10.5),
+            (date(2030, 8, 5), "S12", "5", False, 1.0, 11.0, 11.5),
+        ]
+        with patch(
+            "festival_rules.tithi_intervals",
+            return_value=[(10.1, 10.9)],
+        ):
+            self.assertEqual(self._call(records), [date(2030, 8, 5)])
+
+    def test_both_pakshas_are_resolved(self):
+        records = [
+            record(date(2030, 3, 6), "S11"),
+            record(date(2030, 3, 20), "K11"),
+        ]
+        self.assertEqual(
+            self._call(records),
+            [date(2030, 3, 6), date(2030, 3, 20)],
+        )
 
 
 if __name__ == "__main__":

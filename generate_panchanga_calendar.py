@@ -23,6 +23,7 @@ from festival_rules import (
     GENERIC_UDAYA_FESTIVAL_POLICY,
     TRADITIONAL_FESTIVAL_POLICY,
     resolve_dharma_sindhu_vaishnava_ekadashi_dates,
+    resolve_generic_udaya_ekadashi_dates,
     resolve_festivals,
     GITA_JAYANTI_NUMBER,
     DHANVANTARI_JAYANTI_NUMBER,
@@ -39,7 +40,7 @@ import panchanga
 MONTH_COUNT = 13
 DEFAULT_CITIES_PATH = Path(__file__).with_name("cities.json")
 RULESET_VERSION = "Dharma-sindhu DS-1.3"
-GENERIC_UDAYA_RULESET_VERSION = "Generic-udaya EXP-1.0"
+GENERIC_UDAYA_RULESET_VERSION = "Generic-udaya EXP-2.0"
 GENERIC_MIDPOINT_RULESET_VERSION = "Generic-midpoint EXP-1.0"
 GENERIC_KALA_RULESET_VERSION = "Generic-kala EXP-2.0"
 GENERIC_ANCHOR_RULESET_VERSION = "Generic-anchor EXP-2.0"
@@ -749,8 +750,7 @@ def draw_page_footer(pdf, festival_entries):
         44,
         "T: S01-S15 = Sukla; K01-K15 = Krsna. N = nakshatra; Y = yoga. "
         "Tiny red numbers refer to the festival key. Sundays have a red right "
-        "edge; Dharma-sindhu Vaishnava Ekadashi upavasa has a teal T-cell "
-        "underline.",
+        "edge; Ekadashi upavasa has a teal T-cell underline.",
     )
     pdf.setFont("Helvetica", 5.3)
     pdf.drawString(
@@ -830,9 +830,14 @@ def build_pdf(
         end_month,
         calendar.monthrange(end_year, end_month)[1],
     )
+    resolve_ekadashi = (
+        resolve_generic_udaya_ekadashi_dates
+        if festival_policy == GENERIC_UDAYA_FESTIVAL_POLICY
+        else resolve_dharma_sindhu_vaishnava_ekadashi_dates
+    )
     ekadashi_dates = {
         value
-        for value in resolve_dharma_sindhu_vaishnava_ekadashi_dates(
+        for value in resolve_ekadashi(
             context_months,
             context_data,
         )

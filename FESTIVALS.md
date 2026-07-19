@@ -36,8 +36,8 @@ For each occurrence of the target tithi:
 
 - If the tithi prevails at one sunrise, use that civil date.
 - If it prevails at two consecutive sunrises (vriddhi), use the first sunrise.
-- If it misses sunrise entirely (kshaya), use the civil day whose
-  sunrise-to-sunrise span contains the tithi.
+- If it misses sunrise entirely (kshaya), use the next civil date (the day of
+  the following sunrise).
 - Exclude adhika-masa occurrences by default.
 - Ugadi is the deliberate exception: when Chaitra is adhika, the year-opening
   occurrence belongs to adhika Chaitra.
@@ -49,6 +49,35 @@ part of the day.
 Rules that are not plain masa-and-tithi markers�such as solar Sankranti,
 Vaikuntha Ekadashi, Rig Upakarma, and Varamahalakshmi Vrata�continue to use
 their dedicated selectors.
+
+The same logic applies to determine on which days to fast for Ekadashi vrata:
+
+- Normal (Ekadashi at one sunrise): that civil date.
+- Vriddhi (at two consecutive sunrises): the earlier date.
+- Kshaya (misses sunrise entirely): the next civil date (Dvadashi).
+
+Fast is broken (pāraṇa) on the next day after sunrise, for both normal and
+kshaya observances. For the vriddhi case, wait until ekadashi tithi has ended
+completely after sunrise (max 4 hrs after sunrise).
+
+### RATIONALE
+
+This 'kshaya' logic helps us to avoid celebrating festivals on Amavasya day.
+For example, in India, 2026-03-19 is Amavasya and the next day is
+śukla-dvitīya. Traditional (Dharma-sindhu) calendar celebrates the Hindu New
+Year (Ugadi) on Amavasya day though, according to the same book, Caitra month
+begins on the next day! Another example: You want enjoy a festival feast on
+Vijaya Dashami (Dussehra) but the Ekadashi is kshaya. As per above the rule, the
+fasting is pushed to the next day after Dussehra, so no problem.
+
+The 'vriddhi' rules prioritises the principle that one should _never_ eat during
+the maximal window of an ekadashi tithi. For example, in Tirupati, both
+2027-03-03 and 2027-03-04 at sunrise are Ekadashi (no daśamī-vedha). Yet, all
+calendars (incl. Dharma-sindhu, Smarta, Madhva, Srivaishnava) prescribe fasting
+on the latter date, essentially allowing food consumption on the entire 3rd
+March which has ahorātra ekādaśī tithi! Defeats the whole emphasis on ekadasi
+fasting. Different sampradāyas may differ on pāraṇe rules (breaking the fast),
+that's alright, but in my opinion, keeping upavāsa is more important.
 
 ## 2. Generic Midpoint
 
@@ -181,8 +210,8 @@ location.
 ### Common competition rule
 
 Sunrise uses the Generic Udaya ownership rule: one sunrise uses that date,
-vriddhi uses the first sunrise, and kshaya uses the containing
-sunrise-to-sunrise day.
+vriddhi uses the first sunrise, and kshaya uses the next civil date (the day
+of the following sunrise).
 
 Every other assigned kala uses the same competition rule:
 
@@ -280,9 +309,12 @@ Traditional is 100% by definition because it supplies the reference dates.
 | Location and scope | Traditional | Generic Udaya | Generic Kala |
 |---|---:|---:|---:|
 | Helsinki, all plain-tithi rules | 100% | 81.72% | 97.17% |
-| Helsinki, PDF-visible subset | 100% | 78.87% | 96.77% |
+| Helsinki, PDF-visible subset | 100% | 74.14%¹ | 96.77% |
 | Tirupati, all plain-tithi rules | 100% | 80.68% | 96.54% |
-| Tirupati, PDF-visible subset | 100% | 77.31% | 96.29% |
+| Tirupati, PDF-visible subset | 100% | 73.67%¹ | 96.29% |
+
+¹ Re-evaluated after the vriddhi/kshaya rule change: vriddhi retains first-sunrise,
+  kshaya now uses the next civil date (following sunrise).
 
 Generic Midpoint and Generic Anchor were subsequently compared with the same
 traditional reference over the same 2026–2125 calendar-year range. This
@@ -321,14 +353,17 @@ These percentages measure agreement with this project's traditional resolver,
 not independent proof that either generic policy is religiously authoritative.
 For Janmashtami specifically, Generic Kala's broad Ratri window matched the
 Smarta Nishitha result in 98 of 99 evaluated Helsinki years and 94 of 98
-Tirupati years. Generic Udaya matched only 17 and 32 years respectively. This
+Tirupati years. Generic Udaya matched 14 and 28 years respectively. This
 does not change normal PDF generation, which continues to use the separately
 implemented Vaishnava Janmashtami rule under the traditional policy.
 
 Ugadi uses explicit first-sunrise ownership under Generic Udaya and Generic
-Kala and matched every evaluated traditional occurrence at both locations.
+Kala. Under Generic Kala it matched every evaluated traditional occurrence at
+both locations. Under Generic Udaya it matched 98 of 99 Helsinki years and 89
+of 98 Tirupati years; the divergences are kshaya cases where Generic Udaya now
+uses the following sunrise's civil date.
 
 For Yajur Upakarma, Generic Kala's Sunrise resolver plus validity overlay
 matched 95 of 99 evaluated Helsinki occurrences and 83 of 98 Tirupati
-occurrences. Generic Udaya, which deliberately omits the overlay, matched 92
-and 77 respectively.
+occurrences. Generic Udaya, which deliberately omits the overlay, matched 78
+and 74 respectively.

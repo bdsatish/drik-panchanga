@@ -1,4 +1,4 @@
-"""Dharma Sindhu Vaishnava and Vaikuntha Ekadashi engines."""
+"""Dharma Sindhu Vaishnava, Generic Udaya, and Vaikuntha Ekadashi engines."""
 
 
 def resolve_vaishnava_dates(
@@ -63,6 +63,27 @@ def resolve_vaishnava_dates(
                 else first_date
             )
     return sorted(set(selected))
+
+
+def resolve_generic_udaya_dates(
+    months,
+    month_data,
+    *,
+    collect_records,
+    occurrence_finder,
+):
+    """Resolve Ekadashi dates using the generic-udaya vriddhi/kshaya rules.
+
+    - Normal (Ekadashi at one sunrise): that civil date.
+    - Vriddhi (at two consecutive sunrises): the earlier date.
+    - Kshaya (misses sunrise entirely): the next civil date (Dvadashi).
+    """
+    records = collect_records(months, month_data)
+    selected = set()
+    for tithi in (11, 26):
+        for owner_date, _, _ in occurrence_finder(records, tithi):
+            selected.add(owner_date)
+    return sorted(selected)
 
 
 def select_vaikuntha_dates(
