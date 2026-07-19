@@ -33,7 +33,7 @@ class GenericUdayaPolicyTests(unittest.TestCase):
             [(date(2030, 8, 4), "5", False)],
         )
 
-    def test_kshaya_tithi_uses_preceding_sunrise_date(self):
+    def test_kshaya_tithi_uses_following_sunrise_date(self):
         records = [
             (date(2030, 8, 4), "S4", "5", False, 1.0, 10.0, 10.5),
             (date(2030, 8, 5), "S6", "5", False, 1.0, 11.0, 11.5),
@@ -44,7 +44,7 @@ class GenericUdayaPolicyTests(unittest.TestCase):
         ):
             self.assertEqual(
                 generic_udaya_occurrences(records, 5),
-                [(date(2030, 8, 4), "5", False)],
+                [(date(2030, 8, 5), "5", False)],
             )
 
     def test_kshaya_shukla_pratipada_uses_following_masa_metadata(self):
@@ -59,7 +59,7 @@ class GenericUdayaPolicyTests(unittest.TestCase):
         ):
             self.assertEqual(
                 select_generic_udaya_festival_dates(records, rule),
-                [date(2030, 5, 1)],
+                [date(2030, 5, 2)],
             )
 
     def test_default_month_policy_excludes_adhika_occurrence(self):

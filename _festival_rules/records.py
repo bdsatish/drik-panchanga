@@ -134,7 +134,7 @@ def generic_udaya_occurrences(
         if not interval_finder(record[5], following_record[5], target_tithi):
             continue
         masa_record = following_record if target_tithi <= 15 else record
-        occurrence = (record[0], masa_record[2], masa_record[3])
+        occurrence = (following_record[0], masa_record[2], masa_record[3])
         if occurrence[0] not in sunrise_dates:
             occurrences.append(occurrence)
     return sorted(set(occurrences))
