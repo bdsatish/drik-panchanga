@@ -5,11 +5,13 @@ import unittest
 from unittest.mock import patch
 
 from festival_rules import (
-    ARUNODAYA_HOURS,
+    DAY_FIRST_QUARTER_ANCHOR,
     DAY_MIDPOINT_ANCHOR,
+    DAY_THIRD_QUARTER_ANCHOR,
     GENERIC_ANCHOR_FESTIVAL_POLICY,
+    NIGHT_FIRST_QUARTER_ANCHOR,
     NIGHT_MIDPOINT_ANCHOR,
-    PREDAWN_ANCHOR,
+    NIGHT_THIRD_QUARTER_ANCHOR,
     SUNRISE_ANCHOR,
     SUNSET_ANCHOR,
     generic_anchor_for_rule,
@@ -51,30 +53,42 @@ class GenericAnchorPolicyTests(unittest.TestCase):
         ):
             return select_generic_anchor_festival_dates(self.days, rule)
 
-    def test_five_exact_anchor_calculations(self):
+    def test_exact_anchor_calculations(self):
         first, second = self.days[:2]
         self.assertEqual(
             generic_anchor_jd(first, second, SUNRISE_ANCHOR),
             9.0,
         )
         self.assertEqual(
+            generic_anchor_jd(first, second, DAY_FIRST_QUARTER_ANCHOR),
+            9.125,
+        )
+        self.assertEqual(
             generic_anchor_jd(first, second, DAY_MIDPOINT_ANCHOR),
             9.25,
+        )
+        self.assertEqual(
+            generic_anchor_jd(first, second, DAY_THIRD_QUARTER_ANCHOR),
+            9.375,
         )
         self.assertEqual(
             generic_anchor_jd(first, second, SUNSET_ANCHOR),
             9.5,
         )
         self.assertEqual(
+            generic_anchor_jd(first, second, NIGHT_FIRST_QUARTER_ANCHOR),
+            9.625,
+        )
+        self.assertEqual(
             generic_anchor_jd(first, second, NIGHT_MIDPOINT_ANCHOR),
             9.75,
         )
         self.assertEqual(
-            generic_anchor_jd(first, second, PREDAWN_ANCHOR),
-            9.0 - ARUNODAYA_HOURS / 24,
+            generic_anchor_jd(first, second, NIGHT_THIRD_QUARTER_ANCHOR),
+            9.875,
         )
 
-    def test_night_midpoint_requires_following_sunrise(self):
+    def test_night_quarter_requires_following_sunrise(self):
         with self.assertRaisesRegex(
             ValueError,
             "requires the following sunrise",
@@ -82,20 +96,20 @@ class GenericAnchorPolicyTests(unittest.TestCase):
             generic_anchor_jd(
                 self.days[0],
                 None,
-                NIGHT_MIDPOINT_ANCHOR,
+                NIGHT_FIRST_QUARTER_ANCHOR,
             )
 
-    def test_kala_groups_collapse_to_reduced_anchor_vocabulary(self):
+    def test_anchor_mapping(self):
         expected = {
             "Ugadi": SUNRISE_ANCHOR,
             "Yajur Upakarma": SUNRISE_ANCHOR,
             "Vasanta Panchami": DAY_MIDPOINT_ANCHOR,
             "Rama Navami": DAY_MIDPOINT_ANCHOR,
-            "Mahanavami (Puja)": DAY_MIDPOINT_ANCHOR,
+            "Mahanavami (Puja)": DAY_THIRD_QUARTER_ANCHOR,
             "Narasimha Jayanti": SUNSET_ANCHOR,
-            "Dhana Trayodashi": SUNSET_ANCHOR,
+            "Dhana Trayodashi": NIGHT_FIRST_QUARTER_ANCHOR,
             "Janmashtami": NIGHT_MIDPOINT_ANCHOR,
-            "Naraka Chaturdashi": PREDAWN_ANCHOR,
+            "Naraka Chaturdashi": NIGHT_THIRD_QUARTER_ANCHOR,
         }
         for name, anchor in expected.items():
             with self.subTest(name=name):
@@ -164,7 +178,7 @@ class GenericAnchorPolicyTests(unittest.TestCase):
 
         selector.assert_called_once_with(self.days, rule)
         entry = next(item for item in entries if item[0] == rule.number)
-        self.assertEqual(entry[2], "Janmashtami (Night-Midpoint Anchor)")
+        self.assertEqual(entry[2], "Janmashtami (Ratri Anchor)")
 
     def test_context_date_outside_target_range_is_filtered(self):
         rule = festival_rule("Yajur Upakarma")

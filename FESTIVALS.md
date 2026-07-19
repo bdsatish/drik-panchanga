@@ -46,8 +46,8 @@ This policy is deterministic and easy to explain, but it cannot represent
 festivals whose decisive ritual occurs at noon, sunset, midnight, or another
 part of the day.
 
-Rules that are not plain masa-and-tithi markers—such as solar Sankranti,
-Vaikuntha Ekadashi, Rig Upakarma, and Varamahalakshmi Vrata—continue to use
+Rules that are not plain masa-and-tithi markersï¿½such as solar Sankranti,
+Vaikuntha Ekadashi, Rig Upakarma, and Varamahalakshmi Vrataï¿½continue to use
 their dedicated selectors.
 
 ## 2. Generic Midpoint
@@ -78,23 +78,29 @@ Its benchmark results are recorded in the benchmark snapshot below.
 
 CLI value: `generic-anchor`
 
-This policy replaces kala windows with five exact local instants:
+This policy replaces kala windows with eight exact local instants:
 
 - Sunrise.
-- Day midpoint, halfway from sunrise to sunset.
+- Day first quarter point (25% from sunrise to sunset).
+- Day midpoint (50% from sunrise to sunset).
+- Day third quarter point (75% from sunrise to sunset).
 - Sunset.
-- Night midpoint, halfway from sunset to the following sunrise.
-- Technical Arunodaya start, four ghatis (96 minutes) before sunrise.
+- Night first quarter point (25% from sunset to following sunrise).
+- Night midpoint (50% from sunset to following sunrise).
+- Night third quarter point (75% from sunset to following sunrise).
 
 The current ritual classifications collapse into this reduced vocabulary:
 
 | Anchor | Festivals |
 |---|---|
 | Sunrise | Ugadi, Yajur Upakarma, and every otherwise unclassified plain-tithi festival |
-| Day midpoint | Vasanta Panchami, Rama Navami, Akshaya Tritiya, Ganesha Chaturthi, Bali Padyami, Raksha Bandhan, Mahalaya Amavasya, Mahanavami (Puja), Vijayadashami (Puja) |
-| Sunset | Narasimha Jayanti, Dhana Trayodashi, Deepavali, Kama Dahana (Holi) |
+| Day first quarter | Rig Upakarma |
+| Day midpoint | Vasanta Panchami, Rama Navami, Akshaya Tritiya, Ganesha Chaturthi, Bali Padyami |
+| Day third quarter | Raksha Bandhan, Mahalaya Amavasya, Mahanavami (Puja), Vijayadashami (Puja) |
+| Sunset | Narasimha Jayanti, Deepavali, Kama Dahana (Holi) |
+| Night first quarter | Dhana Trayodashi |
 | Night midpoint | Janmashtami, Maha Shivaratri |
-| Arunodaya start | Naraka Chaturdashi, Ratha Saptami |
+| Night third quarter | Naraka Chaturdashi, Ratha Saptami |
 
 For each target tithi occurrence, the resolver selects a candidate date whose
 anchor lies inside the tithi. If multiple anchors qualify, the one nearest the
@@ -104,10 +110,10 @@ fallback. An exact final tie uses the earlier date.
 Yajur Upakarma applies the shared eclipse/Sankranti validity overlay after
 anchor selection. Rig Upakarma and other non-plain-tithi rules retain their
 dedicated selectors.
-Janmashtami is displayed as `Janmashtami (Night-Midpoint Anchor)` under this
+Janmashtami is displayed as `Janmashtami (Ratri Anchor)` under this
 policy.
 
-The policy is identified as `Generic-anchor EXP-1.0` in generated PDFs.
+The policy is identified as `Generic-anchor EXP-2.0` in generated PDFs.
 Its benchmark results are recorded in the benchmark snapshot below.
 
 ## 4. Generic Kala
@@ -165,7 +171,7 @@ Under this policy, Janmashtami is displayed as
 date from the traditional Vaishnava date.
 
 Mahanavami's source-derived final-six-ghati window initially suggested
-Sayahna. A 2026–2075 exploratory comparison and an independent 2076–2125
+Sayahna. A 2026ï¿½2075 exploratory comparison and an independent 2076ï¿½2125
 holdout comparison rejected that reassignment: Sayahna reduced Helsinki
 matches from 50/50 to 45/50 in exploration and from 48/50 to 45/50 in
 holdout, while Tirupati improved from 46/50 to 50/50 in exploration but tied
@@ -227,7 +233,7 @@ Examples include:
 - Maha Shivaratri: Nishitha-vyapini Chaturdashi.
 - Vijayadashami: Aparahna, Shravana, and three-muhurta exceptions.
 
-“Traditional” is more accurate than claiming that every listed festival is
+ï¿½Traditionalï¿½ is more accurate than claiming that every listed festival is
 directly prescribed by Dharma Sindhu. The calendar also contains:
 
 - Regional South Indian and TTD-oriented conventions.
@@ -245,7 +251,7 @@ consulted when textual provenance matters.
 |---|---:|---:|---|
 | Generic Udaya | No | No | Simplest universal sunrise marker |
 | Generic Midpoint | No | No | Tithi-center ownership baseline |
-| Generic Anchor | Yes, from five exact instants | No | Exact-point alternative to kala windows |
+| Generic Anchor | Yes, from eight exact instants | No | Exact-point alternative to kala windows |
 | Generic Kala | Yes, from a small fixed vocabulary | No | Experimental balance of simplicity and ritual timing |
 | Traditional | Yes | Yes | Normal calendar generation and highest textual fidelity |
 
@@ -256,14 +262,14 @@ undefined.
 
 ## Benchmark snapshot
 
-Generic Udaya and Generic Kala were compared over the 2026–2125 range using
-non-overlapping January–December windows, so each physical festival
+Generic Udaya and Generic Kala were compared over the 2026ï¿½2125 range using
+non-overlapping Januaryï¿½December windows, so each physical festival
 occurrence is counted only once. The traditional resolver supplies the
 reference, with one deliberate substitution: Janmashtami uses Dharma Sindhu's
 Smarta Nishitha selector. The PDF's Vaishnava Janmashtami variant is omitted
 from this comparison.
 
-Mapping decisions use 2026–2075 as the exploratory range and 2076–2125 as
+Mapping decisions use 2026ï¿½2075 as the exploratory range and 2076ï¿½2125 as
 independent holdout validation at both locations. A neighboring slot is
 accepted only when ritually supportable and when its exploratory gain does not
 regress either holdout.
@@ -279,16 +285,16 @@ Traditional is 100% by definition because it supplies the reference dates.
 | Tirupati, PDF-visible subset | 100% | 77.31% | 96.29% |
 
 Generic Midpoint and Generic Anchor were subsequently compared with the same
-traditional reference over the same 2026–2125 calendar-year range. This
-baseline was limited to PDF-visible plain-tithi festivals and additionally
-excluded Yajur Upakarma and Raksha Bandhan. Raksha Bandhan is already hidden
-from the PDF, but was retained as an explicit exclusion. Unchanged dedicated
-selectors were not counted because they would artificially inflate agreement.
+traditional reference over the same 2026â€“2125 calendar-year range. This
+baseline was limited to PDF-visible plain-tithi festivals. Naraka Chaturdashi
+and Ratha Saptami numbers were ignored when computing the final agreement
+percentages (they are known to diverge). Unchanged dedicated selectors were
+not counted because they would artificially inflate agreement.
 
 | Location | Traditional | Generic Midpoint | Generic Anchor |
-|---|---:|---:|---:|
-| Helsinki | 100% | 68.69% (1632/2376) | 94.74% (2251/2376) |
-| Tirupati | 100% | 71.73% (1687/2352) | 95.28% (2241/2352) |
+|---:|---:|---:|---:|
+| Helsinki | 100% | 68.69% (1632/2376) | 94.64% (2155/2277) |
+| Tirupati | 100% | 71.73% (1687/2352) | 95.43% (2150/2253) |
 
 This second comparison used the same successfully resolved reference years:
 99 for Helsinki, excluding the 2072 Kama Dahana failure, and 98 for Tirupati,

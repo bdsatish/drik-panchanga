@@ -5,18 +5,20 @@ from datetime import timedelta
 
 from .config import (
     APARAHNA_KALA,
-    ARUNODAYA_HOURS,
     ARUNODAYA_KALA,
+    DAY_FIRST_QUARTER_ANCHOR,
     DAY_MIDPOINT_ANCHOR,
+    DAY_THIRD_QUARTER_ANCHOR,
     GADHARATRI_KALA,
     GENERIC_ANCHOR_BY_FESTIVAL,
     GENERIC_KALA_BY_FESTIVAL,
     GENERIC_VALIDITY_BY_FESTIVAL,
     MADHYAHNA_KALA,
     MADHYARATRI_KALA,
+    NIGHT_FIRST_QUARTER_ANCHOR,
     NIGHT_KALAS,
     NIGHT_MIDPOINT_ANCHOR,
-    PREDAWN_ANCHOR,
+    NIGHT_THIRD_QUARTER_ANCHOR,
     PRADOSHA_KALA,
     PRATAH_KALA,
     PURVAHNA_KALA,
@@ -271,8 +273,22 @@ def anchor_jd(record, following_record, anchor):
         if following_record is None:
             raise ValueError("night midpoint requires the following sunrise")
         return (sunset_jd + following_record[5]) / 2
-    if anchor == PREDAWN_ANCHOR:
-        return sunrise_jd - ARUNODAYA_HOURS / 24
+    if anchor == DAY_FIRST_QUARTER_ANCHOR:
+        day_length = sunset_jd - sunrise_jd
+        return sunrise_jd + day_length * 0.25
+    if anchor == DAY_THIRD_QUARTER_ANCHOR:
+        day_length = sunset_jd - sunrise_jd
+        return sunrise_jd + day_length * 0.75
+    if anchor == NIGHT_FIRST_QUARTER_ANCHOR:
+        if following_record is None:
+            raise ValueError("night first quarter requires the following sunrise")
+        night_length = following_record[5] - sunset_jd
+        return sunset_jd + night_length * 0.25
+    if anchor == NIGHT_THIRD_QUARTER_ANCHOR:
+        if following_record is None:
+            raise ValueError("night third quarter requires the following sunrise")
+        night_length = following_record[5] - sunset_jd
+        return sunset_jd + night_length * 0.75
     raise ValueError(f"Unknown generic anchor: {anchor}")
 
 
@@ -328,7 +344,12 @@ def select_anchor_festival_dates(
             following_record = records_by_date.get(
                 civil_date + timedelta(days=1)
             )
-            if anchor == NIGHT_MIDPOINT_ANCHOR and following_record is None:
+            night_anchors = {
+                NIGHT_MIDPOINT_ANCHOR,
+                NIGHT_FIRST_QUARTER_ANCHOR,
+                NIGHT_THIRD_QUARTER_ANCHOR,
+            }
+            if anchor in night_anchors and following_record is None:
                 continue
             point = anchor_jd(record, following_record, anchor)
             contains_anchor = target_interval[0] <= point < target_interval[1]
