@@ -94,11 +94,11 @@ The current ritual classifications collapse into this reduced vocabulary:
 | Anchor | Festivals |
 |---|---|
 | Sunrise | Ugadi, Yajur Upakarma, and every otherwise unclassified plain-tithi festival |
-| Day first quarter | Rig Upakarma |
-| Day midpoint | Vasanta Panchami, Rama Navami, Akshaya Tritiya, Ganesha Chaturthi, Bali Padyami |
+| Day first quarter | Vasanta Panchami, Rig Upakarma |
+| Day midpoint | Rama Navami, Akshaya Tritiya, Ganesha Chaturthi, Bali Padyami |
 | Day third quarter | Raksha Bandhan, Mahalaya Amavasya, Mahanavami (Puja), Vijayadashami (Puja) |
-| Sunset | Narasimha Jayanti, Deepavali, Kama Dahana (Holi) |
-| Night first quarter | Dhana Trayodashi |
+| Sunset | Narasimha Jayanti |
+| Night first quarter | Dhana Trayodashi, Deepavali, Kama Dahana (Holi) |
 | Night midpoint | Janmashtami, Maha Shivaratri |
 | Night third quarter | Naraka Chaturdashi, Ratha Saptami |
 
@@ -293,8 +293,8 @@ not counted because they would artificially inflate agreement.
 
 | Location | Traditional | Generic Midpoint | Generic Anchor |
 |---:|---:|---:|---:|
-| Helsinki | 100% | 68.69% (1632/2376) | 94.64% (2155/2277) |
-| Tirupati | 100% | 71.73% (1687/2352) | 95.43% (2150/2253) |
+| Helsinki | 100% | 68.69% (1632/2376) | 93.68% (2133/2277) |
+| Tirupati | 100% | 71.73% (1687/2352) | 94.50% (2129/2253) |
 
 This second comparison used the same successfully resolved reference years:
 99 for Helsinki, excluding the 2072 Kama Dahana failure, and 98 for Tirupati,

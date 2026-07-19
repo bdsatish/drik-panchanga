@@ -103,10 +103,12 @@ class GenericAnchorPolicyTests(unittest.TestCase):
         expected = {
             "Ugadi": SUNRISE_ANCHOR,
             "Yajur Upakarma": SUNRISE_ANCHOR,
-            "Vasanta Panchami": DAY_MIDPOINT_ANCHOR,
+            "Vasanta Panchami": DAY_FIRST_QUARTER_ANCHOR,
             "Rama Navami": DAY_MIDPOINT_ANCHOR,
             "Mahanavami (Puja)": DAY_THIRD_QUARTER_ANCHOR,
             "Narasimha Jayanti": SUNSET_ANCHOR,
+            "Deepavali": NIGHT_FIRST_QUARTER_ANCHOR,
+            "Kama Dahana (Holi)": NIGHT_FIRST_QUARTER_ANCHOR,
             "Dhana Trayodashi": NIGHT_FIRST_QUARTER_ANCHOR,
             "Janmashtami": NIGHT_MIDPOINT_ANCHOR,
             "Naraka Chaturdashi": NIGHT_THIRD_QUARTER_ANCHOR,
