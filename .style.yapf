@@ -1,0 +1,12 @@
+[style]
+based_on_style = pep8
+column_limit = 120
+
+# Prefer keeping call/def arguments on one line when they fit.
+split_before_first_argument = false
+split_all_comma_separated_values = false
+split_before_named_assigns = false
+
+# Make splitting more expensive so YAPF keeps one-liners when possible.
+split_penalty_after_opening_bracket = 300
+split_penalty_for_added_line_split = 300

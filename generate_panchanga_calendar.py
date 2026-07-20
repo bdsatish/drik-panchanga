@@ -18,17 +18,14 @@ from reportlab.pdfgen import canvas
 from festival_rules import resolve_ekadashi_dates, resolve_festivals
 import panchanga
 
-
 MONTH_COUNT = 13
 DEFAULT_CITIES_PATH = Path(__file__).with_name("cities.json")
 RULESET_VERSION = "Udaya-Vyapini-1.0"
 LAYOUT_VERSION = "A4-1.1"
 PDF_AUTHOR = "Satish BD"
 PDF_AUTHOR_EMAIL = "bdsatish@gmail.com"
-PDF_COPYRIGHT = (
-    "Copyright © Satish BD. Licensed under the GNU Affero GPL "
-    "version 3 (or later)."
-)
+PDF_COPYRIGHT = ("Copyright © Satish BD. Licensed under the GNU Affero GPL "
+                 "version 3 (or later).")
 PDF_SOURCE_URL = "https://github.com/bdsatish/drik-panchanga"
 
 
@@ -38,6 +35,7 @@ class Location:
     latitude: float
     longitude: float
     timezone_name: str
+
 
 INK = HexColor("#172033")
 MUTED = HexColor("#465466")
@@ -62,13 +60,11 @@ NAKSHATRA_KEY_LINES = (
     "21 Uttarasadha, 22 Sravana, 23 Dhanistha, 24 Satabhisa, "
     "25 Purvabhadra, 26 Uttarabhadra, 27 Revati",
 )
-YOGA_KEY_LINE = (
-    "Y: 01 Viskumbha, 02 Priti, 03 Ayusman, 04 Saubhagya, 05 Sobhana, "
-    "06 Atiganda, 07 Sukarma, 08 Dhrti, 09 Sula, 10 Ganda, 11 Vrddhi, "
-    "12 Dhruva, 13 Vyaghata, 14 Harsana, 15 Vajra, 16 Siddhi, "
-    "17 Vyatipata, 18 Variyana, 19 Parigha, 20 Siva, 21 Siddha, "
-    "22 Sadhya, 23 Subha, 24 Sukla, 25 Brahma, 26 Aindra, 27 Vaidhrti"
-)
+YOGA_KEY_LINE = ("Y: 01 Viskumbha, 02 Priti, 03 Ayusman, 04 Saubhagya, 05 Sobhana, "
+                 "06 Atiganda, 07 Sukarma, 08 Dhrti, 09 Sula, 10 Ganda, 11 Vrddhi, "
+                 "12 Dhruva, 13 Vyaghata, 14 Harsana, 15 Vajra, 16 Siddhi, "
+                 "17 Vyatipata, 18 Variyana, 19 Parigha, 20 Siva, 21 Siddha, "
+                 "22 Sadhya, 23 Subha, 24 Sukla, 25 Brahma, 26 Aindra, 27 Vaidhrti")
 
 
 def embed_pdf_metadata(pdf, *, title, subject, ruleset_version):
@@ -84,11 +80,9 @@ def embed_pdf_metadata(pdf, *, title, subject, ruleset_version):
     pdf.setAuthor(PDF_AUTHOR)
     pdf.setSubject(subject)
     pdf.setCreator(PDF_SOURCE_URL)
-    pdf.setKeywords(
-        f"ruleset={ruleset_version}; layout={LAYOUT_VERSION}; "
-        f"ayanamsa=True Citra; author-email={PDF_AUTHOR_EMAIL}; "
-        f"copyright={PDF_COPYRIGHT}; url={PDF_SOURCE_URL}"
-    )
+    pdf.setKeywords(f"ruleset={ruleset_version}; layout={LAYOUT_VERSION}; "
+                    f"ayanamsa=True Citra; author-email={PDF_AUTHOR_EMAIL}; "
+                    f"copyright={PDF_COPYRIGHT}; url={PDF_SOURCE_URL}")
 
     info = pdf._doc.info
     info.author_email = PDF_AUTHOR_EMAIL
@@ -151,9 +145,7 @@ def make_location(name, latitude, longitude, timezone_name):
     try:
         ZoneInfo(timezone_name)
     except ZoneInfoNotFoundError as error:
-        raise ValueError(
-            f"Unknown IANA timezone {timezone_name!r} for city {name!r}"
-        ) from error
+        raise ValueError(f"Unknown IANA timezone {timezone_name!r} for city {name!r}") from error
     return Location(name, latitude, longitude, timezone_name)
 
 
@@ -168,10 +160,8 @@ def location_from_mapping(name, record):
         record.get("timezone_name", record.get("tz")),
     )
     if latitude is None or longitude is None or timezone_name is None:
-        raise ValueError(
-            f"Location record for {location_name!r} needs latitude, "
-            "longitude, and timezone"
-        )
+        raise ValueError(f"Location record for {location_name!r} needs latitude, "
+                         "longitude, and timezone")
     return make_location(
         str(location_name),
         latitude,
@@ -189,11 +179,7 @@ def load_location(city):
     if not isinstance(locations, dict):
         raise ValueError("cities.json must contain an object keyed by city")
 
-    matching_names = [
-        name
-        for name in locations
-        if name.casefold() == city.casefold()
-    ]
+    matching_names = [name for name in locations if name.casefold() == city.casefold()]
     if not matching_names:
         import difflib
 
@@ -213,9 +199,7 @@ def load_location(city):
 
 def timezone_hours(timezone, year, month, day):
     """Return the location's UTC offset, including daylight-saving time."""
-    local_noon = datetime(
-        year, month, day, 12, tzinfo=timezone
-    )
+    local_noon = datetime(year, month, day, 12, tzinfo=timezone)
     return local_noon.utcoffset().total_seconds() / 3600
 
 
@@ -263,21 +247,17 @@ def daily_values(year, month, location):
             yoga_number = panchanga.yoga(jd, place)[0]
             masa_number, is_adhika = panchanga.masa(jd, place)
         except Exception as error:
-            raise RuntimeError(
-                f"Cannot calculate sunrise panchanga for {location.name} "
-                f"on {year:04d}-{month:02d}-{day:02d}: {error}"
-            ) from error
-        result.append(
-            (
-                day,
-                tithi_code(tithi_number),
-                nakshatra_number,
-                yoga_number,
-                masa_code(masa_number, is_adhika),
-                is_adhika,
-                sunrise_jd - place.timezone / 24,
-            )
-        )
+            raise RuntimeError(f"Cannot calculate sunrise panchanga for {location.name} "
+                               f"on {year:04d}-{month:02d}-{day:02d}: {error}") from error
+        result.append((
+            day,
+            tithi_code(tithi_number),
+            nakshatra_number,
+            yoga_number,
+            masa_code(masa_number, is_adhika),
+            is_adhika,
+            sunrise_jd - place.timezone / 24,
+        ))
     return result
 
 
@@ -287,26 +267,24 @@ def mark_masa_starts(months, month_data):
     for year, month in months:
         marked_values = []
         for (
-            day,
-            tithi,
-            nakshatra,
-            yoga,
-            masa,
-            is_adhika,
-            _sunrise_jd,
+                day,
+                tithi,
+                nakshatra,
+                yoga,
+                masa,
+                is_adhika,
+                _sunrise_jd,
         ) in month_data[(year, month)]:
             is_masa_start = masa != previous_masa
-            marked_values.append(
-                (
-                    day,
-                    tithi,
-                    nakshatra,
-                    yoga,
-                    is_masa_start,
-                    is_adhika,
-                    masa if is_masa_start else None,
-                )
-            )
+            marked_values.append((
+                day,
+                tithi,
+                nakshatra,
+                yoga,
+                is_masa_start,
+                is_adhika,
+                masa if is_masa_start else None,
+            ))
             previous_masa = masa
         month_data[(year, month)] = marked_values
 
@@ -363,7 +341,6 @@ def draw_day_column(pdf, x, top, width):
             7.4,
             INK,
         )
-
 
     bottom = rows_top - 31 * row_height
     pdf.setStrokeColor(GRID)
@@ -532,18 +509,10 @@ def draw_month(
             baseline,
             "Helvetica-Bold",
             7.4,
-            (
-                ADHIKA_INK
-                if is_masa_start and is_adhika
-                else MASA_START_INK if is_masa_start else ACCENT
-            ),
+            (ADHIKA_INK if is_masa_start and is_adhika else MASA_START_INK if is_masa_start else ACCENT),
         )
-        draw_centered(
-            pdf, f"{nakshatra:02d}", centers[1], baseline, "Helvetica", 7.3, INK
-        )
-        draw_centered(
-            pdf, f"{yoga:02d}", centers[2], baseline, "Helvetica", 7.3, INK
-        )
+        draw_centered(pdf, f"{nakshatra:02d}", centers[1], baseline, "Helvetica", 7.3, INK)
+        draw_centered(pdf, f"{yoga:02d}", centers[2], baseline, "Helvetica", 7.3, INK)
         if festival_numbers:
             pdf.setFillColor(FESTIVAL_INK)
             marker_size = 5.0 if len(festival_numbers) <= 2 else 4.0
@@ -574,10 +543,8 @@ def draw_month(
 def month_span_label(months):
     start_year, start_month = months[0]
     end_year, end_month = months[-1]
-    return (
-        f"{calendar.month_name[start_month]} {start_year} - "
-        f"{calendar.month_name[end_month]} {end_year}"
-    )
+    return (f"{calendar.month_name[start_month]} {start_year} - "
+            f"{calendar.month_name[end_month]} {end_year}")
 
 
 def coordinate_label(value, positive, negative):
@@ -713,17 +680,9 @@ def build_pdf(
         context_start = (start_year - 1, 12)
     else:
         context_start = (start_year, start_month - 1)
-    context_months = list(
-        month_range(*context_start, count=MONTH_COUNT + 2)
-    )
-    context_data = {
-        (year, month): daily_values(year, month, location)
-        for year, month in context_months
-    }
-    month_data = {
-        (year, month): context_data[(year, month)]
-        for year, month in months
-    }
+    context_months = list(month_range(*context_start, count=MONTH_COUNT + 2))
+    context_data = {(year, month): daily_values(year, month, location) for year, month in context_months}
+    month_data = {(year, month): context_data[(year, month)] for year, month in months}
     festivals_by_date, festival_entries = resolve_festivals(
         months,
         month_data,
@@ -744,8 +703,7 @@ def build_pdf(
         for value in resolve_ekadashi_dates(
             context_months,
             context_data,
-        )
-        if range_start <= value <= range_end
+        ) if range_start <= value <= range_end
     }
     mark_masa_starts(months, month_data)
 
@@ -755,10 +713,8 @@ def build_pdf(
     embed_pdf_metadata(
         pdf,
         title=f"{location.name} Panchanga {month_span_label(months)}",
-        subject=(
-            f"Daily tithi, True Citra nakshatra, yoga, and amanta masa at "
-            f"{location.name} sunrise"
-        ),
+        subject=(f"Daily tithi, True Citra nakshatra, yoga, and amanta masa at "
+                 f"{location.name} sunrise"),
         ruleset_version=RULESET_VERSION,
     )
 
@@ -800,19 +756,13 @@ def default_output_path(location, start_year, start_month):
         "-",
         location.name.casefold(),
     ).strip("-") or "location"
-    return Path(
-        f"{city_slug}_panchanga_"
-        f"{start_year:04d}-{start_month:02d}_to_"
-        f"{end_year:04d}-{end_month:02d}.pdf"
-    )
+    return Path(f"{city_slug}_panchanga_"
+                f"{start_year:04d}-{start_month:02d}_to_"
+                f"{end_year:04d}-{end_month:02d}.pdf")
 
 
 def argument_parser():
-    parser = argparse.ArgumentParser(
-        description=(
-            "Generate a one-page A4 panchanga for 13 consecutive months."
-        )
-    )
+    parser = argparse.ArgumentParser(description=("Generate a one-page A4 panchanga for 13 consecutive months."))
     parser.add_argument(
         "--city",
         required=True,

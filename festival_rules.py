@@ -10,7 +10,6 @@ from datetime import timedelta
 
 import panchanga
 
-
 # Tithi festivals: (number, name, masa, tithi).
 TITHI_FESTIVAL_RULES = (
     (1, "Ugadi", 1, "S1"),
@@ -61,24 +60,22 @@ def collect_records(months, month_data):
     records = []
     for year, month in months:
         for (
-            day,
-            tithi,
-            nakshatra,
-            _yoga,
-            masa,
-            is_adhika,
-            sunrise_jd,
+                day,
+                tithi,
+                nakshatra,
+                _yoga,
+                masa,
+                is_adhika,
+                sunrise_jd,
         ) in month_data[(year, month)]:
-            records.append(
-                (
-                    CivilDate(year, month, day),
-                    tithi,
-                    nakshatra,
-                    masa,
-                    is_adhika,
-                    sunrise_jd,
-                )
-            )
+            records.append((
+                CivilDate(year, month, day),
+                tithi,
+                nakshatra,
+                masa,
+                is_adhika,
+                sunrise_jd,
+            ))
     return records
 
 
@@ -86,22 +83,12 @@ def format_festival_dates(dates):
     dates = sorted(dates)
     if not dates:
         return "None"
-    if (
-        len(dates) > 1
-        and len({(value.year, value.month) for value in dates}) == 1
-        and all(
-            right == left + timedelta(days=1)
-            for left, right in zip(dates, dates[1:])
-        )
-    ):
-        return (
-            f"{calendar.month_abbr[dates[0].month]} "
-            f"{dates[0].day:02d}-{dates[-1].day:02d}"
-        )
-    return ",".join(
-        f"{calendar.month_abbr[value.month]} {value.day:02d}"
-        for value in dates
-    )
+    if (len(dates) > 1 and len({(value.year, value.month)
+                                for value in dates}) == 1 and all(right == left + timedelta(days=1)
+                                                                  for left, right in zip(dates, dates[1:]))):
+        return (f"{calendar.month_abbr[dates[0].month]} "
+                f"{dates[0].day:02d}-{dates[-1].day:02d}")
+    return ",".join(f"{calendar.month_abbr[value.month]} {value.day:02d}" for value in dates)
 
 
 def plain_tithi_number(tithi):
@@ -161,10 +148,7 @@ def select_kshaya_dates(records, tithi, *, masa=None, allow_adhika=False):
         end_tithi = plain_tithi_number(following[1])
         if start_tithi is None or end_tithi is None:
             continue
-        skipped = [
-            (start_tithi + offset - 1) % 30 + 1
-            for offset in range(1, (end_tithi - start_tithi) % 30)
-        ]
+        skipped = [(start_tithi + offset - 1) % 30 + 1 for offset in range(1, (end_tithi - start_tithi) % 30)]
         if target_tithi not in skipped:
             continue
         if masa_codes is not None:
@@ -182,24 +166,18 @@ def select_tithi_dates(records, tithi, *, masa=None, allow_adhika=False):
     Kshaya (tithi missed entirely at sunrise) keeps the later civil date.
     """
     masa_codes = masa_codes_for(masa, allow_adhika)
-    sunrise_matches = resolve_vriddhi_dates(
-        [
-            civil_date
-            for civil_date, day_tithi, _nakshatra, day_masa, _is_adhika, _sunrise_jd in records
-            if day_tithi == tithi
-            and (masa_codes is None or day_masa in masa_codes)
-        ]
-    )
+    sunrise_matches = resolve_vriddhi_dates([
+        civil_date for civil_date, day_tithi, _nakshatra, day_masa, _is_adhika, _sunrise_jd in records
+        if day_tithi == tithi and (masa_codes is None or day_masa in masa_codes)
+    ])
     sunrise_dates = set(sunrise_matches)
     kshaya_matches = [
-        civil_date
-        for civil_date in select_kshaya_dates(
+        civil_date for civil_date in select_kshaya_dates(
             records,
             tithi,
             masa=masa,
             allow_adhika=allow_adhika,
-        )
-        if civil_date not in sunrise_dates
+        ) if civil_date not in sunrise_dates
     ]
     return sorted(set(sunrise_matches) | set(kshaya_matches))
 
@@ -221,10 +199,8 @@ def select_plain_tithi_dates(records, masa, tithi, *, allow_adhika=False):
         return matches
     records_by_date = {record[0]: record for record in records}
     adhika_matches = [
-        civil_date
-        for civil_date in matches
-        if records_by_date[civil_date][4]
-        or str(records_by_date[civil_date][3]).startswith("A")
+        civil_date for civil_date in matches
+        if records_by_date[civil_date][4] or str(records_by_date[civil_date][3]).startswith("A")
     ]
     return adhika_matches if adhika_matches else matches
 
@@ -260,8 +236,7 @@ def locally_visible_eclipse_in_window(start_jd, end_jd, geopos):
         geopos,
     )
     is_purely_penumbral = lunar_flags & panchanga.swe.ECL_PENUMBRAL and not (
-        lunar_flags & (panchanga.swe.ECL_PARTIAL | panchanga.swe.ECL_TOTAL)
-    )
+        lunar_flags & (panchanga.swe.ECL_PARTIAL | panchanga.swe.ECL_TOTAL))
     if is_purely_penumbral:
         return False
     lunar_start, lunar_end = lunar_times[2], lunar_times[3]
@@ -270,11 +245,7 @@ def locally_visible_eclipse_in_window(start_jd, end_jd, geopos):
         lunar_start = moonrise
     if moonset and lunar_start <= moonset <= lunar_end:
         lunar_end = moonset
-    return bool(
-        lunar_start
-        and lunar_end
-        and _intervals_overlap(start_jd, end_jd, lunar_start, lunar_end)
-    )
+    return bool(lunar_start and lunar_end and _intervals_overlap(start_jd, end_jd, lunar_start, lunar_end))
 
 
 def civil_day_has_eclipse(records, civil_date, geopos):
@@ -294,10 +265,7 @@ def postpone_upakarma_if_eclipse(primary, fallback, records, geopos):
     """Keep primary dates unless any has a local eclipse; then use fallback."""
     if not primary:
         return list(fallback)
-    if geopos is not None and any(
-        civil_day_has_eclipse(records, civil_date, geopos)
-        for civil_date in primary
-    ):
+    if geopos is not None and any(civil_day_has_eclipse(records, civil_date, geopos) for civil_date in primary):
         return list(fallback) if fallback else list(primary)
     return list(primary)
 
@@ -322,20 +290,18 @@ def select_rig_upakarma_dates(records, geopos=None):
     """
     SRAVANA_NAKSHATRA = 22
 
-    matches_for_masa = lambda masa: resolve_vriddhi_dates(
-        [
-            civil_date
-            for civil_date, _tithi, nakshatra, day_masa, is_adhika, _sunrise_jd in records
-            if day_masa == masa
-            and not is_adhika
-            and nakshatra == SRAVANA_NAKSHATRA
-        ]
-    )
+    def matches_for_masa(masa):
+        return resolve_vriddhi_dates([
+            civil_date for civil_date, _tithi, nakshatra, day_masa, is_adhika, _sunrise_jd in records
+            if day_masa == masa and not is_adhika and nakshatra == SRAVANA_NAKSHATRA
+        ])
 
     # For kshaya nakshatra / eclipse:
-    # TTD/Sri-Vaishnava rule: Sravana masa = 5. If unavailable or eclipsed, use Bhadrapada masa = 6 for Sravana Nakshatra.
+    # TTD/Sri-Vaishnava rule: Sravana masa = 5. If unavailable or eclipsed,
+    # use Bhadrapada masa = 6 for Sravana Nakshatra.
     # Madhwas use Sravana-S05 instead (e.g. SRS Mutt: 03-08-2022)
-    # Smartas use the former civil date when there is Kshaya nakshatra (e.g. Sringeri: 11-08-2022)
+    # Smartas use the former civil date when there is Kshaya nakshatra
+    # (e.g. Sringeri: 11-08-2022)
     primary = matches_for_masa("5")
     fallback = matches_for_masa("6")
     return postpone_upakarma_if_eclipse(primary, fallback, records, geopos)
@@ -373,9 +339,7 @@ def select_makara_sankranti_dates(records):
     MAKARA_RAASI = 10
     selected = []
     previous_raasi = None
-    for civil_date, _tithi, _nakshatra, _masa, _is_adhika, sunrise_jd in sorted(
-        records
-    ):
+    for civil_date, _tithi, _nakshatra, _masa, _is_adhika, sunrise_jd in sorted(records):
         raasi = panchanga.raasi(sunrise_jd)
         if raasi == MAKARA_RAASI and previous_raasi != MAKARA_RAASI:
             if previous_raasi is not None:
@@ -429,23 +393,16 @@ def resolve_festivals(
                 tithi,
                 allow_adhika=(number == 1),  # Ugadi
             )
-        matches = [
-            civil_date
-            for civil_date in candidates
-            if civil_date in target_dates
-        ]
+        matches = [civil_date for civil_date in candidates if civil_date in target_dates]
         if not matches:
             raise RuntimeError(f"No calendar date found for {name}")
         dates_by_number[number] = matches
         names_by_number[number] = name
 
-    VAIKUNTHA_EKADASI = 22 # 'number' in array NON_TITHI_FESTIVAL_RULES
+    VAIKUNTHA_EKADASI = 22  # 'number' in array NON_TITHI_FESTIVAL_RULES
     for number, name in NON_TITHI_FESTIVAL_RULES:
         matches = [
-            civil_date
-            for civil_date in select_non_tithi_dates(
-                records, number, name, geopos=geopos
-            )
+            civil_date for civil_date in select_non_tithi_dates(records, number, name, geopos=geopos)
             if civil_date in target_dates
         ]
         # Vaikuntha Ekadashi may be absent when no Margasira/Pausha S11 falls
@@ -461,9 +418,7 @@ def resolve_festivals(
         dates = dates_by_number[number]
         for civil_date in dates:
             numbers_by_date.setdefault(civil_date, []).append(number)
-        entries.append(
-            (number, format_festival_dates(dates), names_by_number[number])
-        )
+        entries.append((number, format_festival_dates(dates), names_by_number[number]))
     return numbers_by_date, entries
 
 
