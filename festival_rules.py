@@ -8,6 +8,8 @@ import calendar
 from datetime import date as CivilDate
 from datetime import timedelta
 
+import panchanga
+
 
 # Tithi festivals: (number, name, masa, tithi).
 TITHI_FESTIVAL_RULES = (
@@ -18,29 +20,31 @@ TITHI_FESTIVAL_RULES = (
     (5, "Narasimha Jayanti", 2, "S14"),
     (6, "Guru Purnima", 4, "S15"),
     (7, "Naga Panchami", 5, "S5"),
-    (9, "Yajur Upakarma", 5, "S15"),
-    (10, "Janmashtami", 5, "K8"),
-    (11, "Swarna Gowri Vrata", 6, "S3"),
-    (12, "Ganesha Chaturthi", 6, "S4"),
-    (13, "Mahalaya Amavasya", 6, "K15"),
-    (14, "Durga Ashtami", 7, "S8"),
-    (15, "Mahanavami", 7, "S9"),
-    (16, "Vijayadashami", 7, "S10"),
-    (17, "Dhana Trayodashi", 7, "K13"),
-    (18, "Naraka Chaturdashi", 7, "K14"),
-    (19, "Deepavali", 7, "K15"),
-    (20, "Bali Padyami", 8, "S1"),
-    (21, "Vasavi Atmarpana", 11, "S2"),
-    (22, "Vasanta Panchami", 11, "S5"),
-    (23, "Ratha Saptami", 11, "S7"),
-    (24, "VSN Jayanti", 11, "S11"),
-    (25, "Maha Shivaratri", 11, "K14"),
-    (26, "Kama Dahana (Holi)", 12, "S15"),
+    (10, "Yajur Upakarma", 5, "S15"),
+    (11, "Janmashtami", 5, "K8"),
+    (12, "Swarna Gowri Vrata", 6, "S3"),
+    (13, "Ganesha Chaturthi", 6, "S4"),
+    (14, "Mahalaya Amavasya", 6, "K15"),
+    (15, "Durga Ashtami", 7, "S8"),
+    (16, "Mahanavami", 7, "S9"),
+    (17, "Vijayadashami", 7, "S10"),
+    (18, "Dhana Trayodashi", 7, "K13"),
+    (19, "Naraka Chaturdashi", 7, "K14"),
+    (20, "Deepavali", 7, "K15"),
+    (21, "Bali Padyami", 8, "S1"),
+    (23, "Vasavi Atmarpana", 11, "S2"),
+    (24, "Vasanta Panchami", 11, "S5"),
+    (25, "Ratha Saptami", 11, "S7"),
+    (26, "VSN Jayanti", 11, "S11"),
+    (27, "Maha Shivaratri", 11, "K14"),
+    (28, "Kama Dahana (Holi)", 12, "S15"),
 )
 
 # Non-tithi festivals: (number, name). Selectors dispatch on name/number.
 NON_TITHI_FESTIVAL_RULES = (
     (8, "Varamahalakshmi Vrata"),
+    (9, "Rig Upakarma"),
+    (22, "Vaikuntha Ekadashi"),
 )
 
 
@@ -51,19 +55,19 @@ def collect_records(months, month_data):
     day, tithi, nakshatra, masa, is_adhika, tithi_hours_after_sunrise,
     sunrise_jd, sunset_jd, yoga, moonrise_jd.
 
-    Festival records keep only the sunrise identity fields:
-    ``(civil_date, tithi, masa, is_adhika)``.
+    Festival records keep:
+    ``(civil_date, tithi, masa, is_adhika, sunrise_jd, nakshatra)``.
     """
     records = []
     for year, month in months:
         for (
             day,
             tithi,
-            _nakshatra,
+            nakshatra,
             masa,
             is_adhika,
             _tithi_hours_after_sunrise,
-            _sunrise_jd,
+            sunrise_jd,
             _sunset_jd,
             _yoga,
             _moonrise_jd,
@@ -74,6 +78,8 @@ def collect_records(months, month_data):
                     tithi,
                     masa,
                     is_adhika,
+                    sunrise_jd,
+                    nakshatra,
                 )
             )
     return records
@@ -182,7 +188,7 @@ def select_tithi_dates(records, tithi, *, masa=None, allow_adhika=False):
     sunrise_matches = resolve_vriddhi_dates(
         [
             civil_date
-            for civil_date, day_tithi, day_masa, _is_adhika in records
+            for civil_date, day_tithi, day_masa, _is_adhika, _sunrise_jd, _nakshatra in records
             if day_tithi == tithi
             and (masa_codes is None or day_masa in masa_codes)
         ]
@@ -226,10 +232,49 @@ def select_varamahalakshmi_dates(records):
     return selected
 
 
+def select_rig_upakarma_dates(records):
+    """Nija Sravana day whose sunrise nakshatra is Sravana (22).
+
+    Consecutive sunrise matches keep the former date (vriddhi).
+    """
+    SRAVANA_NAKSHATRA = 22
+    matches = [
+        civil_date
+        for civil_date, _tithi, masa, is_adhika, _sunrise_jd, nakshatra in records
+        if masa == "5" and not is_adhika and nakshatra == SRAVANA_NAKSHATRA
+    ]
+    return resolve_vriddhi_dates(matches)
+
+
+def select_vaikuntha_ekadashi_dates(records):
+    """Margasira or Pausha Shukla Ekadashi while the Sun is in Dhanur.
+
+    Candidates are ordinary S11 dates in lunar masas 9 and 10 (with the same
+    sunrise/vriddhi/kshaya rules). ``panchanga.raasi`` at local sunrise must
+    be 9 (Dhanur).
+    """
+    candidates = set(select_plain_tithi_dates(records, 9, "S11"))
+    candidates.update(select_plain_tithi_dates(records, 10, "S11"))
+    records_by_date = {record[0]: record for record in records}
+    selected = []
+    for civil_date in sorted(candidates):
+        record = records_by_date.get(civil_date)
+        if record is None:
+            continue
+        sunrise_jd = record[4]
+        if panchanga.raasi(sunrise_jd) == 9:
+            selected.append(civil_date)
+    return selected
+
+
 def select_non_tithi_dates(records, number, name):
     """Dispatch a non-tithi festival to its selector."""
     if name == "Varamahalakshmi Vrata" or number == 8:
         return select_varamahalakshmi_dates(records)
+    if name == "Rig Upakarma" or number == 9:
+        return select_rig_upakarma_dates(records)
+    if name == "Vaikuntha Ekadashi" or number == 22:
+        return select_vaikuntha_ekadashi_dates(records)
     raise ValueError(f"No selector for non-tithi festival {number} {name!r}")
 
 
