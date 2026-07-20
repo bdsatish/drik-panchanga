@@ -9,9 +9,8 @@ from datetime import date as CivilDate
 from datetime import timedelta
 
 
-# Plain tithi festivals: (number, name, masa, tithi).
-# Civil day whose sunrise owns masa + tithi (non-adhika).
-FESTIVAL_RULES = (
+# Tithi festivals: (number, name, masa, tithi).
+TITHI_FESTIVAL_RULES = (
     (1, "Ugadi", 1, "S1"),
     (2, "Rama Navami", 1, "S9"),
     (3, "Akshaya Tritiya", 2, "S3"),
@@ -19,24 +18,29 @@ FESTIVAL_RULES = (
     (5, "Narasimha Jayanti", 2, "S14"),
     (6, "Guru Purnima", 4, "S15"),
     (7, "Naga Panchami", 5, "S5"),
-    (8, "Yajur Upakarma", 5, "S15"),
-    (9, "Janmashtami", 5, "K8"),
-    (10, "Swarna Gowri Vrata", 6, "S3"),
-    (11, "Ganesha Chaturthi", 6, "S4"),
-    (12, "Mahalaya Amavasya", 6, "K15"),
-    (13, "Durga Ashtami", 7, "S8"),
-    (14, "Mahanavami", 7, "S9"),
-    (15, "Vijayadashami", 7, "S10"),
-    (16, "Dhana Trayodashi", 7, "K13"),
-    (17, "Naraka Chaturdashi", 7, "K14"),
-    (18, "Deepavali", 7, "K15"),
-    (19, "Bali Padyami", 8, "S1"),
-    (20, "Vasavi Atmarpana", 11, "S2"),
-    (21, "Vasanta Panchami", 11, "S5"),
-    (22, "Ratha Saptami", 11, "S7"),
-    (23, "VSN Jayanti", 11, "S11"),
-    (24, "Maha Shivaratri", 11, "K14"),
-    (25, "Kama Dahana (Holi)", 12, "S15"),
+    (9, "Yajur Upakarma", 5, "S15"),
+    (10, "Janmashtami", 5, "K8"),
+    (11, "Swarna Gowri Vrata", 6, "S3"),
+    (12, "Ganesha Chaturthi", 6, "S4"),
+    (13, "Mahalaya Amavasya", 6, "K15"),
+    (14, "Durga Ashtami", 7, "S8"),
+    (15, "Mahanavami", 7, "S9"),
+    (16, "Vijayadashami", 7, "S10"),
+    (17, "Dhana Trayodashi", 7, "K13"),
+    (18, "Naraka Chaturdashi", 7, "K14"),
+    (19, "Deepavali", 7, "K15"),
+    (20, "Bali Padyami", 8, "S1"),
+    (21, "Vasavi Atmarpana", 11, "S2"),
+    (22, "Vasanta Panchami", 11, "S5"),
+    (23, "Ratha Saptami", 11, "S7"),
+    (24, "VSN Jayanti", 11, "S11"),
+    (25, "Maha Shivaratri", 11, "K14"),
+    (26, "Kama Dahana (Holi)", 12, "S15"),
+)
+
+# Non-tithi festivals: (number, name). Selectors dispatch on name/number.
+NON_TITHI_FESTIVAL_RULES = (
+    (8, "Varamahalakshmi Vrata"),
 )
 
 
@@ -207,6 +211,28 @@ def select_plain_tithi_dates(records, masa, tithi, *, allow_adhika=False):
     )
 
 
+def select_varamahalakshmi_dates(records):
+    """Friday strictly before non-adhika Sravana Purnima (S15).
+
+    Uses the same Sravana-S15 sunrise/vriddhi/kshaya anchor as tithi
+    rules. If that Purnima falls on Friday, the previous week's Friday is kept.
+    """
+    selected = []
+    for purnima_date in select_plain_tithi_dates(records, 5, "S15"):
+        vrata_date = purnima_date - timedelta(days=1)
+        while vrata_date.weekday() != calendar.FRIDAY:
+            vrata_date -= timedelta(days=1)
+        selected.append(vrata_date)
+    return selected
+
+
+def select_non_tithi_dates(records, number, name):
+    """Dispatch a non-tithi festival to its selector."""
+    if name == "Varamahalakshmi Vrata" or number == 8:
+        return select_varamahalakshmi_dates(records)
+    raise ValueError(f"No selector for non-tithi festival {number} {name!r}")
+
+
 def resolve_festivals(
     months,
     month_data,
@@ -215,7 +241,7 @@ def resolve_festivals(
     context_data=None,
     geopos=None,
 ):
-    """Resolve plain tithi festivals against sunrise masa and tithi."""
+    """Resolve tithi and non-tithi festivals for the PDF calendar."""
     del geopos  # reserved for later astronomy-dependent rules
     if (context_months is None) != (context_data is None):
         raise ValueError("context_months and context_data must be supplied together")
@@ -227,9 +253,10 @@ def resolve_festivals(
     else:
         records = target_records
 
-    numbers_by_date = {}
-    entries = []
-    for number, name, masa, tithi in FESTIVAL_RULES:
+    dates_by_number = {}
+    names_by_number = {}
+
+    for number, name, masa, tithi in TITHI_FESTIVAL_RULES:
         matches = [
             civil_date
             for civil_date in select_plain_tithi_dates(
@@ -242,9 +269,29 @@ def resolve_festivals(
         ]
         if not matches:
             raise RuntimeError(f"No calendar date found for {name}")
-        for civil_date in matches:
+        dates_by_number[number] = matches
+        names_by_number[number] = name
+
+    for number, name in NON_TITHI_FESTIVAL_RULES:
+        matches = [
+            civil_date
+            for civil_date in select_non_tithi_dates(records, number, name)
+            if civil_date in target_dates
+        ]
+        if not matches:
+            raise RuntimeError(f"No calendar date found for {name}")
+        dates_by_number[number] = matches
+        names_by_number[number] = name
+
+    numbers_by_date = {}
+    entries = []
+    for number in sorted(names_by_number):
+        dates = dates_by_number[number]
+        for civil_date in dates:
             numbers_by_date.setdefault(civil_date, []).append(number)
-        entries.append((number, format_festival_dates(matches), name))
+        entries.append(
+            (number, format_festival_dates(dates), names_by_number[number])
+        )
     return numbers_by_date, entries
 
 
