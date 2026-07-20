@@ -244,12 +244,81 @@ def select_varamahalakshmi_dates(records):
     return selected
 
 
-def select_rig_upakarma_dates(records):
+def _intervals_overlap(first_start, first_end, second_start, second_end):
+    return first_start < second_end and second_start < first_end
+
+
+def locally_visible_eclipse_in_window(start_jd, end_jd, geopos):
+    """True when a non-penumbral lunar eclipse is visible locally.
+
+    Solar eclipses are ignored: they occur near Amavasya, not on/near the
+    Purnima or Sravana-nakshatra days used for Upakarma.
+    """
+    search_start = start_jd - 1
+    lunar_flags, lunar_times, _ = panchanga.swe.lun_eclipse_when_loc(
+        search_start,
+        geopos,
+    )
+    is_purely_penumbral = lunar_flags & panchanga.swe.ECL_PENUMBRAL and not (
+        lunar_flags & (panchanga.swe.ECL_PARTIAL | panchanga.swe.ECL_TOTAL)
+    )
+    if is_purely_penumbral:
+        return False
+    lunar_start, lunar_end = lunar_times[2], lunar_times[3]
+    moonrise, moonset = lunar_times[8], lunar_times[9]
+    if moonrise and lunar_start <= moonrise <= lunar_end:
+        lunar_start = moonrise
+    if moonset and lunar_start <= moonset <= lunar_end:
+        lunar_end = moonset
+    return bool(
+        lunar_start
+        and lunar_end
+        and _intervals_overlap(start_jd, end_jd, lunar_start, lunar_end)
+    )
+
+
+def civil_day_has_eclipse(records, civil_date, geopos):
+    """Eclipse visible between this sunrise and the next (Hindu civil day)."""
+    if geopos is None:
+        return False
+    records_by_date = {record[0]: record for record in records}
+    record = records_by_date.get(civil_date)
+    following = records_by_date.get(civil_date + timedelta(days=1))
+    if record is None or following is None:
+        return False
+    # index [5] = sunrise_jd, for today and tomorrow
+    return locally_visible_eclipse_in_window(record[5], following[5], geopos)
+
+
+def postpone_upakarma_if_eclipse(primary, fallback, records, geopos):
+    """Keep primary dates unless any has a local eclipse; then use fallback."""
+    if not primary:
+        return list(fallback)
+    if geopos is not None and any(
+        civil_day_has_eclipse(records, civil_date, geopos)
+        for civil_date in primary
+    ):
+        return list(fallback) if fallback else list(primary)
+    return list(primary)
+
+
+def select_yajur_upakarma_dates(records, geopos=None):
+    """Nija Sravana Purnima (S15), postponed to Bhadrapada S15 on eclipse.
+
+    Uses the ordinary sunrise/vriddhi/kshaya S15 selection in each masa.
+    """
+    primary = select_plain_tithi_dates(records, 5, "S15")
+    fallback = select_plain_tithi_dates(records, 6, "S15")
+    return postpone_upakarma_if_eclipse(primary, fallback, records, geopos)
+
+
+def select_rig_upakarma_dates(records, geopos=None):
     """Nija day whose sunrise nakshatra is Sravana (22).
 
     Prefer nija Sravana masa. When that nakshatra is kshaya at sunrise
-    (no nija-Sravana match), postpone to nija Bhadrapada's Sravana-nakshatra
-    day. Consecutive sunrise matches keep the former date (vriddhi).
+    (no nija-Sravana match), or when the Sravana-masa day has a local
+    eclipse, postpone to nija Bhadrapada's Sravana-nakshatra day.
+    Consecutive sunrise matches keep the former date (vriddhi).
     """
     SRAVANA_NAKSHATRA = 22
 
@@ -263,11 +332,13 @@ def select_rig_upakarma_dates(records):
         ]
     )
 
-    # For kshaya nakshatra:
-    # TTD/Sri-Vaishnava rule: Sravana masa = 5. If unavailable, use Bhadrapada masa = 6 for Sravana Nakshatra
+    # For kshaya nakshatra / eclipse:
+    # TTD/Sri-Vaishnava rule: Sravana masa = 5. If unavailable or eclipsed, use Bhadrapada masa = 6 for Sravana Nakshatra.
     # Madhwas use Sravana-S05 instead (e.g. SRS Mutt: 03-08-2022)
     # Smartas use the former civil date when there is Kshaya nakshatra (e.g. Sringeri: 11-08-2022)
-    return matches_for_masa("5") or matches_for_masa("6")
+    primary = matches_for_masa("5")
+    fallback = matches_for_masa("6")
+    return postpone_upakarma_if_eclipse(primary, fallback, records, geopos)
 
 
 def select_vaikuntha_ekadashi_dates(records):
@@ -312,12 +383,12 @@ def select_makara_sankranti_dates(records):
     return selected
 
 
-def select_non_tithi_dates(records, number, name):
+def select_non_tithi_dates(records, number, name, geopos=None):
     """Dispatch a non-tithi festival to its selector."""
     if name == "Varamahalakshmi Vrata" or number == 8:
         return select_varamahalakshmi_dates(records)
     if name == "Rig Upakarma" or number == 9:
-        return select_rig_upakarma_dates(records)
+        return select_rig_upakarma_dates(records, geopos=geopos)
     if name == "Vaikuntha Ekadashi" or number == 22:
         return select_vaikuntha_ekadashi_dates(records)
     if name == "Makara Sankranti" or number == 23:
@@ -331,6 +402,7 @@ def resolve_festivals(
     *,
     context_months=None,
     context_data=None,
+    geopos=None,
 ):
     """Resolve tithi and non-tithi festivals for the PDF calendar."""
     if (context_months is None) != (context_data is None):
@@ -347,14 +419,18 @@ def resolve_festivals(
     names_by_number = {}
 
     for number, name, masa, tithi in TITHI_FESTIVAL_RULES:
-        matches = [
-            civil_date
-            for civil_date in select_plain_tithi_dates(
+        if number == 10:  # Yajur Upakarma
+            candidates = select_yajur_upakarma_dates(records, geopos=geopos)
+        else:
+            candidates = select_plain_tithi_dates(
                 records,
                 masa,
                 tithi,
                 allow_adhika=(number == 1),  # Ugadi
             )
+        matches = [
+            civil_date
+            for civil_date in candidates
             if civil_date in target_dates
         ]
         if not matches:
@@ -362,15 +438,17 @@ def resolve_festivals(
         dates_by_number[number] = matches
         names_by_number[number] = name
 
-    VAIKUNTHA_EKADASI = 22 # index in NON_TITHI_FESTIVAL_RULES
+    VAIKUNTHA_EKADASI = 22 # 'number' in array NON_TITHI_FESTIVAL_RULES
     for number, name in NON_TITHI_FESTIVAL_RULES:
         matches = [
             civil_date
-            for civil_date in select_non_tithi_dates(records, number, name)
+            for civil_date in select_non_tithi_dates(
+                records, number, name, geopos=geopos
+            )
             if civil_date in target_dates
         ]
         # Vaikuntha Ekadashi may be absent when no Margasira/Pausha S11 falls
-        # while the Sun is in Dhanur; E.g. yr 2086
+        # while the Sun is in Dhanur; e.g. year 2086.
         if not matches and number != VAIKUNTHA_EKADASI:
             raise RuntimeError(f"No calendar date found for {name}")
         dates_by_number[number] = matches

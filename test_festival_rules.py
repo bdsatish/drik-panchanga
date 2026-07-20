@@ -22,6 +22,7 @@ from festival_rules import (
     select_rig_upakarma_dates,
     select_vaikuntha_ekadashi_dates,
     select_varamahalakshmi_dates,
+    select_yajur_upakarma_dates,
 )
 from generate_panchanga_calendar import (
     MONTH_COUNT,
@@ -518,6 +519,59 @@ class RigUpakarmaTests(unittest.TestCase):
             select_rig_upakarma_dates(records),
             [date(2030, 8, 10)],
         )
+
+    def test_eclipse_on_sravana_day_postpones_to_bhadrapada(self):
+        records = [
+            (date(2030, 8, 9), "S11", 21, "5", False, 10.0),
+            (date(2030, 8, 10), "S12", 22, "5", False, 11.0),
+            (date(2030, 8, 11), "S13", 23, "5", False, 12.0),
+            (date(2030, 9, 7), "S10", 21, "6", False, 40.0),
+            (date(2030, 9, 8), "S11", 22, "6", False, 41.0),
+            (date(2030, 9, 9), "S12", 23, "6", False, 42.0),
+        ]
+        geopos = (79.42, 13.65, 0.0)
+        with mock.patch(
+            "festival_rules.civil_day_has_eclipse",
+            side_effect=lambda records, civil_date, geopos: civil_date
+            == date(2030, 8, 10),
+        ):
+            self.assertEqual(
+                select_rig_upakarma_dates(records, geopos=geopos),
+                [date(2030, 9, 8)],
+            )
+
+
+class YajurUpakarmaTests(unittest.TestCase):
+    def test_selects_sravana_purnima(self):
+        records = [
+            (date(2030, 8, 14), "S14", 1, "5", False, 0.0),
+            (date(2030, 8, 15), "S15", 1, "5", False, 0.0),
+            (date(2030, 8, 16), "K1", 1, "5", False, 0.0),
+        ]
+        self.assertEqual(
+            select_yajur_upakarma_dates(records),
+            [date(2030, 8, 15)],
+        )
+
+    def test_eclipse_on_sravana_purnima_postpones_to_bhadrapada(self):
+        records = [
+            (date(2030, 8, 14), "S14", 1, "5", False, 10.0),
+            (date(2030, 8, 15), "S15", 1, "5", False, 11.0),
+            (date(2030, 8, 16), "K1", 1, "5", False, 12.0),
+            (date(2030, 9, 13), "S14", 1, "6", False, 40.0),
+            (date(2030, 9, 14), "S15", 1, "6", False, 41.0),
+            (date(2030, 9, 15), "K1", 1, "6", False, 42.0),
+        ]
+        geopos = (79.42, 13.65, 0.0)
+        with mock.patch(
+            "festival_rules.civil_day_has_eclipse",
+            side_effect=lambda records, civil_date, geopos: civil_date
+            == date(2030, 8, 15),
+        ):
+            self.assertEqual(
+                select_yajur_upakarma_dates(records, geopos=geopos),
+                [date(2030, 9, 14)],
+            )
 
 
 class VaikunthaEkadashiTests(unittest.TestCase):

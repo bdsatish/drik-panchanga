@@ -729,6 +729,7 @@ def build_pdf(
         month_data,
         context_months=context_months,
         context_data=context_data,
+        geopos=(location.longitude, location.latitude, 0.0),
     )
 
     range_start = CivilDate(start_year, start_month, 1)
