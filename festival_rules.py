@@ -26,18 +26,18 @@ TITHI_FESTIVAL_RULES = (
     (13, "Ganesha Chaturthi", 6, "S4"),
     (14, "Mahalaya Amavasya", 6, "K15"),
     (15, "Durga Ashtami", 7, "S8"),
-    (16, "Mahanavami", 7, "S9"),
+    (16, "Ayudha Puja", 7, "S9"),
     (17, "Vijayadashami", 7, "S10"),
     (18, "Dhana Trayodashi", 7, "K13"),
     (19, "Naraka Chaturdashi", 7, "K14"),
     (20, "Deepavali", 7, "K15"),
     (21, "Bali Padyami", 8, "S1"),
-    (23, "Vasavi Atmarpana", 11, "S2"),
-    (24, "Vasanta Panchami", 11, "S5"),
-    (25, "Ratha Saptami", 11, "S7"),
-    (26, "VSN Jayanti", 11, "S11"),
-    (27, "Maha Shivaratri", 11, "K14"),
-    (28, "Kama Dahana (Holi)", 12, "S15"),
+    (24, "Vasavi Atmarpana", 11, "S2"),
+    (25, "Vasanta Panchami", 11, "S5"),
+    (26, "Ratha Saptami", 11, "S7"),
+    (27, "VSN Jayanti", 11, "S11"),
+    (28, "Maha Shivaratri", 11, "K14"),
+    (29, "Kama Dahana (Holi)", 12, "S15"),
 )
 
 # Non-tithi festivals: (number, name). Selectors dispatch on name/number.
@@ -45,7 +45,10 @@ NON_TITHI_FESTIVAL_RULES = (
     (8, "Varamahalakshmi Vrata"),
     (9, "Rig Upakarma"),
     (22, "Vaikuntha Ekadashi"),
+    (23, "Makara Sankranti"),
 )
+
+MAKARA_RAASI = 10
 
 
 def collect_records(months, month_data):
@@ -267,6 +270,25 @@ def select_vaikuntha_ekadashi_dates(records):
     return selected
 
 
+def select_makara_sankranti_dates(records):
+    """First civil sunrise at which the Sun is in Makara (raasi 10).
+
+    Each transition into Makara yields one date (the first sunrise with
+    ``panchanga.raasi(sunrise_jd) == 10`` after a non-Makara sunrise).
+    """
+    selected = []
+    previous_raasi = None
+    for civil_date, _tithi, _masa, _is_adhika, sunrise_jd, _nakshatra in sorted(
+        records
+    ):
+        raasi = panchanga.raasi(sunrise_jd)
+        if raasi == MAKARA_RAASI and previous_raasi != MAKARA_RAASI:
+            if previous_raasi is not None:
+                selected.append(civil_date)
+        previous_raasi = raasi
+    return selected
+
+
 def select_non_tithi_dates(records, number, name):
     """Dispatch a non-tithi festival to its selector."""
     if name == "Varamahalakshmi Vrata" or number == 8:
@@ -275,6 +297,8 @@ def select_non_tithi_dates(records, number, name):
         return select_rig_upakarma_dates(records)
     if name == "Vaikuntha Ekadashi" or number == 22:
         return select_vaikuntha_ekadashi_dates(records)
+    if name == "Makara Sankranti" or number == 23:
+        return select_makara_sankranti_dates(records)
     raise ValueError(f"No selector for non-tithi festival {number} {name!r}")
 
 
