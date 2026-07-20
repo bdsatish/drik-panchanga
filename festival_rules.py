@@ -97,6 +97,22 @@ def format_festival_dates(dates):
     )
 
 
+def plain_tithi_number(tithi):
+    """Convert a plain S1..S15 or K1..K15 code to 1..30."""
+    if not isinstance(tithi, str) or len(tithi) < 2:
+        return None
+    paksha = tithi[0]
+    if paksha not in {"S", "K"}:
+        return None
+    try:
+        paksha_tithi = int(tithi[1:])
+    except ValueError:
+        return None
+    if not 1 <= paksha_tithi <= 15:
+        return None
+    return paksha_tithi if paksha == "S" else paksha_tithi + 15
+
+
 def resolve_vriddhi_dates(dates):
     """Keep the earlier day when a festival prevails at consecutive sunrises."""
     resolved = []
@@ -110,21 +126,68 @@ def resolve_vriddhi_dates(dates):
     return resolved
 
 
+def select_kshaya_dates(records, masa, tithi, *, allow_adhika=False):
+    """Later civil day when the festival tithi is skipped between sunrises.
+
+    Masa is read from the later sunrise for Shukla festivals and from the
+    earlier sunrise for Krishna festivals. That covers mid-masa kshaya (both
+    days share the masa) and paksha-boundary cases such as Ugadi between
+    Phalguna-K15 and Caitra-S2.
+    """
+    target_tithi = plain_tithi_number(tithi)
+    if target_tithi is None:
+        return []
+    masa_codes = {str(masa), f"A{masa}"} if allow_adhika else {str(masa)}
+    matches = []
+    ordered = sorted(records)
+    for record, following in zip(ordered, ordered[1:]):
+        if following[0] != record[0] + timedelta(days=1):
+            continue
+        start_tithi = plain_tithi_number(record[1])
+        end_tithi = plain_tithi_number(following[1])
+        if start_tithi is None or end_tithi is None:
+            continue
+        skipped = [
+            (start_tithi + offset - 1) % 30 + 1
+            for offset in range(1, (end_tithi - start_tithi) % 30)
+        ]
+        if target_tithi not in skipped:
+            continue
+        masa_record = following if target_tithi <= 15 else record
+        if masa_record[2] in masa_codes:
+            matches.append(following[0])
+    return matches
+
+
 def select_plain_tithi_dates(records, masa, tithi, *, allow_adhika=False):
-    """Civil days whose sunrise tithi matches the rule masa.
+    """Civil days for a plain masa+tithi festival.
 
     By default only non-adhika months match. When ``allow_adhika`` is true
     (Ugadi), both shuddha and adhika forms of the masa are accepted.
 
     Vriddhi (same match at consecutive sunrises) keeps the former date.
+    Kshaya (tithi missed entirely at sunrise) keeps the later civil date.
     """
     masa_codes = {str(masa), f"A{masa}"} if allow_adhika else {str(masa)}
-    matches = [
+    sunrise_matches = resolve_vriddhi_dates(
+        [
+            civil_date
+            for civil_date, day_tithi, day_masa, _is_adhika in records
+            if day_tithi == tithi and day_masa in masa_codes
+        ]
+    )
+    sunrise_dates = set(sunrise_matches)
+    kshaya_matches = [
         civil_date
-        for civil_date, day_tithi, day_masa, _is_adhika in records
-        if day_tithi == tithi and day_masa in masa_codes
+        for civil_date in select_kshaya_dates(
+            records,
+            masa,
+            tithi,
+            allow_adhika=allow_adhika,
+        )
+        if civil_date not in sunrise_dates
     ]
-    return resolve_vriddhi_dates(matches)
+    return sorted(set(sunrise_matches) | set(kshaya_matches))
 
 
 def resolve_festivals(
