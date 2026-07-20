@@ -4,6 +4,8 @@ from datetime import date
 import unittest
 from unittest import mock
 
+import panchanga
+
 from festival_rules import (
     NON_TITHI_FESTIVAL_RULES,
     TITHI_FESTIVAL_RULES,
@@ -20,6 +22,12 @@ from festival_rules import (
     select_rig_upakarma_dates,
     select_vaikuntha_ekadashi_dates,
     select_varamahalakshmi_dates,
+)
+from generate_panchanga_calendar import (
+    MONTH_COUNT,
+    daily_values,
+    load_location,
+    month_range,
 )
 
 
@@ -524,6 +532,40 @@ class VaikunthaEkadashiTests(unittest.TestCase):
         ]
         with mock.patch("festival_rules.panchanga.raasi", return_value=8):
             self.assertEqual(select_vaikuntha_ekadashi_dates(records), [])
+
+    def test_vaikuntha_ekadashi_may_print_none(self):
+        """Tirupati 2086: no Margasira/Pausha S11 while the Sun is in Dhanur."""
+        location = load_location("Tirupati")
+        panchanga.set_chosen_ayanamsa("citra")
+        months = list(month_range(2086, 3))
+        context_months = list(month_range(2086, 2, count=MONTH_COUNT + 2))
+        context_data = {
+            (year, month): daily_values(year, month, location)
+            for year, month in context_months
+        }
+        month_data = {
+            (year, month): context_data[(year, month)]
+            for year, month in months
+        }
+
+        by_date, entries = resolve_festivals(
+            months,
+            month_data,
+            context_months=context_months,
+            context_data=context_data,
+        )
+
+        self.assertEqual(entries[21], (22, "None", "Vaikuntha Ekadashi"))
+        self.assertNotIn(22, [n for nums in by_date.values() for n in nums])
+        records = collect_records(context_months, context_data)
+        self.assertEqual(select_vaikuntha_ekadashi_dates(records), [])
+        margasira = select_plain_tithi_dates(records, 9, "S11")
+        pausha = select_plain_tithi_dates(records, 10, "S11")
+        self.assertEqual(margasira, [date(2086, 12, 16)])
+        self.assertEqual(pausha, [date(2087, 1, 15)])
+        records_by_date = {record[0]: record for record in records}
+        self.assertEqual(panchanga.raasi(records_by_date[margasira[0]][5]), 8)
+        self.assertEqual(panchanga.raasi(records_by_date[pausha[0]][5]), 10)
 
 
 class MakaraSankrantiTests(unittest.TestCase):

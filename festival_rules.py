@@ -263,7 +263,8 @@ def select_vaikuntha_ekadashi_dates(records):
 
     Candidates are ordinary S11 dates in lunar masas 9 and 10 (with the same
     sunrise/vriddhi/kshaya rules). ``panchanga.raasi`` at local sunrise must
-    be 9 (Dhanur).
+    be 9 (Dhanur). Returns an empty list when no such sunrise exists in the
+    supplied records (acceptable; the PDF prints ``None``).
     """
     candidates = set(select_plain_tithi_dates(records, 9, "S11"))
     candidates.update(select_plain_tithi_dates(records, 10, "S11"))
@@ -349,13 +350,16 @@ def resolve_festivals(
         dates_by_number[number] = matches
         names_by_number[number] = name
 
+    VAIKUNTHA_EKADASI = 22 # index in NON_TITHI_FESTIVAL_RULES
     for number, name in NON_TITHI_FESTIVAL_RULES:
         matches = [
             civil_date
             for civil_date in select_non_tithi_dates(records, number, name)
             if civil_date in target_dates
         ]
-        if not matches:
+        # Vaikuntha Ekadashi may be absent when no Margasira/Pausha S11 falls
+        # while the Sun is in Dhanur; E.g. yr 2086
+        if not matches and number != VAIKUNTHA_EKADASI:
             raise RuntimeError(f"No calendar date found for {name}")
         dates_by_number[number] = matches
         names_by_number[number] = name
