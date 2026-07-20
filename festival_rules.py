@@ -245,17 +245,29 @@ def select_varamahalakshmi_dates(records):
 
 
 def select_rig_upakarma_dates(records):
-    """Nija Sravana day whose sunrise nakshatra is Sravana (22).
+    """Nija day whose sunrise nakshatra is Sravana (22).
 
-    Consecutive sunrise matches keep the former date (vriddhi).
+    Prefer nija Sravana masa. When that nakshatra is kshaya at sunrise
+    (no nija-Sravana match), postpone to nija Bhadrapada's Sravana-nakshatra
+    day. Consecutive sunrise matches keep the former date (vriddhi).
     """
     SRAVANA_NAKSHATRA = 22
-    matches = [
-        civil_date
-        for civil_date, _tithi, nakshatra, masa, is_adhika, _sunrise_jd in records
-        if masa == "5" and not is_adhika and nakshatra == SRAVANA_NAKSHATRA
-    ]
-    return resolve_vriddhi_dates(matches)
+
+    matches_for_masa = lambda masa: resolve_vriddhi_dates(
+        [
+            civil_date
+            for civil_date, _tithi, nakshatra, day_masa, is_adhika, _sunrise_jd in records
+            if day_masa == masa
+            and not is_adhika
+            and nakshatra == SRAVANA_NAKSHATRA
+        ]
+    )
+
+    # For kshaya nakshatra:
+    # TTD/Sri-Vaishnava rule: Sravana masa = 5. If unavailable, use Bhadrapada masa = 6 for Sravana Nakshatra
+    # Madhwas use Sravana-S05 instead (e.g. SRS Mutt: 03-08-2022)
+    # Smartas use the former civil date when there is Kshaya nakshatra (e.g. Sringeri: 11-08-2022)
+    return matches_for_masa("5") or matches_for_masa("6")
 
 
 def select_vaikuntha_ekadashi_dates(records):

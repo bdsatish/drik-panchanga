@@ -496,6 +496,29 @@ class RigUpakarmaTests(unittest.TestCase):
             [date(2030, 8, 10)],
         )
 
+    def test_kshaya_sravana_postpones_to_bhadrapada(self):
+        # Sravana masa skips nakshatra 22 between sunrises (21 -> 23).
+        records = [
+            (date(2022, 8, 11), "S14", 21, "5", False, 0.0),
+            (date(2022, 8, 12), "S15", 23, "5", False, 0.0),
+            (date(2022, 9, 8), "S11", 22, "6", False, 0.0),
+            (date(2022, 9, 9), "S12", 23, "6", False, 0.0),
+        ]
+        self.assertEqual(
+            select_rig_upakarma_dates(records),
+            [date(2022, 9, 8)],
+        )
+
+    def test_prefers_sravana_masa_over_bhadrapada(self):
+        records = [
+            (date(2030, 8, 10), "S12", 22, "5", False, 0.0),
+            (date(2030, 9, 8), "S11", 22, "6", False, 0.0),
+        ]
+        self.assertEqual(
+            select_rig_upakarma_dates(records),
+            [date(2030, 8, 10)],
+        )
+
 
 class VaikunthaEkadashiTests(unittest.TestCase):
     def test_keeps_margasira_s11_in_dhanur(self):
