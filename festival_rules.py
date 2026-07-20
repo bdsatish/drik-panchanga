@@ -55,8 +55,7 @@ def collect_records(months, month_data):
     """Flatten daily panchanga rows into civil-date records.
 
     Each source row from ``generate_panchanga_calendar.daily_values`` is:
-    day, tithi, nakshatra, masa, is_adhika, tithi_hours_after_sunrise,
-    sunrise_jd, sunset_jd, yoga, moonrise_jd.
+    day, tithi, nakshatra, yoga, masa, is_adhika, sunrise_jd.
 
     Festival records keep:
     ``(civil_date, tithi, nakshatra, masa, is_adhika, sunrise_jd)``.
@@ -67,13 +66,10 @@ def collect_records(months, month_data):
             day,
             tithi,
             nakshatra,
+            _yoga,
             masa,
             is_adhika,
-            _tithi_hours_after_sunrise,
             sunrise_jd,
-            _sunset_jd,
-            _yoga,
-            _moonrise_jd,
         ) in month_data[(year, month)]:
             records.append(
                 (

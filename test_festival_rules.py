@@ -23,20 +23,9 @@ from festival_rules import (
 )
 
 
-def day_row(day, tithi, masa, is_adhika=False, yoga=1, sunrise_jd=0.0, nakshatra=1):
-    """One ``daily_values`` row with unused timing fields zeroed."""
-    return (
-        day,
-        tithi,
-        nakshatra,
-        masa,
-        is_adhika,
-        0.0,
-        sunrise_jd,
-        0.0,
-        yoga,
-        None,
-    )
+def day_row(day, tithi, masa, is_adhika=False, sunrise_jd=0.0, nakshatra=1, yoga=1):
+    """One ``daily_values`` row: day, tithi, nakshatra, yoga, masa, is_adhika, sunrise_jd."""
+    return (day, tithi, nakshatra, yoga, masa, is_adhika, sunrise_jd)
 
 
 def append_solar_coverage_rows(rows):
