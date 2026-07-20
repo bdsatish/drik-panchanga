@@ -4,8 +4,8 @@ from dataclasses import fields
 import inspect
 import unittest
 
-import festival_rules
-from _festival_rules import catalog, config, model
+import experimental.festival_rules as festival_rules
+from experimental._festival_rules import catalog, config, model
 
 
 class FestivalRulesApiTests(unittest.TestCase):

@@ -4,12 +4,12 @@ from datetime import date
 import unittest
 from unittest.mock import patch
 
-from festival_rules import (
+from experimental.festival_rules import (
     GENERIC_MIDPOINT_FESTIVAL_POLICY,
     resolve_festivals,
     select_generic_midpoint_festival_dates,
 )
-from festival_test_helpers import festival_rule
+from experimental.festival_test_helpers import festival_rule
 
 
 class GenericMidpointPolicyTests(unittest.TestCase):
@@ -37,7 +37,7 @@ class GenericMidpointPolicyTests(unittest.TestCase):
         records=None,
     ):
         with patch(
-            "festival_rules.generic_udaya_occurrences",
+            "experimental.festival_rules.generic_udaya_occurrences",
             return_value=[
                 (
                     date(2030, 4, 11),
@@ -46,7 +46,7 @@ class GenericMidpointPolicyTests(unittest.TestCase):
                 )
             ],
         ), patch(
-            "festival_rules.tithi_intervals",
+            "experimental.festival_rules.tithi_intervals",
             return_value=[interval],
         ):
             return select_generic_midpoint_festival_dates(
@@ -125,16 +125,16 @@ class GenericMidpointPolicyTests(unittest.TestCase):
         selected_date = self.days[1][0]
         geopos = (77.0, 13.0, 0.0)
         with patch(
-            "festival_rules.FESTIVAL_RULES",
+            "experimental.festival_rules.FESTIVAL_RULES",
             (rule,),
         ), patch(
-            "festival_rules.collect_records",
+            "experimental.festival_rules.collect_records",
             side_effect=[[self.days[1]], self.days],
         ), patch(
-            "festival_rules.collect_moonrise_jds",
+            "experimental.festival_rules.collect_moonrise_jds",
             return_value={},
         ), patch(
-            "festival_rules.select_valid_generic_festival_dates",
+            "experimental.festival_rules.select_valid_generic_festival_dates",
             return_value=[selected_date],
         ) as selector:
             _, entries = resolve_festivals(

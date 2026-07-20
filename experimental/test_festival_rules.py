@@ -4,8 +4,8 @@ from datetime import date
 import unittest
 from unittest.mock import patch
 
-from festival_test_helpers import festival_rule, record
-from festival_rules import (
+from experimental.festival_test_helpers import festival_rule, record
+from experimental.festival_rules import (
     FESTIVAL_RULES,
     VARAMAHALAKSHMI_RULE,
     nakshatra_overlaps,
@@ -99,7 +99,7 @@ class RamaNavamiRuleTests(unittest.TestCase):
 
     def test_prefers_later_day_when_both_madhyahnas_have_navami(self):
         with patch(
-            "festival_rules.tithi_overlap_hours",
+            "experimental.festival_rules.tithi_overlap_hours",
             side_effect=[1.0, 1.0],
         ):
             self.assertEqual(
@@ -109,7 +109,7 @@ class RamaNavamiRuleTests(unittest.TestCase):
 
     def test_uses_only_day_whose_madhyahna_has_navami(self):
         with patch(
-            "festival_rules.tithi_overlap_hours",
+            "experimental.festival_rules.tithi_overlap_hours",
             side_effect=[1.0, 0.0],
         ):
             self.assertEqual(
@@ -127,7 +127,7 @@ class AkshayaTritiyaRuleTests(unittest.TestCase):
 
     def test_prefers_later_day_when_both_yugadi_windows_qualify(self):
         with patch(
-            "festival_rules.tithi_overlap_hours",
+            "experimental.festival_rules.tithi_overlap_hours",
             side_effect=[1.0, 1.0],
         ):
             self.assertEqual(
@@ -137,7 +137,7 @@ class AkshayaTritiyaRuleTests(unittest.TestCase):
 
     def test_uses_earlier_day_when_later_window_has_no_tritiya(self):
         with patch(
-            "festival_rules.tithi_overlap_hours",
+            "experimental.festival_rules.tithi_overlap_hours",
             side_effect=[1.0, 0.0],
         ):
             self.assertEqual(
@@ -156,7 +156,7 @@ class AkshayaTritiyaRuleTests(unittest.TestCase):
             record(date(2030, 5, 6), "S3", masa="2"),
         ]
         with patch(
-            "festival_rules.tithi_overlap_hours",
+            "experimental.festival_rules.tithi_overlap_hours",
             return_value=1.0,
         ):
             self.assertEqual(
@@ -246,7 +246,7 @@ class VasaviJayantiRuleTests(unittest.TestCase):
             record(date(2030, 5, 5), "S11", masa="2"),
         ]
         with patch(
-            "festival_rules.tithi_intervals",
+            "experimental.festival_rules.tithi_intervals",
             return_value=[(0.1, 0.9)],
         ):
             self.assertEqual(
@@ -286,7 +286,7 @@ class VasaviAtmarpanaRuleTests(unittest.TestCase):
             record(date(2030, 2, 5), "S3", masa="11"),
         ]
         with patch(
-            "festival_rules.tithi_intervals",
+            "experimental.festival_rules.tithi_intervals",
             return_value=[(0.1, 0.9)],
         ):
             self.assertEqual(
@@ -326,7 +326,7 @@ class VsnJayantiRuleTests(unittest.TestCase):
             record(date(2030, 2, 5), "S12", masa="11"),
         ]
         with patch(
-            "festival_rules.tithi_intervals",
+            "experimental.festival_rules.tithi_intervals",
             return_value=[(0.1, 0.9)],
         ):
             self.assertEqual(
@@ -366,7 +366,7 @@ class GitaJayantiRuleTests(unittest.TestCase):
             record(date(2030, 12, 5), "S12", masa="9"),
         ]
         with patch(
-            "festival_rules.tithi_intervals",
+            "experimental.festival_rules.tithi_intervals",
             return_value=[(0.1, 0.9)],
         ):
             self.assertEqual(
@@ -415,7 +415,7 @@ class VaramahalakshmiRuleTests(unittest.TestCase):
             record(date(2030, 8, 11), "K1", masa="6"),
         ]
         with patch(
-            "festival_rules.tithi_intervals",
+            "experimental.festival_rules.tithi_intervals",
             return_value=[(0.1, 0.9)],
         ):
             self.assertEqual(
@@ -433,7 +433,7 @@ class NarasimhaJayantiRuleTests(unittest.TestCase):
 
     def test_prefers_later_day_when_both_sunsets_have_caturdashi(self):
         with patch(
-            "festival_rules.tithi_number_at",
+            "experimental.festival_rules.tithi_number_at",
             side_effect=[14, 14],
         ):
             self.assertEqual(
@@ -443,7 +443,7 @@ class NarasimhaJayantiRuleTests(unittest.TestCase):
 
     def test_uses_only_sunset_with_caturdashi(self):
         with patch(
-            "festival_rules.tithi_number_at",
+            "experimental.festival_rules.tithi_number_at",
             side_effect=[14, 15],
         ):
             self.assertEqual(
@@ -497,7 +497,7 @@ class GuruPurnimaRuleTests(unittest.TestCase):
             (date(2083, 7, 29), "K1", "4", False, 1.0, 11.0, 11.5),
         ]
         with patch(
-            "festival_rules.tithi_intervals",
+            "experimental.festival_rules.tithi_intervals",
             return_value=[(10.1, 10.9)],
         ):
             self.assertEqual(
@@ -535,7 +535,7 @@ class NagaPanchamiRuleTests(unittest.TestCase):
             (date(2045, 8, 17), "S6", "5", False, 1.0, 11.0, 11.5),
         ]
         with patch(
-            "festival_rules.tithi_intervals",
+            "experimental.festival_rules.tithi_intervals",
             return_value=[(10.1, 10.9)],
         ):
             self.assertEqual(
@@ -557,7 +557,7 @@ class RakshaBandhanRuleTests(unittest.TestCase):
 
     def test_short_later_purnima_uses_previous_pradosha(self):
         with patch(
-            "festival_rules.has_bhadra_free_purnima",
+            "experimental.festival_rules.has_bhadra_free_purnima",
             return_value=True,
         ):
             self.assertEqual(
@@ -570,7 +570,7 @@ class RakshaBandhanRuleTests(unittest.TestCase):
 
     def test_long_later_purnima_uses_later_day(self):
         with patch(
-            "festival_rules.has_bhadra_free_purnima",
+            "experimental.festival_rules.has_bhadra_free_purnima",
             return_value=True,
         ):
             self.assertEqual(
@@ -587,10 +587,10 @@ class RakshaBandhanRuleTests(unittest.TestCase):
             (date(2031, 8, 3), "K1", "5", False, 1.0, 11.0, 11.5),
         ]
         with patch(
-            "festival_rules.tithi_intervals",
+            "experimental.festival_rules.tithi_intervals",
             return_value=[(10.1, 10.9)],
         ), patch(
-            "festival_rules.has_bhadra_free_purnima",
+            "experimental.festival_rules.has_bhadra_free_purnima",
             side_effect=[False, True],
         ):
             self.assertEqual(
@@ -610,10 +610,10 @@ class JanmashtamiRuleTests(unittest.TestCase):
     def test_saptami_viddha_rejected(self):
         # 22 is Saptami, 23 is Ashtami
         with patch(
-            "festival_rules.tithi_intervals",
+            "experimental.festival_rules.tithi_intervals",
             side_effect=[[(10.0, 11.0)], [(11.0, 12.0)]],
         ), patch(
-            "festival_rules.tithi_number_at",
+            "experimental.festival_rules.tithi_number_at",
             side_effect=[22, 23], # Day 1 is Saptami at sunrise, Day 2 is Ashtami at sunrise
         ):
             self.assertEqual(
@@ -623,10 +623,10 @@ class JanmashtamiRuleTests(unittest.TestCase):
 
     def test_shuddha_ashtami_accepted(self):
         with patch(
-            "festival_rules.tithi_intervals",
+            "experimental.festival_rules.tithi_intervals",
             side_effect=[[(10.0, 11.0)], [(11.0, 12.0)]],
         ), patch(
-            "festival_rules.tithi_number_at",
+            "experimental.festival_rules.tithi_number_at",
             side_effect=[23, 23], # Both days have Ashtami at sunrise
         ):
             self.assertEqual(
@@ -641,10 +641,10 @@ class JanmashtamiRuleTests(unittest.TestCase):
             (date(2052, 8, 19), "K10", "5", False, 1.0, 12.0, 12.5),
         ]
         with patch(
-            "festival_rules.tithi_intervals",
+            "experimental.festival_rules.tithi_intervals",
             side_effect=[[(10.1, 10.9)], []],
         ), patch(
-            "festival_rules.tithi_number_at",
+            "experimental.festival_rules.tithi_number_at",
             return_value=22,
         ):
             self.assertEqual(
@@ -664,10 +664,10 @@ class SmartaJanmashtamiRuleTests(unittest.TestCase):
 
     def test_two_nishitha_ashtamis_use_later_day(self):
         with patch(
-            "festival_rules.tithi_overlap_hours",
+            "experimental.festival_rules.tithi_overlap_hours",
             side_effect=[0.0, 1.0, 1.0, 0.0],
         ), patch(
-            "festival_rules.has_tithi_nakshatra",
+            "experimental.festival_rules.has_tithi_nakshatra",
             side_effect=[False, False],
         ):
             self.assertEqual(
@@ -677,10 +677,10 @@ class SmartaJanmashtamiRuleTests(unittest.TestCase):
 
     def test_nishitha_rohini_yoga_has_priority(self):
         with patch(
-            "festival_rules.tithi_overlap_hours",
+            "experimental.festival_rules.tithi_overlap_hours",
             side_effect=[0.0, 1.0, 1.0, 0.0],
         ), patch(
-            "festival_rules.has_tithi_nakshatra",
+            "experimental.festival_rules.has_tithi_nakshatra",
             side_effect=[True, False],
         ):
             self.assertEqual(
@@ -760,17 +760,17 @@ class VijayaDasamiRuleTests(unittest.TestCase):
 
     def test_shravana_boundary_overlap_is_detected_without_sampling(self):
         with patch(
-            "festival_rules.nakshatra_number_at",
+            "experimental.festival_rules.nakshatra_number_at",
             side_effect=[21, 22],
         ):
             self.assertTrue(nakshatra_overlaps(10.0, 10.1, 22))
 
     def test_both_aparahnas_use_earlier_day_without_shravana(self):
         with patch(
-            "festival_rules.tithi_overlap_hours",
+            "experimental.festival_rules.tithi_overlap_hours",
             side_effect=[1.0, 1.0, 1.0, 1.0],
         ), patch(
-            "festival_rules.nakshatra_overlaps",
+            "experimental.festival_rules.nakshatra_overlaps",
             side_effect=[False, False],
         ):
             self.assertEqual(
@@ -780,10 +780,10 @@ class VijayaDasamiRuleTests(unittest.TestCase):
 
     def test_only_later_aparahna_uses_later_day(self):
         with patch(
-            "festival_rules.tithi_overlap_hours",
+            "experimental.festival_rules.tithi_overlap_hours",
             side_effect=[1.0, 0.0, 1.0, 1.0],
         ), patch(
-            "festival_rules.nakshatra_overlaps",
+            "experimental.festival_rules.nakshatra_overlaps",
             side_effect=[False, False],
         ):
             self.assertEqual(
@@ -793,10 +793,10 @@ class VijayaDasamiRuleTests(unittest.TestCase):
 
     def test_both_aparahnas_use_only_shravana_day(self):
         with patch(
-            "festival_rules.tithi_overlap_hours",
+            "experimental.festival_rules.tithi_overlap_hours",
             side_effect=[1.0, 1.0, 1.0, 1.0],
         ), patch(
-            "festival_rules.nakshatra_overlaps",
+            "experimental.festival_rules.nakshatra_overlaps",
             side_effect=[False, True],
         ):
             self.assertEqual(
@@ -806,10 +806,10 @@ class VijayaDasamiRuleTests(unittest.TestCase):
 
     def test_neither_aparahna_uses_only_shravana_day(self):
         with patch(
-            "festival_rules.tithi_overlap_hours",
+            "experimental.festival_rules.tithi_overlap_hours",
             side_effect=[1.0, 0.0, 1.0, 0.0],
         ), patch(
-            "festival_rules.nakshatra_overlaps",
+            "experimental.festival_rules.nakshatra_overlaps",
             side_effect=[False, True],
         ):
             self.assertEqual(
@@ -819,10 +819,10 @@ class VijayaDasamiRuleTests(unittest.TestCase):
 
     def test_neither_aparahna_without_shravana_uses_earlier_day(self):
         with patch(
-            "festival_rules.tithi_overlap_hours",
+            "experimental.festival_rules.tithi_overlap_hours",
             side_effect=[1.0, 0.0, 1.0, 0.0],
         ), patch(
-            "festival_rules.nakshatra_overlaps",
+            "experimental.festival_rules.nakshatra_overlaps",
             side_effect=[False, False],
         ):
             self.assertEqual(
@@ -836,10 +836,10 @@ class VijayaDasamiRuleTests(unittest.TestCase):
             (date(2030, 10, 6), "S10", "7", False, 3.0, 11.0, 11.5),
         ]
         with patch(
-            "festival_rules.tithi_overlap_hours",
+            "experimental.festival_rules.tithi_overlap_hours",
             side_effect=[1.0, 1.0, 1.0, 0.0],
         ), patch(
-            "festival_rules.nakshatra_overlaps",
+            "experimental.festival_rules.nakshatra_overlaps",
             side_effect=[False, True],
         ):
             self.assertEqual(
@@ -853,10 +853,10 @@ class VijayaDasamiRuleTests(unittest.TestCase):
             (date(2030, 10, 6), "S9", "7", False, 3.0, 11.0, 11.5),
         ]
         with patch(
-            "festival_rules.tithi_overlap_hours",
+            "experimental.festival_rules.tithi_overlap_hours",
             side_effect=[1.0, 1.0, 1.0, 0.0],
         ), patch(
-            "festival_rules.nakshatra_overlaps",
+            "experimental.festival_rules.nakshatra_overlaps",
             side_effect=[False, True],
         ):
             self.assertEqual(
@@ -870,10 +870,10 @@ class VijayaDasamiRuleTests(unittest.TestCase):
             (date(2030, 10, 6), "S10", "7", False, 2.0, 11.0, 11.5),
         ]
         with patch(
-            "festival_rules.tithi_overlap_hours",
+            "experimental.festival_rules.tithi_overlap_hours",
             side_effect=[1.0, 1.0, 1.0, 0.0],
         ), patch(
-            "festival_rules.nakshatra_overlaps",
+            "experimental.festival_rules.nakshatra_overlaps",
             side_effect=[False, True],
         ):
             self.assertEqual(
@@ -921,7 +921,7 @@ class AyudhaPujaRuleTests(unittest.TestCase):
             record(date(2030, 10, 5), "S10", masa="7"),
         ]
         with patch(
-            "festival_rules.tithi_intervals",
+            "experimental.festival_rules.tithi_intervals",
             return_value=[(0.1, 0.9)],
         ):
             self.assertEqual(
@@ -935,7 +935,7 @@ class AyudhaPujaRuleTests(unittest.TestCase):
             (date(2005, 10, 12), "S10", "7", False, 1.0, 11.0, 11.5),
         ]
         with patch(
-            "festival_rules.tithi_intervals",
+            "experimental.festival_rules.tithi_intervals",
             return_value=[(10.1, 10.9)],
         ):
             self.assertEqual(
@@ -967,14 +967,14 @@ class BaliPadyamiRuleTests(unittest.TestCase):
     ]
 
     def test_pratipada_reaching_ninth_muhurta_uses_sunrise_day(self):
-        with patch("festival_rules.tithi_number_at", return_value=1):
+        with patch("experimental.festival_rules.tithi_number_at", return_value=1):
             self.assertEqual(
                 select_bali_padyami_dates(self.records, self.rule),
                 [date(2030, 11, 2)],
             )
 
     def test_short_pratipada_uses_previous_day(self):
-        with patch("festival_rules.tithi_number_at", return_value=2):
+        with patch("experimental.festival_rules.tithi_number_at", return_value=2):
             self.assertEqual(
                 select_bali_padyami_dates(self.records, self.rule),
                 [date(2030, 11, 1)],
@@ -990,7 +990,7 @@ class VasantaPanchamiRuleTests(unittest.TestCase):
 
     def test_both_purvahnas_use_earlier_day(self):
         with patch(
-            "festival_rules.tithi_overlap_hours",
+            "experimental.festival_rules.tithi_overlap_hours",
             side_effect=[1.0, 1.0],
         ):
             self.assertEqual(
@@ -1000,7 +1000,7 @@ class VasantaPanchamiRuleTests(unittest.TestCase):
 
     def test_only_later_purvahna_uses_later_day(self):
         with patch(
-            "festival_rules.tithi_overlap_hours",
+            "experimental.festival_rules.tithi_overlap_hours",
             side_effect=[0.0, 1.0],
         ):
             self.assertEqual(
@@ -1018,7 +1018,7 @@ class RathaSaptamiRuleTests(unittest.TestCase):
 
     def test_two_arunodayas_use_earlier_day(self):
         with patch(
-            "festival_rules.tithi_overlap_hours",
+            "experimental.festival_rules.tithi_overlap_hours",
             side_effect=[1.0, 1.0],
         ):
             self.assertEqual(
@@ -1028,7 +1028,7 @@ class RathaSaptamiRuleTests(unittest.TestCase):
 
     def test_only_later_arunodaya_uses_later_day(self):
         with patch(
-            "festival_rules.tithi_overlap_hours",
+            "experimental.festival_rules.tithi_overlap_hours",
             side_effect=[0.0, 1.0],
         ):
             self.assertEqual(
@@ -1046,7 +1046,7 @@ class KamaDahanaRuleTests(unittest.TestCase):
 
     def test_two_pradosha_purnimas_use_later_day(self):
         with patch(
-            "festival_rules.tithi_overlap_hours",
+            "experimental.festival_rules.tithi_overlap_hours",
             side_effect=[1.0, 1.0],
         ):
             self.assertEqual(
@@ -1056,7 +1056,7 @@ class KamaDahanaRuleTests(unittest.TestCase):
 
     def test_only_earlier_pradosha_uses_earlier_day(self):
         with patch(
-            "festival_rules.tithi_overlap_hours",
+            "experimental.festival_rules.tithi_overlap_hours",
             side_effect=[1.0, 0.0],
         ):
             self.assertEqual(
@@ -1075,7 +1075,7 @@ class MahaShivaratriRuleTests(unittest.TestCase):
 
     def test_two_full_nishithas_use_recorded_majority_later_day(self):
         with patch(
-            "festival_rules.tithi_overlap_hours",
+            "experimental.festival_rules.tithi_overlap_hours",
             side_effect=[0.8, 0.8],
         ):
             self.assertEqual(
@@ -1085,7 +1085,7 @@ class MahaShivaratriRuleTests(unittest.TestCase):
 
     def test_full_first_nishitha_beats_partial_later_nishitha(self):
         with patch(
-            "festival_rules.tithi_overlap_hours",
+            "experimental.festival_rules.tithi_overlap_hours",
             side_effect=[0.8, 0.2],
         ):
             self.assertEqual(
@@ -1104,7 +1104,7 @@ class DhanaTrayodashiRuleTests(unittest.TestCase):
 
     def test_two_pradoshas_use_later_day(self):
         with patch(
-            "festival_rules.tithi_overlap_hours",
+            "experimental.festival_rules.tithi_overlap_hours",
             side_effect=[0.0, 1.0, 1.0],
         ):
             self.assertEqual(
@@ -1114,7 +1114,7 @@ class DhanaTrayodashiRuleTests(unittest.TestCase):
 
     def test_one_pradosha_uses_that_day(self):
         with patch(
-            "festival_rules.tithi_overlap_hours",
+            "experimental.festival_rules.tithi_overlap_hours",
             side_effect=[0.0, 1.0, 0.0],
         ):
             self.assertEqual(
@@ -1129,7 +1129,7 @@ class DhanaTrayodashiRuleTests(unittest.TestCase):
             (date(2030, 11, 7), "K14", "7", False, 1.0, 12.0, 12.5),
         ]
         with patch(
-            "festival_rules.tithi_overlap_hours",
+            "experimental.festival_rules.tithi_overlap_hours",
             return_value=0.0,
         ):
             self.assertEqual(
@@ -1144,11 +1144,11 @@ class DhanaTrayodashiRuleTests(unittest.TestCase):
         ]
         with (
             patch(
-                "festival_rules.tithi_overlap_hours",
+                "experimental.festival_rules.tithi_overlap_hours",
                 return_value=0.0,
             ),
             patch(
-                "festival_rules.tithi_intervals",
+                "experimental.festival_rules.tithi_intervals",
                 return_value=[(10.6, 10.9)],
             ),
         ):
@@ -1173,7 +1173,7 @@ class NarakaChaturdashiRuleTests(unittest.TestCase):
 
     def test_two_moonrise_vyapini_dates_use_earlier_day(self):
         with patch(
-            "festival_rules.tithi_number_at",
+            "experimental.festival_rules.tithi_number_at",
             side_effect=[29, 29, 30],
         ):
             self.assertEqual(
@@ -1187,7 +1187,7 @@ class NarakaChaturdashiRuleTests(unittest.TestCase):
 
     def test_only_later_moonrise_vyapini_uses_later_day(self):
         with patch(
-            "festival_rules.tithi_number_at",
+            "experimental.festival_rules.tithi_number_at",
             side_effect=[28, 29, 30],
         ):
             self.assertEqual(
@@ -1202,15 +1202,15 @@ class NarakaChaturdashiRuleTests(unittest.TestCase):
     def test_neither_moonrise_uses_actual_predawn_chaturdashi(self):
         with (
             patch(
-                "festival_rules.tithi_number_at",
+                "experimental.festival_rules.tithi_number_at",
                 side_effect=[28, 30, 30],
             ),
             patch(
-                "festival_rules.tithi_intervals",
+                "experimental.festival_rules.tithi_intervals",
                 return_value=[(9.9, 10.7)],
             ),
             patch(
-                "festival_rules.tithi_overlap_hours",
+                "experimental.festival_rules.tithi_overlap_hours",
                 return_value=0.1,
             ),
         ):
@@ -1226,15 +1226,15 @@ class NarakaChaturdashiRuleTests(unittest.TestCase):
     def test_neither_moonrise_without_predawn_overlap_uses_later_day(self):
         with (
             patch(
-                "festival_rules.tithi_number_at",
+                "experimental.festival_rules.tithi_number_at",
                 side_effect=[28, 30, 30],
             ),
             patch(
-                "festival_rules.tithi_intervals",
+                "experimental.festival_rules.tithi_intervals",
                 return_value=[(10.1, 10.7)],
             ),
             patch(
-                "festival_rules.tithi_overlap_hours",
+                "experimental.festival_rules.tithi_overlap_hours",
                 return_value=0.0,
             ),
         ):
@@ -1258,7 +1258,7 @@ class DeepavaliRuleTests(unittest.TestCase):
             (date(2030, 11, 9), "S1", "8", False, 1.0, 12.0, 12.5),
         ]
         with patch(
-            "festival_rules.tithi_overlap_hours",
+            "experimental.festival_rules.tithi_overlap_hours",
             return_value=0.0,
         ):
             self.assertEqual(
@@ -1273,11 +1273,11 @@ class DeepavaliRuleTests(unittest.TestCase):
         ]
         with (
             patch(
-                "festival_rules.tithi_overlap_hours",
+                "experimental.festival_rules.tithi_overlap_hours",
                 return_value=0.0,
             ),
             patch(
-                "festival_rules.tithi_intervals",
+                "experimental.festival_rules.tithi_intervals",
                 return_value=[(10.6, 10.9)],
             ),
         ):
@@ -1317,7 +1317,7 @@ class DhanvantariJayantiRuleTests(unittest.TestCase):
             (date(2064, 11, 5), "K14", "7", False, 1.0, 11.0, 11.5),
         ]
         with patch(
-            "festival_rules.tithi_intervals",
+            "experimental.festival_rules.tithi_intervals",
             return_value=[(10.1, 10.9)],
         ):
             self.assertEqual(
@@ -1371,7 +1371,7 @@ class MahalayaAmavasyaRuleTests(unittest.TestCase):
 
     def test_two_aparahnas_use_greater_overlap(self):
         with patch(
-            "festival_rules.tithi_overlap_hours",
+            "experimental.festival_rules.tithi_overlap_hours",
             side_effect=[0.5, 1.0, 0.0],
         ):
             self.assertEqual(
@@ -1381,7 +1381,7 @@ class MahalayaAmavasyaRuleTests(unittest.TestCase):
 
     def test_one_aparahna_uses_that_day(self):
         with patch(
-            "festival_rules.tithi_overlap_hours",
+            "experimental.festival_rules.tithi_overlap_hours",
             side_effect=[0.0, 1.0, 0.0],
         ):
             self.assertEqual(
@@ -1396,10 +1396,10 @@ class MahalayaAmavasyaRuleTests(unittest.TestCase):
             (date(2045, 10, 11), "S1", "7", False, 1.0, 12.0, 12.5),
         ]
         with patch(
-            "festival_rules.tithi_overlap_hours",
+            "experimental.festival_rules.tithi_overlap_hours",
             side_effect=[0.0, 0.0],
         ), patch(
-            "festival_rules.tithi_intervals",
+            "experimental.festival_rules.tithi_intervals",
             return_value=[(10.4, 11.0)],
         ):
             self.assertEqual(
@@ -1428,7 +1428,7 @@ class DurgaAshtamiObservanceRuleTests(unittest.TestCase):
             (date(2058, 10, 25), "S9", "7", False, 1.0, 11.0, 11.5),
         ]
         with patch(
-            "festival_rules.tithi_intervals",
+            "experimental.festival_rules.tithi_intervals",
             return_value=[(10.1, 10.9)],
         ):
             self.assertEqual(
@@ -1449,7 +1449,7 @@ class DurgaAshtamiPujaRuleTests(unittest.TestCase):
         ]
         with (
             patch(
-                "festival_rules.tithi_intervals",
+                "experimental.festival_rules.tithi_intervals",
                 side_effect=[
                     [(10.8, 11.0)],
                     [(11.0, 11.5)],
@@ -1457,7 +1457,7 @@ class DurgaAshtamiPujaRuleTests(unittest.TestCase):
                 ],
             ),
             patch(
-                "festival_rules.tithi_number_at",
+                "experimental.festival_rules.tithi_number_at",
                 return_value=8,
             ),
         ):
@@ -1474,14 +1474,14 @@ class DurgaAshtamiPujaRuleTests(unittest.TestCase):
         ]
         with (
             patch(
-                "festival_rules.tithi_intervals",
+                "experimental.festival_rules.tithi_intervals",
                 side_effect=[
                     [(10.8, 11.0)],
                     [(11.0, 11.01)],
                 ],
             ),
             patch(
-                "festival_rules.tithi_number_at",
+                "experimental.festival_rules.tithi_number_at",
                 return_value=9,
             ),
         ):
@@ -1498,7 +1498,7 @@ class DurgaAshtamiPujaRuleTests(unittest.TestCase):
             (date(2030, 10, 7), "S9", "7", False, 1.0, 13.0, 13.5),
         ]
         with patch(
-            "festival_rules.tithi_intervals",
+            "experimental.festival_rules.tithi_intervals",
             side_effect=[
                 [(10.8, 11.0)],
                 [(11.0, 12.0)],
@@ -1517,7 +1517,7 @@ class DurgaAshtamiPujaRuleTests(unittest.TestCase):
             (date(2030, 10, 6), "S10", "7", False, 1.0, 12.0, 12.5),
         ]
         with patch(
-            "festival_rules.tithi_intervals",
+            "experimental.festival_rules.tithi_intervals",
             side_effect=[
                 [(10.8, 11.0)],
                 [(11.0, 11.3)],
@@ -1535,7 +1535,7 @@ class DurgaAshtamiPujaRuleTests(unittest.TestCase):
             (date(2030, 10, 6), "S10", "7", False, 1.0, 12.0, 12.5),
         ]
         with patch(
-            "festival_rules.tithi_intervals",
+            "experimental.festival_rules.tithi_intervals",
             side_effect=[
                 [(10.2, 10.8)],
                 [],
@@ -1557,7 +1557,7 @@ class MahanavamiPujaRuleTests(unittest.TestCase):
             (date(2024, 10, 12), "S9", "7", False, 1.0, 12.0, 12.5),
         ]
         with patch(
-            "festival_rules.tithi_overlap_hours",
+            "experimental.festival_rules.tithi_overlap_hours",
             side_effect=[0.0, 2.4, 0.0],
         ):
             self.assertEqual(
@@ -1572,7 +1572,7 @@ class MahanavamiPujaRuleTests(unittest.TestCase):
             (date(2024, 10, 12), "S9", "7", False, 1.0, 12.0, 12.5),
         ]
         with patch(
-            "festival_rules.tithi_overlap_hours",
+            "experimental.festival_rules.tithi_overlap_hours",
             side_effect=[0.0, 0.5, 0.0],
         ):
             self.assertEqual(
@@ -1586,7 +1586,7 @@ class MahanavamiPujaRuleTests(unittest.TestCase):
             (date(2037, 10, 17), "S9", "7", False, 1.0, 11.0, 11.4),
         ]
         with patch(
-            "festival_rules.tithi_overlap_hours",
+            "experimental.festival_rules.tithi_overlap_hours",
             side_effect=[2.17, 0.0],
         ):
             self.assertEqual(
@@ -1601,11 +1601,11 @@ class MahanavamiPujaRuleTests(unittest.TestCase):
         ]
         with (
             patch(
-                "festival_rules.tithi_overlap_hours",
+                "experimental.festival_rules.tithi_overlap_hours",
                 side_effect=[0.5, 0.0],
             ),
             patch(
-                "festival_rules.tithi_intervals",
+                "experimental.festival_rules.tithi_intervals",
                 return_value=[(10.3, 10.8)],
             ),
         ):
@@ -1620,7 +1620,7 @@ class MahanavamiPujaRuleTests(unittest.TestCase):
             (date(2030, 10, 6), "S9", "7", False, 2.0, 11.0, 11.5),
         ]
         with patch(
-            "festival_rules.tithi_overlap_hours",
+            "experimental.festival_rules.tithi_overlap_hours",
             return_value=0.0,
         ):
             self.assertEqual(
@@ -1658,7 +1658,7 @@ class DasaraRuleTests(unittest.TestCase):
             (date(2075, 10, 19), "S11", "7", False, 1.0, 11.0, 11.5),
         ]
         with patch(
-            "festival_rules.tithi_intervals",
+            "experimental.festival_rules.tithi_intervals",
             return_value=[(10.1, 10.9)],
         ):
             self.assertEqual(

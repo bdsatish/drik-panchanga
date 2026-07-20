@@ -6,13 +6,13 @@ from unittest.mock import patch
 
 import panchanga
 
-from festival_rules import (
+from experimental.festival_rules import (
     eclipse_or_sankranti_in_window,
     select_rigveda_upakarma_dates,
     select_taittiriya_apastamba_upakarma_dates,
     select_taittiriya_purnima_dates,
 )
-from festival_test_helpers import festival_rule
+from experimental.festival_test_helpers import festival_rule
 
 
 class RigUpakarmaRuleTests(unittest.TestCase):
@@ -29,13 +29,13 @@ class RigUpakarmaRuleTests(unittest.TestCase):
             (date(2026, 8, 27), "S15", "5", False, 3.0, 12.0, 12.5),
         ]
         with patch(
-            "festival_rules.nakshatra_number_at",
+            "experimental.festival_rules.nakshatra_number_at",
             side_effect=lambda jd: 22 if 10.9 < jd < 11.1 else 21,
         ), patch(
-            "festival_rules.nakshatra_overlap_hours",
+            "experimental.festival_rules.nakshatra_overlap_hours",
             return_value=2.0,
         ), patch(
-            "festival_rules.upakarma_date_is_contaminated",
+            "experimental.festival_rules.upakarma_date_is_contaminated",
             return_value=False,
         ):
             self.assertEqual(
@@ -53,13 +53,13 @@ class RigUpakarmaRuleTests(unittest.TestCase):
             (date(2030, 8, 21), "S15", "5", False, 3.0, 11.0, 11.5),
         ]
         with patch(
-            "festival_rules.nakshatra_number_at",
+            "experimental.festival_rules.nakshatra_number_at",
             return_value=22,
         ), patch(
-            "festival_rules.nakshatra_overlap_hours",
+            "experimental.festival_rules.nakshatra_overlap_hours",
             side_effect=[3.0, 2.4],
         ), patch(
-            "festival_rules.upakarma_date_is_contaminated",
+            "experimental.festival_rules.upakarma_date_is_contaminated",
             return_value=False,
         ):
             self.assertEqual(
@@ -77,13 +77,13 @@ class RigUpakarmaRuleTests(unittest.TestCase):
             (date(2030, 8, 21), "S15", "5", False, 3.0, 11.0, 11.5),
         ]
         with patch(
-            "festival_rules.nakshatra_number_at",
+            "experimental.festival_rules.nakshatra_number_at",
             return_value=22,
         ), patch(
-            "festival_rules.nakshatra_overlap_hours",
+            "experimental.festival_rules.nakshatra_overlap_hours",
             side_effect=[3.0, 2.0],
         ), patch(
-            "festival_rules.upakarma_date_is_contaminated",
+            "experimental.festival_rules.upakarma_date_is_contaminated",
             return_value=False,
         ):
             self.assertEqual(
@@ -102,13 +102,13 @@ class RigUpakarmaRuleTests(unittest.TestCase):
             (date(2030, 8, 20), "S14", "5", False, 3.0, 30.0, 30.5),
         ]
         with patch(
-            "festival_rules.nakshatra_number_at",
+            "experimental.festival_rules.nakshatra_number_at",
             side_effect=lambda jd: 22 if 29.9 < jd < 30.1 else 1,
         ), patch(
-            "festival_rules.nakshatra_overlap_hours",
+            "experimental.festival_rules.nakshatra_overlap_hours",
             return_value=2.0,
         ), patch(
-            "festival_rules.upakarma_date_is_contaminated",
+            "experimental.festival_rules.upakarma_date_is_contaminated",
             side_effect=[True, False],
         ):
             self.assertEqual(
@@ -126,10 +126,10 @@ class RigUpakarmaRuleTests(unittest.TestCase):
             (date(2030, 8, 6), "S5", "5", False, 2.0, 11.0, 11.5),
         ]
         with patch(
-            "festival_rules.nakshatra_number_at",
+            "experimental.festival_rules.nakshatra_number_at",
             return_value=1,
         ), patch(
-            "festival_rules.upakarma_date_is_contaminated",
+            "experimental.festival_rules.upakarma_date_is_contaminated",
             return_value=False,
         ):
             self.assertEqual(
@@ -146,13 +146,13 @@ class RigUpakarmaRuleTests(unittest.TestCase):
             (date(2030, 9, 15), "S14", "6", False, 3.0, 50.0, 50.5),
         ]
         with patch(
-            "festival_rules.nakshatra_number_at",
+            "experimental.festival_rules.nakshatra_number_at",
             return_value=22,
         ), patch(
-            "festival_rules.nakshatra_overlap_hours",
+            "experimental.festival_rules.nakshatra_overlap_hours",
             return_value=2.0,
         ), patch(
-            "festival_rules.upakarma_date_is_contaminated",
+            "experimental.festival_rules.upakarma_date_is_contaminated",
             return_value=False,
         ):
             self.assertEqual(
@@ -187,17 +187,17 @@ class UpakarmaContaminationTests(unittest.TestCase):
 
     def test_ignores_eclipse_not_visible_at_location(self):
         with patch(
-            "festival_rules.panchanga.solar_longitude",
+            "experimental.festival_rules.panchanga.solar_longitude",
             return_value=10.0,
         ), patch(
-            "festival_rules.panchanga.swe.lun_eclipse_when_loc",
+            "experimental.festival_rules.panchanga.swe.lun_eclipse_when_loc",
             return_value=(
                 panchanga.swe.ECL_PARTIAL,
                 self.eclipse_times(50.0, 49.9, 50.1),
                 (),
             ),
         ), patch(
-            "festival_rules.panchanga.swe.sol_eclipse_when_loc",
+            "experimental.festival_rules.panchanga.swe.sol_eclipse_when_loc",
             return_value=(0, self.solar_times(60.0, 60.1), ()),
         ):
             self.assertFalse(
@@ -206,10 +206,10 @@ class UpakarmaContaminationTests(unittest.TestCase):
 
     def test_visible_contacts_count_when_maximum_precedes_window(self):
         with patch(
-            "festival_rules.panchanga.solar_longitude",
+            "experimental.festival_rules.panchanga.solar_longitude",
             return_value=10.0,
         ), patch(
-            "festival_rules.panchanga.swe.lun_eclipse_when_loc",
+            "experimental.festival_rules.panchanga.swe.lun_eclipse_when_loc",
             return_value=(
                 panchanga.swe.ECL_PARTIAL,
                 self.eclipse_times(9.95, 9.9, 10.1),
@@ -222,17 +222,17 @@ class UpakarmaContaminationTests(unittest.TestCase):
 
     def test_purely_penumbral_lunar_eclipse_is_ignored(self):
         with patch(
-            "festival_rules.panchanga.solar_longitude",
+            "experimental.festival_rules.panchanga.solar_longitude",
             return_value=10.0,
         ), patch(
-            "festival_rules.panchanga.swe.lun_eclipse_when_loc",
+            "experimental.festival_rules.panchanga.swe.lun_eclipse_when_loc",
             return_value=(
                 panchanga.swe.ECL_PENUMBRAL,
                 self.eclipse_times(10.2, 10.1, 10.3),
                 (),
             ),
         ), patch(
-            "festival_rules.panchanga.swe.sol_eclipse_when_loc",
+            "experimental.festival_rules.panchanga.swe.sol_eclipse_when_loc",
             return_value=(0, self.solar_times(60.0, 60.1), ()),
         ):
             self.assertFalse(
@@ -268,7 +268,7 @@ class YajurUpakarmaRuleTests(unittest.TestCase):
             (date(2030, 8, 16), "K1", "5", False, 1.0, 12.0, 12.5),
         ]
         with patch(
-            "festival_rules.tithi_intervals",
+            "experimental.festival_rules.tithi_intervals",
             return_value=[(10.04, 11.08)],
         ):
             self.assertEqual(
@@ -278,10 +278,10 @@ class YajurUpakarmaRuleTests(unittest.TestCase):
 
     def test_taittiriyas_use_later_day_with_two_muhurtas(self):
         with patch(
-            "festival_rules.tithi_intervals",
+            "experimental.festival_rules.tithi_intervals",
             return_value=[(10.1, 11.2)],
         ), patch(
-            "festival_rules.eclipse_or_sankranti_in_window",
+            "experimental.festival_rules.eclipse_or_sankranti_in_window",
             return_value=False,
         ):
             self.assertEqual(
@@ -295,10 +295,10 @@ class YajurUpakarmaRuleTests(unittest.TestCase):
 
     def test_short_later_purnima_uses_earlier_day(self):
         with patch(
-            "festival_rules.tithi_intervals",
+            "experimental.festival_rules.tithi_intervals",
             return_value=[(10.1, 11.05)],
         ), patch(
-            "festival_rules.eclipse_or_sankranti_in_window",
+            "experimental.festival_rules.eclipse_or_sankranti_in_window",
             return_value=False,
         ):
             self.assertEqual(
@@ -316,10 +316,10 @@ class YajurUpakarmaRuleTests(unittest.TestCase):
             (date(2031, 8, 3), "K1", "5", False, 1.0, 11.0, 11.5),
         ]
         with patch(
-            "festival_rules.tithi_intervals",
+            "experimental.festival_rules.tithi_intervals",
             return_value=[(10.1, 10.9)],
         ), patch(
-            "festival_rules.eclipse_or_sankranti_in_window",
+            "experimental.festival_rules.eclipse_or_sankranti_in_window",
             return_value=False,
         ):
             self.assertEqual(
@@ -333,13 +333,13 @@ class YajurUpakarmaRuleTests(unittest.TestCase):
 
     def test_bhadrapada_fallback_reuses_short_remnant_rule(self):
         with patch(
-            "festival_rules.tithi_intervals",
+            "experimental.festival_rules.tithi_intervals",
             side_effect=[
                 [(10.1, 11.2)],
                 [(40.1, 41.05)],
             ],
         ), patch(
-            "festival_rules.upakarma_date_is_contaminated",
+            "experimental.festival_rules.upakarma_date_is_contaminated",
             side_effect=[True, False],
         ):
             self.assertEqual(
@@ -353,13 +353,13 @@ class YajurUpakarmaRuleTests(unittest.TestCase):
 
     def test_contaminated_bhadrapada_fallback_returns_no_date(self):
         with patch(
-            "festival_rules.tithi_intervals",
+            "experimental.festival_rules.tithi_intervals",
             side_effect=[
                 [(10.1, 11.2)],
                 [(40.1, 41.2)],
             ],
         ), patch(
-            "festival_rules.upakarma_date_is_contaminated",
+            "experimental.festival_rules.upakarma_date_is_contaminated",
             side_effect=[True, True],
         ):
             self.assertEqual(
@@ -377,7 +377,7 @@ class YajurUpakarmaRuleTests(unittest.TestCase):
             (date(2030, 9, 14), "K1", "6", False, 1.0, 41.0, 41.5),
         ]
         with patch(
-            "festival_rules.tithi_intervals",
+            "experimental.festival_rules.tithi_intervals",
             return_value=[(40.1, 40.9)],
         ):
             self.assertEqual(

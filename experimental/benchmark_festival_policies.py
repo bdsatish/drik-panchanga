@@ -27,7 +27,7 @@ from zoneinfo import ZoneInfo
 
 import panchanga
 
-from festival_rules import (
+from experimental.festival_rules import (
     TRADITIONAL_FESTIVAL_POLICY,
     FESTIVAL_POLICIES,
     resolve_festivals,

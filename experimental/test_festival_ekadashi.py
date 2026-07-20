@@ -4,13 +4,13 @@ from datetime import date, timedelta
 import unittest
 from unittest.mock import patch
 
-from festival_rules import (
+from experimental.festival_rules import (
     format_festival_dates,
     resolve_festivals,
     resolve_generic_udaya_ekadashi_dates,
     select_vaikuntha_ekadashi_dates,
 )
-from festival_test_helpers import festival_rule, record
+from experimental.festival_test_helpers import festival_rule, record
 
 
 class VaikunthaEkadashiRuleTests(unittest.TestCase):
@@ -25,10 +25,10 @@ class VaikunthaEkadashiRuleTests(unittest.TestCase):
 
     def test_empty_occurrence_is_rendered_as_none(self):
         with patch(
-            "festival_rules.FESTIVAL_RULES",
+            "experimental.festival_rules.FESTIVAL_RULES",
             (self.rule,),
         ), patch(
-            "festival_rules.select_vaikuntha_ekadashi_dates",
+            "experimental.festival_rules.select_vaikuntha_ekadashi_dates",
             return_value=[],
         ):
             festivals_by_date, entries = resolve_festivals([], {})
@@ -41,10 +41,10 @@ class VaikunthaEkadashiRuleTests(unittest.TestCase):
     def test_empty_nonoptional_festival_remains_an_error(self):
         janmashtami = festival_rule("Janmashtami")
         with patch(
-            "festival_rules.FESTIVAL_RULES",
+            "experimental.festival_rules.FESTIVAL_RULES",
             (janmashtami,),
         ), patch(
-            "festival_rules.select_janmashtami_dates",
+            "experimental.festival_rules.select_janmashtami_dates",
             return_value=[],
         ):
             with self.assertRaisesRegex(
@@ -61,10 +61,10 @@ class VaikunthaEkadashiRuleTests(unittest.TestCase):
             (pusya, "S11", "10", False, 3.0, 20.0, 20.5),
         ]
         with patch(
-            "festival_rules.resolve_dharma_sindhu_vaishnava_ekadashi_dates",
+            "experimental.festival_rules.resolve_dharma_sindhu_vaishnava_ekadashi_dates",
             return_value=[margasirsa, pusya],
         ), patch(
-            "festival_rules.panchanga.raasi",
+            "experimental.festival_rules.panchanga.raasi",
             side_effect=[8, 9],
         ):
             self.assertEqual(
@@ -78,10 +78,10 @@ class VaikunthaEkadashiRuleTests(unittest.TestCase):
             (fast_date, "S12", "9", False, 3.0, 10.0, 10.5),
         ]
         with patch(
-            "festival_rules.resolve_dharma_sindhu_vaishnava_ekadashi_dates",
+            "experimental.festival_rules.resolve_dharma_sindhu_vaishnava_ekadashi_dates",
             return_value=[fast_date],
         ), patch(
-            "festival_rules.panchanga.raasi",
+            "experimental.festival_rules.panchanga.raasi",
             return_value=9,
         ):
             self.assertEqual(
@@ -95,10 +95,10 @@ class VaikunthaEkadashiRuleTests(unittest.TestCase):
             (fast_date, "K11", "9", False, 3.0, 10.0, 10.5),
         ]
         with patch(
-            "festival_rules.resolve_dharma_sindhu_vaishnava_ekadashi_dates",
+            "experimental.festival_rules.resolve_dharma_sindhu_vaishnava_ekadashi_dates",
             return_value=[fast_date],
         ), patch(
-            "festival_rules.panchanga.raasi",
+            "experimental.festival_rules.panchanga.raasi",
             return_value=9,
         ):
             self.assertEqual(
@@ -112,10 +112,10 @@ class VaikunthaEkadashiRuleTests(unittest.TestCase):
             (fast_date, "S11", "10", True, 3.0, 10.0, 10.5),
         ]
         with patch(
-            "festival_rules.resolve_dharma_sindhu_vaishnava_ekadashi_dates",
+            "experimental.festival_rules.resolve_dharma_sindhu_vaishnava_ekadashi_dates",
             return_value=[fast_date],
         ), patch(
-            "festival_rules.panchanga.raasi",
+            "experimental.festival_rules.panchanga.raasi",
             return_value=9,
         ):
             self.assertEqual(
@@ -131,10 +131,10 @@ class VaikunthaEkadashiRuleTests(unittest.TestCase):
             (second, "S11", "9", False, 3.0, 20.0, 20.5),
         ]
         with patch(
-            "festival_rules.resolve_dharma_sindhu_vaishnava_ekadashi_dates",
+            "experimental.festival_rules.resolve_dharma_sindhu_vaishnava_ekadashi_dates",
             return_value=[first, second],
         ), patch(
-            "festival_rules.panchanga.raasi",
+            "experimental.festival_rules.panchanga.raasi",
             return_value=9,
         ):
             self.assertEqual(
@@ -148,7 +148,7 @@ class GenericUdayaEkadashiTests(unittest.TestCase):
 
     def _call(self, records):
         with patch(
-            "festival_rules.collect_records",
+            "experimental.festival_rules.collect_records",
             return_value=records,
         ):
             return resolve_generic_udaya_ekadashi_dates([({}, {})], {})
@@ -175,7 +175,7 @@ class GenericUdayaEkadashiTests(unittest.TestCase):
             (date(2030, 8, 5), "S12", "5", False, 1.0, 11.0, 11.5),
         ]
         with patch(
-            "festival_rules.tithi_intervals",
+            "experimental.festival_rules.tithi_intervals",
             return_value=[(10.1, 10.9)],
         ):
             self.assertEqual(self._call(records), [date(2030, 8, 5)])

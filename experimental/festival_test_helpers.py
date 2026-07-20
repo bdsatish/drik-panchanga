@@ -1,6 +1,6 @@
 """Shared builders used by focused festival-rule test modules."""
 
-from festival_rules import FESTIVAL_RULES
+from experimental.festival_rules import FESTIVAL_RULES
 
 
 def record(day, tithi, masa="1", is_adhika=False):

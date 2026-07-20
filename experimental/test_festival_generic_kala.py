@@ -4,7 +4,7 @@ from datetime import date
 import unittest
 from unittest.mock import patch
 
-from festival_rules import (
+from experimental.festival_rules import (
     APARAHNA_KALA,
     ARUNODAYA_KALA,
     GADHARATRI_KALA,
@@ -27,7 +27,7 @@ from festival_rules import (
     select_generic_kala_festival_dates,
     select_valid_generic_kala_festival_dates,
 )
-from festival_test_helpers import festival_rule, record
+from experimental.festival_test_helpers import festival_rule, record
 
 
 class GenericKalaPolicyTests(unittest.TestCase):
@@ -134,10 +134,10 @@ class GenericKalaPolicyTests(unittest.TestCase):
     def test_greater_kala_overlap_wins_competing_date(self):
         rule = festival_rule("Rama Navami")
         with patch(
-            "festival_rules.generic_udaya_occurrences",
+            "experimental.festival_rules.generic_udaya_occurrences",
             return_value=[(date(2030, 4, 11), "1", False)],
         ), patch(
-            "festival_rules.tithi_intervals",
+            "experimental.festival_rules.tithi_intervals",
             return_value=[(10.30, 11.25)],
         ):
             self.assertEqual(
@@ -148,10 +148,10 @@ class GenericKalaPolicyTests(unittest.TestCase):
     def test_midpoint_distance_resolves_missing_window(self):
         rule = festival_rule("Rama Navami")
         with patch(
-            "festival_rules.generic_udaya_occurrences",
+            "experimental.festival_rules.generic_udaya_occurrences",
             return_value=[(date(2030, 4, 11), "1", False)],
         ), patch(
-            "festival_rules.tithi_intervals",
+            "experimental.festival_rules.tithi_intervals",
             return_value=[(10.85, 10.95)],
         ):
             self.assertEqual(
@@ -176,10 +176,10 @@ class GenericKalaPolicyTests(unittest.TestCase):
         shravana_date = date(2030, 8, 15)
         bhadrapada_date = date(2030, 9, 14)
         with patch(
-            "festival_rules.select_generic_kala_festival_dates",
+            "experimental.festival_rules.select_generic_kala_festival_dates",
             side_effect=[[shravana_date], [bhadrapada_date]],
         ) as selector, patch(
-            "festival_rules.generic_kala_date_is_valid",
+            "experimental.festival_rules.generic_kala_date_is_valid",
             side_effect=[False, True],
         ):
             self.assertEqual(
@@ -201,13 +201,13 @@ class GenericKalaPolicyTests(unittest.TestCase):
     def test_yajur_returns_none_when_fallback_is_also_defective(self):
         rule = festival_rule("Yajur Upakarma")
         with patch(
-            "festival_rules.select_generic_kala_festival_dates",
+            "experimental.festival_rules.select_generic_kala_festival_dates",
             side_effect=[
                 [date(2030, 8, 15)],
                 [date(2030, 9, 14)],
             ],
         ), patch(
-            "festival_rules.generic_kala_date_is_valid",
+            "experimental.festival_rules.generic_kala_date_is_valid",
             side_effect=[False, False],
         ):
             self.assertEqual(
@@ -237,19 +237,19 @@ class GenericKalaPolicyTests(unittest.TestCase):
         rule = festival_rule("Rama Navami")
         selected_date = date(2030, 4, 11)
         with patch(
-            "festival_rules.FESTIVAL_RULES",
+            "experimental.festival_rules.FESTIVAL_RULES",
             (rule,),
         ), patch(
-            "festival_rules.collect_records",
+            "experimental.festival_rules.collect_records",
             return_value=[self.days[1]],
         ), patch(
-            "festival_rules.collect_moonrise_jds",
+            "experimental.festival_rules.collect_moonrise_jds",
             return_value={},
         ), patch(
-            "festival_rules.select_generic_kala_festival_dates",
+            "experimental.festival_rules.select_generic_kala_festival_dates",
             return_value=[selected_date],
         ) as selector, patch(
-            "festival_rules.select_rama_navami_dates",
+            "experimental.festival_rules.select_rama_navami_dates",
             side_effect=AssertionError("traditional selector called"),
         ):
             _, entries = resolve_festivals(
@@ -266,16 +266,16 @@ class GenericKalaPolicyTests(unittest.TestCase):
         rule = festival_rule("Janmashtami")
         selected_date = self.days[1][0]
         with patch(
-            "festival_rules.FESTIVAL_RULES",
+            "experimental.festival_rules.FESTIVAL_RULES",
             (rule,),
         ), patch(
-            "festival_rules.collect_records",
+            "experimental.festival_rules.collect_records",
             return_value=[self.days[1]],
         ), patch(
-            "festival_rules.collect_moonrise_jds",
+            "experimental.festival_rules.collect_moonrise_jds",
             return_value={},
         ), patch(
-            "festival_rules.select_generic_kala_festival_dates",
+            "experimental.festival_rules.select_generic_kala_festival_dates",
             return_value=[selected_date],
         ):
             _, entries = resolve_festivals(

@@ -4,7 +4,7 @@ from datetime import date
 import unittest
 from unittest.mock import patch
 
-from festival_rules import (
+from experimental.festival_rules import (
     FestivalRule,
     GENERIC_UDAYA_FESTIVAL_POLICY,
     generic_udaya_occurrences,
@@ -12,7 +12,7 @@ from festival_rules import (
     resolve_festivals,
     select_generic_udaya_festival_dates,
 )
-from festival_test_helpers import festival_rule, record
+from experimental.festival_test_helpers import festival_rule, record
 
 
 class GenericUdayaPolicyTests(unittest.TestCase):
@@ -39,7 +39,7 @@ class GenericUdayaPolicyTests(unittest.TestCase):
             (date(2030, 8, 5), "S6", "5", False, 1.0, 11.0, 11.5),
         ]
         with patch(
-            "festival_rules.tithi_intervals",
+            "experimental.festival_rules.tithi_intervals",
             return_value=[(10.1, 10.9)],
         ):
             self.assertEqual(
@@ -54,7 +54,7 @@ class GenericUdayaPolicyTests(unittest.TestCase):
             (date(2030, 5, 2), "S2", "2", False, 1.0, 11.0, 11.5),
         ]
         with patch(
-            "festival_rules.tithi_intervals",
+            "experimental.festival_rules.tithi_intervals",
             return_value=[(10.1, 10.9)],
         ):
             self.assertEqual(
@@ -99,16 +99,16 @@ class GenericUdayaPolicyTests(unittest.TestCase):
             ),
         ]
         with patch(
-            "festival_rules.FESTIVAL_RULES",
+            "experimental.festival_rules.FESTIVAL_RULES",
             (rule,),
         ), patch(
-            "festival_rules.collect_records",
+            "experimental.festival_rules.collect_records",
             return_value=records,
         ), patch(
-            "festival_rules.collect_moonrise_jds",
+            "experimental.festival_rules.collect_moonrise_jds",
             return_value={},
         ), patch(
-            "festival_rules.select_makara_sankranti_dates",
+            "experimental.festival_rules.select_makara_sankranti_dates",
             return_value=[selected_date],
         ) as selector:
             _, entries = resolve_festivals(
@@ -136,16 +136,16 @@ class GenericUdayaPolicyTests(unittest.TestCase):
             ),
         ]
         with patch(
-            "festival_rules.FESTIVAL_RULES",
+            "experimental.festival_rules.FESTIVAL_RULES",
             (rule,),
         ), patch(
-            "festival_rules.collect_records",
+            "experimental.festival_rules.collect_records",
             return_value=records,
         ), patch(
-            "festival_rules.collect_moonrise_jds",
+            "experimental.festival_rules.collect_moonrise_jds",
             return_value={},
         ), patch(
-            "festival_rules.select_rama_navami_dates",
+            "experimental.festival_rules.select_rama_navami_dates",
             side_effect=AssertionError("traditional selector called"),
         ):
             _, entries = resolve_festivals(

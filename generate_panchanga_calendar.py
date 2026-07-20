@@ -17,18 +17,11 @@ from reportlab.pdfgen import canvas
 
 from festival_rules import (
     FESTIVAL_POLICIES,
-    GENERIC_ANCHOR_FESTIVAL_POLICY,
-    GENERIC_KALA_FESTIVAL_POLICY,
-    GENERIC_MIDPOINT_FESTIVAL_POLICY,
-    GENERIC_UDAYA_FESTIVAL_POLICY,
     TRADITIONAL_FESTIVAL_POLICY,
     resolve_dharma_sindhu_vaishnava_ekadashi_dates,
-    resolve_generic_udaya_ekadashi_dates,
     resolve_festivals,
     GITA_JAYANTI_NUMBER,
     DHANVANTARI_JAYANTI_NUMBER,
-    MAHANAVAMI_PUJA_NUMBER,
-    VIJAYA_DASAMI_NUMBER,
     DASARA_NUMBER,
     AYUDHA_PUJA_NUMBER,
     DURGA_ASHTAMI_NUMBER,
@@ -40,10 +33,6 @@ import panchanga
 MONTH_COUNT = 13
 DEFAULT_CITIES_PATH = Path(__file__).with_name("cities.json")
 RULESET_VERSION = "Dharma-sindhu DS-1.3"
-GENERIC_UDAYA_RULESET_VERSION = "Generic-udaya EXP-2.0"
-GENERIC_MIDPOINT_RULESET_VERSION = "Generic-midpoint EXP-1.0"
-GENERIC_KALA_RULESET_VERSION = "Generic-kala EXP-2.0"
-GENERIC_ANCHOR_RULESET_VERSION = "Generic-anchor EXP-2.0"
 LAYOUT_VERSION = "A4-1.1"
 PDF_AUTHOR = "Satish BD"
 PDF_AUTHOR_EMAIL = "bdsatish@gmail.com"
@@ -57,14 +46,6 @@ PDF_SOURCE_URL = "https://github.com/bdsatish/drik-panchanga"
 def ruleset_version(festival_policy):
     if festival_policy == TRADITIONAL_FESTIVAL_POLICY:
         return RULESET_VERSION
-    if festival_policy == GENERIC_UDAYA_FESTIVAL_POLICY:
-        return GENERIC_UDAYA_RULESET_VERSION
-    if festival_policy == GENERIC_MIDPOINT_FESTIVAL_POLICY:
-        return GENERIC_MIDPOINT_RULESET_VERSION
-    if festival_policy == GENERIC_KALA_FESTIVAL_POLICY:
-        return GENERIC_KALA_RULESET_VERSION
-    if festival_policy == GENERIC_ANCHOR_FESTIVAL_POLICY:
-        return GENERIC_ANCHOR_RULESET_VERSION
     raise ValueError(f"Unknown festival policy: {festival_policy}")
 
 
@@ -830,14 +811,9 @@ def build_pdf(
         end_month,
         calendar.monthrange(end_year, end_month)[1],
     )
-    resolve_ekadashi = (
-        resolve_generic_udaya_ekadashi_dates
-        if festival_policy == GENERIC_UDAYA_FESTIVAL_POLICY
-        else resolve_dharma_sindhu_vaishnava_ekadashi_dates
-    )
     ekadashi_dates = {
         value
-        for value in resolve_ekadashi(
+        for value in resolve_dharma_sindhu_vaishnava_ekadashi_dates(
             context_months,
             context_data,
         )
