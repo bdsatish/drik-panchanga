@@ -48,8 +48,6 @@ NON_TITHI_FESTIVAL_RULES = (
     (23, "Makara Sankranti"),
 )
 
-MAKARA_RAASI = 10
-
 
 def collect_records(months, month_data):
     """Flatten daily panchanga rows into civil-date records.
@@ -287,6 +285,7 @@ def select_makara_sankranti_dates(records):
     Each transition into Makara yields one date (the first sunrise with
     ``panchanga.raasi(sunrise_jd) == 10`` after a non-Makara sunrise).
     """
+    MAKARA_RAASI = 10
     selected = []
     previous_raasi = None
     for civil_date, _tithi, _nakshatra, _masa, _is_adhika, sunrise_jd in sorted(
@@ -319,10 +318,8 @@ def resolve_festivals(
     *,
     context_months=None,
     context_data=None,
-    geopos=None,
 ):
     """Resolve tithi and non-tithi festivals for the PDF calendar."""
-    del geopos  # reserved for later astronomy-dependent rules
     if (context_months is None) != (context_data is None):
         raise ValueError("context_months and context_data must be supplied together")
 

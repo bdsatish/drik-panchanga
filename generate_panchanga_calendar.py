@@ -255,13 +255,9 @@ def daily_values(year, month, location):
         )
         jd = panchanga.gregorian_to_jd(date)
         try:
-            sunrise_result = panchanga.sunrise(jd, place)
-            sunrise_jd = sunrise_result[0]
+            sunrise_jd = panchanga.sunrise(jd, place)[0]
             if not jd - 1 <= sunrise_jd <= jd + 2:
                 raise RuntimeError("no local sunrise")
-            sunset_jd = panchanga.sunset(jd, place)[0]
-            if not jd - 1 <= sunset_jd <= jd + 2:
-                raise RuntimeError("no local sunset")
             tithi_number = panchanga.tithi(jd, place)[0]
             nakshatra_number = panchanga.nakshatra(jd, place)[0]
             yoga_number = panchanga.yoga(jd, place)[0]
@@ -733,7 +729,6 @@ def build_pdf(
         month_data,
         context_months=context_months,
         context_data=context_data,
-        geopos=(location.longitude, location.latitude, 0.0),
     )
 
     range_start = CivilDate(start_year, start_month, 1)
