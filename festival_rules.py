@@ -97,18 +97,34 @@ def format_festival_dates(dates):
     )
 
 
+def resolve_vriddhi_dates(dates):
+    """Keep the earlier day when a festival prevails at consecutive sunrises."""
+    resolved = []
+    previous = None
+    for civil_date in sorted(dates):
+        if previous is not None and civil_date == previous + timedelta(days=1):
+            previous = civil_date
+            continue
+        resolved.append(civil_date)
+        previous = civil_date
+    return resolved
+
+
 def select_plain_tithi_dates(records, masa, tithi, *, allow_adhika=False):
     """Civil days whose sunrise tithi matches the rule masa.
 
     By default only non-adhika months match. When ``allow_adhika`` is true
     (Ugadi), both shuddha and adhika forms of the masa are accepted.
+
+    Vriddhi (same match at consecutive sunrises) keeps the former date.
     """
     masa_codes = {str(masa), f"A{masa}"} if allow_adhika else {str(masa)}
-    return [
+    matches = [
         civil_date
         for civil_date, day_tithi, day_masa, _is_adhika in records
         if day_tithi == tithi and day_masa in masa_codes
     ]
+    return resolve_vriddhi_dates(matches)
 
 
 def resolve_festivals(
