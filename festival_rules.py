@@ -207,13 +207,28 @@ def select_tithi_dates(records, tithi, *, masa=None, allow_adhika=False):
 
 
 def select_plain_tithi_dates(records, masa, tithi, *, allow_adhika=False):
-    """Civil days for a plain masa+tithi festival."""
-    return select_tithi_dates(
+    """Civil days for a plain masa+tithi festival.
+
+    When ``allow_adhika`` is true (Ugadi), adhika and shuddha masas both
+    match, but if any adhika occurrence exists only the adhika dates are
+    kept — matching the generic-udaya policy.
+    """
+    matches = select_tithi_dates(
         records,
         tithi,
         masa=masa,
         allow_adhika=allow_adhika,
     )
+    if not allow_adhika or not matches:
+        return matches
+    records_by_date = {record[0]: record for record in records}
+    adhika_matches = [
+        civil_date
+        for civil_date in matches
+        if records_by_date[civil_date][4]
+        or str(records_by_date[civil_date][3]).startswith("A")
+    ]
+    return adhika_matches if adhika_matches else matches
 
 
 def select_varamahalakshmi_dates(records):

@@ -28,6 +28,18 @@ def day_row(day, tithi, masa, is_adhika=False, sunrise_jd=0.0, nakshatra=1, yoga
     return (day, tithi, nakshatra, yoga, masa, is_adhika, sunrise_jd)
 
 
+def festival_record(
+    civil_date,
+    tithi,
+    masa="1",
+    is_adhika=False,
+    nakshatra=1,
+    sunrise_jd=0.0,
+):
+    """One festival record: civil_date, tithi, nakshatra, masa, is_adhika, sunrise_jd."""
+    return (civil_date, tithi, nakshatra, masa, is_adhika, sunrise_jd)
+
+
 def append_solar_coverage_rows(rows):
     """Append synthetic rows for Vaikuntha and Makara Sankranti coverage."""
     rows.append(day_row(len(rows) + 1, "K1", "12"))
@@ -133,10 +145,19 @@ class SelectPlainTithiTests(unittest.TestCase):
             [date(2030, 4, 9)],
         )
 
-    def test_ugadi_allows_adhika_chaitra(self):
+    def test_ugadi_prefers_adhika_chaitra(self):
         self.assertEqual(
             select_plain_tithi_dates(self.records, 1, "S1", allow_adhika=True),
-            [date(2030, 3, 10), date(2030, 4, 9)],
+            [date(2030, 3, 10)],
+        )
+
+    def test_ugadi_keeps_nija_when_no_adhika(self):
+        records = [
+            festival_record(date(2030, 4, 9), "S1", masa="1"),
+        ]
+        self.assertEqual(
+            select_plain_tithi_dates(records, 1, "S1", allow_adhika=True),
+            [date(2030, 4, 9)],
         )
 
     def test_vriddhi_keeps_former_of_consecutive_matches(self):
@@ -555,6 +576,138 @@ class ResolveEkadashiTests(unittest.TestCase):
                 date(2030, 6, 10),
                 date(2030, 6, 21),
             ],
+        )
+
+
+class GenericUdayaParityTests(unittest.TestCase):
+    """Borrowed from experimental/test_festival_generic_udaya.py (+ ekadashi).
+
+    Behaviour must match the generic-udaya sunrise/vriddhi/kshaya policy.
+    Kshaya is detected from consecutive sunrise tithi skips (no interval patch).
+    """
+
+    def test_plain_tithi_parser_rejects_conditional_rules(self):
+        self.assertEqual(plain_tithi_number("S15"), 15)
+        self.assertEqual(plain_tithi_number("K15"), 30)
+        self.assertIsNone(plain_tithi_number("Dhanur-masa S11"))
+        self.assertIsNone(plain_tithi_number("Solar"))
+
+    def test_vriddhi_tithi_uses_first_sunrise(self):
+        records = [
+            festival_record(date(2030, 8, 4), "S5", masa="5"),
+            festival_record(date(2030, 8, 5), "S5", masa="5"),
+            festival_record(date(2030, 8, 6), "S6", masa="5"),
+        ]
+        self.assertEqual(
+            select_plain_tithi_dates(records, 5, "S5"),
+            [date(2030, 8, 4)],
+        )
+
+    def test_kshaya_tithi_uses_following_sunrise_date(self):
+        records = [
+            festival_record(date(2030, 8, 4), "S4", masa="5"),
+            festival_record(date(2030, 8, 5), "S6", masa="5"),
+        ]
+        self.assertEqual(
+            select_plain_tithi_dates(records, 5, "S5"),
+            [date(2030, 8, 5)],
+        )
+
+    def test_kshaya_shukla_pratipada_uses_following_masa_metadata(self):
+        records = [
+            festival_record(date(2030, 5, 1), "K15", masa="1"),
+            festival_record(date(2030, 5, 2), "S2", masa="2"),
+        ]
+        self.assertEqual(
+            select_plain_tithi_dates(records, 2, "S1"),
+            [date(2030, 5, 2)],
+        )
+
+    def test_default_month_policy_excludes_adhika_occurrence(self):
+        records = [
+            festival_record(date(2030, 5, 3), "S3", masa="A2", is_adhika=True),
+            festival_record(date(2030, 6, 2), "S3", masa="2"),
+        ]
+        self.assertEqual(
+            select_plain_tithi_dates(records, 2, "S3"),
+            [date(2030, 6, 2)],
+        )
+
+    def test_ugadi_preserves_adhika_chaitra_preference(self):
+        records = [
+            festival_record(date(2030, 3, 5), "S1", masa="A1", is_adhika=True),
+            festival_record(date(2030, 4, 4), "S1", masa="1"),
+        ]
+        self.assertEqual(
+            select_plain_tithi_dates(records, 1, "S1", allow_adhika=True),
+            [date(2030, 3, 5)],
+        )
+
+    def test_rama_navami_uses_plain_tithi_not_a_special_selector(self):
+        records = [
+            festival_record(date(2030, 4, 11), "S9", masa="1"),
+        ]
+        self.assertEqual(
+            select_plain_tithi_dates(records, 1, "S9"),
+            [date(2030, 4, 11)],
+        )
+        self.assertEqual(
+            next(rule for rule in TITHI_FESTIVAL_RULES if rule[1] == "Rama Navami"),
+            (2, "Rama Navami", 1, "S9"),
+        )
+
+    def test_normal_single_ekadashi_at_sunrise(self):
+        months = [(2030, 3)]
+        month_data = {
+            (2030, 3): [
+                day_row(20, "S11", "1"),
+                day_row(21, "S12", "1"),
+                day_row(22, "S13", "1"),
+            ]
+        }
+        self.assertEqual(
+            resolve_ekadashi_dates(months, month_data),
+            [date(2030, 3, 20)],
+        )
+
+    def test_vriddhi_ekadashi_uses_first_day(self):
+        months = [(2030, 3)]
+        month_data = {
+            (2030, 3): [
+                day_row(20, "S11", "1"),
+                day_row(21, "S11", "1"),
+                day_row(22, "S12", "1"),
+            ]
+        }
+        self.assertEqual(
+            resolve_ekadashi_dates(months, month_data),
+            [date(2030, 3, 20)],
+        )
+
+    def test_kshaya_ekadashi_uses_next_day(self):
+        months = [(2030, 8)]
+        month_data = {
+            (2030, 8): [
+                day_row(4, "S10", "5"),
+                day_row(5, "S12", "5"),
+            ]
+        }
+        self.assertEqual(
+            resolve_ekadashi_dates(months, month_data),
+            [date(2030, 8, 5)],
+        )
+
+    def test_both_pakshas_are_resolved(self):
+        months = [(2030, 3)]
+        month_data = {
+            (2030, 3): [
+                day_row(6, "S11", "1"),
+                day_row(20, "K11", "1"),
+            ]
+        }
+        self.assertEqual(
+            resolve_ekadashi_dates(months, month_data),
+            [date(2030, 3, 6), date(2030, 3, 20)],
         )
 
 
