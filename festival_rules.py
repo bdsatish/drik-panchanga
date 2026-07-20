@@ -342,22 +342,23 @@ def select_rig_upakarma_dates(records, geopos=None):
 
 
 def select_vaikuntha_ekadashi_dates(records):
-    """Margasira or Pausha Shukla Ekadashi while the Sun is in Dhanur.
+    """Margasira or Pausha Shukla Ekadashi upavasa while the Sun is in Dhanur.
 
-    Candidates are ordinary S11 dates in lunar masas 9 and 10 (with the same
-    sunrise/vriddhi/kshaya rules). ``panchanga.raasi`` at local sunrise must
-    be 9 (Dhanur). Returns an empty list when no such sunrise exists in the
-    supplied records (acceptable; the PDF prints ``None``).
+    Candidates are the shared Ekadashi upavasa dates (same sunrise/vriddhi/
+    kshaya rules as ``resolve_ekadashi_dates``), kept only when the civil day
+    falls in lunar masa 9 or 10, remains Shukla, and ``panchanga.raasi`` at
+    sunrise is 9 (Dhanur). Returns an empty list when none qualify (the PDF
+    prints ``None``).
     """
-    candidates = set(select_plain_tithi_dates(records, 9, "S11"))
-    candidates.update(select_plain_tithi_dates(records, 10, "S11"))
     records_by_date = {record[0]: record for record in records}
     selected = []
-    for civil_date in sorted(candidates):
+    for civil_date in ekadashi_dates_from_records(records):
         record = records_by_date.get(civil_date)
         if record is None:
             continue
-        sunrise_jd = record[5]
+        _civil_date, tithi, _nakshatra, masa, _is_adhika, sunrise_jd = record
+        if masa not in {"9", "10"} or not str(tithi).startswith("S"):
+            continue
         if panchanga.raasi(sunrise_jd) == 9:
             selected.append(civil_date)
     return selected
@@ -468,7 +469,11 @@ def resolve_festivals(
 
 def resolve_ekadashi_dates(months, month_data):
     """Resolve Ekadashi upavasa dates with the same sunrise/vriddhi/kshaya rules."""
-    records = collect_records(months, month_data)
+    return ekadashi_dates_from_records(collect_records(months, month_data))
+
+
+def ekadashi_dates_from_records(records):
+    """Civil days for S11 and K11 using sunrise, vriddhi, and kshaya rules."""
     selected = set()
     for tithi in ("S11", "K11"):
         selected.update(select_tithi_dates(records, tithi))

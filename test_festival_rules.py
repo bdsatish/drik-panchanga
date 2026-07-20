@@ -610,6 +610,19 @@ class VaikunthaEkadashiTests(unittest.TestCase):
         with mock.patch("festival_rules.panchanga.raasi", return_value=8):
             self.assertEqual(select_vaikuntha_ekadashi_dates(records), [])
 
+    def test_uses_shared_ekadashi_kshaya_day(self):
+        # S11 skipped between sunrises; upavasa is the following (S12) day.
+        records = [
+            (date(2030, 12, 4), "S10", 1, "9", False, 10.0),
+            (date(2030, 12, 5), "S12", 1, "9", False, 11.0),
+            (date(2030, 12, 6), "S13", 1, "9", False, 12.0),
+        ]
+        with mock.patch("festival_rules.panchanga.raasi", return_value=9):
+            self.assertEqual(
+                select_vaikuntha_ekadashi_dates(records),
+                [date(2030, 12, 5)],
+            )
+
     def test_vaikuntha_ekadashi_may_print_none(self):
         """Tirupati 2086: no Margasira/Pausha S11 while the Sun is in Dhanur."""
         location = load_location("Tirupati")
