@@ -18,7 +18,6 @@ from generate_panchanga_calendar import (
     fitted_font_size,
     load_location,
 )
-from festival_rules import TRADITIONAL_FESTIVAL_POLICY
 
 
 class PdfLayoutTests(unittest.TestCase):
@@ -33,22 +32,15 @@ class PdfLayoutTests(unittest.TestCase):
         self.assertIn(RULESET_VERSION.encode("ascii"), document)
         self.assertIn(LAYOUT_VERSION.encode("ascii"), document)
 
-    def test_cli_defaults_to_traditional_policy(self):
-        arguments = argument_parser().parse_args(
+    def test_cli_has_no_festival_policy_flag(self):
+        parser = argument_parser()
+        arguments = parser.parse_args(
             ["--city", "Helsinki", "--start", "2026-03"]
         )
-        self.assertEqual(
-            arguments.festival_policy,
-            TRADITIONAL_FESTIVAL_POLICY,
-        )
+        self.assertFalse(hasattr(arguments, "festival_policy"))
 
-    def test_traditional_default_filename_has_no_policy_suffix(self):
-        path = default_output_path(
-            load_location("Helsinki"),
-            2026,
-            3,
-            TRADITIONAL_FESTIVAL_POLICY,
-        )
+    def test_default_filename_has_no_policy_suffix(self):
+        path = default_output_path(load_location("Helsinki"), 2026, 3)
         self.assertEqual(
             path.name,
             "helsinki_panchanga_2026-03_to_2027-03.pdf",

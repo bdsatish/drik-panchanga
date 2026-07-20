@@ -15,18 +15,7 @@ from reportlab.lib.colors import HexColor, white
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.pdfgen import canvas
 
-from festival_rules import (
-    FESTIVAL_POLICIES,
-    TRADITIONAL_FESTIVAL_POLICY,
-    resolve_dharma_sindhu_vaishnava_ekadashi_dates,
-    resolve_festivals,
-    GITA_JAYANTI_NUMBER,
-    DHANVANTARI_JAYANTI_NUMBER,
-    DASARA_NUMBER,
-    AYUDHA_PUJA_NUMBER,
-    DURGA_ASHTAMI_NUMBER,
-    RAKSHA_BANDHAN_NUMBER,
-)
+from festival_rules import resolve_ekadashi_dates, resolve_festivals
 import panchanga
 
 
@@ -41,12 +30,6 @@ PDF_COPYRIGHT = (
     "version 3 (or later)."
 )
 PDF_SOURCE_URL = "https://github.com/bdsatish/drik-panchanga"
-
-
-def ruleset_version(festival_policy):
-    if festival_policy == TRADITIONAL_FESTIVAL_POLICY:
-        return RULESET_VERSION
-    raise ValueError(f"Unknown festival policy: {festival_policy}")
 
 
 @dataclass(frozen=True)
@@ -755,10 +738,8 @@ def build_pdf(
     start_year,
     start_month,
     output_path,
-    festival_policy=TRADITIONAL_FESTIVAL_POLICY,
 ):
     panchanga.set_chosen_ayanamsa("citra")
-    selected_ruleset_version = ruleset_version(festival_policy)
     months = list(month_range(start_year, start_month))
     if start_month == 1:
         context_start = (start_year - 1, 12)
@@ -778,31 +759,10 @@ def build_pdf(
     festivals_by_date, festival_entries = resolve_festivals(
         months,
         month_data,
-        festival_policy,
         context_months=context_months,
         context_data=context_data,
         geopos=(location.longitude, location.latitude, 0.0),
     )
-    
-    # Exclude certain festivals from the generated PDF
-    excluded_festivals = {
-        GITA_JAYANTI_NUMBER, 
-        DHANVANTARI_JAYANTI_NUMBER,
-        AYUDHA_PUJA_NUMBER, # Exclude Ayudha Puja (Observance), keep Mahanavami (Puja)
-        DASARA_NUMBER, # Exclude Dasara (Observance), keep Vijayadashami (Puja)
-        DURGA_ASHTAMI_NUMBER, # Exclude Durga Ashtami (Observance), keep Durga Ashtami (Puja)
-        RAKSHA_BANDHAN_NUMBER,
-    }
-    for civil_date in list(festivals_by_date.keys()):
-        festivals_by_date[civil_date] = [
-            num for num in festivals_by_date[civil_date] if num not in excluded_festivals
-        ]
-        if not festivals_by_date[civil_date]:
-            del festivals_by_date[civil_date]
-            
-    festival_entries = [
-        entry for entry in festival_entries if entry[0] not in excluded_festivals
-    ]
 
     range_start = CivilDate(start_year, start_month, 1)
     end_year, end_month = months[-1]
@@ -813,7 +773,7 @@ def build_pdf(
     )
     ekadashi_dates = {
         value
-        for value in resolve_dharma_sindhu_vaishnava_ekadashi_dates(
+        for value in resolve_ekadashi_dates(
             context_months,
             context_data,
         )
@@ -829,12 +789,12 @@ def build_pdf(
         title=f"{location.name} Panchanga {month_span_label(months)}",
         subject=(
             f"Daily tithi, True Citra nakshatra, yoga, and amanta masa at "
-            f"{location.name} sunrise; festival policy={festival_policy}"
+            f"{location.name} sunrise"
         ),
-        ruleset_version=selected_ruleset_version,
+        ruleset_version=RULESET_VERSION,
     )
 
-    draw_page_header(pdf, location, months, selected_ruleset_version)
+    draw_page_header(pdf, location, months, RULESET_VERSION)
 
     margin = 18
     day_column_width = 24
@@ -864,12 +824,7 @@ def build_pdf(
     return output_path
 
 
-def default_output_path(
-    location,
-    start_year,
-    start_month,
-    festival_policy=TRADITIONAL_FESTIVAL_POLICY,
-):
+def default_output_path(location, start_year, start_month):
     months = list(month_range(start_year, start_month))
     end_year, end_month = months[-1]
     city_slug = re.sub(
@@ -877,13 +832,8 @@ def default_output_path(
         "-",
         location.name.casefold(),
     ).strip("-") or "location"
-    policy_suffix = (
-        ""
-        if festival_policy == TRADITIONAL_FESTIVAL_POLICY
-        else f"{festival_policy}_"
-    )
     return Path(
-        f"{city_slug}_panchanga_{policy_suffix}"
+        f"{city_slug}_panchanga_"
         f"{start_year:04d}-{start_month:02d}_to_"
         f"{end_year:04d}-{end_month:02d}.pdf"
     )
@@ -912,12 +862,6 @@ def argument_parser():
         type=Path,
         help="output PDF path (default: generated from city and range)",
     )
-    parser.add_argument(
-        "--festival-policy",
-        choices=FESTIVAL_POLICIES,
-        default=TRADITIONAL_FESTIVAL_POLICY,
-        help="festival date policy (default: traditional)",
-    )
     return parser
 
 
@@ -931,14 +875,12 @@ def main(argv=None):
             location,
             start_year,
             start_month,
-            arguments.festival_policy,
         )
         generated = build_pdf(
             location,
             start_year,
             start_month,
             output_path,
-            arguments.festival_policy,
         )
     except (OSError, ValueError, RuntimeError) as error:
         parser.error(str(error))
