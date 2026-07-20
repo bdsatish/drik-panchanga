@@ -59,7 +59,7 @@ def collect_records(months, month_data):
     sunrise_jd, sunset_jd, yoga, moonrise_jd.
 
     Festival records keep:
-    ``(civil_date, tithi, masa, is_adhika, sunrise_jd, nakshatra)``.
+    ``(civil_date, tithi, nakshatra, masa, is_adhika, sunrise_jd)``.
     """
     records = []
     for year, month in months:
@@ -79,10 +79,10 @@ def collect_records(months, month_data):
                 (
                     CivilDate(year, month, day),
                     tithi,
+                    nakshatra,
                     masa,
                     is_adhika,
                     sunrise_jd,
-                    nakshatra,
                 )
             )
     return records
@@ -175,7 +175,7 @@ def select_kshaya_dates(records, tithi, *, masa=None, allow_adhika=False):
             continue
         if masa_codes is not None:
             masa_record = following if target_tithi <= 15 else record
-            if masa_record[2] not in masa_codes:
+            if masa_record[3] not in masa_codes:
                 continue
         matches.append(following[0])
     return matches
@@ -191,7 +191,7 @@ def select_tithi_dates(records, tithi, *, masa=None, allow_adhika=False):
     sunrise_matches = resolve_vriddhi_dates(
         [
             civil_date
-            for civil_date, day_tithi, day_masa, _is_adhika, _sunrise_jd, _nakshatra in records
+            for civil_date, day_tithi, _nakshatra, day_masa, _is_adhika, _sunrise_jd in records
             if day_tithi == tithi
             and (masa_codes is None or day_masa in masa_codes)
         ]
@@ -243,7 +243,7 @@ def select_rig_upakarma_dates(records):
     SRAVANA_NAKSHATRA = 22
     matches = [
         civil_date
-        for civil_date, _tithi, masa, is_adhika, _sunrise_jd, nakshatra in records
+        for civil_date, _tithi, nakshatra, masa, is_adhika, _sunrise_jd in records
         if masa == "5" and not is_adhika and nakshatra == SRAVANA_NAKSHATRA
     ]
     return resolve_vriddhi_dates(matches)
@@ -264,7 +264,7 @@ def select_vaikuntha_ekadashi_dates(records):
         record = records_by_date.get(civil_date)
         if record is None:
             continue
-        sunrise_jd = record[4]
+        sunrise_jd = record[5]
         if panchanga.raasi(sunrise_jd) == 9:
             selected.append(civil_date)
     return selected
@@ -278,7 +278,7 @@ def select_makara_sankranti_dates(records):
     """
     selected = []
     previous_raasi = None
-    for civil_date, _tithi, _masa, _is_adhika, sunrise_jd, _nakshatra in sorted(
+    for civil_date, _tithi, _nakshatra, _masa, _is_adhika, sunrise_jd in sorted(
         records
     ):
         raasi = panchanga.raasi(sunrise_jd)
