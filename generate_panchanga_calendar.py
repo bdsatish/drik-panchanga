@@ -21,7 +21,7 @@ import panchanga
 
 MONTH_COUNT = 13
 DEFAULT_CITIES_PATH = Path(__file__).with_name("cities.json")
-RULESET_VERSION = "Plain-tithi PT-0.1"
+RULESET_VERSION = "Udaya-Vyapini-1.0"
 LAYOUT_VERSION = "A4-1.1"
 PDF_AUTHOR = "Satish BD"
 PDF_AUTHOR_EMAIL = "bdsatish@gmail.com"
