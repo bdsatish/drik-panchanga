@@ -63,9 +63,7 @@ def collect_records(months, month_data):
     """
     records = []
     for year, month in months:
-        for day, tithi, nakshatra, _yoga, masa, is_adhika, sunrise_jd in month_data[
-            (year, month)
-        ]:
+        for day, tithi, nakshatra, _yoga, masa, is_adhika, sunrise_jd in month_data[(year, month)]:
             records.append((
                 CivilDate(year, month, day),
                 tithi,
@@ -75,6 +73,7 @@ def collect_records(months, month_data):
                 sunrise_jd,
             ))
     return records
+
 
 def format_festival_dates(dates):
     dates = sorted(dates)
@@ -147,10 +146,7 @@ def select_kshaya_dates(records, tithi, *, masa=None, allow_adhika=False):
         end_tithi = plain_tithi_number(next_tithi)
         if start_tithi is None or end_tithi is None:
             continue
-        skipped = [
-            (start_tithi + offset - 1) % 30 + 1
-            for offset in range(1, (end_tithi - start_tithi) % 30)
-        ]
+        skipped = [(start_tithi + offset - 1) % 30 + 1 for offset in range(1, (end_tithi - start_tithi) % 30)]
         if target_tithi not in skipped:
             continue
         if masa_codes is not None:
@@ -201,12 +197,8 @@ def select_plain_tithi_dates(records, masa, tithi, *, allow_adhika=False):
         return matches
     records_by_date = {record[CIVIL_DATE]: record for record in records}
     adhika_matches = [
-        civil_date
-        for civil_date in matches
-        if (
-            records_by_date[civil_date][IS_ADHIKA]
-            or str(records_by_date[civil_date][MASA]).startswith("A")
-        )
+        civil_date for civil_date in matches
+        if (records_by_date[civil_date][IS_ADHIKA] or str(records_by_date[civil_date][MASA]).startswith("A"))
     ]
     return adhika_matches if adhika_matches else matches
 

@@ -112,10 +112,11 @@ covering 13 consecutive Gregorian months. Each day shows:
 
 Calculations use Swiss Ephemeris with the True Citra ayanamsa. Adhika months
 have a gold cell and Sundays have a red right edge. The teal underline marks
-the Dharma-sindhu Vaishnava Ekadashi fasting day. Numbered red superscripts
-refer to the festival key below the calendar. Ruleset and layout versions are
-printed at the top right and embedded in the PDF metadata so a generated
-calendar can be reproduced or compared after rule changes.
+Ekadashi upavasa (`S11` / `K11`) under the same sunrise rule as festivals.
+Numbered red superscripts refer to the festival key below the calendar.
+Ruleset and layout versions are printed at the top right and embedded in the
+PDF metadata so a generated calendar can be reproduced or compared after rule
+changes.
 
 #### Setup
 
@@ -179,32 +180,40 @@ deactivate
 
 #### Festival dates and conventions
 
-Festival dates are resolved for the selected location rather than copied from
-a fixed Indian calendar. Most rules come from the *Dharma-sindhu*, including
-the required sunrise, Arunodaya, Purvahna, Madhyahna, Aparahna, Pradosha,
-Nishitha, nakshatra, ghati, Bhadra, eclipse, and sankranti tests.
+Festival and Ekadashi dates are resolved for the selected location in
+`festival_rules.py` (ruleset `Udaya-Vyapini-1.0`). The older multi-policy
+implementation is kept under `experimental/` for reference only.
 
-Ekadashi underlines follow the *Dharma-sindhu* Vaishnava four-ghati
-Arunodaya rule. They intentionally do not use ISKCON/Gaudiya named
-Mahadvadashi rules. Rig- and Yajurveda Upakarma are calculated independently
-according to their respective nakshatra and tithi rules.
+**Common sunrise rule.** A festival tied to a tithi uses the civil day where
+that tithi prevails at local sunrise. If the same tithi covers two consecutive
+sunrises (vriddhi), the earlier day is kept. If the tithi is skipped between
+sunrises (kshaya), the later civil day is kept. Adhika (intercalary) masas are
+skipped for ordinary festivals. Ugadi is the exception: when both adhika and
+nija Chaitra `S1` occur, only the adhika date is marked.
 
-Some entries are regional observances built on separately documented
-conventions:
+Most numbered festivals are plain amanta masa + tithi pairs under that rule
+(for example Rama Navami = Chaitra `S9`, Deepavali = Ashvina `K15`). Ekadashi
+underlines use the same rule for every `S11` and `K11`; they are not the
+*Dharma-sindhu* four-ghati Arunodaya / Mahadvadashi machinery.
 
-* Ayudha Puja uses the South Indian Ashvina S9 sunrise rule.
-* Gowri Habba uses the *Dharma-sindhu* Gauri/Haritalika Tritiya decision.
-* Vaikuntha Ekadashi is the *Dharma-sindhu* Vaishnava fast falling in solar
-  Dhanur masa; it can be in lunar Margashirsha or Pausha.
+**Non-tithi festivals** have dedicated selectors:
 
-Entries for which no *Dharma-sindhu* rule has yet been established remain
-explicitly provisional: Vasavi Jayanthi, Varamahalakshmi Vrata, Gita
-Jayanthi, Vasavi Atmarpana, and VSN Jayanthi.
+* Varamahalakshmi Vrata — Friday strictly before nija Sravana Purnima (`S15`).
+* Yajur Upakarma — nija Sravana `S15`; if that civil day has a locally visible
+  non-penumbral lunar eclipse, postpone to Bhadrapada `S15`.
+* Rig Upakarma — nija day whose sunrise nakshatra is Sravana (`22`); if that
+  nakshatra is missing at sunrise in Sravana masa, or the chosen day is
+  eclipsed as above, use Bhadrapada's Sravana-nakshatra day. Vriddhi keeps the
+  former sunrise.
+* Vaikuntha Ekadashi — a Margashirsha or Pausha Shukla Ekadashi upavasa day
+  while the Sun is in Dhanur at sunrise. If none qualify, the PDF prints
+  `None`.
+* Makara Sankranti — first civil sunrise after the Sun enters Makara.
 
-The values and festival decisions are sunrise- and location-dependent, so a
-date can differ between cities. A city inside a polar-night or midnight-sun
-period cannot be generated for dates on which Swiss Ephemeris cannot provide
-a local sunrise.
+Dates are sunrise- and location-dependent, so the same festival can fall on
+different Gregorian days in different cities. A city inside a polar-night or
+midnight-sun period cannot be generated for dates on which Swiss Ephemeris
+cannot provide a local sunrise.
 
 #### Example: Ujjain, March 2026 through March 2027
 
