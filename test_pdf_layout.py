@@ -9,6 +9,7 @@ import unittest
 from reportlab.pdfgen.canvas import Canvas
 
 from generate_panchanga_calendar import (
+    DEFAULT_FESTIVALS_PATH,
     LAYOUT_VERSION,
     RULESET_VERSION,
     argument_parser,
@@ -21,6 +22,7 @@ from generate_panchanga_calendar import (
 
 
 class PdfLayoutTests(unittest.TestCase):
+
     def test_generated_calendar_has_exactly_one_page(self):
         with TemporaryDirectory() as directory:
             output = Path(directory) / "calendar.pdf"
@@ -32,12 +34,11 @@ class PdfLayoutTests(unittest.TestCase):
         self.assertIn(RULESET_VERSION.encode("ascii"), document)
         self.assertIn(LAYOUT_VERSION.encode("ascii"), document)
 
-    def test_cli_has_no_festival_policy_flag(self):
+    def test_cli_defaults_festivals_path(self):
         parser = argument_parser()
-        arguments = parser.parse_args(
-            ["--city", "Helsinki", "--start", "2026-03"]
-        )
+        arguments = parser.parse_args(["--city", "Helsinki", "--start", "2026-03"])
         self.assertFalse(hasattr(arguments, "festival_policy"))
+        self.assertEqual(arguments.festivals, DEFAULT_FESTIVALS_PATH)
 
     def test_default_filename_has_no_policy_suffix(self):
         path = default_output_path(load_location("Helsinki"), 2026, 3)
@@ -48,10 +49,8 @@ class PdfLayoutTests(unittest.TestCase):
 
     def test_long_labels_are_fitted_without_overflow(self):
         pdf = Canvas(BytesIO())
-        text = (
-            "A Particularly Long Location Name Panchanga: "
-            "September 2026 - September 2027"
-        )
+        text = ("A Particularly Long Location Name Panchanga: "
+                "September 2026 - September 2027")
         available_width = 300
         size = fitted_font_size(
             pdf,

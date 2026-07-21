@@ -1,6 +1,8 @@
 """Unit tests for the clean-slate plain-tithi festival rules."""
 
 from datetime import date
+from pathlib import Path
+from tempfile import TemporaryDirectory
 import unittest
 from unittest import mock
 
@@ -11,8 +13,10 @@ from festival_rules import (
     NON_TITHI_FESTIVAL_RULES,
     SUNRISE_JD,
     TITHI_FESTIVAL_RULES,
+    all_festival_names,
     collect_records,
     format_festival_dates,
+    load_festival_selection,
     plain_tithi_number,
     resolve_ekadashi_dates,
     resolve_festivals,
@@ -27,6 +31,7 @@ from festival_rules import (
     select_yajur_upakarma_dates,
 )
 from generate_panchanga_calendar import (
+    DEFAULT_FESTIVALS_PATH,
     MONTH_COUNT,
     daily_values,
     load_location,
@@ -91,6 +96,66 @@ class FestivalCatalogTests(unittest.TestCase):
         numbers = sorted([number
                           for number, *_ in TITHI_FESTIVAL_RULES] + [number for number, _ in NON_TITHI_FESTIVAL_RULES])
         self.assertEqual(numbers, list(range(1, 30)))
+
+
+class FestivalSelectionTests(unittest.TestCase):
+
+    def test_shipped_cfg_enables_full_catalog(self):
+        enabled = load_festival_selection(DEFAULT_FESTIVALS_PATH)
+        self.assertEqual(enabled, frozenset(all_festival_names()))
+
+    def test_disable_one_festival_keeps_stable_numbers(self):
+        lines = ["[festivals]"]
+        for name in all_festival_names():
+            value = "no" if name == "Ugadi" else "yes"
+            lines.append(f"{name} = {value}")
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "festivals.cfg"
+            path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+            enabled = load_festival_selection(path)
+
+        months = [(2030, 1)]
+        month_data = covering_month_data()
+        with mock.patch(
+            "festival_rules.panchanga.raasi",
+            side_effect=lambda jd: 10 if jd >= 1000 else 9,
+        ):
+            by_date, entries = resolve_festivals(
+                months,
+                month_data,
+                enabled_names=enabled,
+            )
+        self.assertNotIn("Ugadi", [name for _number, _dates, name in entries])
+        self.assertEqual(entries[0], (2, "Jan 02", "Rama Navami"))
+        self.assertNotIn(1, [n for nums in by_date.values() for n in nums])
+        self.assertIn(2, [n for nums in by_date.values() for n in nums])
+
+    def test_unknown_name_raises(self):
+        body = "[festivals]\n" + "\n".join(f"{name} = yes" for name in all_festival_names())
+        body += "\nExtra Festival = yes\n"
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "festivals.cfg"
+            path.write_text(body, encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "Unknown festival"):
+                load_festival_selection(path)
+
+    def test_missing_name_raises(self):
+        names = list(all_festival_names())
+        body = "[festivals]\n" + "\n".join(f"{name} = yes" for name in names[1:])
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "festivals.cfg"
+            path.write_text(body + "\n", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "Missing festival"):
+                load_festival_selection(path)
+
+    def test_duplicate_name_raises(self):
+        body = "[festivals]\n" + "\n".join(f"{name} = yes" for name in all_festival_names())
+        body += "\nUgadi = no\n"
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "festivals.cfg"
+            path.write_text(body, encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "Duplicate festival"):
+                load_festival_selection(path)
 
 
 class CollectRecordsTests(unittest.TestCase):

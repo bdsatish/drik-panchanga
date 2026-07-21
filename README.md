@@ -166,6 +166,10 @@ python generate_panchanga_calendar.py \
   --output ujjain_panchanga_mar2026_mar2027.pdf
 ```
 
+Which festivals appear in the PDF is controlled by `festivals.cfg` next to the
+generator (every catalog name must be listed as `yes` or `no`). Override the
+path with `--festivals FILE.cfg` if needed.
+
 Run the regression tests with:
 
 ```
@@ -182,7 +186,8 @@ deactivate
 
 Festival and Ekadashi dates are resolved for the selected location in
 `festival_rules.py` (ruleset `Udaya-Vyapini-1.0`). The older multi-policy
-implementation is kept under `experimental/` for reference only.
+implementation is kept under `experimental/` for reference only. The PDF
+includes only festivals enabled in `festivals.cfg` (see Setup above).
 
 **Common sunrise rule.** A festival tied to a tithi uses the civil day where
 that tithi prevails at local sunrise. If the same tithi covers two consecutive

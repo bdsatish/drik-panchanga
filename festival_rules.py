@@ -5,8 +5,10 @@ reference. This module is a clean-slate rebuild.
 """
 
 import calendar
+import configparser
 from datetime import date as CivilDate
 from datetime import timedelta
+from pathlib import Path
 
 import panchanga
 
@@ -50,6 +52,78 @@ NON_TITHI_FESTIVAL_RULES = (
 # Festival record: (civil_date, tithi, nakshatra, masa, is_adhika, sunrise_jd).
 # Prefer unpacking at call sites; use these only for single-field peeks.
 CIVIL_DATE, TITHI, NAKSHATRA, MASA, IS_ADHIKA, SUNRISE_JD = range(6)
+
+_TRUTHY = frozenset({"yes", "true", "1", "on"})
+_FALSY = frozenset({"no", "false", "0", "off"})
+
+
+def all_festival_rules():
+    """Catalog entries as ``(number, name)`` sorted by festival number."""
+    rules = [(number, name) for number, name, _masa, _tithi in TITHI_FESTIVAL_RULES]
+    rules.extend(NON_TITHI_FESTIVAL_RULES)
+    return tuple(sorted(rules, key=lambda item: item[0]))
+
+
+def all_festival_names():
+    """Catalog festival names in ascending number order."""
+    return tuple(name for _number, name in all_festival_rules())
+
+
+def _parse_bool(raw, *, key):
+    value = raw.strip().casefold()
+    if value in _TRUTHY:
+        return True
+    if value in _FALSY:
+        return False
+    raise ValueError(f"Invalid value for festival {key!r}: {raw!r} "
+                     "(use yes/no, true/false, 1/0, or on/off)")
+
+
+def load_festival_selection(path):
+    """Return the frozenset of enabled festival names from an INI cfg.
+
+    The ``[festivals]`` section must list every catalog name exactly once.
+    """
+    path = Path(path)
+    text = path.read_text(encoding="utf-8")
+    seen_keys = []
+    in_festivals = False
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or stripped.startswith(";"):
+            continue
+        if stripped.startswith("[") and stripped.endswith("]"):
+            in_festivals = stripped[1:-1].strip().casefold() == "festivals"
+            continue
+        if not in_festivals or "=" not in stripped:
+            continue
+        key = stripped.split("=", 1)[0].strip()
+        seen_keys.append(key)
+
+    duplicates = sorted({key for key in seen_keys if seen_keys.count(key) > 1})
+    if duplicates:
+        raise ValueError(f"Duplicate festival entries in {path}: {', '.join(duplicates)}")
+
+    parser = configparser.ConfigParser()
+    parser.optionxform = str  # preserve festival name case
+    parser.read_string(text)
+    if not parser.has_section("festivals"):
+        raise ValueError(f"{path} must contain a [festivals] section")
+
+    configured = dict(parser.items("festivals"))
+    catalog = all_festival_names()
+    catalog_set = set(catalog)
+    configured_names = set(configured)
+
+    unknown = sorted(configured_names - catalog_set)
+    if unknown:
+        raise ValueError(f"Unknown festival names in {path}: {', '.join(unknown)}")
+    missing = [name for name in catalog if name not in configured_names]
+    if missing:
+        raise ValueError(f"Missing festival names in {path}: {', '.join(missing)}")
+
+    enabled = frozenset(name for name, raw in configured.items() if _parse_bool(raw, key=name))
+    return enabled
 
 
 def collect_records(months, month_data):
@@ -369,8 +443,13 @@ def resolve_festivals(
     context_months=None,
     context_data=None,
     geopos=None,
+    enabled_names=None,
 ):
-    """Resolve tithi and non-tithi festivals for the PDF calendar."""
+    """Resolve tithi and non-tithi festivals for the PDF calendar.
+
+    When ``enabled_names`` is set, only those catalog festivals are resolved
+    and returned. ``None`` includes the full catalog (unit-test default).
+    """
     if (context_months is None) != (context_data is None):
         raise ValueError("context_months and context_data must be supplied together")
 
@@ -385,6 +464,8 @@ def resolve_festivals(
     names_by_number = {}
 
     for number, name, masa, tithi in TITHI_FESTIVAL_RULES:
+        if enabled_names is not None and name not in enabled_names:
+            continue
         if number == 10:  # Yajur Upakarma
             candidates = select_yajur_upakarma_dates(records, geopos=geopos)
         else:
@@ -402,6 +483,8 @@ def resolve_festivals(
 
     VAIKUNTHA_EKADASI = 22  # 'number' in array NON_TITHI_FESTIVAL_RULES
     for number, name in NON_TITHI_FESTIVAL_RULES:
+        if enabled_names is not None and name not in enabled_names:
+            continue
         matches = [
             civil_date for civil_date in select_non_tithi_dates(records, number, name, geopos=geopos)
             if civil_date in target_dates

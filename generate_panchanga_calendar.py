@@ -15,11 +15,12 @@ from reportlab.lib.colors import HexColor, white
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.pdfgen import canvas
 
-from festival_rules import resolve_ekadashi_dates, resolve_festivals
+from festival_rules import load_festival_selection, resolve_ekadashi_dates, resolve_festivals
 import panchanga
 
 MONTH_COUNT = 13
 DEFAULT_CITIES_PATH = Path(__file__).with_name("cities.json")
+DEFAULT_FESTIVALS_PATH = Path(__file__).with_name("festivals.cfg")
 RULESET_VERSION = "Udaya-Vyapini-1.0"
 LAYOUT_VERSION = "A4-1.1"
 PDF_AUTHOR = "Satish BD"
@@ -673,6 +674,8 @@ def build_pdf(
     start_year,
     start_month,
     output_path,
+    *,
+    festivals_path=None,
 ):
     panchanga.set_chosen_ayanamsa("citra")
     months = list(month_range(start_year, start_month))
@@ -683,12 +686,15 @@ def build_pdf(
     context_months = list(month_range(*context_start, count=MONTH_COUNT + 2))
     context_data = {(year, month): daily_values(year, month, location) for year, month in context_months}
     month_data = {(year, month): context_data[(year, month)] for year, month in months}
+    festivals_path = Path(festivals_path) if festivals_path is not None else DEFAULT_FESTIVALS_PATH
+    enabled_names = load_festival_selection(festivals_path)
     festivals_by_date, festival_entries = resolve_festivals(
         months,
         month_data,
         context_months=context_months,
         context_data=context_data,
         geopos=(location.longitude, location.latitude, 0.0),
+        enabled_names=enabled_names,
     )
 
     range_start = CivilDate(start_year, start_month, 1)
@@ -780,6 +786,13 @@ def argument_parser():
         type=Path,
         help="output PDF path (default: generated from city and range)",
     )
+    parser.add_argument(
+        "--festivals",
+        type=Path,
+        default=DEFAULT_FESTIVALS_PATH,
+        help=(f"INI file selecting which festivals to include "
+              f"(default: {DEFAULT_FESTIVALS_PATH.name})"),
+    )
     return parser
 
 
@@ -799,6 +812,7 @@ def main(argv=None):
             start_year,
             start_month,
             output_path,
+            festivals_path=arguments.festivals,
         )
     except (OSError, ValueError, RuntimeError) as error:
         parser.error(str(error))
