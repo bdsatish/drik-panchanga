@@ -1,6 +1,6 @@
 # Throw-away script for one-time use only.
 #
-# Generates a list of cities whose population is more than 50000
+# Generates cities.json of places whose population is more than 60000.
 #
 # Download cities15000.zip from http://download.geonames.org/export/dump/
 #
@@ -26,7 +26,6 @@ if not os.path.exists(txt_path):
 
 fin = open(txt_path, 'r')
 reader = csv.reader(fin, 'excel-tab')
-fout = open(os.path.join(script_dir, 'cities.csv'), 'w')
 cities = {}
 
 for record in reader:
@@ -37,13 +36,13 @@ for record in reader:
 
     # Ignore small cities
     if int(population) > 60000 and asciiname:
-      cities[asciiname] = {'latitude': float(latitude),
-                           'longitude': float(longitude),
-                           'timezone': timezone}
-      fout.write(u'%s:%s:%s:%s\n' % (asciiname, latitude, longitude, timezone))
+        cities[asciiname] = {
+            'latitude': float(latitude),
+            'longitude': float(longitude),
+            'timezone': timezone,
+        }
 
-fout.close()
-fjson = open(os.path.join(script_dir, 'cities.json'), 'w')
-json.dump(cities, fjson)
-fjson.close()
+with open(os.path.join(script_dir, 'cities.json'), 'w') as fjson:
+    json.dump(cities, fjson)
+
 os.remove(txt_path)
