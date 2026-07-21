@@ -7,7 +7,9 @@ from unittest import mock
 import panchanga
 
 from festival_rules import (
+    CIVIL_DATE,
     NON_TITHI_FESTIVAL_RULES,
+    SUNRISE_JD,
     TITHI_FESTIVAL_RULES,
     collect_records,
     format_festival_dates,
@@ -653,9 +655,15 @@ class VaikunthaEkadashiTests(unittest.TestCase):
         pausha = select_plain_tithi_dates(records, 10, "S11")
         self.assertEqual(margasira, [date(2086, 12, 16)])
         self.assertEqual(pausha, [date(2087, 1, 15)])
-        records_by_date = {record[0]: record for record in records}
-        self.assertEqual(panchanga.raasi(records_by_date[margasira[0]][5]), 8)
-        self.assertEqual(panchanga.raasi(records_by_date[pausha[0]][5]), 10)
+        records_by_date = {record[CIVIL_DATE]: record for record in records}
+        self.assertEqual(
+            panchanga.raasi(records_by_date[margasira[0]][SUNRISE_JD]),
+            8,
+        )
+        self.assertEqual(
+            panchanga.raasi(records_by_date[pausha[0]][SUNRISE_JD]),
+            10,
+        )
 
 
 class MakaraSankrantiTests(unittest.TestCase):

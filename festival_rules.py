@@ -47,6 +47,10 @@ NON_TITHI_FESTIVAL_RULES = (
     (23, "Makara Sankranti"),
 )
 
+# Festival record: (civil_date, tithi, nakshatra, masa, is_adhika, sunrise_jd).
+# Prefer unpacking at call sites; use these only for single-field peeks.
+CIVIL_DATE, TITHI, NAKSHATRA, MASA, IS_ADHIKA, SUNRISE_JD = range(6)
+
 
 def collect_records(months, month_data):
     """Flatten daily panchanga rows into civil-date records.
@@ -59,15 +63,9 @@ def collect_records(months, month_data):
     """
     records = []
     for year, month in months:
-        for (
-                day,
-                tithi,
-                nakshatra,
-                _yoga,
-                masa,
-                is_adhika,
-                sunrise_jd,
-        ) in month_data[(year, month)]:
+        for day, tithi, nakshatra, _yoga, masa, is_adhika, sunrise_jd in month_data[
+            (year, month)
+        ]:
             records.append((
                 CivilDate(year, month, day),
                 tithi,
@@ -77,7 +75,6 @@ def collect_records(months, month_data):
                 sunrise_jd,
             ))
     return records
-
 
 def format_festival_dates(dates):
     dates = sorted(dates)
@@ -142,20 +139,25 @@ def select_kshaya_dates(records, tithi, *, masa=None, allow_adhika=False):
     matches = []
     ordered = sorted(records)
     for record, following in zip(ordered, ordered[1:]):
-        if following[0] != record[0] + timedelta(days=1):
+        civil_date, day_tithi, _nak, day_masa, _adhika, _jd = record
+        next_date, next_tithi, _nak, next_masa, _adhika, _jd = following
+        if next_date != civil_date + timedelta(days=1):
             continue
-        start_tithi = plain_tithi_number(record[1])
-        end_tithi = plain_tithi_number(following[1])
+        start_tithi = plain_tithi_number(day_tithi)
+        end_tithi = plain_tithi_number(next_tithi)
         if start_tithi is None or end_tithi is None:
             continue
-        skipped = [(start_tithi + offset - 1) % 30 + 1 for offset in range(1, (end_tithi - start_tithi) % 30)]
+        skipped = [
+            (start_tithi + offset - 1) % 30 + 1
+            for offset in range(1, (end_tithi - start_tithi) % 30)
+        ]
         if target_tithi not in skipped:
             continue
         if masa_codes is not None:
-            masa_record = following if target_tithi <= 15 else record
-            if masa_record[3] not in masa_codes:
+            check_masa = next_masa if target_tithi <= 15 else day_masa
+            if check_masa not in masa_codes:
                 continue
-        matches.append(following[0])
+        matches.append(next_date)
     return matches
 
 
@@ -197,10 +199,14 @@ def select_plain_tithi_dates(records, masa, tithi, *, allow_adhika=False):
     )
     if not allow_adhika or not matches:
         return matches
-    records_by_date = {record[0]: record for record in records}
+    records_by_date = {record[CIVIL_DATE]: record for record in records}
     adhika_matches = [
-        civil_date for civil_date in matches
-        if records_by_date[civil_date][4] or str(records_by_date[civil_date][3]).startswith("A")
+        civil_date
+        for civil_date in matches
+        if (
+            records_by_date[civil_date][IS_ADHIKA]
+            or str(records_by_date[civil_date][MASA]).startswith("A")
+        )
     ]
     return adhika_matches if adhika_matches else matches
 
@@ -252,13 +258,16 @@ def civil_day_has_eclipse(records, civil_date, geopos):
     """Eclipse visible between this sunrise and the next (Hindu civil day)."""
     if geopos is None:
         return False
-    records_by_date = {record[0]: record for record in records}
+    records_by_date = {record[CIVIL_DATE]: record for record in records}
     record = records_by_date.get(civil_date)
     following = records_by_date.get(civil_date + timedelta(days=1))
     if record is None or following is None:
         return False
-    # index [5] = sunrise_jd, for today and tomorrow
-    return locally_visible_eclipse_in_window(record[5], following[5], geopos)
+    return locally_visible_eclipse_in_window(
+        record[SUNRISE_JD],
+        following[SUNRISE_JD],
+        geopos,
+    )
 
 
 def postpone_upakarma_if_eclipse(primary, fallback, records, geopos):
@@ -316,13 +325,13 @@ def select_vaikuntha_ekadashi_dates(records):
     sunrise is 9 (Dhanur). Returns an empty list when none qualify (the PDF
     prints ``None``).
     """
-    records_by_date = {record[0]: record for record in records}
+    records_by_date = {record[CIVIL_DATE]: record for record in records}
     selected = []
     for civil_date in ekadashi_dates_from_records(records):
         record = records_by_date.get(civil_date)
         if record is None:
             continue
-        _civil_date, tithi, _nakshatra, masa, _is_adhika, sunrise_jd = record
+        _date, tithi, _nakshatra, masa, _is_adhika, sunrise_jd = record
         if masa not in {"9", "10"} or not str(tithi).startswith("S"):
             continue
         if panchanga.raasi(sunrise_jd) == 9:
@@ -374,7 +383,7 @@ def resolve_festivals(
         raise ValueError("context_months and context_data must be supplied together")
 
     target_records = collect_records(months, month_data)
-    target_dates = {record[0] for record in target_records}
+    target_dates = {civil_date for civil_date, *_ in target_records}
     if context_months is not None:
         records = collect_records(context_months, context_data)
     else:
