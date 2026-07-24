@@ -400,7 +400,9 @@ def find_local_eclipses(start_jd, end_jd, geopos):
                         visible_end,
                 )):
                     found.append((kind, phase, maximum, visible_start, visible_end))
-            search_jd = maximum + 1e-4
+            # Advance by a full day. A tiny epsilon can make swe return the same
+            # eclipse again (e.g. a skipped penumbral), which would stall the loop.
+            search_jd = maximum + 1.0
             if len(found) > 64:
                 break
 
