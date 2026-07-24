@@ -24,6 +24,7 @@ from generate_panchanga_calendar import (
     fitted_font_size,
     load_location,
     tithi_display_parts,
+    tithi_font,
     tithi_ink,
 )
 
@@ -111,6 +112,10 @@ class TithiDisplayTests(unittest.TestCase):
             tithi_ink(True, is_masa_start=True, is_adhika=True),
             ADHIKA_INK,
         )
+
+    def test_font_uses_italic_for_krishna(self):
+        self.assertEqual(tithi_font(True), "Helvetica-Bold")
+        self.assertEqual(tithi_font(False), "Helvetica-BoldOblique")
 
 
 if __name__ == "__main__":

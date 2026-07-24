@@ -27,7 +27,7 @@ MONTH_COUNT = 13
 DEFAULT_CITIES_PATH = Path(__file__).with_name("cities.json")
 DEFAULT_FESTIVALS_PATH = Path(__file__).with_name("festivals.cfg")
 RULESET_VERSION = "Udaya-Vyapini-1.0"
-LAYOUT_VERSION = "A4-1.5"
+LAYOUT_VERSION = "A4-1.6"
 PDF_AUTHOR = "Satish BD"
 PDF_AUTHOR_EMAIL = "bdsatish@gmail.com"
 PDF_COPYRIGHT = ("Copyright © Satish BD. Licensed under the GNU Affero GPL "
@@ -314,7 +314,7 @@ def tithi_display_parts(tithi):
     """Return ``(number_text, is_sukla)`` for PDF display without S/K letters.
 
     Internal codes stay ``S11`` / ``K11``; the calendar shows only ``01``–``15``
-    and uses ink color for paksha.
+    and uses ink plus font style for paksha.
     """
     numbers = []
     is_sukla = True
@@ -342,6 +342,11 @@ def tithi_ink(is_sukla, is_masa_start=False, is_adhika=False):
     if is_masa_start:
         return MASA_START_INK
     return ACCENT if is_sukla else KRSNA_INK
+
+
+def tithi_font(is_sukla):
+    """Font for the T cell: upright bold for Sukla, bold italic for Krsna."""
+    return "Helvetica-Bold" if is_sukla else "Helvetica-BoldOblique"
 
 
 def daily_values(year, month, location):
@@ -628,7 +633,7 @@ def draw_month(
             tithi_display,
             centers[0],
             baseline,
-            "Helvetica-Bold",
+            tithi_font(is_sukla),
             7.4,
             tithi_ink(is_sukla, is_masa_start, is_adhika),
         )
@@ -786,7 +791,7 @@ def draw_page_footer(pdf, festival_entries, eclipse_line="Eclipses: None"):
     pdf.drawString(
         18,
         36,
-        "T: 01-15; blue = Sukla, dark = Krsna. N = nakshatra; Y = yoga. "
+        "T: 01-15; Sukla = upright bold, Krsna = bold italic. N = nakshatra; Y = yoga. "
         "Tiny red numbers refer to the festival key. Sundays have a red right "
         "edge; Ekadashi upavasa has a teal T-cell underline; eclipses have a "
         "brown X in the lower-left corner.",

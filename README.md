@@ -113,7 +113,9 @@ covering 13 consecutive Gregorian months. Each day shows:
 Calculations use Swiss Ephemeris with the True Citra ayanamsa. Adhika months
 have a gold cell and Sundays have a red right edge. The teal underline marks
 Ekadashi upavasa (`S11` / `K11` in the ruleset) under the same sunrise rule as festivals.
-A brown X in the lower-left corner marks days with a locally visible eclipse.
+The `T` column shows only `01`-`15`; Sukla is upright bold and Krsna is bold
+italic, so black-and-white prints still distinguish them. A brown X in the
+lower-left corner marks days with a locally visible eclipse.
 Numbered red superscripts refer to the festival key below the calendar. The
 footer also lists locally visible partial, total, and annular eclipses for the
 printed Gregorian range, each with its local visibility window and that date's
