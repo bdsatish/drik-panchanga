@@ -7,7 +7,7 @@ import json
 import re
 from dataclasses import dataclass
 from datetime import date as CivilDate
-from datetime import datetime, timezone as dt_timezone
+from datetime import datetime, timedelta, timezone as dt_timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -27,7 +27,7 @@ MONTH_COUNT = 13
 DEFAULT_CITIES_PATH = Path(__file__).with_name("cities.json")
 DEFAULT_FESTIVALS_PATH = Path(__file__).with_name("festivals.cfg")
 RULESET_VERSION = "Udaya-Vyapini-1.0"
-LAYOUT_VERSION = "A4-1.4"
+LAYOUT_VERSION = "A4-1.5"
 PDF_AUTHOR = "Satish BD"
 PDF_AUTHOR_EMAIL = "bdsatish@gmail.com"
 PDF_COPYRIGHT = ("Copyright © Satish BD. Licensed under the GNU Affero GPL "
@@ -58,6 +58,7 @@ MASA_START_ROW = HexColor("#E4F1E7")
 MASA_START_INK = HexColor("#356846")
 FESTIVAL_INK = HexColor("#9A3154")
 EKADASHI_MARK = HexColor("#168078")
+ECLIPSE_MARK = HexColor("#8B4518")
 
 NAKSHATRA_KEY_LINES = (
     "N: 1 Asvini, 2 Bharani, 3 Krittika, 4 Rohini, 5 Mrgasira, 6 Ardra, "
@@ -223,18 +224,63 @@ def format_local_hm(jd, timezone_name):
     return f"{total_minutes // 60:02d}:{total_minutes % 60:02d}"
 
 
-def format_eclipse_line(eclipses, timezone_name):
-    """Compact footer line for locally visible eclipses with local times."""
+def format_eclipse_line(eclipses, timezone_name, sunrise_by_date=None):
+    """Compact footer line for locally visible eclipses with local times.
+
+    When ``sunrise_by_date`` maps civil dates to sunrise Julian days, each
+    entry also shows that date's local sunrise.
+    """
     if not eclipses:
         return "Eclipses: None"
+    sunrise_by_date = sunrise_by_date or {}
     parts = []
     for kind, phase, maximum_jd, visible_start, visible_end in eclipses:
         civil = jd_to_local_civil_date(maximum_jd, timezone_name)
         start_hm = format_local_hm(visible_start, timezone_name)
         end_hm = format_local_hm(visible_end, timezone_name)
-        parts.append(f"{kind} {calendar.month_abbr[civil.month]} {civil.day:02d} "
-                     f"({phase}) {start_hm}-{end_hm}")
+        part = (f"{kind} {calendar.month_abbr[civil.month]} {civil.day:02d} "
+                f"({phase}) {start_hm}-{end_hm}")
+        sunrise_jd = sunrise_by_date.get(civil)
+        if sunrise_jd is not None:
+            part += f", sunrise {format_local_hm(sunrise_jd, timezone_name)}"
+        parts.append(part)
     return "Eclipses: " + "; ".join(parts)
+
+
+def sunrise_jd_by_civil_date(months, month_data):
+    """Map each printed civil date to its local sunrise Julian day."""
+    result = {}
+    for year, month in months:
+        for day, _tithi, _nakshatra, _yoga, _masa, _is_adhika, sunrise_jd in month_data[(year, month)]:
+            result[CivilDate(year, month, day)] = sunrise_jd
+    return result
+
+
+def eclipse_civil_dates(eclipses, timezone_name):
+    """Local civil dates that overlap any eclipse visibility window."""
+    dates = set()
+    for _kind, _phase, _maximum_jd, visible_start, visible_end in eclipses:
+        start = jd_to_local_datetime(visible_start, timezone_name).date()
+        end = jd_to_local_datetime(visible_end, timezone_name).date()
+        if end < start:
+            start, end = end, start
+        day = start
+        while day <= end:
+            dates.add(day)
+            day += timedelta(days=1)
+    return dates
+
+
+def draw_eclipse_mark(pdf, x, row_y):
+    """Small X in the cell's bottom-left corner for a locally visible eclipse."""
+    pdf.setStrokeColor(ECLIPSE_MARK)
+    pdf.setLineWidth(0.75)
+    inset = 1.5
+    size = 3.4
+    left = x + inset
+    bottom = row_y + inset
+    pdf.line(left, bottom, left + size, bottom + size)
+    pdf.line(left, bottom + size, left + size, bottom)
 
 
 def local_range_jds(start_year, start_month, end_year, end_month, timezone_name):
@@ -430,6 +476,7 @@ def draw_month(
     values,
     festivals_by_date,
     ekadashi_dates,
+    eclipse_dates,
     x,
     top,
     width,
@@ -569,6 +616,8 @@ def draw_month(
                 stroke=0,
                 fill=1,
             )
+        if civil_date in eclipse_dates:
+            draw_eclipse_mark(pdf, x, row_y)
         festival_numbers = festivals_by_date.get(
             civil_date,
             (),
@@ -732,19 +781,20 @@ def draw_page_footer(pdf, festival_entries, eclipse_line="Eclipses: None"):
         "eclipse footer",
     )
     pdf.setFont("Helvetica", eclipse_size)
-    pdf.drawString(18, 48, eclipse_line)
+    pdf.drawString(18, 44, eclipse_line)
     pdf.setFont("Helvetica", 5.4)
     pdf.drawString(
         18,
-        40,
+        36,
         "T: 01-15; blue = Sukla, dark = Krsna. N = nakshatra; Y = yoga. "
         "Tiny red numbers refer to the festival key. Sundays have a red right "
-        "edge; Ekadashi upavasa has a teal T-cell underline.",
+        "edge; Ekadashi upavasa has a teal T-cell underline; eclipses have a "
+        "brown X in the lower-left corner.",
     )
     pdf.setFont("Helvetica", 5.3)
     pdf.drawString(
         18,
-        32,
+        28,
         "Masa: a small upper-left badge marks its first visible tithi; "
         "gold fill denotes adhika. 1 Caitra, 2 Vaisakha, 3 Jyestha, "
         "4 Asadha, 5 Sravana, 6 Bhadrapada, 7 Asvina, 8 Kartika, "
@@ -752,10 +802,10 @@ def draw_page_footer(pdf, festival_entries, eclipse_line="Eclipses: None"):
     )
     pdf.drawString(
         18,
-        24,
+        20,
         f"{NAKSHATRA_KEY_LINES[0]}, {NAKSHATRA_KEY_LINES[1]}",
     )
-    pdf.drawString(18, 16, YOGA_KEY_LINE)
+    pdf.drawString(18, 12, YOGA_KEY_LINE)
 
 
 def build_pdf(
@@ -801,10 +851,14 @@ def build_pdf(
         end_month,
         location.timezone_name,
     )
+    eclipses = find_local_eclipses(eclipse_start_jd, eclipse_end_jd, geopos)
+    sunrise_by_date = sunrise_jd_by_civil_date(months, month_data)
     eclipse_line = format_eclipse_line(
-        find_local_eclipses(eclipse_start_jd, eclipse_end_jd, geopos),
+        eclipses,
         location.timezone_name,
+        sunrise_by_date=sunrise_by_date,
     )
+    eclipse_dates = eclipse_civil_dates(eclipses, location.timezone_name)
     ekadashi_dates = {
         value
         for value in resolve_ekadashi_dates(
@@ -843,6 +897,7 @@ def build_pdf(
             month_data[(year, month)],
             festivals_by_date,
             ekadashi_dates,
+            eclipse_dates,
             x,
             top,
             month_width,

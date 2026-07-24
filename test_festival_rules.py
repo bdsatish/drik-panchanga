@@ -117,8 +117,8 @@ class FestivalSelectionTests(unittest.TestCase):
         months = [(2030, 1)]
         month_data = covering_month_data()
         with mock.patch(
-            "festival_rules.panchanga.raasi",
-            side_effect=lambda jd: 10 if jd >= 1000 else 9,
+                "festival_rules.panchanga.raasi",
+                side_effect=lambda jd: 10 if jd >= 1000 else 9,
         ):
             by_date, entries = resolve_festivals(
                 months,

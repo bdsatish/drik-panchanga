@@ -113,10 +113,11 @@ covering 13 consecutive Gregorian months. Each day shows:
 Calculations use Swiss Ephemeris with the True Citra ayanamsa. Adhika months
 have a gold cell and Sundays have a red right edge. The teal underline marks
 Ekadashi upavasa (`S11` / `K11` in the ruleset) under the same sunrise rule as festivals.
+A brown X in the lower-left corner marks days with a locally visible eclipse.
 Numbered red superscripts refer to the festival key below the calendar. The
 footer also lists locally visible partial, total, and annular eclipses for the
-printed Gregorian range, each with its local visibility window (`None` when
-none qualify). Ruleset and layout versions
+printed Gregorian range, each with its local visibility window and that date's
+sunrise (`None` when none qualify). Ruleset and layout versions
 are printed at the top right and embedded in the PDF metadata so a generated
 calendar can be reproduced or compared after rule changes.
 
@@ -206,12 +207,18 @@ underlines use the same rule for every `S11` and `K11`; they are not the
 **Non-tithi festivals** have dedicated selectors:
 
 * Varamahalakshmi Vrata — Friday strictly before nija Sravana Purnima (`S15`).
-* Yajur Upakarma — nija Sravana `S15`; if that civil day has a locally visible
-  non-penumbral lunar eclipse, postpone to Bhadrapada `S15`.
+* Yajur Upakarma — nija Sravana `S15`. If eclipsed (see below), postpone to
+  Bhadrapada `S15`.
 * Rig Upakarma — nija day whose sunrise nakshatra is Sravana (`22`); if that
   nakshatra is missing at sunrise in Sravana masa, or the chosen day is
-  eclipsed as above, use Bhadrapada's Sravana-nakshatra day. Vriddhi keeps the
-  former sunrise.
+  eclipsed (see below), use Bhadrapada's Sravana-nakshatra day. Vriddhi keeps
+  the former sunrise.
+
+  Upakarma eclipse test (Yajur and Rig): postpone only when a locally visible
+  non-penumbral lunar eclipse overlaps the chosen day's sunrise-to-next-sunrise
+  window. Solar and purely penumbral lunar eclipses are ignored. This is a
+  deliberate Udaya-Vyapini simplification; Dharma-sindhu / Nirnaya-sindhu often
+  use a midnight-to-midnight Upakarma window instead.
 * Vaikuntha Ekadashi — a Margashirsha or Pausha Shukla Ekadashi upavasa day
   while the Sun is in Dhanur at sunrise. If none qualify, the PDF prints
   `None`.
