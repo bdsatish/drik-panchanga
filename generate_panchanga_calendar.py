@@ -7,7 +7,7 @@ import json
 import re
 from dataclasses import dataclass
 from datetime import date as CivilDate
-from datetime import datetime
+from datetime import datetime, timezone as dt_timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -15,14 +15,19 @@ from reportlab.lib.colors import HexColor, white
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.pdfgen import canvas
 
-from festival_rules import load_festival_selection, resolve_ekadashi_dates, resolve_festivals
+from festival_rules import (
+    find_local_eclipses,
+    load_festival_selection,
+    resolve_ekadashi_dates,
+    resolve_festivals,
+)
 import panchanga
 
 MONTH_COUNT = 13
 DEFAULT_CITIES_PATH = Path(__file__).with_name("cities.json")
 DEFAULT_FESTIVALS_PATH = Path(__file__).with_name("festivals.cfg")
 RULESET_VERSION = "Udaya-Vyapini-1.0"
-LAYOUT_VERSION = "A4-1.1"
+LAYOUT_VERSION = "A4-1.3"
 PDF_AUTHOR = "Satish BD"
 PDF_AUTHOR_EMAIL = "bdsatish@gmail.com"
 PDF_COPYRIGHT = ("Copyright © Satish BD. Licensed under the GNU Affero GPL "
@@ -196,6 +201,52 @@ def load_location(city):
         raise ValueError(message)
     name = matching_names[0]
     return location_from_mapping(name, locations[name])
+
+
+def jd_to_local_datetime(jd, timezone_name):
+    """Convert a UT Julian day to local ``datetime`` in ``timezone_name``."""
+    utc = datetime.fromtimestamp((jd - 2440587.5) * 86400.0, tz=dt_timezone.utc)
+    return utc.astimezone(ZoneInfo(timezone_name))
+
+
+def jd_to_local_civil_date(jd, timezone_name):
+    """Convert a UT Julian day to the civil date in ``timezone_name``."""
+    return jd_to_local_datetime(jd, timezone_name).date()
+
+
+def format_local_hm(jd, timezone_name):
+    """Format a UT Julian day as local ``HH:MM``, rounded to the nearest minute."""
+    local = jd_to_local_datetime(jd, timezone_name)
+    total_minutes = int(round(local.hour * 60 + local.minute + local.second / 60.0))
+    total_minutes %= 24 * 60
+    return f"{total_minutes // 60:02d}:{total_minutes % 60:02d}"
+
+
+def format_eclipse_line(eclipses, timezone_name):
+    """Compact footer line for locally visible eclipses with local times."""
+    if not eclipses:
+        return "Eclipses: None"
+    parts = []
+    for kind, phase, maximum_jd, visible_start, visible_end in eclipses:
+        civil = jd_to_local_civil_date(maximum_jd, timezone_name)
+        start_hm = format_local_hm(visible_start, timezone_name)
+        end_hm = format_local_hm(visible_end, timezone_name)
+        parts.append(
+            f"{kind} {calendar.month_abbr[civil.month]} {civil.day:02d} "
+            f"({phase}) {start_hm}-{end_hm}"
+        )
+    return "Eclipses: " + "; ".join(parts)
+
+
+def local_range_jds(start_year, start_month, end_year, end_month, timezone_name):
+    """UT Julian days covering the printed Gregorian months in local civil time."""
+    timezone = ZoneInfo(timezone_name)
+    last_day = calendar.monthrange(end_year, end_month)[1]
+    start_local = datetime(start_year, start_month, 1, 0, 0, 0, tzinfo=timezone)
+    end_local = datetime(end_year, end_month, last_day, 23, 59, 59, tzinfo=timezone)
+    start_jd = start_local.timestamp() / 86400.0 + 2440587.5
+    end_jd = end_local.timestamp() / 86400.0 + 2440587.5
+    return start_jd, end_jd
 
 
 def timezone_hours(timezone, year, month, day):
@@ -597,7 +648,7 @@ def draw_page_header(pdf, location, months, ruleset_version):
     )
 
 
-def draw_page_footer(pdf, festival_entries):
+def draw_page_footer(pdf, festival_entries, eclipse_line="Eclipses: None"):
     pdf.setFillColor(FESTIVAL_INK)
 
     columns = 6
@@ -633,7 +684,7 @@ def draw_page_footer(pdf, festival_entries):
             f"festival entry {number}",
         )
         entry_x = 18 + column * column_width
-        entry_y = 88 - row * 8
+        entry_y = 86 - row * 8
         pdf.setFont("Helvetica-Bold", marker_size)
         pdf.drawString(entry_x, entry_y + 2.0, marker)
         pdf.setFont("Helvetica", entry_size)
@@ -644,10 +695,28 @@ def draw_page_footer(pdf, festival_entries):
         )
 
     pdf.setFillColor(MUTED)
+    eclipse_size = fitted_font_size(
+        pdf,
+        eclipse_line,
+        "Helvetica",
+        5.4,
+        4.6,
+        landscape(A4)[0] - 36,
+    )
+    ensure_text_fits(
+        pdf,
+        eclipse_line,
+        "Helvetica",
+        eclipse_size,
+        landscape(A4)[0] - 36,
+        "eclipse footer",
+    )
+    pdf.setFont("Helvetica", eclipse_size)
+    pdf.drawString(18, 48, eclipse_line)
     pdf.setFont("Helvetica", 5.4)
     pdf.drawString(
         18,
-        44,
+        40,
         "T: S01-S15 = Sukla; K01-K15 = Krsna. N = nakshatra; Y = yoga. "
         "Tiny red numbers refer to the festival key. Sundays have a red right "
         "edge; Ekadashi upavasa has a teal T-cell underline.",
@@ -655,7 +724,7 @@ def draw_page_footer(pdf, festival_entries):
     pdf.setFont("Helvetica", 5.3)
     pdf.drawString(
         18,
-        36,
+        32,
         "Masa: a small upper-left badge marks its first visible tithi; "
         "gold fill denotes adhika. 1 Caitra, 2 Vaisakha, 3 Jyestha, "
         "4 Asadha, 5 Sravana, 6 Bhadrapada, 7 Asvina, 8 Kartika, "
@@ -663,10 +732,10 @@ def draw_page_footer(pdf, festival_entries):
     )
     pdf.drawString(
         18,
-        28,
+        24,
         f"{NAKSHATRA_KEY_LINES[0]}, {NAKSHATRA_KEY_LINES[1]}",
     )
-    pdf.drawString(18, 20, YOGA_KEY_LINE)
+    pdf.drawString(18, 16, YOGA_KEY_LINE)
 
 
 def build_pdf(
@@ -688,12 +757,13 @@ def build_pdf(
     month_data = {(year, month): context_data[(year, month)] for year, month in months}
     festivals_path = Path(festivals_path) if festivals_path is not None else DEFAULT_FESTIVALS_PATH
     enabled_names = load_festival_selection(festivals_path)
+    geopos = (location.longitude, location.latitude, 0.0)
     festivals_by_date, festival_entries = resolve_festivals(
         months,
         month_data,
         context_months=context_months,
         context_data=context_data,
-        geopos=(location.longitude, location.latitude, 0.0),
+        geopos=geopos,
         enabled_names=enabled_names,
     )
 
@@ -703,6 +773,17 @@ def build_pdf(
         end_year,
         end_month,
         calendar.monthrange(end_year, end_month)[1],
+    )
+    eclipse_start_jd, eclipse_end_jd = local_range_jds(
+        start_year,
+        start_month,
+        end_year,
+        end_month,
+        location.timezone_name,
+    )
+    eclipse_line = format_eclipse_line(
+        find_local_eclipses(eclipse_start_jd, eclipse_end_jd, geopos),
+        location.timezone_name,
     )
     ekadashi_dates = {
         value
@@ -747,7 +828,7 @@ def build_pdf(
             month_width,
         )
 
-    draw_page_footer(pdf, festival_entries)
+    draw_page_footer(pdf, festival_entries, eclipse_line=eclipse_line)
     pdf.showPage()
 
     pdf.save()

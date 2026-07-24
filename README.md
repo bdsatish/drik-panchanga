@@ -113,10 +113,12 @@ covering 13 consecutive Gregorian months. Each day shows:
 Calculations use Swiss Ephemeris with the True Citra ayanamsa. Adhika months
 have a gold cell and Sundays have a red right edge. The teal underline marks
 Ekadashi upavasa (`S11` / `K11`) under the same sunrise rule as festivals.
-Numbered red superscripts refer to the festival key below the calendar.
-Ruleset and layout versions are printed at the top right and embedded in the
-PDF metadata so a generated calendar can be reproduced or compared after rule
-changes.
+Numbered red superscripts refer to the festival key below the calendar. The
+footer also lists locally visible partial, total, and annular eclipses for the
+printed Gregorian range, each with its local visibility window (`None` when
+none qualify). Ruleset and layout versions
+are printed at the top right and embedded in the PDF metadata so a generated
+calendar can be reproduced or compared after rule changes.
 
 #### Setup
 

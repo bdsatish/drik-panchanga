@@ -5,6 +5,7 @@ from pathlib import Path
 import re
 from tempfile import TemporaryDirectory
 import unittest
+from unittest import mock
 
 from reportlab.pdfgen.canvas import Canvas
 
@@ -24,15 +25,28 @@ from generate_panchanga_calendar import (
 class PdfLayoutTests(unittest.TestCase):
 
     def test_generated_calendar_has_exactly_one_page(self):
+        import generate_panchanga_calendar as calendar_module
+
         with TemporaryDirectory() as directory:
             output = Path(directory) / "calendar.pdf"
-            build_pdf(load_location("Helsinki"), 2026, 6, output)
+            with mock.patch(
+                    "generate_panchanga_calendar.find_local_eclipses",
+                    return_value=[
+                        ("Lunar", "Partial", 2461103.0419131187, 2461103.0, 2461103.1),
+                    ],
+            ), mock.patch(
+                    "generate_panchanga_calendar.draw_page_footer",
+                    wraps=calendar_module.draw_page_footer,
+            ) as footer:
+                build_pdf(load_location("Helsinki"), 2026, 6, output)
             document = output.read_bytes()
 
         page_objects = re.findall(rb"/Type\s*/Page\b", document)
         self.assertEqual(len(page_objects), 1)
         self.assertIn(RULESET_VERSION.encode("ascii"), document)
         self.assertIn(LAYOUT_VERSION.encode("ascii"), document)
+        self.assertEqual(footer.call_count, 1)
+        self.assertIn("Eclipses:", footer.call_args.kwargs["eclipse_line"])
 
     def test_cli_defaults_festivals_path(self):
         parser = argument_parser()
