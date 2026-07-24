@@ -27,7 +27,7 @@ MONTH_COUNT = 13
 DEFAULT_CITIES_PATH = Path(__file__).with_name("cities.json")
 DEFAULT_FESTIVALS_PATH = Path(__file__).with_name("festivals.cfg")
 RULESET_VERSION = "Udaya-Vyapini-1.0"
-LAYOUT_VERSION = "A4-1.3"
+LAYOUT_VERSION = "A4-1.4"
 PDF_AUTHOR = "Satish BD"
 PDF_AUTHOR_EMAIL = "bdsatish@gmail.com"
 PDF_COPYRIGHT = ("Copyright © Satish BD. Licensed under the GNU Affero GPL "
@@ -46,6 +46,7 @@ class Location:
 INK = HexColor("#172033")
 MUTED = HexColor("#465466")
 ACCENT = HexColor("#263F73")
+KRSNA_INK = HexColor("#2A303C")
 GRID = HexColor("#CBD3DF")
 MONTH_DIVIDER = HexColor("#AAB5C4")
 ALT_ROW = HexColor("#F4F7FA")
@@ -231,10 +232,8 @@ def format_eclipse_line(eclipses, timezone_name):
         civil = jd_to_local_civil_date(maximum_jd, timezone_name)
         start_hm = format_local_hm(visible_start, timezone_name)
         end_hm = format_local_hm(visible_end, timezone_name)
-        parts.append(
-            f"{kind} {calendar.month_abbr[civil.month]} {civil.day:02d} "
-            f"({phase}) {start_hm}-{end_hm}"
-        )
+        parts.append(f"{kind} {calendar.month_abbr[civil.month]} {civil.day:02d} "
+                     f"({phase}) {start_hm}-{end_hm}")
     return "Eclipses: " + "; ".join(parts)
 
 
@@ -265,17 +264,38 @@ def masa_code(masa_number, is_adhika):
     return f"A{masa_number}" if is_adhika else str(masa_number)
 
 
-def zero_pad_calendar_value(value):
-    """Zero-pad masa and tithi numbers for fixed-width calendar display."""
-    formatted = []
-    for part in value.split("/"):
-        if part.startswith("A"):
-            formatted.append(f"A{int(part[1:]):02d}")
-        elif part.startswith(("S", "K")):
-            formatted.append(f"{part[0]}{int(part[1:]):02d}")
+def tithi_display_parts(tithi):
+    """Return ``(number_text, is_sukla)`` for PDF display without S/K letters.
+
+    Internal codes stay ``S11`` / ``K11``; the calendar shows only ``01``–``15``
+    and uses ink color for paksha.
+    """
+    numbers = []
+    is_sukla = True
+    paksha_set = False
+    for part in tithi.split("/"):
+        if part.startswith("S"):
+            numbers.append(f"{int(part[1:]):02d}")
+            if not paksha_set:
+                is_sukla = True
+                paksha_set = True
+        elif part.startswith("K"):
+            numbers.append(f"{int(part[1:]):02d}")
+            if not paksha_set:
+                is_sukla = False
+                paksha_set = True
         else:
-            formatted.append(f"{int(part):02d}")
-    return "/".join(formatted)
+            numbers.append(f"{int(part):02d}")
+    return "/".join(numbers), is_sukla
+
+
+def tithi_ink(is_sukla, is_masa_start=False, is_adhika=False):
+    """Ink for the T cell: masa-start overrides, else Sukla blue / Krsna dark."""
+    if is_masa_start and is_adhika:
+        return ADHIKA_INK
+    if is_masa_start:
+        return MASA_START_INK
+    return ACCENT if is_sukla else KRSNA_INK
 
 
 def daily_values(year, month, location):
@@ -510,7 +530,7 @@ def draw_month(
             is_adhika,
             masa_badge,
         ) = values_by_day[day]
-        tithi_display = zero_pad_calendar_value(tithi)
+        tithi_display, is_sukla = tithi_display_parts(tithi)
         if is_masa_start:
             pdf.setFillColor(ADHIKA_ROW if is_adhika else MASA_START_ROW)
             pdf.rect(
@@ -561,7 +581,7 @@ def draw_month(
             baseline,
             "Helvetica-Bold",
             7.4,
-            (ADHIKA_INK if is_masa_start and is_adhika else MASA_START_INK if is_masa_start else ACCENT),
+            tithi_ink(is_sukla, is_masa_start, is_adhika),
         )
         draw_centered(pdf, f"{nakshatra:02d}", centers[1], baseline, "Helvetica", 7.3, INK)
         draw_centered(pdf, f"{yoga:02d}", centers[2], baseline, "Helvetica", 7.3, INK)
@@ -717,7 +737,7 @@ def draw_page_footer(pdf, festival_entries, eclipse_line="Eclipses: None"):
     pdf.drawString(
         18,
         40,
-        "T: S01-S15 = Sukla; K01-K15 = Krsna. N = nakshatra; Y = yoga. "
+        "T: 01-15; blue = Sukla, dark = Krsna. N = nakshatra; Y = yoga. "
         "Tiny red numbers refer to the festival key. Sundays have a red right "
         "edge; Ekadashi upavasa has a teal T-cell underline.",
     )

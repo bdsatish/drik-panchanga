@@ -10,8 +10,12 @@ from unittest import mock
 from reportlab.pdfgen.canvas import Canvas
 
 from generate_panchanga_calendar import (
+    ACCENT,
+    ADHIKA_INK,
     DEFAULT_FESTIVALS_PATH,
+    KRSNA_INK,
     LAYOUT_VERSION,
+    MASA_START_INK,
     RULESET_VERSION,
     argument_parser,
     build_pdf,
@@ -19,6 +23,8 @@ from generate_panchanga_calendar import (
     ensure_text_fits,
     fitted_font_size,
     load_location,
+    tithi_display_parts,
+    tithi_ink,
 )
 
 
@@ -86,6 +92,24 @@ class PdfLayoutTests(unittest.TestCase):
         self.assertLessEqual(
             pdf.stringWidth(text, "Helvetica-Bold", size),
             available_width + 0.01,
+        )
+
+
+class TithiDisplayTests(unittest.TestCase):
+
+    def test_sukla_and_krsna_drop_letters(self):
+        self.assertEqual(tithi_display_parts("S1"), ("01", True))
+        self.assertEqual(tithi_display_parts("S15"), ("15", True))
+        self.assertEqual(tithi_display_parts("K1"), ("01", False))
+        self.assertEqual(tithi_display_parts("K11"), ("11", False))
+
+    def test_ink_uses_paksha_unless_masa_start(self):
+        self.assertEqual(tithi_ink(True), ACCENT)
+        self.assertEqual(tithi_ink(False), KRSNA_INK)
+        self.assertEqual(tithi_ink(False, is_masa_start=True), MASA_START_INK)
+        self.assertEqual(
+            tithi_ink(True, is_masa_start=True, is_adhika=True),
+            ADHIKA_INK,
         )
 
 

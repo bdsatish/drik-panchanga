@@ -105,14 +105,14 @@ and open `Gui.wxg`.
 `generate_panchanga_calendar.py` creates a single-page A4 landscape calendar
 covering 13 consecutive Gregorian months. Each day shows:
 
-* `T`: tithi at local sunrise (`S01`-`S15` and `K01`-`K15`)
+* `T`: tithi number at local sunrise (`01`-`15`); blue ink is Sukla, dark ink is Krsna
 * `N`: nakshatra number (`01`-`27`)
 * `Y`: yoga number (`01`-`27`)
 * the amanta lunar month at its first sunrise-visible tithi
 
 Calculations use Swiss Ephemeris with the True Citra ayanamsa. Adhika months
 have a gold cell and Sundays have a red right edge. The teal underline marks
-Ekadashi upavasa (`S11` / `K11`) under the same sunrise rule as festivals.
+Ekadashi upavasa (`S11` / `K11` in the ruleset) under the same sunrise rule as festivals.
 Numbered red superscripts refer to the festival key below the calendar. The
 footer also lists locally visible partial, total, and annular eclipses for the
 printed Gregorian range, each with its local visibility window (`None` when
