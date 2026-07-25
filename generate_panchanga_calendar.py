@@ -27,12 +27,18 @@ MONTH_COUNT = 13
 DEFAULT_CITIES_PATH = Path(__file__).with_name("cities.json")
 DEFAULT_FESTIVALS_PATH = Path(__file__).with_name("festivals.cfg")
 RULESET_VERSION = "Udaya-Vyapini-1.0"
-LAYOUT_VERSION = "A4-1.6"
+LAYOUT_VERSION = "A4-1.7"
 PDF_AUTHOR = "Satish BD"
 PDF_AUTHOR_EMAIL = "bdsatish@gmail.com"
 PDF_COPYRIGHT = ("Copyright © Satish BD. Licensed under the GNU Affero GPL "
                  "version 3 (or later).")
 PDF_SOURCE_URL = "https://github.com/bdsatish/drik-panchanga"
+
+# PDF layout proportions. Tweak these together.
+TITHI_COLUMN_RATIO = 0.44
+NAKSHATRA_COLUMN_RATIO = 0.28
+YOGA_COLUMN_RATIO = 0.28
+EKADASHI_UNDERLINE_RATIO = 0.72
 
 
 @dataclass(frozen=True)
@@ -489,6 +495,9 @@ def draw_month(
     month_header_height = 20
     column_header_height = 15
     row_height = 13.7
+    tithi_column_width = width * TITHI_COLUMN_RATIO
+    nakshatra_column_width = width * NAKSHATRA_COLUMN_RATIO
+    yoga_column_width = width * YOGA_COLUMN_RATIO
 
     pdf.setFillColor(ACCENT)
     pdf.rect(
@@ -521,9 +530,9 @@ def draw_month(
     )
 
     centers = (
-        x + width * 0.25,
-        x + width * 0.625,
-        x + width * 0.875,
+        x + tithi_column_width / 2,
+        x + tithi_column_width + nakshatra_column_width / 2,
+        x + tithi_column_width + nakshatra_column_width + yoga_column_width / 2,
     )
     for label, center in zip(("T", "N", "Y"), centers):
         draw_centered(
@@ -588,7 +597,7 @@ def draw_month(
             pdf.rect(
                 x,
                 row_y,
-                width * 0.5,
+                tithi_column_width,
                 row_height,
                 stroke=0,
                 fill=1,
@@ -613,10 +622,11 @@ def draw_month(
         civil_date = CivilDate(year, month, day)
         if civil_date in ekadashi_dates:
             pdf.setFillColor(EKADASHI_MARK)
+            ekadashi_width = tithi_column_width * EKADASHI_UNDERLINE_RATIO
             pdf.rect(
-                x + width * 0.08,
+                x + (tithi_column_width - ekadashi_width) / 2,
                 row_y + 0.6,
-                width * 0.34,
+                ekadashi_width,
                 1.2,
                 stroke=0,
                 fill=1,
@@ -647,7 +657,7 @@ def draw_month(
             pdf.setFont("Helvetica-Bold", marker_size)
             for marker_index, number in enumerate(festival_numbers):
                 pdf.drawRightString(
-                    x + width * 0.47,
+                    x + tithi_column_width - 1.6,
                     marker_top - marker_index * marker_spacing,
                     str(number),
                 )
@@ -656,8 +666,13 @@ def draw_month(
     pdf.setStrokeColor(GRID)
     pdf.setLineWidth(0.4)
     pdf.rect(x, bottom, width, top - bottom, stroke=1, fill=0)
-    pdf.line(x + width * 0.5, bottom, x + width * 0.5, header_top)
-    pdf.line(x + width * 0.75, bottom, x + width * 0.75, header_top)
+    pdf.line(x + tithi_column_width, bottom, x + tithi_column_width, header_top)
+    pdf.line(
+        x + tithi_column_width + nakshatra_column_width,
+        bottom,
+        x + tithi_column_width + nakshatra_column_width,
+        header_top,
+    )
     for index in range(32):
         y = rows_top - index * row_height
         pdf.line(x, y, x + width, y)
