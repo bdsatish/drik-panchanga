@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Drik Panchanga — Calendar PDF</title>
+  <style>
+    :root {
+      --ink: #172033;
+      --muted: #465466;
+      --accent: #263f73;
+      --accent-soft: #e8eef8;
+      --border: #cbd3df;
+      --bg: #f4f7fa;
+      --card: #ffffff;
+      --error: #9a3154;
+      --focus: #168078;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(ellipse at top, #eef3fa 0%, var(--bg) 55%),
+        var(--bg);
+      line-height: 1.5;
+    }
+
+    main {
+      max-width: 34rem;
+      margin: 0 auto;
+      padding: 2.5rem 1.25rem 3rem;
+    }
+
+    header {
+      margin-bottom: 1.75rem;
+    }
+
+    h1 {
+      margin: 0 0 0.35rem;
+      font-size: 1.65rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--accent);
+    }
+
+    .subtitle {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.98rem;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem 1.35rem 1.35rem;
+      box-shadow: 0 8px 28px rgba(23, 32, 51, 0.06);
+    }
+
+    label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 0.4rem;
+    }
+
+    .field {
+      margin-bottom: 1.15rem;
+      position: relative;
+    }
+
+    input[type="text"],
+    input[type="month"] {
+      width: 100%;
+      padding: 0.7rem 0.85rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 1rem;
+      color: var(--ink);
+      background: #fff;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: var(--focus);
+      box-shadow: 0 0 0 3px rgba(22, 128, 120, 0.15);
+    }
+
+    .hint {
+      margin: 0.35rem 0 0;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    .suggestions {
+      position: absolute;
+      z-index: 10;
+      left: 0;
+      right: 0;
+      top: calc(100% - 0.15rem);
+      margin: 0;
+      padding: 0.35rem 0;
+      list-style: none;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: 0 10px 24px rgba(23, 32, 51, 0.12);
+      max-height: 14rem;
+      overflow-y: auto;
+      display: none;
+    }
+
+    .suggestions.open { display: block; }
+
+    .suggestions li button {
+      display: block;
+      width: 100%;
+      text-align: left;
+      border: 0;
+      background: transparent;
+      padding: 0.55rem 0.85rem;
+      font-size: 0.95rem;
+      color: var(--ink);
+      cursor: pointer;
+    }
+
+    .suggestions li button:hover,
+    .suggestions li button[aria-selected="true"] {
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    button[type="submit"] {
+      width: 100%;
+      margin-top: 0.35rem;
+      padding: 0.85rem 1rem;
+      border: 0;
+      border-radius: 8px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.05s;
+    }
+
+    button[type="submit"]:hover:not(:disabled) {
+      background: #1c3260;
+    }
+
+    button[type="submit"]:active:not(:disabled) {
+      transform: translateY(1px);
+    }
+
+    button[type="submit"]:disabled {
+      opacity: 0.65;
+      cursor: wait;
+    }
+
+    .error {
+      margin: 0 0 1rem;
+      padding: 0.75rem 0.9rem;
+      border-radius: 8px;
+      background: #fdf0f4;
+      border: 1px solid #e8b7c6;
+      color: var(--error);
+      font-size: 0.95rem;
+    }
+
+    .status {
+      margin: 0.85rem 0 0;
+      min-height: 1.25rem;
+      font-size: 0.9rem;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    footer {
+      margin-top: 1.75rem;
+      font-size: 0.82rem;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    footer a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    footer a:hover { text-decoration: underline; }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem 1rem;
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+
+    .meta span {
+      background: var(--bg);
+      border-radius: 999px;
+      padding: 0.2rem 0.65rem;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Drik Panchanga</h1>
+      <p class="subtitle">
+        Generate a one-page A4 landscape calendar (13 months) as PDF.
+      </p>
+    </header>
+
+    {% if error %}
+    <p class="error" role="alert">{{ error }}</p>
+    {% endif %}
+
+    <div class="card">
+      <form id="generate-form" method="post" action="/generate" autocomplete="off">
+        <div class="field">
+          <label for="city">City</label>
+          <input
+            id="city"
+            name="city"
+            type="text"
+            required
+            placeholder="e.g. Tirupati, Espoo, Paris"
+            spellcheck="false"
+            aria-autocomplete="list"
+            aria-controls="city-suggestions"
+            aria-expanded="false"
+          >
+          <ul id="city-suggestions" class="suggestions" role="listbox"></ul>
+          <p class="hint">Matched against cities.json (case-insensitive).</p>
+        </div>
+
+        <div class="field">
+          <label for="start">First month</label>
+          <input id="start" name="start" type="month" required>
+          <p class="hint">Thirteen consecutive Gregorian months from this date.</p>
+        </div>
+
+        <button type="submit" id="submit-btn">Generate PDF</button>
+        <p class="status" id="status" aria-live="polite"></p>
+      </form>
+
+      <div class="meta">
+        <span>True Citra ayanamsa</span>
+        <span>Udaya-Vyapini festivals</span>
+        <span>~1–3 s generation</span>
+      </div>
+    </div>
+
+    <footer>
+      Source:
+      <a href="https://github.com/bdsatish/drik-panchanga">drik-panchanga</a>
+      · AGPL-3.0
+    </footer>
+  </main>
+
+  <script>
+    (function () {
+      const cityInput = document.getElementById("city");
+      const startInput = document.getElementById("start");
+      const list = document.getElementById("city-suggestions");
+      const form = document.getElementById("generate-form");
+      const submitBtn = document.getElementById("submit-btn");
+      const status = document.getElementById("status");
+
+      // Default start month: current month in local time.
+      if (!startInput.value) {
+        const now = new Date();
+        const y = now.getFullYear();
+        const m = String(now.getMonth() + 1).padStart(2, "0");
+        startInput.value = `${y}-${m}`;
+      }
+
+      let debounceTimer = null;
+      let activeIndex = -1;
+      let currentItems = [];
+
+      function closeSuggestions() {
+        list.classList.remove("open");
+        list.innerHTML = "";
+        cityInput.setAttribute("aria-expanded", "false");
+        activeIndex = -1;
+        currentItems = [];
+      }
+
+      function renderSuggestions(cities) {
+        currentItems = cities;
+        activeIndex = -1;
+        list.innerHTML = "";
+        if (!cities.length) {
+          closeSuggestions();
+          return;
+        }
+        cities.forEach((name, index) => {
+          const li = document.createElement("li");
+          li.setAttribute("role", "option");
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.textContent = name;
+          btn.setAttribute("aria-selected", "false");
+          btn.addEventListener("mousedown", (event) => {
+            event.preventDefault();
+            cityInput.value = name;
+            closeSuggestions();
+            cityInput.focus();
+          });
+          li.appendChild(btn);
+          list.appendChild(li);
+        });
+        list.classList.add("open");
+        cityInput.setAttribute("aria-expanded", "true");
+      }
+
+      function setActive(index) {
+        const buttons = list.querySelectorAll("button");
+        buttons.forEach((btn, i) => {
+          btn.setAttribute("aria-selected", i === index ? "true" : "false");
+        });
+        activeIndex = index;
+        if (index >= 0 && buttons[index]) {
+          buttons[index].scrollIntoView({ block: "nearest" });
+        }
+      }
+
+      async function fetchCities(query) {
+        const url = `/api/cities?q=${encodeURIComponent(query)}&limit=15`;
+        const response = await fetch(url);
+        if (!response.ok) return [];
+        const data = await response.json();
+        return data.cities || [];
+      }
+
+      cityInput.addEventListener("input", () => {
+        const query = cityInput.value.trim();
+        clearTimeout(debounceTimer);
+        if (query.length < 2) {
+          closeSuggestions();
+          return;
+        }
+        debounceTimer = setTimeout(async () => {
+          try {
+            const cities = await fetchCities(query);
+            renderSuggestions(cities);
+          } catch (_) {
+            closeSuggestions();
+          }
+        }, 180);
+      });
+
+      cityInput.addEventListener("keydown", (event) => {
+        if (!list.classList.contains("open") || !currentItems.length) return;
+        if (event.key === "ArrowDown") {
+          event.preventDefault();
+          setActive(Math.min(activeIndex + 1, currentItems.length - 1));
+        } else if (event.key === "ArrowUp") {
+          event.preventDefault();
+          setActive(Math.max(activeIndex - 1, 0));
+        } else if (event.key === "Enter" && activeIndex >= 0) {
+          event.preventDefault();
+          cityInput.value = currentItems[activeIndex];
+          closeSuggestions();
+        } else if (event.key === "Escape") {
+          closeSuggestions();
+        }
+      });
+
+      cityInput.addEventListener("blur", () => {
+        setTimeout(closeSuggestions, 120);
+      });
+
+      form.addEventListener("submit", () => {
+        submitBtn.disabled = true;
+        status.textContent = "Generating calendar… this usually takes a few seconds.";
+        // Re-enable after the browser starts the download navigation.
+        setTimeout(() => {
+          submitBtn.disabled = false;
+          status.textContent = "";
+        }, 8000);
+      });
+    })();
+  </script>
+</body>
+</html>

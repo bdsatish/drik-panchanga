@@ -1,3 +1,5 @@
 pyswisseph
 reportlab
+flask>=3.0
+gunicorn>=22.0
 yapf>=0.43
