@@ -187,6 +187,29 @@ To leave the virtual environment when finished, run:
 deactivate
 ```
 
+#### Web UI
+
+Publicly accessible: https://panchanga.up.railway.app/
+
+All web code lives under `webapp/`. With the venv activated, from the
+repository root:
+
+```
+python -m webapp.app
+```
+
+Then open [http://127.0.0.1:8765/](http://127.0.0.1:8765/). Choose a city
+(autocomplete against `cities.json`), pick the first month of the 13-month
+range, and download the PDF. Override the port with `--port 9000` or
+`PORT` / `PANCHANGA_PORT`.
+
+Local Docker check (repo root):
+
+```
+docker build -f webapp/Dockerfile -t panchanga .
+docker run --rm -p 8080:8080 -e PORT=8080 panchanga
+```
+
 #### Festival dates and conventions
 
 Festival and Ekadashi dates are resolved for the selected location in
