@@ -1,8 +1,4 @@
-"""Festival API consumed by the PDF calendar generator.
-
-The previous multi-policy implementation lives under ``experimental/`` for
-reference. This module is a clean-slate rebuild.
-"""
+"""Festival API consumed by the PDF calendar generator."""
 
 import calendar
 import configparser
@@ -101,10 +97,7 @@ def _parse_bool(raw, *, key):
 
 
 def load_festival_selection(path):
-    """Return the frozenset of enabled festival names from an INI cfg.
-
-    The ``[festivals]`` section must list every catalog name exactly once.
-    """
+    """Enabled festival names from an INI cfg with a complete ``[festivals]`` section."""
     path = Path(path)
     parser = configparser.ConfigParser(strict=True)
     parser.optionxform = str  # preserve festival name case
@@ -134,13 +127,9 @@ def load_festival_selection(path):
 
 
 def collect_records(months, month_data):
-    """Flatten daily panchanga rows into civil-date records.
+    """Flatten ``daily_values`` rows into festival records.
 
-    Each source row from ``generate_panchanga_calendar.daily_values`` is:
-    day, tithi, nakshatra, yoga, masa, is_adhika, sunrise_jd.
-
-    Festival records keep:
-    ``(civil_date, tithi, nakshatra, masa, is_adhika, sunrise_jd)``.
+    Output: ``(civil_date, tithi, nakshatra, masa, is_adhika, sunrise_jd)``.
     """
     records = []
     for year, month in months:
@@ -207,10 +196,7 @@ def resolve_vriddhi_dates(dates):
 def select_kshaya_dates(records, tithi, *, masa=None, allow_adhika=False):
     """Later civil day when the tithi is skipped between sunrises.
 
-    When ``masa`` is set, it is read from the later sunrise for Shukla tithis
-    and from the earlier sunrise for Krishna tithis. That covers mid-masa
-    kshaya and paksha-boundary cases such as Ugadi between Phalguna-K15 and
-    Caitra-S2. When ``masa`` is ``None``, any masa is accepted.
+    With ``masa``, check the later sunrise for Shukla and the earlier for Krishna.
     """
     target_tithi = plain_tithi_number(tithi)
     if target_tithi is None:
@@ -241,8 +227,7 @@ def select_kshaya_dates(records, tithi, *, masa=None, allow_adhika=False):
 def select_tithi_dates(records, tithi, *, masa=None, allow_adhika=False):
     """Civil days for a tithi using sunrise, vriddhi, and kshaya rules.
 
-    Vriddhi (same tithi at consecutive sunrises) keeps the former date.
-    Kshaya (tithi missed entirely at sunrise) keeps the later civil date.
+    Vriddhi keeps the former date; kshaya keeps the later civil date.
     """
     masa_codes = masa_codes_for(masa, allow_adhika)
     sunrise_matches = resolve_vriddhi_dates([
@@ -258,12 +243,7 @@ def select_tithi_dates(records, tithi, *, masa=None, allow_adhika=False):
 
 
 def select_plain_tithi_dates(records, masa, tithi, *, allow_adhika=False):
-    """Civil days for a plain masa+tithi festival.
-
-    When ``allow_adhika`` is true (Ugadi), adhika and shuddha masas both
-    match, but if any adhika occurrence exists only the adhika dates are
-    kept — matching the generic-udaya policy.
-    """
+    """Civil days for a plain masa+tithi festival (adhika-preferring when allowed)."""
     matches = select_tithi_dates(records, tithi, masa=masa, allow_adhika=allow_adhika)
     if not allow_adhika or not matches:
         return matches
@@ -276,11 +256,7 @@ def select_plain_tithi_dates(records, masa, tithi, *, allow_adhika=False):
 
 
 def select_varamahalakshmi_dates(records):
-    """Friday strictly before non-adhika Sravana Purnima (S15).
-
-    Uses the same Sravana-S15 sunrise/vriddhi/kshaya anchor as tithi
-    rules. If that Purnima falls on Friday, the previous week's Friday is kept.
-    """
+    """Friday strictly before non-adhika Sravana Purnima (S15)."""
     selected = []
     for purnima_date in select_plain_tithi_dates(records, 5, "S15"):
         vrata_date = purnima_date - timedelta(days=1)
@@ -291,12 +267,7 @@ def select_varamahalakshmi_dates(records):
 
 
 def _eclipse_phase(flags):
-    """Return Partial/Total/Annular, or None if not locally usable.
-
-    ``*_eclipse_when_loc`` already searches for events observable at the
-    place. Require ``ECL_VISIBLE`` but not ``ECL_MAX_VISIBLE`` (maximum may
-    fall at rise/set). Purely penumbral lunar eclipses are omitted.
-    """
+    """Return Partial/Total/Annular, or None if not locally usable."""
     if not (flags & panchanga.swe.ECL_VISIBLE):
         return None
     if flags & panchanga.swe.ECL_TOTAL:
@@ -309,13 +280,7 @@ def _eclipse_phase(flags):
 
 
 def find_local_eclipses(start_jd, end_jd, geopos):
-    """Locally visible partial/total/annular eclipses with maximum in ``[start_jd, end_jd)``.
-
-    Returns a sorted list of ``(kind, phase, maximum_jd)`` where ``kind`` is
-    ``\"Lunar\"`` or ``\"Solar\"`` and ``phase`` is Partial, Total, or Annular.
-    Purely penumbral lunar eclipses are omitted. Membership uses the maximum
-    only; contact intervals are not consulted.
-    """
+    """Locally visible partial/total/annular eclipses with maximum in ``[start_jd, end_jd)``."""
     if end_jd <= start_jd:
         return []
 
@@ -369,26 +334,14 @@ def postpone_upakarma_if_eclipse(primary, fallback, geopos, timezone_name):
 
 
 def select_yajur_upakarma_dates(records, geopos=None, timezone_name=None):
-    """Nija Sravana Purnima (S15), postponed to Bhadrapada S15 on eclipse.
-
-    Uses the ordinary sunrise/vriddhi/kshaya S15 selection in each masa. A
-    locally visible non-penumbral lunar eclipse whose maximum falls on the
-    selected local civil date triggers the fallback.
-    """
+    """Nija Sravana Purnima (S15), postponed to Bhadrapada S15 on eclipse."""
     primary = select_plain_tithi_dates(records, 5, "S15")
     fallback = select_plain_tithi_dates(records, 6, "S15")
     return postpone_upakarma_if_eclipse(primary, fallback, geopos, timezone_name)
 
 
 def select_rig_upakarma_dates(records, geopos=None, timezone_name=None):
-    """Nija day whose sunrise nakshatra is Sravana (22).
-
-    Prefer nija Sravana masa. When that nakshatra is kshaya at sunrise
-    (no nija-Sravana match), or when the Sravana-masa day has a local
-    eclipse whose maximum falls on that local civil date, postpone to nija
-    Bhadrapada's Sravana-nakshatra day. Consecutive sunrise matches keep the
-    former date (vriddhi).
-    """
+    """Nija Sravana-nakshatra day, postponed to Bhadrapada on kshaya/eclipse."""
     SRAVANA_NAKSHATRA = 22
 
     def matches_for_masa(masa):
@@ -409,14 +362,7 @@ def select_rig_upakarma_dates(records, geopos=None, timezone_name=None):
 
 
 def select_vaikuntha_ekadashi_dates(records):
-    """Margasira or Pausha Shukla Ekadashi upavasa while the Sun is in Dhanur.
-
-    Candidates are the shared Ekadashi upavasa dates (same sunrise/vriddhi/
-    kshaya rules as ``resolve_ekadashi_dates``), kept only when the civil day
-    falls in lunar masa 9 or 10, remains Shukla, and ``panchanga.raasi`` at
-    sunrise is 9 (Dhanur). Returns an empty list when none qualify (the PDF
-    prints ``None``).
-    """
+    """Margasira/Pausha Shukla Ekadashi upavasa while the Sun is in Dhanur."""
     records_by_date = {record[CIVIL_DATE]: record for record in records}
     selected = []
     for civil_date in ekadashi_dates_from_records(records):
@@ -432,11 +378,7 @@ def select_vaikuntha_ekadashi_dates(records):
 
 
 def select_makara_sankranti_dates(records):
-    """First civil sunrise at which the Sun is in Makara (raasi 10).
-
-    Each transition into Makara yields one date (the first sunrise with
-    ``panchanga.raasi(sunrise_jd) == 10`` after a non-Makara sunrise).
-    """
+    """First civil sunrise after each transition into Makara (raasi 10)."""
     MAKARA_RAASI = 10
     selected = []
     previous_raasi = None
@@ -466,11 +408,7 @@ def select_non_tithi_dates(records, name, geopos=None, timezone_name=None):
 
 def resolve_festivals(months, month_data, *, context_months=None, context_data=None, geopos=None, timezone_name=None,
                       enabled_names=None):
-    """Resolve tithi and non-tithi festivals for the PDF calendar.
-
-    When ``enabled_names`` is set, only those catalog festivals are resolved
-    and returned. ``None`` includes the full catalog (unit-test default).
-    """
+    """Resolve tithi and non-tithi festivals for the PDF calendar."""
     if (context_months is None) != (context_data is None):
         raise ValueError("context_months and context_data must be supplied together")
 

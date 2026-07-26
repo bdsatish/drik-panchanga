@@ -59,11 +59,7 @@ def append_solar_coverage_rows(rows):
 
 
 def covering_tithi_rows():
-    """Synthetic day rows for every plain-tithi festival, plus Sravana Purnima.
-
-    Sravana ``S15`` is inserted after Naga Panchami so Varamahalakshmi and
-    Yajur Upakarma still have an anchor day after Yajur left the tithi catalog.
-    """
+    """Synthetic day rows for every plain-tithi festival, plus Sravana Purnima."""
     rows = []
     for number, _name, masa, tithi in TITHI_FESTIVAL_RULES:
         nakshatra = 22 if number == 7 else 1
@@ -664,11 +660,7 @@ class ResolveEkadashiTests(unittest.TestCase):
 
 
 class GenericUdayaParityTests(unittest.TestCase):
-    """Borrowed from experimental/test_festival_generic_udaya.py (+ ekadashi).
-
-    Behaviour must match the generic-udaya sunrise/vriddhi/kshaya policy.
-    Kshaya is detected from consecutive sunrise tithi skips (no interval patch).
-    """
+    """Parity with generic-udaya sunrise/vriddhi/kshaya behaviour."""
 
     def test_plain_tithi_parser_rejects_conditional_rules(self):
         self.assertEqual(plain_tithi_number("S15"), 15)

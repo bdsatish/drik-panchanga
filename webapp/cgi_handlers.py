@@ -1,12 +1,4 @@
-"""CGI request handlers for freesshell.de public_html deployment.
-
-Entry scripts under ~/public_html import this module and call the matching
-handler. Environment setup (sys.path, SE_EPHE_PATH) is done by those scripts
-before import so this file stays free of host-specific shebangs.
-
-Python 3.13+ has no stdlib ``cgi`` module, so form parsing is done with
-urllib + CONTENT_LENGTH (application/x-www-form-urlencoded only).
-"""
+"""CGI request handlers for freesshell.de public_html deployment."""
 
 from __future__ import annotations
 

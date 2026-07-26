@@ -204,10 +204,9 @@ def format_local_hm(jd, timezone_name):
 
 
 def format_eclipse_line(eclipses, timezone_name, sunrise_by_date=None):
-    """Compact footer line for locally visible eclipses at maximum time.
+    """Compact footer line for eclipses at maximum time.
 
-    When ``sunrise_by_date`` maps civil dates to sunrise Julian days, each
-    entry also shows that date's local sunrise.
+    Optional ``sunrise_by_date`` adds that date's local sunrise to each entry.
     """
     if not eclipses:
         return "Eclipses: None"
