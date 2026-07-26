@@ -282,28 +282,8 @@ def masa_code(masa_number, is_adhika):
 
 
 def tithi_display_parts(tithi):
-    """Return ``(number_text, is_sukla)`` for PDF display without S/K letters.
-
-    Internal codes stay ``S11`` / ``K11``; the calendar shows only ``01``–``15``
-    and uses ink plus font style for paksha.
-    """
-    numbers = []
-    is_sukla = True
-    paksha_set = False
-    for part in tithi.split("/"):
-        if part.startswith("S"):
-            numbers.append(f"{int(part[1:]):02d}")
-            if not paksha_set:
-                is_sukla = True
-                paksha_set = True
-        elif part.startswith("K"):
-            numbers.append(f"{int(part[1:]):02d}")
-            if not paksha_set:
-                is_sukla = False
-                paksha_set = True
-        else:
-            numbers.append(f"{int(part):02d}")
-    return "/".join(numbers), is_sukla
+    """Return ``(number_text, is_sukla)`` for a single ``S*`` / ``K*`` code."""
+    return f"{int(tithi[1:]):02d}", tithi.startswith("S")
 
 
 def tithi_ink(is_sukla, is_masa_start=False, is_adhika=False):
