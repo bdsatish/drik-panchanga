@@ -23,6 +23,7 @@ from festival_rules import (
     resolve_vriddhi_dates,
     select_kshaya_dates,
     select_makara_sankranti_dates,
+    select_mesha_sankranti_dates,
     select_non_tithi_dates,
     select_plain_tithi_dates,
     select_rig_upakarma_dates,
@@ -50,11 +51,11 @@ def festival_record(civil_date, tithi, masa="1", is_adhika=False, nakshatra=1, s
 
 
 def append_solar_coverage_rows(rows):
-    """Append synthetic rows for Vaikuntha and Makara Sankranti coverage."""
+    """Append synthetic rows for Vaikuntha, Makara, and Mesha Sankranti coverage."""
     rows.append(day_row(len(rows) + 1, "K1", "12"))
     rows.append(day_row(len(rows) + 1, "S11", "9", sunrise_jd=900.0))
-    rows.append(day_row(len(rows) + 1, "S12", "9", sunrise_jd=999.0))
-    rows.append(day_row(len(rows) + 1, "S13", "9", sunrise_jd=1000.0))
+    rows.append(day_row(len(rows) + 1, "S12", "9", sunrise_jd=1000.0))
+    rows.append(day_row(len(rows) + 1, "S13", "9", sunrise_jd=2000.0))
     return rows
 
 
@@ -105,24 +106,29 @@ def sequential_month_data(row_specs, year=2030, start_month=1):
 class FestivalCatalogTests(unittest.TestCase):
 
     def test_catalog_is_seasonal_and_complete(self):
-        self.assertEqual(len(FESTIVAL_RULES), 31)
+        self.assertEqual(len(FESTIVAL_RULES), 32)
         self.assertEqual(FESTIVAL_RULES[0], ("Ugadi", 1, "S1"))
         self.assertEqual(FESTIVAL_RULES[-1], ("Kama Dahana (Holi)", 12, "S15"))
         self.assertIn(("Ananta Chaturdashi", 6, "S14"), FESTIVAL_RULES)
         self.assertIn(("Surya Shashthi / Chhath", 8, "S6"), FESTIVAL_RULES)
+        self.assertIn(("Mesha Sankranti", None, None), FESTIVAL_RULES)
+        self.assertEqual(FESTIVAL_RULES[FESTIVAL_RULES.index(("Rama Navami", 1, "S9")) + 1],
+                         ("Mesha Sankranti", None, None))
         self.assertEqual(FESTIVAL_RULES[FESTIVAL_RULES.index(("Ganesha Chaturthi", 6, "S4")) + 1],
                          ("Ananta Chaturdashi", 6, "S14"))
         names = [name for name, _masa, _tithi in FESTIVAL_RULES]
         self.assertEqual(len(names), len(set(names)))
         self.assertEqual(all_festival_names(), tuple(names))
-        self.assertEqual(sum(1 for _name, masa, _tithi in FESTIVAL_RULES if masa is None), 5)
+        self.assertEqual(sum(1 for _name, masa, _tithi in FESTIVAL_RULES if masa is None), 6)
 
 
 class FestivalSelectionTests(unittest.TestCase):
 
     def test_shipped_cfg_enables_full_catalog_except_disabled(self):
         enabled = load_festival_selection(DEFAULT_FESTIVALS_PATH)
-        self.assertEqual(enabled, frozenset(all_festival_names()) - {"Ananta Chaturdashi", "Surya Shashthi / Chhath"})
+        self.assertEqual(enabled, frozenset(all_festival_names()) - {
+            "Ananta Chaturdashi", "Surya Shashthi / Chhath", "Mesha Sankranti"
+        })
 
     def test_disable_one_festival_uses_dense_markers(self):
         lines = ["[festivals]"]
@@ -136,7 +142,8 @@ class FestivalSelectionTests(unittest.TestCase):
 
         months = [(2030, 1)]
         month_data = covering_month_data()
-        with mock.patch("festival_rules.panchanga.raasi", side_effect=lambda jd: 10 if jd >= 1000 else 9):
+        with mock.patch("festival_rules.panchanga.raasi",
+                        side_effect=lambda jd: 1 if jd >= 2000 else (10 if jd >= 1000 else 9)):
             by_date, entries = resolve_festivals(months, month_data, enabled_names=enabled)
         self.assertNotIn("Ugadi", [name for _marker, _dates, name in entries])
         self.assertEqual(entries[0], (1, "Jan 02", "Rama Navami"))
@@ -305,7 +312,11 @@ class ResolveFestivalsTests(unittest.TestCase):
     def setUp(self):
 
         def fake_raasi(jd):
-            return 10 if jd >= 1000 else 9
+            if jd >= 2000:
+                return 1
+            if jd >= 1000:
+                return 10
+            return 9
 
         self.raasi_patcher = mock.patch("festival_rules.panchanga.raasi", side_effect=fake_raasi)
         self.raasi_patcher.start()
@@ -316,26 +327,28 @@ class ResolveFestivalsTests(unittest.TestCase):
         month_data = covering_month_data()
         by_date, entries = resolve_festivals(months, month_data)
 
-        self.assertEqual(len(entries), 31)
+        self.assertEqual(len(entries), 32)
         self.assertEqual(entries[0], (1, "Jan 01", "Ugadi"))
-        self.assertEqual(entries[7], (8, "Jan 04", "Varamahalakshmi Vrata"))
-        self.assertEqual(entries[8], (9, "Jan 07", "Rig Upakarma"))
-        self.assertEqual(entries[9], (10, "Jan 08", "Yajur Upakarma"))
-        self.assertEqual(entries[10], (11, "Jan 09", "Janmashtami"))
-        self.assertEqual(entries[13], (14, "Jan 12", "Ananta Chaturdashi"))
-        self.assertEqual(entries[22], (23, "Jan 21", "Surya Shashthi / Chhath"))
-        self.assertEqual(entries[23], (24, "Jan 29", "Vaikuntha Ekadashi"))
-        self.assertEqual(entries[24], (25, "Jan 31", "Makara Sankranti"))
-        self.assertEqual([marker for marker, _dates, _name in entries], list(range(1, 32)))
+        self.assertEqual(entries[2], (3, "Jan 31", "Mesha Sankranti"))
+        self.assertEqual(entries[8], (9, "Jan 04", "Varamahalakshmi Vrata"))
+        self.assertEqual(entries[9], (10, "Jan 07", "Rig Upakarma"))
+        self.assertEqual(entries[10], (11, "Jan 08", "Yajur Upakarma"))
+        self.assertEqual(entries[11], (12, "Jan 09", "Janmashtami"))
+        self.assertEqual(entries[14], (15, "Jan 12", "Ananta Chaturdashi"))
+        self.assertEqual(entries[23], (24, "Jan 21", "Surya Shashthi / Chhath"))
+        self.assertEqual(entries[24], (25, "Jan 29", "Vaikuntha Ekadashi"))
+        self.assertEqual(entries[25], (26, "Jan 30", "Makara Sankranti"))
+        self.assertEqual([marker for marker, _dates, _name in entries], list(range(1, 33)))
         self.assertEqual(by_date[date(2030, 1, 1)], [1])
-        self.assertEqual(by_date[date(2030, 1, 4)], [4, 8])
-        self.assertEqual(by_date[date(2030, 1, 7)], [7, 9])
-        self.assertEqual(by_date[date(2030, 1, 8)], [10])
-        self.assertEqual(by_date[date(2030, 1, 9)], [11])
-        self.assertEqual(by_date[date(2030, 1, 12)], [14])
-        self.assertEqual(by_date[date(2030, 1, 21)], [23])
-        self.assertEqual(by_date[date(2030, 1, 29)], [24])
-        self.assertEqual(by_date[date(2030, 1, 31)], [25])
+        self.assertEqual(by_date[date(2030, 1, 4)], [5, 9])
+        self.assertEqual(by_date[date(2030, 1, 7)], [8, 10])
+        self.assertEqual(by_date[date(2030, 1, 8)], [11])
+        self.assertEqual(by_date[date(2030, 1, 9)], [12])
+        self.assertEqual(by_date[date(2030, 1, 12)], [15])
+        self.assertEqual(by_date[date(2030, 1, 21)], [24])
+        self.assertEqual(by_date[date(2030, 1, 29)], [25])
+        self.assertEqual(by_date[date(2030, 1, 30)], [26])
+        self.assertEqual(by_date[date(2030, 1, 31)], [3])
 
     def test_ugadi_marks_adhika_chaitra_s1(self):
         months = [(2030, 3)]
@@ -412,9 +425,9 @@ class ResolveFestivalsTests(unittest.TestCase):
         months, month_data = sequential_month_data(rows)
 
         by_date, entries = resolve_festivals(months, month_data)
-        self.assertEqual(by_date[date(2030, 1, 9)], [11])
+        self.assertEqual(by_date[date(2030, 1, 9)], [12])
         self.assertNotIn(date(2030, 1, 10), by_date)
-        self.assertEqual(entries[10], (11, "Jan 09", "Janmashtami"))
+        self.assertEqual(entries[11], (12, "Jan 09", "Janmashtami"))
 
     def test_kshaya_marks_later_date_in_calendar(self):
         rows = []
@@ -437,8 +450,8 @@ class ResolveFestivalsTests(unittest.TestCase):
         months, month_data = sequential_month_data(rows)
 
         by_date, entries = resolve_festivals(months, month_data)
-        self.assertIn(3, by_date[date(2030, 1, 4)])
-        self.assertEqual(entries[2], (3, "Jan 04", "Akshaya Tritiya"))
+        self.assertIn(4, by_date[date(2030, 1, 4)])
+        self.assertEqual(entries[3], (4, "Jan 04", "Akshaya Tritiya"))
 
 
 class VaramahalakshmiTests(unittest.TestCase):
@@ -629,8 +642,8 @@ class VaikunthaEkadashiTests(unittest.TestCase):
         by_date, entries = resolve_festivals(months, month_data, context_months=context_months,
                                              context_data=context_data)
 
-        self.assertEqual(entries[23], (24, "None", "Vaikuntha Ekadashi"))
-        self.assertNotIn(24, [n for nums in by_date.values() for n in nums])
+        self.assertEqual(entries[24], (25, "None", "Vaikuntha Ekadashi"))
+        self.assertNotIn(25, [n for nums in by_date.values() for n in nums])
         records = collect_records(context_months, context_data)
         self.assertEqual(select_vaikuntha_ekadashi_dates(records), [])
         margasira = select_plain_tithi_dates(records, 9, "S11")
@@ -660,6 +673,26 @@ class MakaraSankrantiTests(unittest.TestCase):
         ]
         with mock.patch("festival_rules.panchanga.raasi", return_value=10):
             self.assertEqual(select_makara_sankranti_dates(records), [])
+
+
+class MeshaSankrantiTests(unittest.TestCase):
+
+    def test_marks_first_sunrise_in_mesha(self):
+        records = [
+            (date(2030, 4, 13), "S10", 1, "1", False, 10.0),
+            (date(2030, 4, 14), "S11", 1, "1", False, 20.0),
+            (date(2030, 4, 15), "S12", 1, "1", False, 30.0),
+        ]
+        with mock.patch("festival_rules.panchanga.raasi", side_effect=lambda jd: 1 if jd >= 20.0 else 12):
+            self.assertEqual(select_mesha_sankranti_dates(records), [date(2030, 4, 14)])
+
+    def test_ignores_range_that_opens_already_in_mesha(self):
+        records = [
+            (date(2030, 4, 14), "S11", 1, "1", False, 20.0),
+            (date(2030, 4, 15), "S12", 1, "1", False, 30.0),
+        ]
+        with mock.patch("festival_rules.panchanga.raasi", return_value=1):
+            self.assertEqual(select_mesha_sankranti_dates(records), [])
 
 
 class ResolveEkadashiTests(unittest.TestCase):

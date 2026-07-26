@@ -34,6 +34,7 @@ def jd_to_local_civil_date(jd, timezone_name):
 FESTIVAL_RULES = (
     ("Ugadi", 1, "S1"),
     ("Rama Navami", 1, "S9"),
+    ("Mesha Sankranti", None, None),
     ("Akshaya Tritiya", 2, "S3"),
     ("Vasavi Jayanti", 2, "S10"),
     ("Narasimha Jayanti", 2, "S14"),
@@ -369,18 +370,27 @@ def select_vaikuntha_ekadashi_dates(records):
     return selected
 
 
-def select_makara_sankranti_dates(records):
-    """First civil sunrise after each transition into Makara (raasi 10)."""
-    MAKARA_RAASI = 10
+def select_sankranti_dates(records, target_raasi):
+    """First civil sunrise after each transition into ``target_raasi``."""
     selected = []
     previous_raasi = None
     for civil_date, _tithi, _nakshatra, _masa, _is_adhika, sunrise_jd in sorted(records):
         raasi = panchanga.raasi(sunrise_jd)
-        if raasi == MAKARA_RAASI and previous_raasi != MAKARA_RAASI:
+        if raasi == target_raasi and previous_raasi != target_raasi:
             if previous_raasi is not None:
                 selected.append(civil_date)
         previous_raasi = raasi
     return selected
+
+
+def select_mesha_sankranti_dates(records):
+    """First civil sunrise after each transition into Mesha (raasi 1)."""
+    return select_sankranti_dates(records, 1)
+
+
+def select_makara_sankranti_dates(records):
+    """First civil sunrise after each transition into Makara (raasi 10)."""
+    return select_sankranti_dates(records, 10)
 
 
 def select_non_tithi_dates(records, name, geopos=None, timezone_name=None):
@@ -393,6 +403,8 @@ def select_non_tithi_dates(records, name, geopos=None, timezone_name=None):
         return select_yajur_upakarma_dates(records, geopos=geopos, timezone_name=timezone_name)
     if name == "Vaikuntha Ekadashi":
         return select_vaikuntha_ekadashi_dates(records)
+    if name == "Mesha Sankranti":
+        return select_mesha_sankranti_dates(records)
     if name == "Makara Sankranti":
         return select_makara_sankranti_dates(records)
     raise ValueError(f"No selector for non-tithi festival {name!r}")
