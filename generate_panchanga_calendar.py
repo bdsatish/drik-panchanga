@@ -7,7 +7,7 @@ import json
 import re
 from dataclasses import dataclass
 from datetime import date as CivilDate
-from datetime import datetime, timezone as dt_timezone
+from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -17,6 +17,9 @@ from reportlab.pdfgen import canvas
 
 from festival_rules import (
     find_local_eclipses,
+    jd_to_local_civil_date,
+    jd_to_local_datetime,
+    julian_day_from_datetime,
     load_festival_selection,
     resolve_ekadashi_dates,
     resolve_festivals,
@@ -35,6 +38,9 @@ PDF_COPYRIGHT = ("Copyright © Satish BD. Licensed under the GNU Affero GPL "
 PDF_SOURCE_URL = "https://github.com/bdsatish/drik-panchanga"
 
 # PDF layout proportions. Tweak these together.
+MONTH_HEADER_HEIGHT = 20
+COLUMN_HEADER_HEIGHT = 15
+ROW_HEIGHT = 13.7
 TITHI_COLUMN_RATIO = 0.44
 NAKSHATRA_COLUMN_RATIO = 0.28
 YOGA_COLUMN_RATIO = 0.28
@@ -195,17 +201,6 @@ def load_location(city):
     return location_from_mapping(name, locations[name])
 
 
-def jd_to_local_datetime(jd, timezone_name):
-    """Convert a UT Julian day to local ``datetime`` in ``timezone_name``."""
-    utc = datetime.fromtimestamp((jd - 2440587.5) * 86400.0, tz=dt_timezone.utc)
-    return utc.astimezone(ZoneInfo(timezone_name))
-
-
-def jd_to_local_civil_date(jd, timezone_name):
-    """Convert a UT Julian day to the civil date in ``timezone_name``."""
-    return jd_to_local_datetime(jd, timezone_name).date()
-
-
 def format_local_hm(jd, timezone_name):
     """Format a UT Julian day as local ``HH:MM``, rounded to the nearest minute."""
     local = jd_to_local_datetime(jd, timezone_name)
@@ -263,13 +258,11 @@ def draw_eclipse_mark(pdf, x, row_y):
 
 def local_range_jds(start_year, start_month, end_year, end_month, timezone_name):
     """UT Julian days covering the printed Gregorian months in local civil time."""
-    timezone = ZoneInfo(timezone_name)
+    timezone_info = ZoneInfo(timezone_name)
     last_day = calendar.monthrange(end_year, end_month)[1]
-    start_local = datetime(start_year, start_month, 1, 0, 0, 0, tzinfo=timezone)
-    end_local = datetime(end_year, end_month, last_day, 23, 59, 59, tzinfo=timezone)
-    start_jd = start_local.timestamp() / 86400.0 + 2440587.5
-    end_jd = end_local.timestamp() / 86400.0 + 2440587.5
-    return start_jd, end_jd
+    start_local = datetime(start_year, start_month, 1, 0, 0, 0, tzinfo=timezone_info)
+    end_local = datetime(end_year, end_month, last_day, 23, 59, 59, tzinfo=timezone_info)
+    return julian_day_from_datetime(start_local), julian_day_from_datetime(end_local)
 
 
 def timezone_hours(timezone, year, month, day):
@@ -407,10 +400,7 @@ def ensure_text_fits(pdf, text, font, size, available_width, context):
 
 
 def draw_day_column(pdf, x, top, width):
-    month_header_height = 20
-    column_header_height = 15
-    row_height = 13.7
-    header_height = month_header_height + column_header_height
+    header_height = MONTH_HEADER_HEIGHT + COLUMN_HEADER_HEIGHT
 
     pdf.setFillColor(ACCENT)
     pdf.rect(x, top - header_height, width, header_height, stroke=0, fill=1)
@@ -418,36 +408,33 @@ def draw_day_column(pdf, x, top, width):
 
     rows_top = top - header_height
     for index in range(31):
-        row_y = rows_top - (index + 1) * row_height
+        row_y = rows_top - (index + 1) * ROW_HEIGHT
         pdf.setFillColor(ALT_ROW if index % 2 else white)
-        pdf.rect(x, row_y, width, row_height, stroke=0, fill=1)
+        pdf.rect(x, row_y, width, ROW_HEIGHT, stroke=0, fill=1)
         draw_centered(pdf, str(index + 1), x + width / 2, row_y + 4.1, "Helvetica", 7.4, INK)
 
-    bottom = rows_top - 31 * row_height
+    bottom = rows_top - 31 * ROW_HEIGHT
     pdf.setStrokeColor(GRID)
     pdf.setLineWidth(0.4)
     pdf.rect(x, bottom, width, top - bottom, stroke=1, fill=0)
     for index in range(32):
-        y = rows_top - index * row_height
+        y = rows_top - index * ROW_HEIGHT
         pdf.line(x, y, x + width, y)
 
 
 def draw_month(pdf, year, month, values, festivals_by_date, ekadashi_dates, eclipse_dates, x, top, width):
-    month_header_height = 20
-    column_header_height = 15
-    row_height = 13.7
     tithi_column_width = width * TITHI_COLUMN_RATIO
     nakshatra_column_width = width * NAKSHATRA_COLUMN_RATIO
     yoga_column_width = width * YOGA_COLUMN_RATIO
 
     pdf.setFillColor(ACCENT)
-    pdf.rect(x, top - month_header_height, width, month_header_height, stroke=0, fill=1)
+    pdf.rect(x, top - MONTH_HEADER_HEIGHT, width, MONTH_HEADER_HEIGHT, stroke=0, fill=1)
     draw_centered(pdf, f"{calendar.month_abbr[month]} '{str(year)[2:]}", x + width / 2, top - 14, "Helvetica-Bold", 8.0,
                   white)
 
-    header_top = top - month_header_height
+    header_top = top - MONTH_HEADER_HEIGHT
     pdf.setFillColor(HexColor("#E2E7EF"))
-    pdf.rect(x, header_top - column_header_height, width, column_header_height, stroke=0, fill=1)
+    pdf.rect(x, header_top - COLUMN_HEADER_HEIGHT, width, COLUMN_HEADER_HEIGHT, stroke=0, fill=1)
 
     centers = (
         x + tithi_column_width / 2,
@@ -457,7 +444,7 @@ def draw_month(pdf, year, month, values, festivals_by_date, ekadashi_dates, ecli
     for label, center in zip(("T", "N", "Y"), centers):
         draw_centered(pdf, label, center, header_top - 10.5, "Helvetica-Bold", 7.0, MUTED)
 
-    rows_top = header_top - column_header_height
+    rows_top = header_top - COLUMN_HEADER_HEIGHT
     values_by_day = {
         day: (
             tithi,
@@ -479,7 +466,7 @@ def draw_month(pdf, year, month, values, festivals_by_date, ekadashi_dates, ecli
     }
     for index in range(31):
         day = index + 1
-        row_y = rows_top - (index + 1) * row_height
+        row_y = rows_top - (index + 1) * ROW_HEIGHT
         is_sunday = False
         if day not in values_by_day:
             pdf.setFillColor(MISSING_ROW)
@@ -490,7 +477,7 @@ def draw_month(pdf, year, month, values, festivals_by_date, ekadashi_dates, ecli
                 pdf.setFillColor(ALT_ROW)
             else:
                 pdf.setFillColor(white)
-        pdf.rect(x, row_y, width, row_height, stroke=0, fill=1)
+        pdf.rect(x, row_y, width, ROW_HEIGHT, stroke=0, fill=1)
 
         if day not in values_by_day:
             continue
@@ -506,13 +493,13 @@ def draw_month(pdf, year, month, values, festivals_by_date, ekadashi_dates, ecli
         tithi_display, is_sukla = tithi_display_parts(tithi)
         if is_masa_start:
             pdf.setFillColor(ADHIKA_ROW if is_adhika else MASA_START_ROW)
-            pdf.rect(x, row_y, tithi_column_width, row_height, stroke=0, fill=1)
+            pdf.rect(x, row_y, tithi_column_width, ROW_HEIGHT, stroke=0, fill=1)
             pdf.setFillColor(ADHIKA_INK if is_adhika else MASA_START_INK)
             pdf.setFont("Helvetica-Bold", 5.2)
             pdf.drawString(x + 2.4, row_y + 8.2, masa_badge.removeprefix("A"))
         if is_sunday:
             pdf.setFillColor(SUNDAY_MARK)
-            pdf.rect(x + width - 1.6, row_y, 1.6, row_height, stroke=0, fill=1)
+            pdf.rect(x + width - 1.6, row_y, 1.6, ROW_HEIGHT, stroke=0, fill=1)
         civil_date = CivilDate(year, month, day)
         if civil_date in ekadashi_dates:
             pdf.setFillColor(EKADASHI_MARK)
@@ -536,7 +523,7 @@ def draw_month(pdf, year, month, values, festivals_by_date, ekadashi_dates, ecli
                 pdf.drawRightString(x + tithi_column_width - 1.6, marker_top - marker_index * marker_spacing,
                                     str(number))
 
-    bottom = rows_top - 31 * row_height
+    bottom = rows_top - 31 * ROW_HEIGHT
     pdf.setStrokeColor(GRID)
     pdf.setLineWidth(0.4)
     pdf.rect(x, bottom, width, top - bottom, stroke=1, fill=0)
@@ -544,7 +531,7 @@ def draw_month(pdf, year, month, values, festivals_by_date, ekadashi_dates, ecli
     pdf.line(x + tithi_column_width + nakshatra_column_width, bottom, x + tithi_column_width + nakshatra_column_width,
              header_top)
     for index in range(32):
-        y = rows_top - index * row_height
+        y = rows_top - index * ROW_HEIGHT
         pdf.line(x, y, x + width, y)
     pdf.setStrokeColor(MONTH_DIVIDER)
     pdf.setLineWidth(0.9)

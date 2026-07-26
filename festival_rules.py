@@ -7,7 +7,7 @@ reference. This module is a clean-slate rebuild.
 import calendar
 import configparser
 from datetime import date as CivilDate
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -15,6 +15,23 @@ import panchanga
 
 SECONDS_PER_DAY = 24 * 60 * 60
 JULIAN_DAY_AT_UNIX_EPOCH = 2440587.5
+
+
+def julian_day_from_datetime(value):
+    """Convert a timezone-aware ``datetime`` to a UT Julian day."""
+    return value.timestamp() / SECONDS_PER_DAY + JULIAN_DAY_AT_UNIX_EPOCH
+
+
+def jd_to_local_datetime(jd, timezone_name):
+    """Convert a UT Julian day to local ``datetime`` in ``timezone_name``."""
+    utc = datetime.fromtimestamp((jd - JULIAN_DAY_AT_UNIX_EPOCH) * SECONDS_PER_DAY, tz=timezone.utc)
+    return utc.astimezone(ZoneInfo(timezone_name))
+
+
+def jd_to_local_civil_date(jd, timezone_name):
+    """Convert a UT Julian day to the civil date in ``timezone_name``."""
+    return jd_to_local_datetime(jd, timezone_name).date()
+
 
 # Tithi festivals: (number, name, masa, tithi).
 TITHI_FESTIVAL_RULES = (
@@ -354,11 +371,11 @@ def civil_day_has_eclipse(civil_date, geopos, timezone_name):
     """True when a visible non-penumbral lunar eclipse peaks locally on date."""
     if geopos is None:
         return False
-    timezone = ZoneInfo(timezone_name)
-    day_start = datetime(civil_date.year, civil_date.month, civil_date.day, tzinfo=timezone)
+    timezone_info = ZoneInfo(timezone_name)
+    day_start = datetime(civil_date.year, civil_date.month, civil_date.day, tzinfo=timezone_info)
     day_end = day_start + timedelta(days=1)
-    start_jd = day_start.timestamp() / SECONDS_PER_DAY + JULIAN_DAY_AT_UNIX_EPOCH
-    end_jd = day_end.timestamp() / SECONDS_PER_DAY + JULIAN_DAY_AT_UNIX_EPOCH
+    start_jd = julian_day_from_datetime(day_start)
+    end_jd = julian_day_from_datetime(day_end)
     return any(kind == "Lunar" for kind, _phase, _maximum_jd in find_local_eclipses(start_jd, end_jd, geopos))
 
 
@@ -469,16 +486,8 @@ def select_non_tithi_dates(records, name, geopos=None, timezone_name=None):
     raise ValueError(f"No selector for non-tithi festival {name!r}")
 
 
-def resolve_festivals(
-    months,
-    month_data,
-    *,
-    context_months=None,
-    context_data=None,
-    geopos=None,
-    timezone_name=None,
-    enabled_names=None,
-):
+def resolve_festivals(months, month_data, *, context_months=None, context_data=None, geopos=None, timezone_name=None,
+                      enabled_names=None):
     """Resolve tithi and non-tithi festivals for the PDF calendar.
 
     When ``enabled_names`` is set, only those catalog festivals are resolved

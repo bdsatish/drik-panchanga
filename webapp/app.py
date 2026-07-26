@@ -28,12 +28,7 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from generate_panchanga_calendar import (  # noqa: E402
-    DEFAULT_CITIES_PATH,
-    DEFAULT_FESTIVALS_PATH,
-    build_pdf,
-    default_output_path,
-    load_location,
-    parse_start_month,
+    DEFAULT_CITIES_PATH, DEFAULT_FESTIVALS_PATH, build_pdf, default_output_path, load_location, parse_start_month,
 )
 
 app = Flask(__name__)
@@ -110,13 +105,7 @@ def generate():
     output_path = tmp_dir / output_name
     try:
         try:
-            generated = build_pdf(
-                location,
-                start_year,
-                start_month,
-                output_path,
-                festivals_path=DEFAULT_FESTIVALS_PATH,
-            )
+            generated = build_pdf(location, start_year, start_month, output_path, festivals_path=DEFAULT_FESTIVALS_PATH)
         except (OSError, ValueError, RuntimeError) as error:
             abort(400, description=str(error))
         # Load into memory so the temp directory can be removed immediately.
@@ -125,20 +114,14 @@ def generate():
     finally:
         shutil.rmtree(tmp_dir, ignore_errors=True)
 
-    return send_file(
-        io.BytesIO(pdf_bytes),
-        mimetype="application/pdf",
-        as_attachment=True,
-        download_name=download_name,
-        max_age=0,
-    )
+    return send_file(io.BytesIO(pdf_bytes), mimetype="application/pdf", as_attachment=True, download_name=download_name,
+                     max_age=0)
 
 
 @app.errorhandler(400)
 def bad_request(error):
     message = getattr(error, "description", None) or "Bad request"
-    if request.accept_mimetypes.best == "application/json" or request.path.startswith(
-            "/api/"):
+    if request.accept_mimetypes.best == "application/json" or request.path.startswith("/api/"):
         return jsonify({"error": message}), 400
     return render_template("index.html", error=message), 400
 
@@ -148,27 +131,15 @@ def main():
     import os
 
     parser = argparse.ArgumentParser(description="Serve the panchanga PDF web UI.")
-    parser.add_argument(
-        "--host",
-        default=os.environ.get("PANCHANGA_HOST", "0.0.0.0"),
-        help="bind address (default: 0.0.0.0, or PANCHANGA_HOST)",
-    )
+    parser.add_argument("--host", default=os.environ.get("PANCHANGA_HOST", "0.0.0.0"),
+                        help="bind address (default: 0.0.0.0, or PANCHANGA_HOST)")
     parser.add_argument(
         "--port",
         type=int,
         # Railway/Heroku set PORT; local default remains 8765.
-        default=int(
-            os.environ.get("PORT")
-            or os.environ.get("PANCHANGA_PORT")
-            or "8765"
-        ),
-        help="TCP port (default: PORT / PANCHANGA_PORT / 8765)",
-    )
-    parser.add_argument(
-        "--debug",
-        action="store_true",
-        help="enable Flask debug reloader",
-    )
+        default=int(os.environ.get("PORT") or os.environ.get("PANCHANGA_PORT") or "8765"),
+        help="TCP port (default: PORT / PANCHANGA_PORT / 8765)")
+    parser.add_argument("--debug", action="store_true", help="enable Flask debug reloader")
     args = parser.parse_args()
     # 0.0.0.0 so the UI is reachable from other devices on the LAN.
     app.run(host=args.host, port=args.port, debug=args.debug)

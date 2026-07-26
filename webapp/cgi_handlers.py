@@ -26,16 +26,10 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from generate_panchanga_calendar import (  # noqa: E402
-    DEFAULT_FESTIVALS_PATH,
-    build_pdf,
-    default_output_path,
-    load_location,
-    parse_start_month,
+    DEFAULT_FESTIVALS_PATH, build_pdf, default_output_path, load_location, parse_start_month,
 )
 from webapp.app import (  # noqa: E402
-    city_names,
-    safe_download_name,
-    search_cities,
+    city_names, safe_download_name, search_cities,
 )
 
 PROJECT_ROOT = _REPO_ROOT
@@ -54,10 +48,8 @@ def _parse_urlencoded_post() -> dict[str, str]:
     raw = sys.stdin.buffer.read(length) if length > 0 else b""
     content_type = os.environ.get("CONTENT_TYPE", "")
     if content_type and "application/x-www-form-urlencoded" not in content_type:
-        raise ValueError(
-            "Unsupported Content-Type for generate: "
-            f"{content_type!r} (expected application/x-www-form-urlencoded)"
-        )
+        raise ValueError("Unsupported Content-Type for generate: "
+                         f"{content_type!r} (expected application/x-www-form-urlencoded)")
     parsed = parse_qs(raw.decode("utf-8", errors="replace"), keep_blank_values=True)
     return {key: (values[-1] if values else "") for key, values in parsed.items()}
 
@@ -79,27 +71,21 @@ def write_text(
     status: str | None = None,
 ) -> None:
     data = body.encode("utf-8")
-    write_headers(
-        [
-            ("Content-Type", content_type),
-            ("Content-Length", str(len(data))),
-            ("Cache-Control", "no-store"),
-        ],
-        status=status,
-    )
+    write_headers([
+        ("Content-Type", content_type),
+        ("Content-Length", str(len(data))),
+        ("Cache-Control", "no-store"),
+    ], status=status)
     sys.stdout.buffer.write(data)
 
 
 def write_json(payload: object, *, status: str | None = None) -> None:
     data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
-    write_headers(
-        [
-            ("Content-Type", "application/json; charset=utf-8"),
-            ("Content-Length", str(len(data))),
-            ("Cache-Control", "no-store"),
-        ],
-        status=status,
-    )
+    write_headers([
+        ("Content-Type", "application/json; charset=utf-8"),
+        ("Content-Length", str(len(data))),
+        ("Cache-Control", "no-store"),
+    ], status=status)
     sys.stdout.buffer.write(data)
 
 
@@ -113,11 +99,9 @@ def write_error(
         write_json({"error": message}, status=status)
         return
     safe = html.escape(message)
-    body = (
-        "<!DOCTYPE html><html lang='en'><head><meta charset='utf-8'>"
-        f"<title>Error</title></head><body><h1>Error</h1><p>{safe}</p>"
-        "<p><a href='./'>Back</a></p></body></html>"
-    )
+    body = ("<!DOCTYPE html><html lang='en'><head><meta charset='utf-8'>"
+            f"<title>Error</title></head><body><h1>Error</h1><p>{safe}</p>"
+            "<p><a href='./'>Back</a></p></body></html>")
     write_text(body, content_type="text/html; charset=utf-8", status=status)
 
 
@@ -134,21 +118,14 @@ def handle_cities() -> None:
         city_names()  # fail fast if cities.json is missing
         write_json({"cities": search_cities(query, limit=limit)})
     except Exception as error:  # noqa: BLE001 — surface to the browser for CGI
-        write_error(
-            str(error) or traceback.format_exc(),
-            status="500 Internal Server Error",
-            as_json=True,
-        )
+        write_error(str(error) or traceback.format_exc(), status="500 Internal Server Error", as_json=True)
 
 
 def handle_generate() -> None:
     """POST generate.py with city + start → PDF attachment."""
     method = os.environ.get("REQUEST_METHOD", "GET").upper()
     if method != "POST":
-        write_error(
-            "Use POST with form fields city and start (YYYY-MM).",
-            status="405 Method Not Allowed",
-        )
+        write_error("Use POST with form fields city and start (YYYY-MM).", status="405 Method Not Allowed")
         return
 
     try:
@@ -168,46 +145,33 @@ def handle_generate() -> None:
         tmp_dir = Path(tempfile.mkdtemp(prefix="panchanga-cgi-"))
         output_path = tmp_dir / output_name
         try:
-            generated = build_pdf(
-                location,
-                start_year,
-                start_month,
-                output_path,
-                festivals_path=DEFAULT_FESTIVALS_PATH,
-            )
+            generated = build_pdf(location, start_year, start_month, output_path, festivals_path=DEFAULT_FESTIVALS_PATH)
             pdf_bytes = generated.read_bytes()
             download_name = safe_download_name(generated)
         finally:
             shutil.rmtree(tmp_dir, ignore_errors=True)
 
-        write_headers(
-            [
-                ("Content-Type", "application/pdf"),
-                ("Content-Disposition", f'attachment; filename="{download_name}"'),
-                ("Content-Length", str(len(pdf_bytes))),
-                ("Cache-Control", "no-store"),
-            ]
-        )
+        write_headers([
+            ("Content-Type", "application/pdf"),
+            ("Content-Disposition", f'attachment; filename="{download_name}"'),
+            ("Content-Length", str(len(pdf_bytes))),
+            ("Cache-Control", "no-store"),
+        ])
         sys.stdout.buffer.write(pdf_bytes)
     except (OSError, ValueError, RuntimeError) as error:
         write_error(str(error))
     except Exception as error:  # noqa: BLE001
-        write_error(
-            f"Internal error: {error}",
-            status="500 Internal Server Error",
-        )
+        write_error(f"Internal error: {error}", status="500 Internal Server Error")
 
 
 def handle_status() -> None:
     """GET status.py — tiny health / version probe."""
     try:
         n_cities = len(city_names())
-        write_json(
-            {
-                "ok": True,
-                "cities": n_cities,
-                "project": str(PROJECT_ROOT),
-            }
-        )
+        write_json({
+            "ok": True,
+            "cities": n_cities,
+            "project": str(PROJECT_ROOT),
+        })
     except Exception as error:  # noqa: BLE001
         write_error(str(error), status="500 Internal Server Error", as_json=True)

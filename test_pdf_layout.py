@@ -36,15 +36,10 @@ class PdfLayoutTests(unittest.TestCase):
 
         with TemporaryDirectory() as directory:
             output = Path(directory) / "calendar.pdf"
-            with mock.patch(
-                    "generate_panchanga_calendar.find_local_eclipses",
-                    return_value=[
-                        ("Lunar", "Partial", 2461103.0419131187),
-                    ],
-            ), mock.patch(
-                    "generate_panchanga_calendar.draw_page_footer",
-                    wraps=calendar_module.draw_page_footer,
-            ) as footer:
+            with mock.patch("generate_panchanga_calendar.find_local_eclipses", return_value=[
+                ("Lunar", "Partial", 2461103.0419131187),
+            ]), mock.patch("generate_panchanga_calendar.draw_page_footer",
+                           wraps=calendar_module.draw_page_footer) as footer:
                 build_pdf(load_location("Helsinki"), 2026, 6, output)
             document = output.read_bytes()
 
@@ -63,37 +58,17 @@ class PdfLayoutTests(unittest.TestCase):
 
     def test_default_filename_has_no_policy_suffix(self):
         path = default_output_path(load_location("Helsinki"), 2026, 3)
-        self.assertEqual(
-            path.name,
-            "helsinki_panchanga_2026-03_to_2027-04.pdf",
-        )
+        self.assertEqual(path.name, "helsinki_panchanga_2026-03_to_2027-04.pdf")
 
     def test_long_labels_are_fitted_without_overflow(self):
         pdf = Canvas(BytesIO())
         text = ("A Particularly Long Location Name Panchanga: "
                 "September 2026 - September 2027")
         available_width = 300
-        size = fitted_font_size(
-            pdf,
-            text,
-            "Helvetica-Bold",
-            11,
-            5,
-            available_width,
-        )
+        size = fitted_font_size(pdf, text, "Helvetica-Bold", 11, 5, available_width)
 
-        ensure_text_fits(
-            pdf,
-            text,
-            "Helvetica-Bold",
-            size,
-            available_width,
-            "test title",
-        )
-        self.assertLessEqual(
-            pdf.stringWidth(text, "Helvetica-Bold", size),
-            available_width + 0.01,
-        )
+        ensure_text_fits(pdf, text, "Helvetica-Bold", size, available_width, "test title")
+        self.assertLessEqual(pdf.stringWidth(text, "Helvetica-Bold", size), available_width + 0.01)
 
 
 class TithiDisplayTests(unittest.TestCase):
@@ -108,10 +83,7 @@ class TithiDisplayTests(unittest.TestCase):
         self.assertEqual(tithi_ink(True), ACCENT)
         self.assertEqual(tithi_ink(False), KRSNA_INK)
         self.assertEqual(tithi_ink(False, is_masa_start=True), MASA_START_INK)
-        self.assertEqual(
-            tithi_ink(True, is_masa_start=True, is_adhika=True),
-            ADHIKA_INK,
-        )
+        self.assertEqual(tithi_ink(True, is_masa_start=True, is_adhika=True), ADHIKA_INK)
 
     def test_font_uses_italic_for_krishna(self):
         self.assertEqual(tithi_font(True), "Helvetica-Bold")
