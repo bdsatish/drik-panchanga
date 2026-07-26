@@ -354,17 +354,9 @@ def find_local_eclipses(start_jd, end_jd, geopos):
             # Advance by a full day. A tiny epsilon can make swe return the same
             # eclipse again (e.g. a skipped penumbral), which would stall the loop.
             search_jd = maximum + 1.0
-            if len(found) > 64:
-                break
 
     found.sort(key=lambda item: item[2])
-    # Deduplicate near-identical maxima (solar+lunar searches are separate).
-    deduped = []
-    for item in found:
-        if deduped and item[0] == deduped[-1][0] and abs(item[2] - deduped[-1][2]) < 1e-4:
-            continue
-        deduped.append(item)
-    return deduped
+    return found
 
 
 def civil_day_has_eclipse(civil_date, geopos, timezone_name):
