@@ -118,7 +118,7 @@ italic, so black-and-white prints still distinguish them. A brown X in the
 lower-left corner marks days with a locally visible eclipse.
 Numbered red superscripts refer to the festival key below the calendar. The
 footer also lists locally visible partial, total, and annular eclipses for the
-printed Gregorian range, each with its local visibility window and that date's
+printed Gregorian range, each with its local maximum time and that date's
 sunrise (`None` when none qualify). Ruleset and layout versions
 are printed at the top right and embedded in the PDF metadata so a generated
 calendar can be reproduced or compared after rule changes.
@@ -239,12 +239,13 @@ underlines use the same rule for every `S11` and `K11`; they are not the
   eclipsed (see below), use Bhadrapada's Sravana-nakshatra day. Vriddhi keeps
   the former sunrise.
 
-  Upakarma eclipse test (Yajur and Rig): postpone when the maximum of a locally
-  visible non-penumbral lunar eclipse falls on the chosen local civil date. In
-  practical terms, an eclipse `X` on the selected Upakarma date triggers the
-  fallback. Solar and purely penumbral lunar eclipses are ignored. Assigning
-  each eclipse to its maximum's date is a deterministic single-date
-  simplification, not the full Dharma-sindhu / Nirnaya-sindhu interval rule.
+  Upakarma eclipse test (Yajur and Rig): postpone when the instant of a locally
+  visible non-penumbral lunar eclipse's maximum falls on the chosen local civil
+  date. In practical terms, an eclipse `X` on the selected Upakarma date
+  triggers the fallback. Solar and purely penumbral lunar eclipses are
+  ignored. Using midnight-to-midnight civil date for an eclipse is in line with
+  Dharma Sindhu. Using the maximum's moment avoids interval arithmetic.
+
 * Vaikuntha Ekadashi — a Margashirsha or Pausha Shukla Ekadashi upavasa day
   while the Sun is in Dhanur at sunrise. If none qualify, the PDF prints
   `None`.

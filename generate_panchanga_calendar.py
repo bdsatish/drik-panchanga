@@ -27,7 +27,7 @@ MONTH_COUNT = 14
 DEFAULT_CITIES_PATH = Path(__file__).with_name("cities.json")
 DEFAULT_FESTIVALS_PATH = Path(__file__).with_name("festivals.cfg")
 RULESET_VERSION = "Udaya-Vyapini-1.1"
-LAYOUT_VERSION = "A4-1.8"
+LAYOUT_VERSION = "A4-1.9"
 PDF_AUTHOR = "Satish BD"
 PDF_AUTHOR_EMAIL = "bdsatish@gmail.com"
 PDF_COPYRIGHT = ("Copyright © Satish BD. Licensed under the GNU Affero GPL "
@@ -215,7 +215,7 @@ def format_local_hm(jd, timezone_name):
 
 
 def format_eclipse_line(eclipses, timezone_name, sunrise_by_date=None):
-    """Compact footer line for locally visible eclipses with local times.
+    """Compact footer line for locally visible eclipses at maximum time.
 
     When ``sunrise_by_date`` maps civil dates to sunrise Julian days, each
     entry also shows that date's local sunrise.
@@ -224,12 +224,10 @@ def format_eclipse_line(eclipses, timezone_name, sunrise_by_date=None):
         return "Eclipses: None"
     sunrise_by_date = sunrise_by_date or {}
     parts = []
-    for kind, phase, maximum_jd, visible_start, visible_end in eclipses:
+    for kind, phase, maximum_jd in eclipses:
         civil = jd_to_local_civil_date(maximum_jd, timezone_name)
-        start_hm = format_local_hm(visible_start, timezone_name)
-        end_hm = format_local_hm(visible_end, timezone_name)
         part = (f"{kind} {calendar.month_abbr[civil.month]} {civil.day:02d} "
-                f"({phase}) {start_hm}-{end_hm}")
+                f"({phase}) max {format_local_hm(maximum_jd, timezone_name)}")
         sunrise_jd = sunrise_by_date.get(civil)
         if sunrise_jd is not None:
             part += f", sunrise {format_local_hm(sunrise_jd, timezone_name)}"
@@ -248,10 +246,7 @@ def sunrise_jd_by_civil_date(months, month_data):
 
 def eclipse_civil_dates(eclipses, timezone_name):
     """Local civil date of each eclipse maximum."""
-    return {
-        jd_to_local_civil_date(maximum_jd, timezone_name)
-        for _kind, _phase, maximum_jd, _visible_start, _visible_end in eclipses
-    }
+    return {jd_to_local_civil_date(maximum_jd, timezone_name) for _kind, _phase, maximum_jd in eclipses}
 
 
 def draw_eclipse_mark(pdf, x, row_y):

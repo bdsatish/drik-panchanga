@@ -39,7 +39,7 @@ class PdfLayoutTests(unittest.TestCase):
             with mock.patch(
                     "generate_panchanga_calendar.find_local_eclipses",
                     return_value=[
-                        ("Lunar", "Partial", 2461103.0419131187, 2461103.0, 2461103.1),
+                        ("Lunar", "Partial", 2461103.0419131187),
                     ],
             ), mock.patch(
                     "generate_panchanga_calendar.draw_page_footer",

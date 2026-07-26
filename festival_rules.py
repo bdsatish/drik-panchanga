@@ -287,12 +287,15 @@ def select_varamahalakshmi_dates(records):
     return selected
 
 
-def _intervals_overlap(first_start, first_end, second_start, second_end):
-    return first_start < second_end and second_start < first_end
-
-
 def _eclipse_phase(flags):
-    """Return Partial/Total/Annular, or None for purely penumbral / unusable."""
+    """Return Partial/Total/Annular, or None if not locally usable.
+
+    ``*_eclipse_when_loc`` already searches for events observable at the
+    place. Require ``ECL_VISIBLE`` but not ``ECL_MAX_VISIBLE`` (maximum may
+    fall at rise/set). Purely penumbral lunar eclipses are omitted.
+    """
+    if not (flags & panchanga.swe.ECL_VISIBLE):
+        return None
     if flags & panchanga.swe.ECL_TOTAL:
         return "Total"
     if flags & (panchanga.swe.ECL_ANNULAR | panchanga.swe.ECL_ANNULAR_TOTAL):
@@ -302,80 +305,23 @@ def _eclipse_phase(flags):
     return None
 
 
-def _clip_lunar_visibility(times):
-    """Local lunar eclipse window after moonrise/moonset clipping.
-
-    ``lun_eclipse_when_loc`` may zero geometric contacts that fall outside
-    local visibility and instead expose the bound via moonrise/moonset.
-    """
-    lunar_start, lunar_end = times[2], times[3]
-    moonrise, moonset = times[8], times[9]
-    maximum = times[0]
-    if not lunar_start and moonrise:
-        lunar_start = moonrise
-    elif moonrise and lunar_start and moonrise > lunar_start:
-        lunar_start = moonrise
-    if not lunar_end and moonset:
-        lunar_end = moonset
-    elif moonset and lunar_end and moonset < lunar_end:
-        lunar_end = moonset
-    if lunar_start and not lunar_end and maximum and maximum >= lunar_start:
-        lunar_end = maximum
-    if lunar_end and not lunar_start and maximum and maximum <= lunar_end:
-        lunar_start = maximum
-    if lunar_start and lunar_end and lunar_start <= lunar_end:
-        if lunar_start == lunar_end:
-            return lunar_start, lunar_end + 1e-6
-        return lunar_start, lunar_end
-    return None, None
-
-
-def _clip_solar_visibility(times):
-    """Local solar eclipse window after sunrise/sunset clipping.
-
-    ``sol_eclipse_when_loc`` may zero geometric contacts outside daytime and
-    expose the bound via sunrise/sunset instead.
-    """
-    solar_start, solar_end = times[1], times[4]
-    sunrise, sunset = times[5], times[6]
-    maximum = times[0]
-    if not solar_start and sunrise:
-        solar_start = sunrise
-    elif sunrise and solar_start and sunrise > solar_start:
-        solar_start = sunrise
-    if not solar_end and sunset:
-        solar_end = sunset
-    elif sunset and solar_end and sunset < solar_end:
-        solar_end = sunset
-    if solar_start and not solar_end and maximum and maximum >= solar_start:
-        solar_end = maximum
-    if solar_end and not solar_start and maximum and maximum <= solar_end:
-        solar_start = maximum
-    if solar_start and solar_end and solar_start <= solar_end:
-        if solar_start == solar_end:
-            return solar_start, solar_end + 1e-6
-        return solar_start, solar_end
-    return None, None
-
-
 def find_local_eclipses(start_jd, end_jd, geopos):
-    """Locally visible partial/total/annular eclipses in ``[start_jd, end_jd)``.
+    """Locally visible partial/total/annular eclipses with maximum in ``[start_jd, end_jd)``.
 
-    Returns a sorted list of
-    ``(kind, phase, maximum_jd, visible_start_jd, visible_end_jd)`` where
-    ``kind`` is ``\"Lunar\"`` or ``\"Solar\"`` and ``phase`` is Partial, Total,
-    or Annular. Purely penumbral lunar eclipses are omitted. The visible
-    window is the locally clipped contact interval.
+    Returns a sorted list of ``(kind, phase, maximum_jd)`` where ``kind`` is
+    ``\"Lunar\"`` or ``\"Solar\"`` and ``phase`` is Partial, Total, or Annular.
+    Purely penumbral lunar eclipses are omitted. Membership uses the maximum
+    only; contact intervals are not consulted.
     """
     if end_jd <= start_jd:
         return []
 
     searches = (
-        ("Lunar", panchanga.swe.lun_eclipse_when_loc, _clip_lunar_visibility),
-        ("Solar", panchanga.swe.sol_eclipse_when_loc, _clip_solar_visibility),
+        ("Lunar", panchanga.swe.lun_eclipse_when_loc),
+        ("Solar", panchanga.swe.sol_eclipse_when_loc),
     )
     found = []
-    for kind, finder, clipper in searches:
+    for kind, finder in searches:
         search_jd = start_jd - 1.0
         while search_jd < end_jd + 2.0:
             try:
@@ -386,10 +332,8 @@ def find_local_eclipses(start_jd, end_jd, geopos):
             if not maximum or maximum <= search_jd:
                 break
             phase = _eclipse_phase(flags)
-            if phase is not None:
-                visible_start, visible_end = clipper(times)
-                if (visible_start and visible_end and _intervals_overlap(start_jd, end_jd, visible_start, visible_end)):
-                    found.append((kind, phase, maximum, visible_start, visible_end))
+            if phase is not None and start_jd <= maximum < end_jd:
+                found.append((kind, phase, maximum))
             # Advance by a full day. A tiny epsilon can make swe return the same
             # eclipse again (e.g. a skipped penumbral), which would stall the loop.
             search_jd = maximum + 1.0
@@ -415,9 +359,6 @@ def civil_day_has_eclipse(civil_date, geopos, timezone_name):
     start_jd = day_start.timestamp() / SECONDS_PER_DAY + JULIAN_DAY_AT_UNIX_EPOCH
     lunar_flags, lunar_times, _ = panchanga.swe.lun_eclipse_when_loc(start_jd - 1, geopos)
     if _eclipse_phase(lunar_flags) is None:
-        return False
-    visible_start, visible_end = _clip_lunar_visibility(lunar_times)
-    if not visible_start or not visible_end:
         return False
     maximum_timestamp = (lunar_times[0] - JULIAN_DAY_AT_UNIX_EPOCH) * SECONDS_PER_DAY
     maximum_date = datetime.fromtimestamp(maximum_timestamp, tz=ZoneInfo("UTC")).astimezone(timezone).date()
