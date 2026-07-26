@@ -248,12 +248,8 @@ def select_tithi_dates(records, tithi, *, masa=None, allow_adhika=False):
     ])
     sunrise_dates = set(sunrise_matches)
     kshaya_matches = [
-        civil_date for civil_date in select_kshaya_dates(
-            records,
-            tithi,
-            masa=masa,
-            allow_adhika=allow_adhika,
-        ) if civil_date not in sunrise_dates
+        civil_date for civil_date in select_kshaya_dates(records, tithi, masa=masa, allow_adhika=allow_adhika)
+        if civil_date not in sunrise_dates
     ]
     return sorted(set(sunrise_matches) | set(kshaya_matches))
 
@@ -265,12 +261,7 @@ def select_plain_tithi_dates(records, masa, tithi, *, allow_adhika=False):
     match, but if any adhika occurrence exists only the adhika dates are
     kept — matching the generic-udaya policy.
     """
-    matches = select_tithi_dates(
-        records,
-        tithi,
-        masa=masa,
-        allow_adhika=allow_adhika,
-    )
+    matches = select_tithi_dates(records, tithi, masa=masa, allow_adhika=allow_adhika)
     if not allow_adhika or not matches:
         return matches
     records_by_date = {record[CIVIL_DATE]: record for record in records}
@@ -397,12 +388,7 @@ def find_local_eclipses(start_jd, end_jd, geopos):
             phase = _eclipse_phase(flags)
             if phase is not None:
                 visible_start, visible_end = clipper(times)
-                if (visible_start and visible_end and _intervals_overlap(
-                        start_jd,
-                        end_jd,
-                        visible_start,
-                        visible_end,
-                )):
+                if (visible_start and visible_end and _intervals_overlap(start_jd, end_jd, visible_start, visible_end)):
                     found.append((kind, phase, maximum, visible_start, visible_end))
             # Advance by a full day. A tiny epsilon can make swe return the same
             # eclipse again (e.g. a skipped penumbral), which would stall the loop.
@@ -425,27 +411,16 @@ def civil_day_has_eclipse(civil_date, geopos, timezone_name):
     if geopos is None:
         return False
     timezone = ZoneInfo(timezone_name)
-    day_start = datetime(
-        civil_date.year,
-        civil_date.month,
-        civil_date.day,
-        tzinfo=timezone,
-    )
+    day_start = datetime(civil_date.year, civil_date.month, civil_date.day, tzinfo=timezone)
     start_jd = day_start.timestamp() / SECONDS_PER_DAY + JULIAN_DAY_AT_UNIX_EPOCH
-    lunar_flags, lunar_times, _ = panchanga.swe.lun_eclipse_when_loc(
-        start_jd - 1,
-        geopos,
-    )
+    lunar_flags, lunar_times, _ = panchanga.swe.lun_eclipse_when_loc(start_jd - 1, geopos)
     if _eclipse_phase(lunar_flags) is None:
         return False
     visible_start, visible_end = _clip_lunar_visibility(lunar_times)
     if not visible_start or not visible_end:
         return False
     maximum_timestamp = (lunar_times[0] - JULIAN_DAY_AT_UNIX_EPOCH) * SECONDS_PER_DAY
-    maximum_date = datetime.fromtimestamp(
-        maximum_timestamp,
-        tz=ZoneInfo("UTC"),
-    ).astimezone(timezone).date()
+    maximum_date = datetime.fromtimestamp(maximum_timestamp, tz=ZoneInfo("UTC")).astimezone(timezone).date()
     return maximum_date == civil_date
 
 
@@ -455,11 +430,7 @@ def postpone_upakarma_if_eclipse(primary, fallback, geopos, timezone_name):
         return list(fallback)
     if geopos is not None and timezone_name is None:
         raise ValueError("Upakarma eclipse handling requires a timezone name")
-    if geopos is not None and any(civil_day_has_eclipse(
-            civil_date,
-            geopos,
-            timezone_name,
-    ) for civil_date in primary):
+    if geopos is not None and any(civil_day_has_eclipse(civil_date, geopos, timezone_name) for civil_date in primary):
         return list(fallback) if fallback else list(primary)
     return list(primary)
 
@@ -473,12 +444,7 @@ def select_yajur_upakarma_dates(records, geopos=None, timezone_name=None):
     """
     primary = select_plain_tithi_dates(records, 5, "S15")
     fallback = select_plain_tithi_dates(records, 6, "S15")
-    return postpone_upakarma_if_eclipse(
-        primary,
-        fallback,
-        geopos,
-        timezone_name,
-    )
+    return postpone_upakarma_if_eclipse(primary, fallback, geopos, timezone_name)
 
 
 def select_rig_upakarma_dates(records, geopos=None, timezone_name=None):
@@ -506,12 +472,7 @@ def select_rig_upakarma_dates(records, geopos=None, timezone_name=None):
     # (e.g. Sringeri: 11-08-2022)
     primary = matches_for_masa("5")
     fallback = matches_for_masa("6")
-    return postpone_upakarma_if_eclipse(
-        primary,
-        fallback,
-        geopos,
-        timezone_name,
-    )
+    return postpone_upakarma_if_eclipse(primary, fallback, geopos, timezone_name)
 
 
 def select_vaikuntha_ekadashi_dates(records):
@@ -560,11 +521,7 @@ def select_non_tithi_dates(records, number, name, geopos=None, timezone_name=Non
     if name == "Varamahalakshmi Vrata" or number == 8:
         return select_varamahalakshmi_dates(records)
     if name == "Rig Upakarma" or number == 9:
-        return select_rig_upakarma_dates(
-            records,
-            geopos=geopos,
-            timezone_name=timezone_name,
-        )
+        return select_rig_upakarma_dates(records, geopos=geopos, timezone_name=timezone_name)
     if name == "Vaikuntha Ekadashi" or number == 22:
         return select_vaikuntha_ekadashi_dates(records)
     if name == "Makara Sankranti" or number == 23:
@@ -604,11 +561,7 @@ def resolve_festivals(
         if enabled_names is not None and name not in enabled_names:
             continue
         if number == 10:  # Yajur Upakarma
-            candidates = select_yajur_upakarma_dates(
-                records,
-                geopos=geopos,
-                timezone_name=timezone_name,
-            )
+            candidates = select_yajur_upakarma_dates(records, geopos=geopos, timezone_name=timezone_name)
         else:
             candidates = select_plain_tithi_dates(
                 records,
@@ -627,13 +580,9 @@ def resolve_festivals(
         if enabled_names is not None and name not in enabled_names:
             continue
         matches = [
-            civil_date for civil_date in select_non_tithi_dates(
-                records,
-                number,
-                name,
-                geopos=geopos,
-                timezone_name=timezone_name,
-            ) if civil_date in target_dates
+            civil_date
+            for civil_date in select_non_tithi_dates(records, number, name, geopos=geopos, timezone_name=timezone_name)
+            if civil_date in target_dates
         ]
         # Vaikuntha Ekadashi may be absent when no Margasira/Pausha S11 falls
         # while the Sun is in Dhanur; e.g. year 2086.

@@ -104,10 +104,7 @@ def embed_pdf_metadata(pdf, *, title, subject, ruleset_version):
     info.url = PDF_SOURCE_URL
 
     def format_info(document, self=info):
-        dates = PDFDate(
-            ts=document._timeStamp,
-            dateFormatter=self._dateFormatter,
-        )
+        dates = PDFDate(ts=document._timeStamp, dateFormatter=self._dateFormatter)
         return PDFDictionary({
             "Title": PDFString(self.title),
             "Author": PDFString(self.author),
@@ -169,19 +166,11 @@ def location_from_mapping(name, record):
     location_name = record.get("city", record.get("name", name))
     latitude = record.get("latitude", record.get("lat"))
     longitude = record.get("longitude", record.get("lon"))
-    timezone_name = record.get(
-        "timezone",
-        record.get("timezone_name", record.get("tz")),
-    )
+    timezone_name = record.get("timezone", record.get("timezone_name", record.get("tz")))
     if latitude is None or longitude is None or timezone_name is None:
         raise ValueError(f"Location record for {location_name!r} needs latitude, "
                          "longitude, and timezone")
-    return make_location(
-        str(location_name),
-        latitude,
-        longitude,
-        str(timezone_name),
-    )
+    return make_location(str(location_name), latitude, longitude, str(timezone_name))
 
 
 def load_location(city):
@@ -197,12 +186,7 @@ def load_location(city):
     if not matching_names:
         import difflib
 
-        suggestions = difflib.get_close_matches(
-            city,
-            list(locations),
-            n=5,
-            cutoff=0.6,
-        )
+        suggestions = difflib.get_close_matches(city, list(locations), n=5, cutoff=0.6)
         message = f"City {city!r} was not found in {path}"
         if suggestions:
             message += f". Close matches: {', '.join(suggestions)}"
@@ -354,11 +338,7 @@ def daily_values(year, month, location):
     days = calendar.monthrange(year, month)[1]
     for day in range(1, days + 1):
         date = panchanga.Date(year, month, day)
-        place = panchanga.Place(
-            location.latitude,
-            location.longitude,
-            timezone_hours(timezone, year, month, day),
-        )
+        place = panchanga.Place(location.latitude, location.longitude, timezone_hours(timezone, year, month, day))
         jd = panchanga.gregorian_to_jd(date)
         try:
             sunrise_jd = panchanga.sunrise(jd, place)[0]
@@ -439,30 +419,14 @@ def draw_day_column(pdf, x, top, width):
 
     pdf.setFillColor(ACCENT)
     pdf.rect(x, top - header_height, width, header_height, stroke=0, fill=1)
-    draw_centered(
-        pdf,
-        "DAY",
-        x + width / 2,
-        top - 21,
-        "Helvetica-Bold",
-        7.2,
-        white,
-    )
+    draw_centered(pdf, "DAY", x + width / 2, top - 21, "Helvetica-Bold", 7.2, white)
 
     rows_top = top - header_height
     for index in range(31):
         row_y = rows_top - (index + 1) * row_height
         pdf.setFillColor(ALT_ROW if index % 2 else white)
         pdf.rect(x, row_y, width, row_height, stroke=0, fill=1)
-        draw_centered(
-            pdf,
-            str(index + 1),
-            x + width / 2,
-            row_y + 4.1,
-            "Helvetica",
-            7.4,
-            INK,
-        )
+        draw_centered(pdf, str(index + 1), x + width / 2, row_y + 4.1, "Helvetica", 7.4, INK)
 
     bottom = rows_top - 31 * row_height
     pdf.setStrokeColor(GRID)
@@ -482,34 +446,13 @@ def draw_month(pdf, year, month, values, festivals_by_date, ekadashi_dates, ecli
     yoga_column_width = width * YOGA_COLUMN_RATIO
 
     pdf.setFillColor(ACCENT)
-    pdf.rect(
-        x,
-        top - month_header_height,
-        width,
-        month_header_height,
-        stroke=0,
-        fill=1,
-    )
-    draw_centered(
-        pdf,
-        f"{calendar.month_abbr[month]} '{str(year)[2:]}",
-        x + width / 2,
-        top - 14,
-        "Helvetica-Bold",
-        8.0,
-        white,
-    )
+    pdf.rect(x, top - month_header_height, width, month_header_height, stroke=0, fill=1)
+    draw_centered(pdf, f"{calendar.month_abbr[month]} '{str(year)[2:]}", x + width / 2, top - 14, "Helvetica-Bold", 8.0,
+                  white)
 
     header_top = top - month_header_height
     pdf.setFillColor(HexColor("#E2E7EF"))
-    pdf.rect(
-        x,
-        header_top - column_header_height,
-        width,
-        column_header_height,
-        stroke=0,
-        fill=1,
-    )
+    pdf.rect(x, header_top - column_header_height, width, column_header_height, stroke=0, fill=1)
 
     centers = (
         x + tithi_column_width / 2,
@@ -517,15 +460,7 @@ def draw_month(pdf, year, month, values, festivals_by_date, ekadashi_dates, ecli
         x + tithi_column_width + nakshatra_column_width + yoga_column_width / 2,
     )
     for label, center in zip(("T", "N", "Y"), centers):
-        draw_centered(
-            pdf,
-            label,
-            center,
-            header_top - 10.5,
-            "Helvetica-Bold",
-            7.0,
-            MUTED,
-        )
+        draw_centered(pdf, label, center, header_top - 10.5, "Helvetica-Bold", 7.0, MUTED)
 
     rows_top = header_top - column_header_height
     values_by_day = {
@@ -576,59 +511,24 @@ def draw_month(pdf, year, month, values, festivals_by_date, ekadashi_dates, ecli
         tithi_display, is_sukla = tithi_display_parts(tithi)
         if is_masa_start:
             pdf.setFillColor(ADHIKA_ROW if is_adhika else MASA_START_ROW)
-            pdf.rect(
-                x,
-                row_y,
-                tithi_column_width,
-                row_height,
-                stroke=0,
-                fill=1,
-            )
+            pdf.rect(x, row_y, tithi_column_width, row_height, stroke=0, fill=1)
             pdf.setFillColor(ADHIKA_INK if is_adhika else MASA_START_INK)
             pdf.setFont("Helvetica-Bold", 5.2)
-            pdf.drawString(
-                x + 2.4,
-                row_y + 8.2,
-                masa_badge.removeprefix("A"),
-            )
+            pdf.drawString(x + 2.4, row_y + 8.2, masa_badge.removeprefix("A"))
         if is_sunday:
             pdf.setFillColor(SUNDAY_MARK)
-            pdf.rect(
-                x + width - 1.6,
-                row_y,
-                1.6,
-                row_height,
-                stroke=0,
-                fill=1,
-            )
+            pdf.rect(x + width - 1.6, row_y, 1.6, row_height, stroke=0, fill=1)
         civil_date = CivilDate(year, month, day)
         if civil_date in ekadashi_dates:
             pdf.setFillColor(EKADASHI_MARK)
             ekadashi_width = tithi_column_width * EKADASHI_UNDERLINE_RATIO
-            pdf.rect(
-                x + (tithi_column_width - ekadashi_width) / 2,
-                row_y + 0.6,
-                ekadashi_width,
-                1.2,
-                stroke=0,
-                fill=1,
-            )
+            pdf.rect(x + (tithi_column_width - ekadashi_width) / 2, row_y + 0.6, ekadashi_width, 1.2, stroke=0, fill=1)
         if civil_date in eclipse_dates:
             draw_eclipse_mark(pdf, x, row_y)
-        festival_numbers = festivals_by_date.get(
-            civil_date,
-            (),
-        )
+        festival_numbers = festivals_by_date.get(civil_date, ())
         baseline = row_y + (3.0 if festival_numbers else 4.1)
-        draw_centered(
-            pdf,
-            tithi_display,
-            centers[0],
-            baseline,
-            tithi_font(is_sukla),
-            7.4,
-            tithi_ink(is_sukla, is_masa_start, is_adhika),
-        )
+        draw_centered(pdf, tithi_display, centers[0], baseline, tithi_font(is_sukla), 7.4,
+                      tithi_ink(is_sukla, is_masa_start, is_adhika))
         draw_centered(pdf, f"{nakshatra:02d}", centers[1], baseline, "Helvetica", 7.3, INK)
         draw_centered(pdf, f"{yoga:02d}", centers[2], baseline, "Helvetica", 7.3, INK)
         if festival_numbers:
@@ -638,23 +538,16 @@ def draw_month(pdf, year, month, values, festivals_by_date, ekadashi_dates, ecli
             marker_top = row_y + (8.8 if len(festival_numbers) <= 2 else 9.5)
             pdf.setFont("Helvetica-Bold", marker_size)
             for marker_index, number in enumerate(festival_numbers):
-                pdf.drawRightString(
-                    x + tithi_column_width - 1.6,
-                    marker_top - marker_index * marker_spacing,
-                    str(number),
-                )
+                pdf.drawRightString(x + tithi_column_width - 1.6, marker_top - marker_index * marker_spacing,
+                                    str(number))
 
     bottom = rows_top - 31 * row_height
     pdf.setStrokeColor(GRID)
     pdf.setLineWidth(0.4)
     pdf.rect(x, bottom, width, top - bottom, stroke=1, fill=0)
     pdf.line(x + tithi_column_width, bottom, x + tithi_column_width, header_top)
-    pdf.line(
-        x + tithi_column_width + nakshatra_column_width,
-        bottom,
-        x + tithi_column_width + nakshatra_column_width,
-        header_top,
-    )
+    pdf.line(x + tithi_column_width + nakshatra_column_width, bottom, x + tithi_column_width + nakshatra_column_width,
+             header_top)
     for index in range(32):
         y = rows_top - index * row_height
         pdf.line(x, y, x + width, y)
@@ -679,44 +572,19 @@ def draw_page_header(pdf, location, months, ruleset_version):
     page_width, page_height = landscape(A4)
     title = f"{location.name} Panchanga: {month_span_label(months)}"
     pdf.setFillColor(INK)
-    title_size = fitted_font_size(
-        pdf,
-        title,
-        "Helvetica-Bold",
-        11,
-        8,
-        page_width - 36,
-    )
-    ensure_text_fits(
-        pdf,
-        title,
-        "Helvetica-Bold",
-        title_size,
-        page_width - 36,
-        "page title",
-    )
+    title_size = fitted_font_size(pdf, title, "Helvetica-Bold", 11, 8, page_width - 36)
+    ensure_text_fits(pdf, title, "Helvetica-Bold", title_size, page_width - 36, "page title")
     pdf.setFont("Helvetica-Bold", title_size)
-    pdf.drawString(
-        18,
-        page_height - 20,
-        title,
-    )
+    pdf.drawString(18, page_height - 20, title)
     pdf.setFillColor(MUTED)
     pdf.setFont("Helvetica", 7.5)
     pdf.drawString(
-        18,
-        page_height - 31,
-        "At local sunrise | True Citra ayanamsa | Equal nakshatras | Amanta masa | "
+        18, page_height - 31, "At local sunrise | True Citra ayanamsa | Equal nakshatras | Amanta masa | "
         f"{coordinate_label(location.latitude, 'N', 'S')}, "
         f"{coordinate_label(location.longitude, 'E', 'W')} | "
-        f"{location.timezone_name} civil time",
-    )
+        f"{location.timezone_name} civil time")
     pdf.setFont("Helvetica", 4.7)
-    pdf.drawRightString(
-        page_width - 18,
-        page_height - 19,
-        f"Ruleset: {ruleset_version} | Layout: {LAYOUT_VERSION}",
-    )
+    pdf.drawRightString(page_width - 18, page_height - 19, f"Ruleset: {ruleset_version} | Layout: {LAYOUT_VERSION}")
 
 
 def draw_page_footer(pdf, festival_entries, eclipse_line="Eclipses: None"):
@@ -731,82 +599,36 @@ def draw_page_footer(pdf, festival_entries, eclipse_line="Eclipses: None"):
         marker = str(number)
         entry = f"{name}: {festival_date}"
         marker_size = 5.0
-        marker_width = pdf.stringWidth(
-            marker,
-            "Helvetica-Bold",
-            marker_size,
-        )
+        marker_width = pdf.stringWidth(marker, "Helvetica-Bold", marker_size)
         marker_gap = 2.0
         entry_width = column_width - 4 - marker_width - marker_gap
-        entry_size = fitted_font_size(
-            pdf,
-            entry,
-            "Helvetica",
-            7.5,
-            5.5,
-            entry_width,
-        )
-        ensure_text_fits(
-            pdf,
-            entry,
-            "Helvetica",
-            entry_size,
-            entry_width,
-            f"festival entry {number}",
-        )
+        entry_size = fitted_font_size(pdf, entry, "Helvetica", 7.5, 5.5, entry_width)
+        ensure_text_fits(pdf, entry, "Helvetica", entry_size, entry_width, f"festival entry {number}")
         entry_x = 18 + column * column_width
         entry_y = 86 - row * 8
         pdf.setFont("Helvetica-Bold", marker_size)
         pdf.drawString(entry_x, entry_y + 2.0, marker)
         pdf.setFont("Helvetica", entry_size)
-        pdf.drawString(
-            entry_x + marker_width + marker_gap,
-            entry_y,
-            entry,
-        )
+        pdf.drawString(entry_x + marker_width + marker_gap, entry_y, entry)
 
     pdf.setFillColor(MUTED)
-    eclipse_size = fitted_font_size(
-        pdf,
-        eclipse_line,
-        "Helvetica",
-        5.4,
-        4.6,
-        landscape(A4)[0] - 36,
-    )
-    ensure_text_fits(
-        pdf,
-        eclipse_line,
-        "Helvetica",
-        eclipse_size,
-        landscape(A4)[0] - 36,
-        "eclipse footer",
-    )
+    eclipse_size = fitted_font_size(pdf, eclipse_line, "Helvetica", 5.4, 4.6, landscape(A4)[0] - 36)
+    ensure_text_fits(pdf, eclipse_line, "Helvetica", eclipse_size, landscape(A4)[0] - 36, "eclipse footer")
     pdf.setFont("Helvetica", eclipse_size)
     pdf.drawString(18, 44, eclipse_line)
     pdf.setFont("Helvetica", 5.4)
     pdf.drawString(
-        18,
-        36,
-        "T: 01-15; Sukla = upright bold, Krsna = bold italic. N = nakshatra; Y = yoga. "
+        18, 36, "T: 01-15; Sukla = upright bold, Krsna = bold italic. N = nakshatra; Y = yoga. "
         "Tiny red numbers refer to the festival key. Sundays have a red right "
         "edge; Ekadashi upavasa has a teal T-cell underline; eclipses have a "
-        "brown X in the lower-left corner.",
-    )
+        "brown X in the lower-left corner.")
     pdf.setFont("Helvetica", 5.3)
     pdf.drawString(
-        18,
-        28,
-        "Masa: a small upper-left badge marks its first visible tithi; "
+        18, 28, "Masa: a small upper-left badge marks its first visible tithi; "
         "gold fill denotes adhika. 1 Caitra, 2 Vaisakha, 3 Jyestha, "
         "4 Asadha, 5 Sravana, 6 Bhadrapada, 7 Asvina, 8 Kartika, "
-        "9 Margasirsa, 10 Pusya, 11 Magha, 12 Phalguna.",
-    )
-    pdf.drawString(
-        18,
-        20,
-        f"{NAKSHATRA_KEY_LINES[0]}, {NAKSHATRA_KEY_LINES[1]}",
-    )
+        "9 Margasirsa, 10 Pusya, 11 Magha, 12 Phalguna.")
+    pdf.drawString(18, 20, f"{NAKSHATRA_KEY_LINES[0]}, {NAKSHATRA_KEY_LINES[1]}")
     pdf.drawString(18, 12, YOGA_KEY_LINE)
 
 
@@ -824,43 +646,21 @@ def build_pdf(location, start_year, start_month, output_path, *, festivals_path=
     enabled_names = load_festival_selection(festivals_path)
     geopos = (location.longitude, location.latitude, 0.0)
     festivals_by_date, festival_entries = resolve_festivals(
-        months,
-        month_data,
-        context_months=context_months,
-        context_data=context_data,
-        geopos=geopos,
-        timezone_name=location.timezone_name,
-        enabled_names=enabled_names,
-    )
+        months, month_data, context_months=context_months, context_data=context_data, geopos=geopos,
+        timezone_name=location.timezone_name, enabled_names=enabled_names)
 
     range_start = CivilDate(start_year, start_month, 1)
     end_year, end_month = months[-1]
-    range_end = CivilDate(
-        end_year,
-        end_month,
-        calendar.monthrange(end_year, end_month)[1],
-    )
-    eclipse_start_jd, eclipse_end_jd = local_range_jds(
-        start_year,
-        start_month,
-        end_year,
-        end_month,
-        location.timezone_name,
-    )
+    range_end = CivilDate(end_year, end_month, calendar.monthrange(end_year, end_month)[1])
+    eclipse_start_jd, eclipse_end_jd = local_range_jds(start_year, start_month, end_year, end_month,
+                                                       location.timezone_name)
     eclipses = find_local_eclipses(eclipse_start_jd, eclipse_end_jd, geopos)
     sunrise_by_date = sunrise_jd_by_civil_date(months, month_data)
-    eclipse_line = format_eclipse_line(
-        eclipses,
-        location.timezone_name,
-        sunrise_by_date=sunrise_by_date,
-    )
+    eclipse_line = format_eclipse_line(eclipses, location.timezone_name, sunrise_by_date=sunrise_by_date)
     eclipse_dates = eclipse_civil_dates(eclipses, location.timezone_name)
     ekadashi_dates = {
         value
-        for value in resolve_ekadashi_dates(
-            context_months,
-            context_data,
-        ) if range_start <= value <= range_end
+        for value in resolve_ekadashi_dates(context_months, context_data) if range_start <= value <= range_end
     }
     mark_masa_starts(months, month_data)
 
@@ -868,12 +668,9 @@ def build_pdf(location, start_year, start_month, output_path, *, festivals_path=
     output_path = Path(output_path)
     pdf = canvas.Canvas(str(output_path), pagesize=(page_width, page_height))
     embed_pdf_metadata(
-        pdf,
-        title=f"{location.name} Panchanga {month_span_label(months)}",
+        pdf, title=f"{location.name} Panchanga {month_span_label(months)}",
         subject=(f"Daily tithi, True Citra nakshatra, yoga, and amanta masa at "
-                 f"{location.name} sunrise"),
-        ruleset_version=RULESET_VERSION,
-    )
+                 f"{location.name} sunrise"), ruleset_version=RULESET_VERSION)
 
     draw_page_header(pdf, location, months, RULESET_VERSION)
 
@@ -886,18 +683,8 @@ def build_pdf(location, start_year, start_month, output_path, *, festivals_path=
     draw_day_column(pdf, margin, top, day_column_width)
     for index, (year, month) in enumerate(months):
         x = margin + day_column_width + index * month_width
-        draw_month(
-            pdf,
-            year,
-            month,
-            month_data[(year, month)],
-            festivals_by_date,
-            ekadashi_dates,
-            eclipse_dates,
-            x,
-            top,
-            month_width,
-        )
+        draw_month(pdf, year, month, month_data[(year, month)], festivals_by_date, ekadashi_dates, eclipse_dates, x,
+                   top, month_width)
 
     draw_page_footer(pdf, festival_entries, eclipse_line=eclipse_line)
     pdf.showPage()
@@ -909,11 +696,7 @@ def build_pdf(location, start_year, start_month, output_path, *, festivals_path=
 def default_output_path(location, start_year, start_month):
     months = list(month_range(start_year, start_month))
     end_year, end_month = months[-1]
-    city_slug = re.sub(
-        r"[^a-z0-9]+",
-        "-",
-        location.name.casefold(),
-    ).strip("-") or "location"
+    city_slug = re.sub(r"[^a-z0-9]+", "-", location.name.casefold()).strip("-") or "location"
     return Path(f"{city_slug}_panchanga_"
                 f"{start_year:04d}-{start_month:02d}_to_"
                 f"{end_year:04d}-{end_month:02d}.pdf")
@@ -921,30 +704,13 @@ def default_output_path(location, start_year, start_month):
 
 def argument_parser():
     parser = argparse.ArgumentParser(description=("Generate a one-page A4 panchanga for 13 consecutive months."))
+    parser.add_argument("--city", required=True, help=f"city name as listed in {DEFAULT_CITIES_PATH.name}")
+    parser.add_argument("--start", required=True, metavar="YYYY-MM", help="first of the 13 consecutive calendar months")
+    parser.add_argument("-o", "--output", type=Path, help="output PDF path (default: generated from city and range)")
     parser.add_argument(
-        "--city",
-        required=True,
-        help=f"city name as listed in {DEFAULT_CITIES_PATH.name}",
-    )
-    parser.add_argument(
-        "--start",
-        required=True,
-        metavar="YYYY-MM",
-        help="first of the 13 consecutive calendar months",
-    )
-    parser.add_argument(
-        "-o",
-        "--output",
-        type=Path,
-        help="output PDF path (default: generated from city and range)",
-    )
-    parser.add_argument(
-        "--festivals",
-        type=Path,
-        default=DEFAULT_FESTIVALS_PATH,
+        "--festivals", type=Path, default=DEFAULT_FESTIVALS_PATH,
         help=(f"INI file selecting which festivals to include "
-              f"(default: {DEFAULT_FESTIVALS_PATH.name})"),
-    )
+              f"(default: {DEFAULT_FESTIVALS_PATH.name})"))
     return parser
 
 
@@ -954,18 +720,8 @@ def main(argv=None):
     try:
         start_year, start_month = parse_start_month(arguments.start)
         location = load_location(arguments.city)
-        output_path = arguments.output or default_output_path(
-            location,
-            start_year,
-            start_month,
-        )
-        generated = build_pdf(
-            location,
-            start_year,
-            start_month,
-            output_path,
-            festivals_path=arguments.festivals,
-        )
+        output_path = arguments.output or default_output_path(location, start_year, start_month)
+        generated = build_pdf(location, start_year, start_month, output_path, festivals_path=arguments.festivals)
     except (OSError, ValueError, RuntimeError) as error:
         parser.error(str(error))
     print(generated.resolve())
