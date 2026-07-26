@@ -29,42 +29,39 @@ def jd_to_local_civil_date(jd, timezone_name):
     return jd_to_local_datetime(jd, timezone_name).date()
 
 
-# Tithi festivals: (number, name, masa, tithi).
-TITHI_FESTIVAL_RULES = (
-    (1, "Ugadi", 1, "S1"),
-    (2, "Rama Navami", 1, "S9"),
-    (3, "Akshaya Tritiya", 2, "S3"),
-    (4, "Vasavi Jayanti", 2, "S10"),
-    (5, "Narasimha Jayanti", 2, "S14"),
-    (6, "Guru Purnima", 4, "S15"),
-    (7, "Naga Panchami", 5, "S5"),
-    (11, "Janmashtami", 5, "K8"),
-    (12, "Swarna Gowri Vrata", 6, "S3"),
-    (13, "Ganesha Chaturthi", 6, "S4"),
-    (30, "Ananta Chaturdashi", 6, "S14"),
-    (14, "Mahalaya Amavasya", 6, "K15"),
-    (15, "Durga Ashtami", 7, "S8"),
-    (16, "Ayudha Puja", 7, "S9"),
-    (17, "Vijayadashami", 7, "S10"),
-    (18, "Dhana Trayodashi", 7, "K13"),
-    (19, "Naraka Chaturdashi", 7, "K14"),
-    (20, "Deepavali", 7, "K15"),
-    (21, "Bali Padyami", 8, "S1"),
-    (24, "Vasavi Atmarpana", 11, "S2"),
-    (25, "Vasanta Panchami", 11, "S5"),
-    (26, "Ratha Saptami", 11, "S7"),
-    (27, "VSN Jayanti", 11, "S11"),
-    (28, "Maha Shivaratri", 11, "K14"),
-    (29, "Kama Dahana (Holi)", 12, "S15"),
-)
-
-# Non-tithi festivals: (number, name). Selectors dispatch on name/number.
-NON_TITHI_FESTIVAL_RULES = (
-    (8, "Varamahalakshmi Vrata"),
-    (9, "Rig Upakarma"),
-    (10, "Yajur Upakarma"),
-    (22, "Vaikuntha Ekadashi"),
-    (23, "Makara Sankranti"),
+# Seasonal catalog for PDF markers. ``(name, masa, tithi)``; ``masa``/``tithi``
+# are ``None`` for non-tithi festivals (selector dispatch is by name).
+FESTIVAL_RULES = (
+    ("Ugadi", 1, "S1"),
+    ("Rama Navami", 1, "S9"),
+    ("Akshaya Tritiya", 2, "S3"),
+    ("Vasavi Jayanti", 2, "S10"),
+    ("Narasimha Jayanti", 2, "S14"),
+    ("Guru Purnima", 4, "S15"),
+    ("Naga Panchami", 5, "S5"),
+    ("Varamahalakshmi Vrata", None, None),
+    ("Rig Upakarma", None, None),
+    ("Yajur Upakarma", None, None),
+    ("Janmashtami", 5, "K8"),
+    ("Swarna Gowri Vrata", 6, "S3"),
+    ("Ganesha Chaturthi", 6, "S4"),
+    ("Ananta Chaturdashi", 6, "S14"),
+    ("Mahalaya Amavasya", 6, "K15"),
+    ("Durga Ashtami", 7, "S8"),
+    ("Ayudha Puja", 7, "S9"),
+    ("Vijayadashami", 7, "S10"),
+    ("Dhana Trayodashi", 7, "K13"),
+    ("Naraka Chaturdashi", 7, "K14"),
+    ("Deepavali", 7, "K15"),
+    ("Bali Padyami", 8, "S1"),
+    ("Vaikuntha Ekadashi", None, None),
+    ("Makara Sankranti", None, None),
+    ("Vasavi Atmarpana", 11, "S2"),
+    ("Vasanta Panchami", 11, "S5"),
+    ("Ratha Saptami", 11, "S7"),
+    ("VSN Jayanti", 11, "S11"),
+    ("Maha Shivaratri", 11, "K14"),
+    ("Kama Dahana (Holi)", 12, "S15"),
 )
 
 # Festival record: (civil_date, tithi, nakshatra, masa, is_adhika, sunrise_jd).
@@ -75,16 +72,9 @@ _TRUTHY = frozenset({"yes", "true", "1", "on"})
 _FALSY = frozenset({"no", "false", "0", "off"})
 
 
-def all_festival_rules():
-    """Catalog entries as ``(number, name)`` sorted by festival number."""
-    rules = [(number, name) for number, name, _masa, _tithi in TITHI_FESTIVAL_RULES]
-    rules.extend(NON_TITHI_FESTIVAL_RULES)
-    return tuple(sorted(rules, key=lambda item: item[0]))
-
-
 def all_festival_names():
-    """Catalog festival names in ascending number order."""
-    return tuple(name for _number, name in all_festival_rules())
+    """Catalog festival names in fixed seasonal order."""
+    return tuple(name for name, _masa, _tithi in FESTIVAL_RULES)
 
 
 def _parse_bool(raw, *, key):
@@ -409,7 +399,12 @@ def select_non_tithi_dates(records, name, geopos=None, timezone_name=None):
 
 def resolve_festivals(months, month_data, *, context_months=None, context_data=None, geopos=None, timezone_name=None,
                       enabled_names=None):
-    """Resolve tithi and non-tithi festivals for the PDF calendar."""
+    """Resolve festivals for the PDF calendar.
+
+    Returns ``(markers_by_date, entries)`` where markers are dense ``1..N`` in
+    ``FESTIVAL_RULES`` order among enabled festivals, and each entry is
+    ``(marker, date_text, name)``.
+    """
     if (context_months is None) != (context_data is None):
         raise ValueError("context_months and context_data must be supplied together")
 
@@ -420,37 +415,37 @@ def resolve_festivals(months, month_data, *, context_months=None, context_data=N
     else:
         records = target_records
 
-    dates_by_number = {}
-    names_by_number = {}
+    dates_by_name = {}
 
-    def store(number, name, candidates, *, allow_empty=False):
+    def store(name, candidates, *, allow_empty=False):
         matches = [civil_date for civil_date in candidates if civil_date in target_dates]
         if not matches and not allow_empty:
             raise RuntimeError(f"No calendar date found for {name}")
-        dates_by_number[number] = matches
-        names_by_number[number] = name
+        dates_by_name[name] = matches
 
-    for number, name, masa, tithi in TITHI_FESTIVAL_RULES:
+    for name, masa, tithi in FESTIVAL_RULES:
         if enabled_names is not None and name not in enabled_names:
             continue
-        store(number, name, select_plain_tithi_dates(records, masa, tithi, allow_adhika=(number == 1)))  # Ugadi
+        if masa is None:
+            # Vaikuntha Ekadashi may be absent when no Margasira/Pausha S11 falls
+            # while the Sun is in Dhanur; e.g. year 2086.
+            store(name, select_non_tithi_dates(records, name, geopos=geopos, timezone_name=timezone_name),
+                  allow_empty=(name == "Vaikuntha Ekadashi"))
+        else:
+            store(name, select_plain_tithi_dates(records, masa, tithi, allow_adhika=(name == "Ugadi")))
 
-    for number, name in NON_TITHI_FESTIVAL_RULES:
-        if enabled_names is not None and name not in enabled_names:
-            continue
-        # Vaikuntha Ekadashi may be absent when no Margasira/Pausha S11 falls
-        # while the Sun is in Dhanur; e.g. year 2086.
-        store(number, name, select_non_tithi_dates(records, name, geopos=geopos, timezone_name=timezone_name),
-              allow_empty=(name == "Vaikuntha Ekadashi"))
-
-    numbers_by_date = {}
+    markers_by_date = {}
     entries = []
-    for number in sorted(names_by_number):
-        dates = dates_by_number[number]
+    marker = 0
+    for name, _masa, _tithi in FESTIVAL_RULES:
+        if name not in dates_by_name:
+            continue
+        marker += 1
+        dates = dates_by_name[name]
         for civil_date in dates:
-            numbers_by_date.setdefault(civil_date, []).append(number)
-        entries.append((number, format_festival_dates(dates), names_by_number[number]))
-    return numbers_by_date, entries
+            markers_by_date.setdefault(civil_date, []).append(marker)
+        entries.append((marker, format_festival_dates(dates), name))
+    return markers_by_date, entries
 
 
 def resolve_ekadashi_dates(months, month_data):
