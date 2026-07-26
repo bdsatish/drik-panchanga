@@ -23,11 +23,11 @@ from festival_rules import (
 )
 import panchanga
 
-MONTH_COUNT = 13
+MONTH_COUNT = 14
 DEFAULT_CITIES_PATH = Path(__file__).with_name("cities.json")
 DEFAULT_FESTIVALS_PATH = Path(__file__).with_name("festivals.cfg")
 RULESET_VERSION = "Udaya-Vyapini-1.1"
-LAYOUT_VERSION = "A4-1.7"
+LAYOUT_VERSION = "A4-1.8"
 PDF_AUTHOR = "Satish BD"
 PDF_AUTHOR_EMAIL = "bdsatish@gmail.com"
 PDF_COPYRIGHT = ("Copyright © Satish BD. Licensed under the GNU Affero GPL "
@@ -703,9 +703,9 @@ def default_output_path(location, start_year, start_month):
 
 
 def argument_parser():
-    parser = argparse.ArgumentParser(description=("Generate a one-page A4 panchanga for 13 consecutive months."))
+    parser = argparse.ArgumentParser(description=("Generate a one-page A4 panchanga for 14 consecutive months."))
     parser.add_argument("--city", required=True, help=f"city name as listed in {DEFAULT_CITIES_PATH.name}")
-    parser.add_argument("--start", required=True, metavar="YYYY-MM", help="first of the 13 consecutive calendar months")
+    parser.add_argument("--start", required=True, metavar="YYYY-MM", help="first of the 14 consecutive calendar months")
     parser.add_argument("-o", "--output", type=Path, help="output PDF path (default: generated from city and range)")
     parser.add_argument(
         "--festivals", type=Path, default=DEFAULT_FESTIVALS_PATH,

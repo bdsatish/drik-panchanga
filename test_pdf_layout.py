@@ -65,7 +65,7 @@ class PdfLayoutTests(unittest.TestCase):
         path = default_output_path(load_location("Helsinki"), 2026, 3)
         self.assertEqual(
             path.name,
-            "helsinki_panchanga_2026-03_to_2027-03.pdf",
+            "helsinki_panchanga_2026-03_to_2027-04.pdf",
         )
 
     def test_long_labels_are_fitted_without_overflow(self):

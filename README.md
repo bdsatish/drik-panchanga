@@ -103,7 +103,7 @@ and open `Gui.wxg`.
 ### One-page calendar PDF ###
 
 `generate_panchanga_calendar.py` creates a single-page A4 landscape calendar
-covering 13 consecutive Gregorian months. Each day shows:
+covering 14 consecutive Gregorian months. Each day shows:
 
 * `T`: tithi number at local sunrise (`01`-`15`); blue ink is Sukla, dark ink is Krsna
 * `N`: nakshatra number (`01`-`27`)
@@ -151,7 +151,7 @@ SE_EPHE_PATH=/path/to/ephemeris/files ./setup_venv.sh
 source .venv/bin/activate
 ```
 
-Select a city and the first month of the 13-month range:
+Select a city and the first month of the 14-month range:
 
 ```
 python generate_panchanga_calendar.py \
@@ -199,7 +199,7 @@ python -m webapp.app
 ```
 
 Then open [http://127.0.0.1:8765/](http://127.0.0.1:8765/). Choose a city
-(autocomplete against `cities.json`), pick the first month of the 13-month
+(autocomplete against `cities.json`), pick the first month of the 14-month
 range, and download the PDF. Override the port with `--port 9000` or
 `PORT` / `PANCHANGA_PORT`.
 
