@@ -54,6 +54,7 @@ FESTIVAL_RULES = (
     ("Naraka Chaturdashi", 7, "K14"),
     ("Deepavali", 7, "K15"),
     ("Bali Padyami", 8, "S1"),
+    ("Surya Shashthi / Chhath", 8, "S6"),
     ("Vaikuntha Ekadashi", None, None),
     ("Makara Sankranti", None, None),
     ("Vasavi Atmarpana", 11, "S2"),
