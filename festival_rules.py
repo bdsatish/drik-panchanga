@@ -106,28 +106,15 @@ def load_festival_selection(path):
     The ``[festivals]`` section must list every catalog name exactly once.
     """
     path = Path(path)
-    text = path.read_text(encoding="utf-8")
-    seen_keys = []
-    in_festivals = False
-    for line in text.splitlines():
-        stripped = line.strip()
-        if not stripped or stripped.startswith("#") or stripped.startswith(";"):
-            continue
-        if stripped.startswith("[") and stripped.endswith("]"):
-            in_festivals = stripped[1:-1].strip().casefold() == "festivals"
-            continue
-        if not in_festivals or "=" not in stripped:
-            continue
-        key = stripped.split("=", 1)[0].strip()
-        seen_keys.append(key)
-
-    duplicates = sorted({key for key in seen_keys if seen_keys.count(key) > 1})
-    if duplicates:
-        raise ValueError(f"Duplicate festival entries in {path}: {', '.join(duplicates)}")
-
-    parser = configparser.ConfigParser()
+    parser = configparser.ConfigParser(strict=True)
     parser.optionxform = str  # preserve festival name case
-    parser.read_string(text)
+    try:
+        parser.read_string(path.read_text(encoding="utf-8"))
+    except configparser.DuplicateOptionError as error:
+        raise ValueError(f"Duplicate festival entries in {path}: {error.option}") from error
+    except configparser.DuplicateSectionError as error:
+        raise ValueError(f"Duplicate section in {path}: [{error.section}]") from error
+
     if not parser.has_section("festivals"):
         raise ValueError(f"{path} must contain a [festivals] section")
 
@@ -143,8 +130,7 @@ def load_festival_selection(path):
     if missing:
         raise ValueError(f"Missing festival names in {path}: {', '.join(missing)}")
 
-    enabled = frozenset(name for name, raw in configured.items() if _parse_bool(raw, key=name))
-    return enabled
+    return frozenset(name for name, raw in configured.items() if _parse_bool(raw, key=name))
 
 
 def collect_records(months, month_data):

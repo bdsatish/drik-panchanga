@@ -84,16 +84,13 @@ class FestivalCatalogTests(unittest.TestCase):
         self.assertEqual(len(TITHI_FESTIVAL_RULES), 24)
         self.assertEqual(TITHI_FESTIVAL_RULES[0], (1, "Ugadi", 1, "S1"))
         self.assertEqual(TITHI_FESTIVAL_RULES[-1], (29, "Kama Dahana (Holi)", 12, "S15"))
-        self.assertEqual(
-            NON_TITHI_FESTIVAL_RULES,
-            (
-                (8, "Varamahalakshmi Vrata"),
-                (9, "Rig Upakarma"),
-                (10, "Yajur Upakarma"),
-                (22, "Vaikuntha Ekadashi"),
-                (23, "Makara Sankranti"),
-            )
-        )
+        self.assertEqual(NON_TITHI_FESTIVAL_RULES, (
+            (8, "Varamahalakshmi Vrata"),
+            (9, "Rig Upakarma"),
+            (10, "Yajur Upakarma"),
+            (22, "Vaikuntha Ekadashi"),
+            (23, "Makara Sankranti"),
+        ))
         numbers = sorted([number
                           for number, *_ in TITHI_FESTIVAL_RULES] + [number for number, _ in NON_TITHI_FESTIVAL_RULES])
         self.assertEqual(numbers, list(range(1, 30)))
@@ -172,12 +169,11 @@ class ResolveVriddhiTests(unittest.TestCase):
                 date(2030, 5, 7),
                 date(2030, 8, 10),
                 date(2030, 8, 11),
-            ]),
-            [date(2030, 5, 5), date(2030, 8, 10)]
-        )
+            ]), [date(2030, 5, 5), date(2030, 8, 10)])
 
     def test_leaves_isolated_dates_unchanged(self):
-        self.assertEqual(resolve_vriddhi_dates([date(2030, 3, 10), date(2030, 4, 9)]), [date(2030, 3, 10), date(2030, 4, 9)])
+        self.assertEqual(resolve_vriddhi_dates([date(2030, 3, 10), date(2030, 4, 9)]),
+                         [date(2030, 3, 10), date(2030, 4, 9)])
 
 
 class SelectPlainTithiTests(unittest.TestCase):
@@ -351,7 +347,8 @@ class ResolveFestivalsTests(unittest.TestCase):
         }
         target_data[(2030, 3)][0] = day_row(1, "S1", "1")
 
-        by_date, entries = resolve_festivals(target_months, target_data, context_months=context_months, context_data=context_data)
+        by_date, entries = resolve_festivals(target_months, target_data, context_months=context_months,
+                                             context_data=context_data)
         self.assertEqual(entries[0], (1, "Mar 01", "Ugadi"))
         self.assertNotIn(date(2030, 2, 1), by_date)
 
@@ -517,11 +514,10 @@ class RigUpakarmaTests(unittest.TestCase):
             (date(2030, 9, 9), "S12", 23, "6", False, 42.0),
         ]
         geopos = (79.42, 13.65, 0.0)
-        with mock.patch(
-                "festival_rules.civil_day_has_eclipse",
-                side_effect=lambda civil_date, geopos, timezone_name: civil_date == date(2030, 8, 10)
-        ):
-            self.assertEqual(select_rig_upakarma_dates(records, geopos=geopos, timezone_name="Asia/Kolkata"), [date(2030, 9, 8)])
+        with mock.patch("festival_rules.civil_day_has_eclipse",
+                        side_effect=lambda civil_date, geopos, timezone_name: civil_date == date(2030, 8, 10)):
+            self.assertEqual(select_rig_upakarma_dates(records, geopos=geopos, timezone_name="Asia/Kolkata"),
+                             [date(2030, 9, 8)])
 
 
 class YajurUpakarmaTests(unittest.TestCase):
@@ -544,11 +540,10 @@ class YajurUpakarmaTests(unittest.TestCase):
             (date(2030, 9, 15), "K1", 1, "6", False, 42.0),
         ]
         geopos = (79.42, 13.65, 0.0)
-        with mock.patch(
-                "festival_rules.civil_day_has_eclipse",
-                side_effect=lambda civil_date, geopos, timezone_name: civil_date == date(2030, 8, 15)
-        ):
-            self.assertEqual(select_yajur_upakarma_dates(records, geopos=geopos, timezone_name="Asia/Kolkata"), [date(2030, 9, 14)])
+        with mock.patch("festival_rules.civil_day_has_eclipse",
+                        side_effect=lambda civil_date, geopos, timezone_name: civil_date == date(2030, 8, 15)):
+            self.assertEqual(select_yajur_upakarma_dates(records, geopos=geopos, timezone_name="Asia/Kolkata"),
+                             [date(2030, 9, 14)])
 
     def test_helsinki_pre_sunrise_eclipse_postpones_to_bhadrapada(self):
         location = load_location("Helsinki")
@@ -558,10 +553,8 @@ class YajurUpakarmaTests(unittest.TestCase):
         records = collect_records(months, month_data)
         geopos = (location.longitude, location.latitude, 0.0)
 
-        self.assertEqual(
-            select_yajur_upakarma_dates(records, geopos=geopos, timezone_name=location.timezone_name),
-            [date(2026, 9, 26)]
-        )
+        self.assertEqual(select_yajur_upakarma_dates(records, geopos=geopos, timezone_name=location.timezone_name),
+                         [date(2026, 9, 26)])
 
 
 class VaikunthaEkadashiTests(unittest.TestCase):
@@ -608,7 +601,8 @@ class VaikunthaEkadashiTests(unittest.TestCase):
         context_data = {(year, month): daily_values(year, month, location) for year, month in context_months}
         month_data = {(year, month): context_data[(year, month)] for year, month in months}
 
-        by_date, entries = resolve_festivals(months, month_data, context_months=context_months, context_data=context_data)
+        by_date, entries = resolve_festivals(months, month_data, context_months=context_months,
+                                             context_data=context_data)
 
         self.assertEqual(entries[21], (22, "None", "Vaikuntha Ekadashi"))
         self.assertNotIn(22, [n for nums in by_date.values() for n in nums])
@@ -662,14 +656,11 @@ class ResolveEkadashiTests(unittest.TestCase):
                 day_row(21, "S12", "4"),  # sukla kshaya -> day 21
             ]
         }
-        self.assertEqual(
-            resolve_ekadashi_dates(months, month_data),
-            [
-                date(2030, 6, 2),
-                date(2030, 6, 10),
-                date(2030, 6, 21),
-            ]
-        )
+        self.assertEqual(resolve_ekadashi_dates(months, month_data), [
+            date(2030, 6, 2),
+            date(2030, 6, 10),
+            date(2030, 6, 21),
+        ])
 
 
 class GenericUdayaParityTests(unittest.TestCase):
@@ -726,7 +717,8 @@ class GenericUdayaParityTests(unittest.TestCase):
             festival_record(date(2030, 4, 11), "S9", masa="1"),
         ]
         self.assertEqual(select_plain_tithi_dates(records, 1, "S9"), [date(2030, 4, 11)])
-        self.assertEqual(next(rule for rule in TITHI_FESTIVAL_RULES if rule[1] == "Rama Navami"), (2, "Rama Navami", 1, "S9"))
+        self.assertEqual(next(rule for rule in TITHI_FESTIVAL_RULES
+                              if rule[1] == "Rama Navami"), (2, "Rama Navami", 1, "S9"))
 
     def test_normal_single_ekadashi_at_sunrise(self):
         months = [(2030, 3)]
