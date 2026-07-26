@@ -167,16 +167,10 @@ def make_location(name, latitude, longitude, timezone_name):
 
 
 def location_from_mapping(name, record):
-    if not isinstance(record, dict):
-        raise ValueError(f"Location record for {name!r} must be an object")
-    location_name = record.get("city", record.get("name", name))
-    latitude = record.get("latitude", record.get("lat"))
-    longitude = record.get("longitude", record.get("lon"))
-    timezone_name = record.get("timezone", record.get("timezone_name", record.get("tz")))
-    if latitude is None or longitude is None or timezone_name is None:
-        raise ValueError(f"Location record for {location_name!r} needs latitude, "
-                         "longitude, and timezone")
-    return make_location(str(location_name), latitude, longitude, str(timezone_name))
+    try:
+        return make_location(name, record["latitude"], record["longitude"], str(record["timezone"]))
+    except (KeyError, TypeError) as error:
+        raise ValueError(f"Location record for {name!r} needs latitude, longitude, and timezone") from error
 
 
 def load_location(city):
