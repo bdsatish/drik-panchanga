@@ -540,13 +540,13 @@ class VaramahalakshmiTests(unittest.TestCase):
             (date(2030, 8, 10), "S15", 1, "5", False, 0.0),
         ]
         self.assertEqual(
-            select_non_tithi_dates(records, 8, "Varamahalakshmi Vrata"),
+            select_non_tithi_dates(records, "Varamahalakshmi Vrata"),
             [date(2030, 8, 9)],
         )
 
     def test_dispatcher_rejects_unknown_festival(self):
         with self.assertRaisesRegex(ValueError, "No selector"):
-            select_non_tithi_dates([], 99, "Unknown Vrata")
+            select_non_tithi_dates([], "Unknown Vrata")
 
 
 class RigUpakarmaTests(unittest.TestCase):

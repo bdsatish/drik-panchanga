@@ -454,19 +454,19 @@ def select_makara_sankranti_dates(records):
     return selected
 
 
-def select_non_tithi_dates(records, number, name, geopos=None, timezone_name=None):
-    """Dispatch a non-tithi festival to its selector."""
-    if name == "Varamahalakshmi Vrata" or number == 8:
+def select_non_tithi_dates(records, name, geopos=None, timezone_name=None):
+    """Dispatch a non-tithi festival to its selector by catalog name."""
+    if name == "Varamahalakshmi Vrata":
         return select_varamahalakshmi_dates(records)
-    if name == "Rig Upakarma" or number == 9:
+    if name == "Rig Upakarma":
         return select_rig_upakarma_dates(records, geopos=geopos, timezone_name=timezone_name)
-    if name == "Yajur Upakarma" or number == 10:
+    if name == "Yajur Upakarma":
         return select_yajur_upakarma_dates(records, geopos=geopos, timezone_name=timezone_name)
-    if name == "Vaikuntha Ekadashi" or number == 22:
+    if name == "Vaikuntha Ekadashi":
         return select_vaikuntha_ekadashi_dates(records)
-    if name == "Makara Sankranti" or number == 23:
+    if name == "Makara Sankranti":
         return select_makara_sankranti_dates(records)
-    raise ValueError(f"No selector for non-tithi festival {number} {name!r}")
+    raise ValueError(f"No selector for non-tithi festival {name!r}")
 
 
 def resolve_festivals(
@@ -518,7 +518,7 @@ def resolve_festivals(
             continue
         matches = [
             civil_date
-            for civil_date in select_non_tithi_dates(records, number, name, geopos=geopos, timezone_name=timezone_name)
+            for civil_date in select_non_tithi_dates(records, name, geopos=geopos, timezone_name=timezone_name)
             if civil_date in target_dates
         ]
         # Vaikuntha Ekadashi may be absent when no Margasira/Pausha S11 falls
