@@ -572,13 +572,7 @@ def select_makara_sankranti_dates(records):
     return selected
 
 
-def select_non_tithi_dates(
-    records,
-    number,
-    name,
-    geopos=None,
-    timezone_name=None,
-):
+def select_non_tithi_dates(records, number, name, geopos=None, timezone_name=None):
     """Dispatch a non-tithi festival to its selector."""
     if name == "Varamahalakshmi Vrata" or number == 8:
         return select_varamahalakshmi_dates(records)

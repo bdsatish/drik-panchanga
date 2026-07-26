@@ -480,18 +480,7 @@ def draw_day_column(pdf, x, top, width):
         pdf.line(x, y, x + width, y)
 
 
-def draw_month(
-    pdf,
-    year,
-    month,
-    values,
-    festivals_by_date,
-    ekadashi_dates,
-    eclipse_dates,
-    x,
-    top,
-    width,
-):
+def draw_month(pdf, year, month, values, festivals_by_date, ekadashi_dates, eclipse_dates, x, top, width):
     month_header_height = 20
     column_header_height = 15
     row_height = 13.7
@@ -828,14 +817,7 @@ def draw_page_footer(pdf, festival_entries, eclipse_line="Eclipses: None"):
     pdf.drawString(18, 12, YOGA_KEY_LINE)
 
 
-def build_pdf(
-    location,
-    start_year,
-    start_month,
-    output_path,
-    *,
-    festivals_path=None,
-):
+def build_pdf(location, start_year, start_month, output_path, *, festivals_path=None):
     panchanga.set_chosen_ayanamsa("citra")
     months = list(month_range(start_year, start_month))
     if start_month == 1:

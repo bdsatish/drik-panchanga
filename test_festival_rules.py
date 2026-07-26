@@ -44,14 +44,7 @@ def day_row(day, tithi, masa, is_adhika=False, sunrise_jd=0.0, nakshatra=1, yoga
     return (day, tithi, nakshatra, yoga, masa, is_adhika, sunrise_jd)
 
 
-def festival_record(
-    civil_date,
-    tithi,
-    masa="1",
-    is_adhika=False,
-    nakshatra=1,
-    sunrise_jd=0.0,
-):
+def festival_record(civil_date, tithi, masa="1", is_adhika=False, nakshatra=1, sunrise_jd=0.0):
     """One festival record: civil_date, tithi, nakshatra, masa, is_adhika, sunrise_jd."""
     return (civil_date, tithi, nakshatra, masa, is_adhika, sunrise_jd)
 
