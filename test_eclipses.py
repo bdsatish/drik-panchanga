@@ -5,7 +5,7 @@ from unittest import mock
 
 import panchanga
 
-from festival_rules import find_local_eclipses
+from festival_rules import civil_day_has_eclipse, find_local_eclipses
 from generate_panchanga_calendar import (
     eclipse_civil_dates,
     format_eclipse_line,
@@ -228,8 +228,8 @@ class FormatEclipseLineTests(unittest.TestCase):
 
 class EclipseCivilDatesTests(unittest.TestCase):
 
-    def test_marks_local_dates_covering_visibility(self):
-        from datetime import datetime
+    def test_marks_only_local_date_of_maximum(self):
+        from datetime import date, datetime
         from zoneinfo import ZoneInfo
 
         ist = ZoneInfo("Asia/Kolkata")
@@ -238,16 +238,26 @@ class EclipseCivilDatesTests(unittest.TestCase):
             return local_dt.timestamp() / 86400.0 + 2440587.5
 
         start = to_jd(datetime(2026, 3, 3, 23, 30, tzinfo=ist))
+        maximum = to_jd(datetime(2026, 3, 4, 0, 5, tzinfo=ist))
         end = to_jd(datetime(2026, 3, 4, 1, 0, tzinfo=ist))
+        eclipse = ("Lunar", "Partial", maximum, start, end)
         dates = eclipse_civil_dates(
-            [("Lunar", "Partial", start, start, end)],
+            [eclipse],
             "Asia/Kolkata",
         )
-        self.assertEqual(
-            {d.isoformat()
-             for d in dates},
-            {"2026-03-03", "2026-03-04"},
-        )
+        self.assertEqual(dates, {date(2026, 3, 4)})
+
+        with mock.patch(
+                "festival_rules.panchanga.swe.lun_eclipse_when_loc",
+                return_value=(
+                    panchanga.swe.ECL_PARTIAL | panchanga.swe.ECL_VISIBLE,
+                    _times(maximum=maximum, start=start, end=end),
+                    None,
+                ),
+        ):
+            geopos = (77.6, 13.0, 0.0)
+            self.assertFalse(civil_day_has_eclipse(date(2026, 3, 3), geopos, "Asia/Kolkata"))
+            self.assertTrue(civil_day_has_eclipse(date(2026, 3, 4), geopos, "Asia/Kolkata"))
 
 
 if __name__ == "__main__":

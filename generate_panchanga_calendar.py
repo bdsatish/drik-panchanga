@@ -7,7 +7,7 @@ import json
 import re
 from dataclasses import dataclass
 from datetime import date as CivilDate
-from datetime import datetime, timedelta, timezone as dt_timezone
+from datetime import datetime, timezone as dt_timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -263,18 +263,11 @@ def sunrise_jd_by_civil_date(months, month_data):
 
 
 def eclipse_civil_dates(eclipses, timezone_name):
-    """Local civil dates that overlap any eclipse visibility window."""
-    dates = set()
-    for _kind, _phase, _maximum_jd, visible_start, visible_end in eclipses:
-        start = jd_to_local_datetime(visible_start, timezone_name).date()
-        end = jd_to_local_datetime(visible_end, timezone_name).date()
-        if end < start:
-            start, end = end, start
-        day = start
-        while day <= end:
-            dates.add(day)
-            day += timedelta(days=1)
-    return dates
+    """Local civil date of each eclipse maximum."""
+    return {
+        jd_to_local_civil_date(maximum_jd, timezone_name)
+        for _kind, _phase, maximum_jd, _visible_start, _visible_end in eclipses
+    }
 
 
 def draw_eclipse_mark(pdf, x, row_y):

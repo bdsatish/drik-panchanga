@@ -420,54 +420,37 @@ def find_local_eclipses(start_jd, end_jd, geopos):
     return deduped
 
 
-def locally_visible_eclipse_in_window(start_jd, end_jd, geopos):
-    """True when a non-penumbral lunar eclipse is visible locally.
-
-    Solar eclipses are ignored: they occur near Amavasya, not on/near the
-    Purnima or Sravana-nakshatra days used for Upakarma.
-    """
-    search_start = start_jd - 1
-    lunar_flags, lunar_times, _ = panchanga.swe.lun_eclipse_when_loc(
-        search_start,
-        geopos,
-    )
-    is_purely_penumbral = lunar_flags & panchanga.swe.ECL_PENUMBRAL and not (
-        lunar_flags & (panchanga.swe.ECL_PARTIAL | panchanga.swe.ECL_TOTAL))
-    if is_purely_penumbral:
-        return False
-    lunar_start, lunar_end = _clip_lunar_visibility(lunar_times)
-    return bool(lunar_start and lunar_end and _intervals_overlap(start_jd, end_jd, lunar_start, lunar_end))
-
-
 def civil_day_has_eclipse(civil_date, geopos, timezone_name):
-    """Eclipse visible from local midnight through the next local midnight."""
+    """True when a visible non-penumbral lunar eclipse peaks locally on date."""
     if geopos is None:
         return False
     timezone = ZoneInfo(timezone_name)
-    following_date = civil_date + timedelta(days=1)
     day_start = datetime(
         civil_date.year,
         civil_date.month,
         civil_date.day,
         tzinfo=timezone,
     )
-    day_end = datetime(
-        following_date.year,
-        following_date.month,
-        following_date.day,
-        tzinfo=timezone,
-    )
     start_jd = day_start.timestamp() / SECONDS_PER_DAY + JULIAN_DAY_AT_UNIX_EPOCH
-    end_jd = day_end.timestamp() / SECONDS_PER_DAY + JULIAN_DAY_AT_UNIX_EPOCH
-    return locally_visible_eclipse_in_window(
-        start_jd,
-        end_jd,
+    lunar_flags, lunar_times, _ = panchanga.swe.lun_eclipse_when_loc(
+        start_jd - 1,
         geopos,
     )
+    if _eclipse_phase(lunar_flags) is None:
+        return False
+    visible_start, visible_end = _clip_lunar_visibility(lunar_times)
+    if not visible_start or not visible_end:
+        return False
+    maximum_timestamp = (lunar_times[0] - JULIAN_DAY_AT_UNIX_EPOCH) * SECONDS_PER_DAY
+    maximum_date = datetime.fromtimestamp(
+        maximum_timestamp,
+        tz=ZoneInfo("UTC"),
+    ).astimezone(timezone).date()
+    return maximum_date == civil_date
 
 
 def postpone_upakarma_if_eclipse(primary, fallback, geopos, timezone_name):
-    """Use fallback when an eclipse is visible on a primary local civil date."""
+    """Use fallback when a visible lunar eclipse peaks on a primary date."""
     if not primary:
         return list(fallback)
     if geopos is not None and timezone_name is None:
@@ -485,8 +468,8 @@ def select_yajur_upakarma_dates(records, geopos=None, timezone_name=None):
     """Nija Sravana Purnima (S15), postponed to Bhadrapada S15 on eclipse.
 
     Uses the ordinary sunrise/vriddhi/kshaya S15 selection in each masa. A
-    locally visible non-penumbral lunar eclipse anywhere on the selected local
-    civil date (midnight to midnight) triggers the fallback.
+    locally visible non-penumbral lunar eclipse whose maximum falls on the
+    selected local civil date triggers the fallback.
     """
     primary = select_plain_tithi_dates(records, 5, "S15")
     fallback = select_plain_tithi_dates(records, 6, "S15")
@@ -503,9 +486,9 @@ def select_rig_upakarma_dates(records, geopos=None, timezone_name=None):
 
     Prefer nija Sravana masa. When that nakshatra is kshaya at sunrise
     (no nija-Sravana match), or when the Sravana-masa day has a local
-    eclipse between local midnights, postpone to nija Bhadrapada's
-    Sravana-nakshatra day. Consecutive sunrise matches keep the former date
-    (vriddhi).
+    eclipse whose maximum falls on that local civil date, postpone to nija
+    Bhadrapada's Sravana-nakshatra day. Consecutive sunrise matches keep the
+    former date (vriddhi).
     """
     SRAVANA_NAKSHATRA = 22
 

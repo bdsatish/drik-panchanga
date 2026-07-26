@@ -239,13 +239,12 @@ underlines use the same rule for every `S11` and `K11`; they are not the
   eclipsed (see below), use Bhadrapada's Sravana-nakshatra day. Vriddhi keeps
   the former sunrise.
 
-  Upakarma eclipse test (Yajur and Rig): postpone when a locally visible
-  non-penumbral lunar eclipse overlaps the chosen local civil date, from
-  midnight to the next midnight. In practical terms, an eclipse `X` on the
-  selected Upakarma date triggers the fallback. Solar and purely penumbral
-  lunar eclipses are ignored. This is a simple Dharma-sindhu /
-  Nirnaya-sindhu-inspired exception to the calendar's otherwise
-  sunrise-based Udaya-Vyapini rules.
+  Upakarma eclipse test (Yajur and Rig): postpone when the maximum of a locally
+  visible non-penumbral lunar eclipse falls on the chosen local civil date. In
+  practical terms, an eclipse `X` on the selected Upakarma date triggers the
+  fallback. Solar and purely penumbral lunar eclipses are ignored. Assigning
+  each eclipse to its maximum's date is a deterministic single-date
+  simplification, not the full Dharma-sindhu / Nirnaya-sindhu interval rule.
 * Vaikuntha Ekadashi — a Margashirsha or Pausha Shukla Ekadashi upavasa day
   while the Sun is in Dhanur at sunrise. If none qualify, the PDF prints
   `None`.
