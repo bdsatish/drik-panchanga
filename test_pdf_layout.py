@@ -20,7 +20,6 @@ from generate_panchanga_calendar import (
     argument_parser,
     build_pdf,
     default_output_path,
-    ensure_text_fits,
     fitted_font_size,
     load_location,
     tithi_display_parts,
@@ -65,9 +64,7 @@ class PdfLayoutTests(unittest.TestCase):
         text = ("A Particularly Long Location Name Panchanga: "
                 "September 2026 - September 2027")
         available_width = 300
-        size = fitted_font_size(pdf, text, "Helvetica-Bold", 11, 5, available_width)
-
-        ensure_text_fits(pdf, text, "Helvetica-Bold", size, available_width, "test title")
+        size = fitted_font_size(pdf, text, "Helvetica-Bold", 11, 5, available_width, "test title")
         self.assertLessEqual(pdf.stringWidth(text, "Helvetica-Bold", size), available_width + 0.01)
 
 

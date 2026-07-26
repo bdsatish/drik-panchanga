@@ -365,18 +365,16 @@ def draw_centered(pdf, text, center_x, baseline_y, font, size, color=INK):
     pdf.drawCentredString(center_x, baseline_y, text)
 
 
-def fitted_font_size(pdf, text, font, maximum, minimum, available_width):
-    """Shrink text only when it would exceed its available width."""
+def fitted_font_size(pdf, text, font, maximum, minimum, available_width, context):
+    """Shrink text to fit; raise if it still overflows at ``minimum``."""
     natural_width = pdf.stringWidth(text, font, maximum)
     if natural_width <= available_width:
-        return maximum
-    return max(minimum, maximum * available_width / natural_width)
-
-
-def ensure_text_fits(pdf, text, font, size, available_width, context):
-    """Fail generation rather than silently clipping an important label."""
+        size = maximum
+    else:
+        size = max(minimum, maximum * available_width / natural_width)
     if pdf.stringWidth(text, font, size) > available_width + 0.01:
         raise ValueError(f"{context} is too long to fit: {text!r}")
+    return size
 
 
 def draw_day_column(pdf, x, top, width):
@@ -534,8 +532,7 @@ def draw_page_header(pdf, location, months, ruleset_version):
     page_width, page_height = landscape(A4)
     title = f"{location.name} Panchanga: {month_span_label(months)}"
     pdf.setFillColor(INK)
-    title_size = fitted_font_size(pdf, title, "Helvetica-Bold", 11, 8, page_width - 36)
-    ensure_text_fits(pdf, title, "Helvetica-Bold", title_size, page_width - 36, "page title")
+    title_size = fitted_font_size(pdf, title, "Helvetica-Bold", 11, 8, page_width - 36, "page title")
     pdf.setFont("Helvetica-Bold", title_size)
     pdf.drawString(18, page_height - 20, title)
     pdf.setFillColor(MUTED)
@@ -564,8 +561,7 @@ def draw_page_footer(pdf, festival_entries, eclipse_line="Eclipses: None"):
         marker_width = pdf.stringWidth(marker, "Helvetica-Bold", marker_size)
         marker_gap = 2.0
         entry_width = column_width - 4 - marker_width - marker_gap
-        entry_size = fitted_font_size(pdf, entry, "Helvetica", 7.5, 5.5, entry_width)
-        ensure_text_fits(pdf, entry, "Helvetica", entry_size, entry_width, f"festival entry {number}")
+        entry_size = fitted_font_size(pdf, entry, "Helvetica", 7.5, 5.5, entry_width, f"festival entry {number}")
         entry_x = 18 + column * column_width
         entry_y = 86 - row * 8
         pdf.setFont("Helvetica-Bold", marker_size)
@@ -574,8 +570,7 @@ def draw_page_footer(pdf, festival_entries, eclipse_line="Eclipses: None"):
         pdf.drawString(entry_x + marker_width + marker_gap, entry_y, entry)
 
     pdf.setFillColor(MUTED)
-    eclipse_size = fitted_font_size(pdf, eclipse_line, "Helvetica", 5.4, 4.6, landscape(A4)[0] - 36)
-    ensure_text_fits(pdf, eclipse_line, "Helvetica", eclipse_size, landscape(A4)[0] - 36, "eclipse footer")
+    eclipse_size = fitted_font_size(pdf, eclipse_line, "Helvetica", 5.4, 4.6, landscape(A4)[0] - 36, "eclipse footer")
     pdf.setFont("Helvetica", eclipse_size)
     pdf.drawString(18, 44, eclipse_line)
     pdf.setFont("Helvetica", 5.4)
