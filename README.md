@@ -213,7 +213,7 @@ docker run --rm -p 8080:8080 -e PORT=8080 panchanga
 #### Festival dates and conventions
 
 Festival and Ekadashi dates are resolved for the selected location in
-`festival_rules.py` (ruleset `Udaya-Vyapini-1.0`). The older multi-policy
+`festival_rules.py` (ruleset `Udaya-Vyapini-1.1`). The older multi-policy
 implementation is kept under `experimental/` for reference only. The PDF
 includes only festivals enabled in `festivals.cfg` (see Setup above).
 
@@ -239,11 +239,13 @@ underlines use the same rule for every `S11` and `K11`; they are not the
   eclipsed (see below), use Bhadrapada's Sravana-nakshatra day. Vriddhi keeps
   the former sunrise.
 
-  Upakarma eclipse test (Yajur and Rig): postpone only when a locally visible
-  non-penumbral lunar eclipse overlaps the chosen day's sunrise-to-next-sunrise
-  window. Solar and purely penumbral lunar eclipses are ignored. This is a
-  deliberate Udaya-Vyapini simplification; Dharma-sindhu / Nirnaya-sindhu often
-  use a midnight-to-midnight Upakarma window instead.
+  Upakarma eclipse test (Yajur and Rig): postpone when a locally visible
+  non-penumbral lunar eclipse overlaps the chosen local civil date, from
+  midnight to the next midnight. In practical terms, an eclipse `X` on the
+  selected Upakarma date triggers the fallback. Solar and purely penumbral
+  lunar eclipses are ignored. This is a simple Dharma-sindhu /
+  Nirnaya-sindhu-inspired exception to the calendar's otherwise
+  sunrise-based Udaya-Vyapini rules.
 * Vaikuntha Ekadashi — a Margashirsha or Pausha Shukla Ekadashi upavasa day
   while the Sun is in Dhanur at sunrise. If none qualify, the PDF prints
   `None`.

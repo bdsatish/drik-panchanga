@@ -26,7 +26,7 @@ import panchanga
 MONTH_COUNT = 13
 DEFAULT_CITIES_PATH = Path(__file__).with_name("cities.json")
 DEFAULT_FESTIVALS_PATH = Path(__file__).with_name("festivals.cfg")
-RULESET_VERSION = "Udaya-Vyapini-1.0"
+RULESET_VERSION = "Udaya-Vyapini-1.1"
 LAYOUT_VERSION = "A4-1.7"
 PDF_AUTHOR = "Satish BD"
 PDF_AUTHOR_EMAIL = "bdsatish@gmail.com"
@@ -854,6 +854,7 @@ def build_pdf(
         context_months=context_months,
         context_data=context_data,
         geopos=geopos,
+        timezone_name=location.timezone_name,
         enabled_names=enabled_names,
     )
 

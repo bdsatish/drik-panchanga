@@ -598,10 +598,14 @@ class RigUpakarmaTests(unittest.TestCase):
         geopos = (79.42, 13.65, 0.0)
         with mock.patch(
                 "festival_rules.civil_day_has_eclipse",
-                side_effect=lambda records, civil_date, geopos: civil_date == date(2030, 8, 10),
+                side_effect=lambda civil_date, geopos, timezone_name: civil_date == date(2030, 8, 10),
         ):
             self.assertEqual(
-                select_rig_upakarma_dates(records, geopos=geopos),
+                select_rig_upakarma_dates(
+                    records,
+                    geopos=geopos,
+                    timezone_name="Asia/Kolkata",
+                ),
                 [date(2030, 9, 8)],
             )
 
@@ -631,12 +635,33 @@ class YajurUpakarmaTests(unittest.TestCase):
         geopos = (79.42, 13.65, 0.0)
         with mock.patch(
                 "festival_rules.civil_day_has_eclipse",
-                side_effect=lambda records, civil_date, geopos: civil_date == date(2030, 8, 15),
+                side_effect=lambda civil_date, geopos, timezone_name: civil_date == date(2030, 8, 15),
         ):
             self.assertEqual(
-                select_yajur_upakarma_dates(records, geopos=geopos),
+                select_yajur_upakarma_dates(
+                    records,
+                    geopos=geopos,
+                    timezone_name="Asia/Kolkata",
+                ),
                 [date(2030, 9, 14)],
             )
+
+    def test_helsinki_pre_sunrise_eclipse_postpones_to_bhadrapada(self):
+        location = load_location("Helsinki")
+        panchanga.set_chosen_ayanamsa("citra")
+        months = list(month_range(2026, 5, count=6))
+        month_data = {(year, month): daily_values(year, month, location) for year, month in months}
+        records = collect_records(months, month_data)
+        geopos = (location.longitude, location.latitude, 0.0)
+
+        self.assertEqual(
+            select_yajur_upakarma_dates(
+                records,
+                geopos=geopos,
+                timezone_name=location.timezone_name,
+            ),
+            [date(2026, 9, 26)],
+        )
 
 
 class VaikunthaEkadashiTests(unittest.TestCase):
