@@ -484,36 +484,25 @@ def resolve_festivals(months, month_data, *, context_months=None, context_data=N
     dates_by_number = {}
     names_by_number = {}
 
-    for number, name, masa, tithi in TITHI_FESTIVAL_RULES:
-        if enabled_names is not None and name not in enabled_names:
-            continue
-        candidates = select_plain_tithi_dates(
-            records,
-            masa,
-            tithi,
-            allow_adhika=(number == 1),  # Ugadi
-        )
+    def store(number, name, candidates, *, allow_empty=False):
         matches = [civil_date for civil_date in candidates if civil_date in target_dates]
-        if not matches:
+        if not matches and not allow_empty:
             raise RuntimeError(f"No calendar date found for {name}")
         dates_by_number[number] = matches
         names_by_number[number] = name
 
-    VAIKUNTHA_EKADASI = 22  # 'number' in array NON_TITHI_FESTIVAL_RULES
+    for number, name, masa, tithi in TITHI_FESTIVAL_RULES:
+        if enabled_names is not None and name not in enabled_names:
+            continue
+        store(number, name, select_plain_tithi_dates(records, masa, tithi, allow_adhika=(number == 1)))  # Ugadi
+
     for number, name in NON_TITHI_FESTIVAL_RULES:
         if enabled_names is not None and name not in enabled_names:
             continue
-        matches = [
-            civil_date
-            for civil_date in select_non_tithi_dates(records, name, geopos=geopos, timezone_name=timezone_name)
-            if civil_date in target_dates
-        ]
         # Vaikuntha Ekadashi may be absent when no Margasira/Pausha S11 falls
         # while the Sun is in Dhanur; e.g. year 2086.
-        if not matches and number != VAIKUNTHA_EKADASI:
-            raise RuntimeError(f"No calendar date found for {name}")
-        dates_by_number[number] = matches
-        names_by_number[number] = name
+        store(number, name, select_non_tithi_dates(records, name, geopos=geopos, timezone_name=timezone_name),
+              allow_empty=(name == "Vaikuntha Ekadashi"))
 
     numbers_by_date = {}
     entries = []

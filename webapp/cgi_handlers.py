@@ -64,12 +64,7 @@ def write_headers(headers: list[tuple[str, str]], *, status: str | None = None) 
     out.write(b"\r\n")
 
 
-def write_text(
-    body: str,
-    *,
-    content_type: str = "text/plain; charset=utf-8",
-    status: str | None = None,
-) -> None:
+def write_text(body: str, *, content_type: str = "text/plain; charset=utf-8", status: str | None = None) -> None:
     data = body.encode("utf-8")
     write_headers([
         ("Content-Type", content_type),
@@ -89,12 +84,7 @@ def write_json(payload: object, *, status: str | None = None) -> None:
     sys.stdout.buffer.write(data)
 
 
-def write_error(
-    message: str,
-    *,
-    status: str = "400 Bad Request",
-    as_json: bool = False,
-) -> None:
+def write_error(message: str, *, status: str = "400 Bad Request", as_json: bool = False) -> None:
     if as_json:
         write_json({"error": message}, status=status)
         return
