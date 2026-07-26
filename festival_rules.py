@@ -41,6 +41,7 @@ TITHI_FESTIVAL_RULES = (
     (11, "Janmashtami", 5, "K8"),
     (12, "Swarna Gowri Vrata", 6, "S3"),
     (13, "Ganesha Chaturthi", 6, "S4"),
+    (30, "Ananta Chaturdashi", 6, "S14"),
     (14, "Mahalaya Amavasya", 6, "K15"),
     (15, "Durga Ashtami", 7, "S8"),
     (16, "Ayudha Puja", 7, "S9"),

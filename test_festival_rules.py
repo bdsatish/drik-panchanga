@@ -77,9 +77,10 @@ def covering_month_data(year=2030, month=1):
 class FestivalCatalogTests(unittest.TestCase):
 
     def test_catalogs_partition_tithi_and_non_tithi(self):
-        self.assertEqual(len(TITHI_FESTIVAL_RULES), 24)
+        self.assertEqual(len(TITHI_FESTIVAL_RULES), 25)
         self.assertEqual(TITHI_FESTIVAL_RULES[0], (1, "Ugadi", 1, "S1"))
         self.assertEqual(TITHI_FESTIVAL_RULES[-1], (29, "Kama Dahana (Holi)", 12, "S15"))
+        self.assertIn((30, "Ananta Chaturdashi", 6, "S14"), TITHI_FESTIVAL_RULES)
         self.assertEqual(NON_TITHI_FESTIVAL_RULES, (
             (8, "Varamahalakshmi Vrata"),
             (9, "Rig Upakarma"),
@@ -89,14 +90,14 @@ class FestivalCatalogTests(unittest.TestCase):
         ))
         numbers = sorted([number
                           for number, *_ in TITHI_FESTIVAL_RULES] + [number for number, _ in NON_TITHI_FESTIVAL_RULES])
-        self.assertEqual(numbers, list(range(1, 30)))
+        self.assertEqual(numbers, list(range(1, 31)))
 
 
 class FestivalSelectionTests(unittest.TestCase):
 
-    def test_shipped_cfg_enables_full_catalog(self):
+    def test_shipped_cfg_enables_full_catalog_except_disabled(self):
         enabled = load_festival_selection(DEFAULT_FESTIVALS_PATH)
-        self.assertEqual(enabled, frozenset(all_festival_names()))
+        self.assertEqual(enabled, frozenset(all_festival_names()) - {"Ananta Chaturdashi"})
 
     def test_disable_one_festival_keeps_stable_numbers(self):
         lines = ["[festivals]"]
@@ -290,21 +291,23 @@ class ResolveFestivalsTests(unittest.TestCase):
         month_data = covering_month_data()
         by_date, entries = resolve_festivals(months, month_data)
 
-        self.assertEqual(len(entries), 29)
+        self.assertEqual(len(entries), 30)
         self.assertEqual(entries[0], (1, "Jan 01", "Ugadi"))
         self.assertEqual(entries[7], (8, "Jan 04", "Varamahalakshmi Vrata"))
         self.assertEqual(entries[8], (9, "Jan 07", "Rig Upakarma"))
         self.assertEqual(entries[9], (10, "Jan 08", "Yajur Upakarma"))
         self.assertEqual(entries[10], (11, "Jan 09", "Janmashtami"))
-        self.assertEqual(entries[21], (22, "Jan 27", "Vaikuntha Ekadashi"))
-        self.assertEqual(entries[22], (23, "Jan 29", "Makara Sankranti"))
+        self.assertEqual(entries[21], (22, "Jan 28", "Vaikuntha Ekadashi"))
+        self.assertEqual(entries[22], (23, "Jan 30", "Makara Sankranti"))
+        self.assertEqual(entries[29], (30, "Jan 12", "Ananta Chaturdashi"))
         self.assertEqual(by_date[date(2030, 1, 1)], [1])
         self.assertEqual(by_date[date(2030, 1, 4)], [4, 8])
         self.assertEqual(by_date[date(2030, 1, 7)], [7, 9])
         self.assertEqual(by_date[date(2030, 1, 8)], [10])
         self.assertEqual(by_date[date(2030, 1, 9)], [11])
-        self.assertEqual(by_date[date(2030, 1, 27)], [22])
-        self.assertEqual(by_date[date(2030, 1, 29)], [23])
+        self.assertEqual(by_date[date(2030, 1, 12)], [30])
+        self.assertEqual(by_date[date(2030, 1, 28)], [22])
+        self.assertEqual(by_date[date(2030, 1, 30)], [23])
 
     def test_ugadi_marks_adhika_chaitra_s1(self):
         months = [(2030, 3)]
