@@ -58,20 +58,30 @@ def append_solar_coverage_rows(rows):
     return rows
 
 
-def covering_month_data(year=2030, month=1):
-    """Synthetic month containing every tithi festival once."""
+def covering_tithi_rows():
+    """Synthetic day rows for every plain-tithi festival, plus Sravana Purnima.
+
+    Sravana ``S15`` is inserted after Naga Panchami so Varamahalakshmi and
+    Yajur Upakarma still have an anchor day after Yajur left the tithi catalog.
+    """
     rows = []
-    for index, (number, _name, masa, tithi) in enumerate(TITHI_FESTIVAL_RULES, start=1):
-        # Naga Panchami day also carries Sravana nakshatra for Rig Upakarma.
+    for number, _name, masa, tithi in TITHI_FESTIVAL_RULES:
         nakshatra = 22 if number == 7 else 1
-        rows.append(day_row(index, tithi, str(masa), nakshatra=nakshatra))
-    return {(year, month): append_solar_coverage_rows(rows)}
+        rows.append(day_row(len(rows) + 1, tithi, str(masa), nakshatra=nakshatra))
+        if number == 7:
+            rows.append(day_row(len(rows) + 1, "S15", "5"))
+    return rows
+
+
+def covering_month_data(year=2030, month=1):
+    """Synthetic month containing every catalog festival once."""
+    return {(year, month): append_solar_coverage_rows(covering_tithi_rows())}
 
 
 class FestivalCatalogTests(unittest.TestCase):
 
     def test_catalogs_partition_tithi_and_non_tithi(self):
-        self.assertEqual(len(TITHI_FESTIVAL_RULES), 25)
+        self.assertEqual(len(TITHI_FESTIVAL_RULES), 24)
         self.assertEqual(TITHI_FESTIVAL_RULES[0], (1, "Ugadi", 1, "S1"))
         self.assertEqual(
             TITHI_FESTIVAL_RULES[-1],
@@ -82,6 +92,7 @@ class FestivalCatalogTests(unittest.TestCase):
             (
                 (8, "Varamahalakshmi Vrata"),
                 (9, "Rig Upakarma"),
+                (10, "Yajur Upakarma"),
                 (22, "Vaikuntha Ekadashi"),
                 (23, "Makara Sankranti"),
             ),
@@ -355,12 +366,14 @@ class ResolveFestivalsTests(unittest.TestCase):
         self.assertEqual(entries[0], (1, "Jan 01", "Ugadi"))
         self.assertEqual(entries[7], (8, "Jan 04", "Varamahalakshmi Vrata"))
         self.assertEqual(entries[8], (9, "Jan 07", "Rig Upakarma"))
+        self.assertEqual(entries[9], (10, "Jan 08", "Yajur Upakarma"))
         self.assertEqual(entries[10], (11, "Jan 09", "Janmashtami"))
         self.assertEqual(entries[21], (22, "Jan 27", "Vaikuntha Ekadashi"))
         self.assertEqual(entries[22], (23, "Jan 29", "Makara Sankranti"))
         self.assertEqual(by_date[date(2030, 1, 1)], [1])
         self.assertEqual(by_date[date(2030, 1, 4)], [4, 8])
         self.assertEqual(by_date[date(2030, 1, 7)], [7, 9])
+        self.assertEqual(by_date[date(2030, 1, 8)], [10])
         self.assertEqual(by_date[date(2030, 1, 9)], [11])
         self.assertEqual(by_date[date(2030, 1, 27)], [22])
         self.assertEqual(by_date[date(2030, 1, 29)], [23])
@@ -368,12 +381,14 @@ class ResolveFestivalsTests(unittest.TestCase):
     def test_ugadi_marks_adhika_chaitra_s1(self):
         months = [(2030, 3)]
         rows = []
-        for index, (number, _name, masa, tithi) in enumerate(TITHI_FESTIVAL_RULES, start=1):
+        for number, _name, masa, tithi in TITHI_FESTIVAL_RULES:
             nakshatra = 22 if number == 7 else 1
             if number == 1:
-                rows.append(day_row(index, "S1", "A1", is_adhika=True, nakshatra=nakshatra))
+                rows.append(day_row(len(rows) + 1, "S1", "A1", is_adhika=True, nakshatra=nakshatra))
             else:
-                rows.append(day_row(index, tithi, str(masa), nakshatra=nakshatra))
+                rows.append(day_row(len(rows) + 1, tithi, str(masa), nakshatra=nakshatra))
+            if number == 7:
+                rows.append(day_row(len(rows) + 1, "S15", "5"))
         append_solar_coverage_rows(rows)
         month_data = {(2030, 3): rows}
 
@@ -428,6 +443,9 @@ class ResolveFestivalsTests(unittest.TestCase):
         for number, _name, masa, tithi in TITHI_FESTIVAL_RULES:
             nakshatra = 22 if number == 7 else 1
             rows.append(day_row(day, tithi, str(masa), nakshatra=nakshatra))
+            if number == 7:
+                day += 1
+                rows.append(day_row(day, "S15", "5"))
             if number == 11:
                 day += 1
                 rows.append(day_row(day, tithi, str(masa)))
@@ -455,6 +473,9 @@ class ResolveFestivalsTests(unittest.TestCase):
                 rows.append(day_row(day, "S4", "2"))
             else:
                 rows.append(day_row(day, tithi, str(masa), nakshatra=nakshatra))
+            if number == 7:
+                day += 1
+                rows.append(day_row(day, "S15", "5"))
             day += 1
         rows.append(day_row(day, "K1", "12"))
         rows.append(day_row(day + 1, "S11", "9", sunrise_jd=900.0))

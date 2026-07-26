@@ -204,6 +204,9 @@ class EclipseCivilDatesTests(unittest.TestCase):
                     _times(maximum),
                     None,
                 ),
+        ), mock.patch(
+                "festival_rules.panchanga.swe.sol_eclipse_when_loc",
+                return_value=(0, _times(100.0), None),
         ):
             geopos = (77.6, 13.0, 0.0)
             self.assertFalse(civil_day_has_eclipse(date(2026, 3, 3), geopos, "Asia/Kolkata"))

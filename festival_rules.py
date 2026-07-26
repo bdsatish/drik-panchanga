@@ -25,7 +25,6 @@ TITHI_FESTIVAL_RULES = (
     (5, "Narasimha Jayanti", 2, "S14"),
     (6, "Guru Purnima", 4, "S15"),
     (7, "Naga Panchami", 5, "S5"),
-    (10, "Yajur Upakarma", 5, "S15"),
     (11, "Janmashtami", 5, "K8"),
     (12, "Swarna Gowri Vrata", 6, "S3"),
     (13, "Ganesha Chaturthi", 6, "S4"),
@@ -49,6 +48,7 @@ TITHI_FESTIVAL_RULES = (
 NON_TITHI_FESTIVAL_RULES = (
     (8, "Varamahalakshmi Vrata"),
     (9, "Rig Upakarma"),
+    (10, "Yajur Upakarma"),
     (22, "Vaikuntha Ekadashi"),
     (23, "Makara Sankranti"),
 )
@@ -356,13 +356,10 @@ def civil_day_has_eclipse(civil_date, geopos, timezone_name):
         return False
     timezone = ZoneInfo(timezone_name)
     day_start = datetime(civil_date.year, civil_date.month, civil_date.day, tzinfo=timezone)
+    day_end = day_start + timedelta(days=1)
     start_jd = day_start.timestamp() / SECONDS_PER_DAY + JULIAN_DAY_AT_UNIX_EPOCH
-    lunar_flags, lunar_times, _ = panchanga.swe.lun_eclipse_when_loc(start_jd - 1, geopos)
-    if _eclipse_phase(lunar_flags) is None:
-        return False
-    maximum_timestamp = (lunar_times[0] - JULIAN_DAY_AT_UNIX_EPOCH) * SECONDS_PER_DAY
-    maximum_date = datetime.fromtimestamp(maximum_timestamp, tz=ZoneInfo("UTC")).astimezone(timezone).date()
-    return maximum_date == civil_date
+    end_jd = day_end.timestamp() / SECONDS_PER_DAY + JULIAN_DAY_AT_UNIX_EPOCH
+    return any(kind == "Lunar" for kind, _phase, _maximum_jd in find_local_eclipses(start_jd, end_jd, geopos))
 
 
 def postpone_upakarma_if_eclipse(primary, fallback, geopos, timezone_name):
@@ -463,6 +460,8 @@ def select_non_tithi_dates(records, number, name, geopos=None, timezone_name=Non
         return select_varamahalakshmi_dates(records)
     if name == "Rig Upakarma" or number == 9:
         return select_rig_upakarma_dates(records, geopos=geopos, timezone_name=timezone_name)
+    if name == "Yajur Upakarma" or number == 10:
+        return select_yajur_upakarma_dates(records, geopos=geopos, timezone_name=timezone_name)
     if name == "Vaikuntha Ekadashi" or number == 22:
         return select_vaikuntha_ekadashi_dates(records)
     if name == "Makara Sankranti" or number == 23:
@@ -501,15 +500,12 @@ def resolve_festivals(
     for number, name, masa, tithi in TITHI_FESTIVAL_RULES:
         if enabled_names is not None and name not in enabled_names:
             continue
-        if number == 10:  # Yajur Upakarma
-            candidates = select_yajur_upakarma_dates(records, geopos=geopos, timezone_name=timezone_name)
-        else:
-            candidates = select_plain_tithi_dates(
-                records,
-                masa,
-                tithi,
-                allow_adhika=(number == 1),  # Ugadi
-            )
+        candidates = select_plain_tithi_dates(
+            records,
+            masa,
+            tithi,
+            allow_adhika=(number == 1),  # Ugadi
+        )
         matches = [civil_date for civil_date in candidates if civil_date in target_dates]
         if not matches:
             raise RuntimeError(f"No calendar date found for {name}")
