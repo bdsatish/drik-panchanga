@@ -1,1 +1,1 @@
-web: gunicorn webapp.app:app --bind 0.0.0.0:${PORT:-8080} --workers 1 --threads 2 --timeout 120
+web: gunicorn webapp.app:app --bind 0.0.0.0:${PORT:-8080} --workers 1 --threads 2 --timeout 120 --no-control-socket

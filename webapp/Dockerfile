@@ -11,12 +11,14 @@ WORKDIR /app
 
 # Install Python deps first (better layer cache).
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt gunicorn
+RUN pip install --no-cache-dir -r requirements.txt 'gunicorn>=22,<27'
 
 # Core calendar library + web package (see root .dockerignore).
 COPY generate_panchanga_calendar.py festival_rules.py panchanga.py vedic.py \
      sankranti.py cities.json festivals.cfg sanskrit_names.json ./
 COPY webapp ./webapp
+COPY webapp/docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
 
 # Swiss Ephemeris .se1 data (~100 MB) — required for accurate calculations.
 ENV SE_EPHE_PATH=/app/ephe
@@ -36,10 +38,6 @@ ENV PORT=8080
 EXPOSE 8080
 
 # One worker: PDF generation is CPU-heavy; long timeout for calendar builds.
-CMD gunicorn webapp.app:app \
-    --bind "0.0.0.0:${PORT}" \
-    --workers 1 \
-    --threads 2 \
-    --timeout 120 \
-    --access-logfile - \
-    --error-logfile -
+# Entrypoint expands $PORT and disables gunicorn's control socket (fails on
+# read-only / missing $HOME layouts used by some hosts).
+ENTRYPOINT ["/docker-entrypoint.sh"]
