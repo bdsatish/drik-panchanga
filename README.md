@@ -201,10 +201,14 @@ repository root:
 python -m webapp.app
 ```
 
-Then open [http://127.0.0.1:8765/](http://127.0.0.1:8765/). Choose a city
-(autocomplete against `cities.json`), pick the first month of the 14-month
-range, and download the PDF. Override the port with `--port 9000` or
-`PORT` / `PANCHANGA_PORT`.
+Then open [http://127.0.0.1:8765/](http://127.0.0.1:8765/). Enter a city
+(autocomplete against `cities.json`), then either:
+
+* look up a single day’s panchanga with a `DD/MM/YYYY` date (negative years
+  allowed as proleptic Gregorian), or
+* pick the first month of the 14-month PDF calendar range and download the PDF.
+
+Override the port with `--port 9000` or `PORT` / `PANCHANGA_PORT`.
 
 Local Docker check (repo root):
 

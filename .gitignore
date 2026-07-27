@@ -38,3 +38,5 @@ venv/
 .project
 .pydevproject
 .aider*
+
+*.pdf

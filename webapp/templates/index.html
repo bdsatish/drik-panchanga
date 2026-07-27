@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Drik Panchanga — Calendar PDF</title>
+  <title>Drik Panchanga</title>
   <style>
     :root {
       --ink: #172033;
@@ -31,7 +31,7 @@
     }
 
     main {
-      max-width: 34rem;
+      max-width: 38rem;
       margin: 0 auto;
       padding: 2.5rem 1.25rem 3rem;
     }
@@ -48,6 +48,13 @@
       color: var(--accent);
     }
 
+    h2 {
+      margin: 0 0 1rem;
+      font-size: 1.05rem;
+      font-weight: 650;
+      color: var(--accent);
+    }
+
     .subtitle {
       margin: 0;
       color: var(--muted);
@@ -60,6 +67,7 @@
       border-radius: 12px;
       padding: 1.5rem 1.35rem 1.35rem;
       box-shadow: 0 8px 28px rgba(23, 32, 51, 0.06);
+      margin-bottom: 1.25rem;
     }
 
     label {
@@ -214,6 +222,56 @@
       border-radius: 999px;
       padding: 0.2rem 0.65rem;
     }
+
+    .results {
+      display: none;
+      margin-top: 1.15rem;
+      border-top: 1px solid var(--border);
+      padding-top: 1rem;
+    }
+
+    .results.visible { display: block; }
+
+    .context {
+      margin: 0 0 0.85rem;
+      font-size: 0.95rem;
+      color: var(--muted);
+    }
+
+    .context strong { color: var(--ink); font-weight: 600; }
+
+    .result-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.95rem;
+    }
+
+    .result-table th,
+    .result-table td {
+      text-align: left;
+      padding: 0.45rem 0.35rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    .result-table th {
+      width: 28%;
+      color: var(--muted);
+      font-weight: 600;
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .result-table .ends {
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .segment + .segment {
+      margin-top: 0.25rem;
+    }
   </style>
 </head>
 <body>
@@ -221,7 +279,7 @@
     <header>
       <h1>Drik Panchanga</h1>
       <p class="subtitle">
-        Generate a one-page A4 landscape calendar (14 months) as PDF.
+        Look up a day’s panchanga, or generate a one-page A4 landscape calendar PDF.
       </p>
     </header>
 
@@ -230,30 +288,53 @@
     {% endif %}
 
     <div class="card">
-      <form id="generate-form" method="post" action="/generate" autocomplete="off">
-        <div class="field">
-          <label for="city">City</label>
-          <input
-            id="city"
-            name="city"
-            type="text"
-            required
-            placeholder="e.g. Tirupati, Espoo, Paris"
-            spellcheck="false"
-            aria-autocomplete="list"
-            aria-controls="city-suggestions"
-            aria-expanded="false"
-          >
-          <ul id="city-suggestions" class="suggestions" role="listbox"></ul>
-          <p class="hint">Matched against cities.json (case-insensitive).</p>
-        </div>
+      <div class="field">
+        <label for="city">City</label>
+        <input
+          id="city"
+          name="city"
+          type="text"
+          required
+          placeholder="e.g. Tirupati, Espoo, Paris"
+          spellcheck="false"
+          aria-autocomplete="list"
+          aria-controls="city-suggestions"
+          aria-expanded="false"
+        >
+        <ul id="city-suggestions" class="suggestions" role="listbox"></ul>
+        <p class="hint">Shared by both tools. Matched against cities.json (case-insensitive).</p>
+      </div>
+    </div>
 
+    <div class="card">
+      <h2>Day panchanga</h2>
+      <form id="day-form" autocomplete="off">
+        <div class="field">
+          <label for="date">Date</label>
+          <input id="date" name="date" type="text" required placeholder="DD/MM/YYYY" inputmode="numeric">
+          <p class="hint">Proleptic Gregorian; negative years allowed (e.g. 30/01/-1316).</p>
+        </div>
+        <button type="submit" id="day-btn">Show panchanga</button>
+        <p class="status" id="day-status" aria-live="polite"></p>
+      </form>
+
+      <div class="results" id="day-results" aria-live="polite">
+        <p class="context" id="day-context"></p>
+        <table class="result-table">
+          <tbody id="day-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Calendar PDF</h2>
+      <form id="generate-form" method="post" action="/generate" autocomplete="off">
+        <input type="hidden" name="city" id="pdf-city">
         <div class="field">
           <label for="start">First month</label>
           <input id="start" name="start" type="month" required>
-          <p class="hint">Thirteen consecutive Gregorian months from this date.</p>
+          <p class="hint">Thirteen consecutive Gregorian months from this month.</p>
         </div>
-
         <button type="submit" id="submit-btn">Generate PDF</button>
         <p class="status" id="status" aria-live="polite"></p>
       </form>
@@ -261,7 +342,7 @@
       <div class="meta">
         <span>True Citra ayanamsa</span>
         <span>Udaya-Vyapini festivals</span>
-        <span>~1–3 s generation</span>
+        <span>~1–3 s PDF</span>
       </div>
     </div>
 
@@ -275,18 +356,31 @@
   <script>
     (function () {
       const cityInput = document.getElementById("city");
+      const dateInput = document.getElementById("date");
       const startInput = document.getElementById("start");
       const list = document.getElementById("city-suggestions");
-      const form = document.getElementById("generate-form");
+      const dayForm = document.getElementById("day-form");
+      const dayBtn = document.getElementById("day-btn");
+      const dayStatus = document.getElementById("day-status");
+      const dayResults = document.getElementById("day-results");
+      const dayContext = document.getElementById("day-context");
+      const dayBody = document.getElementById("day-body");
+      const pdfForm = document.getElementById("generate-form");
+      const pdfCity = document.getElementById("pdf-city");
       const submitBtn = document.getElementById("submit-btn");
       const status = document.getElementById("status");
 
-      // Default start month: current month in local time.
       if (!startInput.value) {
         const now = new Date();
         const y = now.getFullYear();
         const m = String(now.getMonth() + 1).padStart(2, "0");
         startInput.value = `${y}-${m}`;
+      }
+      if (!dateInput.value) {
+        const now = new Date();
+        const d = String(now.getDate()).padStart(2, "0");
+        const m = String(now.getMonth() + 1).padStart(2, "0");
+        dateInput.value = `${d}/${m}/${now.getFullYear()}`;
       }
 
       let debounceTimer = null;
@@ -309,7 +403,7 @@
           closeSuggestions();
           return;
         }
-        cities.forEach((name, index) => {
+        cities.forEach((name) => {
           const li = document.createElement("li");
           li.setAttribute("role", "option");
           const btn = document.createElement("button");
@@ -346,6 +440,41 @@
         if (!response.ok) return [];
         const data = await response.json();
         return data.cities || [];
+      }
+
+      function escapeHtml(value) {
+        return String(value)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+      }
+
+      function segmentsHtml(segments) {
+        return segments.map((seg) => (
+          `<div class="segment">${escapeHtml(seg.name)}`
+          + ` <span class="ends">until ${escapeHtml(seg.ends)}</span></div>`
+        )).join("");
+      }
+
+      function renderDay(data) {
+        dayContext.innerHTML =
+          `<strong>${escapeHtml(data.city)}</strong> · ${escapeHtml(data.date)}`
+          + ` · ${escapeHtml(data.ayanamsa)}`;
+        const rows = [
+          ["Samvatsara", escapeHtml(data.samvatsara)],
+          ["Māsa", escapeHtml(data.masa)],
+          ["Ṛtu", escapeHtml(data.rtu)],
+          ["Vāra", escapeHtml(data.vaara)],
+          ["Tithi", segmentsHtml(data.tithi)],
+          ["Nakṣatra", segmentsHtml(data.nakshatra)],
+          ["Yoga", segmentsHtml(data.yoga)],
+          ["Karaṇa", segmentsHtml(data.karana)],
+        ];
+        dayBody.innerHTML = rows.map(([label, value]) => (
+          `<tr><th scope="row">${label}</th><td>${value}</td></tr>`
+        )).join("");
+        dayResults.classList.add("visible");
       }
 
       cityInput.addEventListener("input", () => {
@@ -386,10 +515,44 @@
         setTimeout(closeSuggestions, 120);
       });
 
-      form.addEventListener("submit", () => {
+      dayForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const city = cityInput.value.trim();
+        const date = dateInput.value.trim();
+        if (!city) {
+          dayStatus.textContent = "Enter a city.";
+          return;
+        }
+        dayBtn.disabled = true;
+        dayStatus.textContent = "Computing…";
+        dayResults.classList.remove("visible");
+        try {
+          const url = `/api/panchanga?city=${encodeURIComponent(city)}`
+            + `&date=${encodeURIComponent(date)}`;
+          const response = await fetch(url);
+          const data = await response.json();
+          if (!response.ok) {
+            throw new Error(data.error || "Request failed");
+          }
+          renderDay(data);
+          dayStatus.textContent = "";
+        } catch (error) {
+          dayStatus.textContent = error.message || "Could not compute panchanga.";
+        } finally {
+          dayBtn.disabled = false;
+        }
+      });
+
+      pdfForm.addEventListener("submit", (event) => {
+        const city = cityInput.value.trim();
+        if (!city) {
+          event.preventDefault();
+          status.textContent = "Enter a city.";
+          return;
+        }
+        pdfCity.value = city;
         submitBtn.disabled = true;
         status.textContent = "Generating calendar… this usually takes a few seconds.";
-        // Re-enable after the browser starts the download navigation.
         setTimeout(() => {
           submitBtn.disabled = false;
           status.textContent = "";

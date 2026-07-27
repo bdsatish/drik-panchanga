@@ -30,6 +30,7 @@ if str(_REPO_ROOT) not in sys.path:
 from generate_panchanga_calendar import (  # noqa: E402
     DEFAULT_CITIES_PATH, DEFAULT_FESTIVALS_PATH, build_pdf, default_output_path, load_location, parse_start_month,
 )
+from webapp.day_panchanga import compute_day_panchanga  # noqa: E402
 
 app = Flask(__name__)
 
@@ -83,6 +84,16 @@ def api_cities():
     except ValueError:
         limit = 20
     return jsonify({"cities": search_cities(query, limit=limit)})
+
+
+@app.get("/api/panchanga")
+def api_panchanga():
+    city = (request.args.get("city") or "").strip()
+    date = (request.args.get("date") or "").strip()
+    try:
+        return jsonify(compute_day_panchanga(city, date))
+    except ValueError as error:
+        abort(400, description=str(error))
 
 
 @app.post("/generate")

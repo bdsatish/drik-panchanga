@@ -23,6 +23,7 @@ from generate_panchanga_calendar import (  # noqa: E402
 from webapp.app import (  # noqa: E402
     city_names, safe_download_name, search_cities,
 )
+from webapp.day_panchanga import compute_day_panchanga  # noqa: E402
 
 PROJECT_ROOT = _REPO_ROOT
 
@@ -100,6 +101,19 @@ def handle_cities() -> None:
         city_names()  # fail fast if cities.json is missing
         write_json({"cities": search_cities(query, limit=limit)})
     except Exception as error:  # noqa: BLE001 — surface to the browser for CGI
+        write_error(str(error) or traceback.format_exc(), status="500 Internal Server Error", as_json=True)
+
+
+def handle_panchanga() -> None:
+    """GET panchanga.py?city=...&date=DD/MM/YYYY → JSON day panchanga."""
+    try:
+        params = _query_params()
+        city = (params.get("city") or [""])[0]
+        date = (params.get("date") or [""])[0]
+        write_json(compute_day_panchanga(city, date))
+    except ValueError as error:
+        write_error(str(error), as_json=True)
+    except Exception as error:  # noqa: BLE001
         write_error(str(error) or traceback.format_exc(), status="500 Internal Server Error", as_json=True)
 
 
