@@ -461,11 +461,20 @@
         dayContext.innerHTML =
           `<strong>${escapeHtml(data.city)}</strong> · ${escapeHtml(data.date)}`
           + ` · ${escapeHtml(data.ayanamsa)}`;
+        const timeOrDash = (value) => (value ? escapeHtml(value) : "—");
         const rows = [
           ["Samvatsara", escapeHtml(data.samvatsara)],
           ["Māsa", escapeHtml(data.masa)],
           ["Ṛtu", escapeHtml(data.rtu)],
           ["Vāra", escapeHtml(data.vaara)],
+          ["Kali Day", String(data.kali_day)],
+          ["Śālivāhana Śaka", String(data.saka_year)],
+          ["Kali Year", String(data.kali_year)],
+          ["Sunrise", timeOrDash(data.sunrise)],
+          ["Sunset", timeOrDash(data.sunset)],
+          ["Moonrise", timeOrDash(data.moonrise)],
+          ["Moonset", timeOrDash(data.moonset)],
+          ["Day duration", timeOrDash(data.day_duration)],
           ["Tithi", segmentsHtml(data.tithi)],
           ["Nakṣatra", segmentsHtml(data.nakshatra)],
           ["Yoga", segmentsHtml(data.yoga)],

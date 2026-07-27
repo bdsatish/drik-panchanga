@@ -74,6 +74,17 @@ def place_for_date(location, civil: panchanga.Date) -> panchanga.Place:
     return panchanga.Place(location.latitude, location.longitude, offset)
 
 
+def _optional_event_time(compute, jd, place) -> str | None:
+    """Format a rise/set time, or ``None`` when Swiss Ephemeris cannot find it."""
+    try:
+        value = compute(jd, place)
+        # sunrise/sunset return [jd, hms]; moonrise/moonset return hms only.
+        hms = value[1] if isinstance(value, (list, tuple)) and len(value) == 2 else value
+        return format_time(hms)
+    except Exception:
+        return None
+
+
 def compute_day_panchanga(city: str, date_text: str) -> dict:
     """Return named panchanga fields for ``city`` on ``date_text`` (DD/MM/YYYY)."""
     city = (city or "").strip()
@@ -87,9 +98,12 @@ def compute_day_panchanga(city: str, date_text: str) -> dict:
     jd = panchanga.gregorian_to_jd(civil)
 
     try:
-        sunrise_jd = panchanga.sunrise(jd, place)[0]
+        sunrise = panchanga.sunrise(jd, place)
+        sunrise_jd = sunrise[0]
         if not jd - 1 <= sunrise_jd <= jd + 2:
             raise RuntimeError("no local sunrise")
+        sunset = panchanga.sunset(jd, place)
+        day_dur = panchanga.day_duration(jd, place)
     except Exception as error:
         raise ValueError(f"Cannot compute sunrise panchanga for {location.name} "
                          f"on {civil.day:02d}/{civil.month:02d}/{civil.year}: {error}") from error
@@ -103,6 +117,8 @@ def compute_day_panchanga(city: str, date_text: str) -> dict:
     rtu_num = panchanga.ritu(masa_num)
     samvat_num = panchanga.samvatsara(jd, masa_num)
     vara_num = panchanga.vaara(jd)
+    kali_year, saka_year = panchanga.elapsed_year(jd, masa_num)
+    kali_day = int(panchanga.ahargana(jd))
 
     masa_name = names["masas"][str(masa_num)]
     if is_adhika:
@@ -121,6 +137,14 @@ def compute_day_panchanga(city: str, date_text: str) -> dict:
         "is_adhika": bool(is_adhika),
         "rtu": f"{names['ritus'][str(rtu_num)]} ṛtu",
         "vaara": names["varas"][str(vara_num)],
+        "kali_day": kali_day,
+        "saka_year": int(saka_year),
+        "kali_year": int(kali_year),
+        "sunrise": format_time(sunrise[1]),
+        "sunset": format_time(sunset[1]),
+        "moonrise": _optional_event_time(panchanga.moonrise, jd, place),
+        "moonset": _optional_event_time(panchanga.moonset, jd, place),
+        "day_duration": format_time(day_dur[1]),
         "tithi": _named_segments(ti, names["tithis"]),
         "nakshatra": _named_segments(nak, names["nakshatras"]),
         "yoga": _named_segments(yog, names["yogas"]),
