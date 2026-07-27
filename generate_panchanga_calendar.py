@@ -29,6 +29,7 @@ import panchanga
 MONTH_COUNT = 14
 DEFAULT_CITIES_PATH = Path(__file__).with_name("cities.json")
 DEFAULT_FESTIVALS_PATH = Path(__file__).with_name("festivals.cfg")
+FOOTER_FESTIVAL_SLOTS = 30  # 6 columns x 5 rows in draw_page_footer
 RULESET_VERSION = "Udaya-Vyapini-1.1"
 LAYOUT_VERSION = "A4-1.9"
 PDF_AUTHOR = "Satish BD"
@@ -540,6 +541,12 @@ def draw_page_header(pdf, location, months, ruleset_version):
 
 
 def draw_page_footer(pdf, festival_entries, eclipse_line="Eclipses: None"):
+    if len(festival_entries) > FOOTER_FESTIVAL_SLOTS:
+        raise ValueError(
+            f"Festival footer holds at most {FOOTER_FESTIVAL_SLOTS} entries "
+            f"(6x5); got {len(festival_entries)}. Disable some festivals in "
+            "festivals.cfg or pass a smaller --festivals file.")
+
     pdf.setFillColor(FESTIVAL_INK)
 
     columns = 6

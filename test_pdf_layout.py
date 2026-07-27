@@ -13,6 +13,7 @@ from generate_panchanga_calendar import (
     ACCENT,
     ADHIKA_INK,
     DEFAULT_FESTIVALS_PATH,
+    FOOTER_FESTIVAL_SLOTS,
     KRSNA_INK,
     LAYOUT_VERSION,
     MASA_START_INK,
@@ -20,6 +21,7 @@ from generate_panchanga_calendar import (
     argument_parser,
     build_pdf,
     default_output_path,
+    draw_page_footer,
     fitted_font_size,
     load_location,
     tithi_display_parts,
@@ -66,6 +68,19 @@ class PdfLayoutTests(unittest.TestCase):
         available_width = 300
         size = fitted_font_size(pdf, text, "Helvetica-Bold", 11, 5, available_width, "test title")
         self.assertLessEqual(pdf.stringWidth(text, "Helvetica-Bold", size), available_width + 0.01)
+
+    def test_footer_rejects_more_entries_than_slots(self):
+        pdf = Canvas(BytesIO())
+        entries = [(index, "Jan 01", f"Festival {index}")
+                   for index in range(1, FOOTER_FESTIVAL_SLOTS + 2)]
+        with self.assertRaisesRegex(ValueError, str(FOOTER_FESTIVAL_SLOTS)):
+            draw_page_footer(pdf, entries)
+
+    def test_footer_accepts_full_slot_count(self):
+        pdf = Canvas(BytesIO())
+        entries = [(index, "Jan 01", f"Festival {index}")
+                   for index in range(1, FOOTER_FESTIVAL_SLOTS + 1)]
+        draw_page_footer(pdf, entries)
 
 
 class TithiDisplayTests(unittest.TestCase):
