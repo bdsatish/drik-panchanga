@@ -42,48 +42,10 @@ automatically based on the date and place entered in the textboxes.
 Requirements
 ------------
 
-This app works with both Python 2 and Python 3. The only difference is that Python 2
-needs wxgtk-3.0 whereas Python 3 needs wxgtk-4.0. The codebase is compatible with both
-Python 2 and 3. See below for Python 3.
+Tested with Python 3.12, wxgtk 4.2.2, wxglade 0.8.1. The core of the library
+(`panchanga.py`) can be imported into other code or used from the command line.
 
-### Python 2 (DEPRECATED) ###
-
-Python interface to Swiss ephemeris.
-
-```
-pip install --user pyswisseph  # OR apt-get install pyswisseph
-```
-
-The core of the library (`panchanga.py`) can be imported into other code
-or used from the command line.
-
-In order to just _run_ the GUI (`gui.py`) you also need python-tz and
-wxPython (interface to wxWidgets):
-
-```
-apt-get install python-tz
-apt-get install python-wxgtk3.0
-```
-
-If you want to _modify_ the GUI (`Gui.wxg`), you must use wxGlade:
-
-```
-apt-get install python-wxglade
-```
-
-Wxglade 0.7.0 is buggy (0.6.8 is ok), try the development version from [here][wxgde].
-
-[wxgde]: https://github.com/wxGlade/wxGlade/releases
-
-How does it look?
-
-[Sample screenshot](screenshot.jpg):
-
-![Sample screenshot](screenshot.jpg "Hindu Panchanga")
-
-### Python 3 ###
-
-Tested with Python 3.12, wxgtk 4.2.2, wxglade 0.8.1.
+To run the GUI (`gui.py`):
 
 ```
 apt-get install python3-tz python3-wxgtk4.0 python3-wheel
@@ -91,39 +53,71 @@ pip3 install --user pyswisseph  # or apt-get
 python3 gui.py
 ```
 
-If you want to _edit_ the GUI, download [wxGlade](https://github.com/wxGlade/wxGlade/releases)
-and directly run:
+If you want to edit the GUI, download
+[wxGlade](https://github.com/wxGlade/wxGlade/releases) and run:
 
 ```
 python3 wxglade.py
 ```
 
-and open `Gui.wxg`.
+then open `Gui.wxg`.
 
-### One-page calendar PDF ###
+How does it look?
+
+[Sample screenshot](screenshot.jpg):
+
+![Sample screenshot](screenshot.jpg "Hindu Panchanga")
+
+
+Using the GUI
+-------------
+
+### Location known ###
+
+First, type the Date in DD/MM/YYYY format in the 'Date' field. Negative value for YYYY are
+interpolated as proleptic Gregorian calendar.
+
+Second, type your location (city or district) in the Location field and click 'Search'.  If found,
+then the coordinates and time zone are updated. If not, try the [next method](#location-unknown).
+If your location's population is more than 50,000 then the location should be found.
+
+Third, click 'Compute'. Now the fields like tithi, etc. are computed and shown on the GUI.
+
+### Location unknown ###
+
+First, type the Date in DD/MM/YYYY format in the 'Date' field.
+
+Second, manually enter the coordinates and time zone of your location. You can use
+[Google Maps](http://maps.google.com) or [Time and Date website](http://www.timeanddate.com/) for
+this purpose.
+
+Third, click 'Compute'.  Now the fields like tithi, etc. are computed and shown on the GUI.
+
+One-page calendar PDF
+---------------------
 
 `generate_panchanga_calendar.py` creates a single-page A4 landscape calendar
 covering 14 consecutive Gregorian months. Each day shows:
 
-* `T`: tithi number at local sunrise (`01`-`15`); blue ink is Sukla, dark ink is Krsna
-* `N`: nakshatra number (`01`-`27`)
-* `Y`: yoga number (`01`-`27`)
+* `T`: tithi number at local sunrise (01-15); blue ink is Sukla, dark ink in italics is Krsna
+* `N`: nakshatra number (01-27)
+* `Y`: yoga number (01-27)
 * the amanta lunar month at its first sunrise-visible tithi
 
 Calculations use Swiss Ephemeris with the True Citra ayanamsa. Adhika months
 have a gold cell and Sundays have a red right edge. The teal underline marks
-Ekadashi upavasa (`S11` / `K11` in the ruleset) under the same sunrise rule as festivals.
-The `T` column shows only `01`-`15`; Sukla is upright bold and Krsna is bold
-italic, so black-and-white prints still distinguish them. A brown X in the
-lower-left corner marks days with a locally visible eclipse.
-Numbered red superscripts refer to the festival key below the calendar. The
-footer also lists locally visible partial, total, and annular eclipses for the
-printed Gregorian range, each with its local maximum time and that date's
-sunrise (`None` when none qualify). Ruleset and layout versions
-are printed at the top right and embedded in the PDF metadata so a generated
-calendar can be reproduced or compared after rule changes.
+Ekadashi upavasa (S11 / K11 in the ruleset) under the same sunrise rule as
+festivals.  The `T` column shows only 01-15; Sukla is upright bold and Krsna is
+bold italic, so black-and-white prints still distinguish them. A brown X in the
+lower-left corner marks days with a locally visible eclipse.  Numbered red
+superscripts refer to the festival key below the calendar. The footer also lists
+locally visible partial, total, and annular eclipses for the printed Gregorian
+range, each with its local maximum time and that date's sunrise (`None` when
+none qualify). Ruleset and layout versions are printed at the top right and
+embedded in the PDF metadata so a generated calendar can be reproduced or
+compared after rule changes.
 
-#### Setup
+### Setup
 
 The PDF generator requires Python 3.9 or newer. Create a local virtual
 environment and install `pyswisseph`, ReportLab, and their dependencies:
@@ -154,24 +148,18 @@ source .venv/bin/activate
 Select a city and the first month of the 14-month range:
 
 ```
-python generate_panchanga_calendar.py \
-  --city Paris \
-  --start 2026-06
+python generate_panchanga_calendar.py  --city Bengaluru --start 2026-06
 ```
 
-Cities are read from `cities.json` next to the generator. Its IANA time-zone
-names, such as `Europe/Paris`, allow daylight-saving changes to be applied
-separately to every date. City matching is case-insensitive. Use
-`--output FILE.pdf` to choose the output path:
+Cities are read from `cities.json` next to the generator. City matching is
+case-insensitive. Use `--output FILE.pdf` to choose the output path:
 
 ```
-python generate_panchanga_calendar.py \
-  --city Ujjain \
-  --start 2026-03 \
-  --output ujjain_panchanga_mar2026_mar2027.pdf
+python generate_panchanga_calendar.py  --city Ujjain  --start 2026-03 \
+  --output ujjain_panchanga_mar2026_apr2027.pdf
 ```
 
-#### Festivals (how to)
+### Festivals (how to)
 
 Which festivals appear in the PDF is controlled by `festivals.cfg` next to the
 generator. Every catalog name must be listed as `yes` or `no`. Override the
@@ -201,7 +189,8 @@ To leave the virtual environment when finished, run:
 deactivate
 ```
 
-#### Web UI
+Web UI
+------
 
 Publicly accessible: https://panchanga.up.railway.app/
 
@@ -223,32 +212,6 @@ Local Docker check (repo root):
 docker build -f webapp/Dockerfile -t panchanga .
 docker run --rm -p 8080:8080 -e PORT=8080 panchanga
 ```
-
-
-Using the GUI
--------------
-
-### Location known ###
-
-First, type the Date in DD/MM/YYYY format in the 'Date' field. Negative value for YYYY are
-interpolated as proleptic Gregorian calendar.
-
-Second, type your location (city or district) in the Location field and click 'Search'.  If found,
-then the coordinates and time zone are updated. If not, try the [next method](#location-unknown).
-If your location's population is more than 50,000 then the location should be found.
-
-Third, click 'Compute'. Now the fields like tithi, etc. are computed and shown on the GUI.
-
-### Location unknown ###
-
-First, type the Date in DD/MM/YYYY format in the 'Date' field.
-
-Second, manually enter the coordinates and time zone of your location. You can use
-[Google Maps](http://maps.google.com) or [Time and Date website](http://www.timeanddate.com/) for
-this purpose.
-
-Third, click 'Compute'.  Now the fields like tithi, etc. are computed and shown on the GUI.
-
 
 Accuracy
 --------
