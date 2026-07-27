@@ -34,6 +34,7 @@ def jd_to_local_civil_date(jd, timezone_name):
 FESTIVAL_RULES = (
     ("Ugadi", 1, "S1"),
     ("Rama Navami", 1, "S9"),
+    ("Hanuman Jayanti", 1, "S15"),
     ("Mesha Sankranti", None, None),
     ("Akshaya Tritiya", 2, "S3"),
     ("Vasavi Jayanti", 2, "S10"),
@@ -43,6 +44,7 @@ FESTIVAL_RULES = (
     ("Varamahalakshmi Vrata", None, None),
     ("Rig Upakarma", None, None),
     ("Yajur Upakarma", None, None),
+    ("Onam", None, None),
     ("Janmashtami", 5, "K8"),
     ("Swarna Gowri Vrata", 6, "S3"),
     ("Ganesha Chaturthi", 6, "S4"),
@@ -51,6 +53,7 @@ FESTIVAL_RULES = (
     ("Durga Ashtami", 7, "S8"),
     ("Ayudha Puja", 7, "S9"),
     ("Vijayadashami", 7, "S10"),
+    ("Karwa Chauth", 7, "K4"),
     ("Dhana Trayodashi", 7, "K13"),
     ("Naraka Chaturdashi", 7, "K14"),
     ("Deepavali", 7, "K15"),
@@ -355,6 +358,26 @@ def select_rig_upakarma_dates(records, geopos=None, timezone_name=None):
     return postpone_upakarma_if_eclipse(primary, fallback, geopos, timezone_name)
 
 
+def select_onam_dates(records):
+    """Sravana-nakshatra sunrise in Simha; if none, try Kanya. Vriddhi keeps former.
+
+    Same sunrise/vriddhi/kshaya-fallback pattern as Rig Upakarma, but keyed on
+    solar rasi (Simha then Kanya) rather than lunar masa, with no eclipse test.
+    """
+    SRAVANA_NAKSHATRA = 22
+    SIMHA_RAASI = 5
+    KANYA_RAASI = 6
+
+    def matches_for_raasi(target_raasi):
+        return resolve_vriddhi_dates([
+            civil_date for civil_date, _tithi, nakshatra, _masa, _is_adhika, sunrise_jd in records
+            if nakshatra == SRAVANA_NAKSHATRA and panchanga.raasi(sunrise_jd) == target_raasi
+        ])
+
+    primary = matches_for_raasi(SIMHA_RAASI)
+    return primary if primary else matches_for_raasi(KANYA_RAASI)
+
+
 def select_vaikuntha_ekadashi_dates(records):
     """Margasira/Pausha Shukla Ekadashi upavasa while the Sun is in Dhanur."""
     records_by_date = {record[CIVIL_DATE]: record for record in records}
@@ -402,6 +425,8 @@ def select_non_tithi_dates(records, name, geopos=None, timezone_name=None):
         return select_rig_upakarma_dates(records, geopos=geopos, timezone_name=timezone_name)
     if name == "Yajur Upakarma":
         return select_yajur_upakarma_dates(records, geopos=geopos, timezone_name=timezone_name)
+    if name == "Onam":
+        return select_onam_dates(records)
     if name == "Vaikuntha Ekadashi":
         return select_vaikuntha_ekadashi_dates(records)
     if name == "Mesha Sankranti":
