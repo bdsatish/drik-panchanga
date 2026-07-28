@@ -1,5 +1,9 @@
 """Festival definitions and observance-date rules for the PDF calendar."""
 
+import sys, os
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 import calendar
 from datetime import timedelta
 
