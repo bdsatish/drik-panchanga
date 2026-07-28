@@ -86,7 +86,8 @@
     }
 
     input[type="text"],
-    input[type="month"] {
+    input[type="month"],
+    select {
       width: 100%;
       padding: 0.7rem 0.85rem;
       border: 1px solid var(--border);
@@ -97,7 +98,8 @@
       transition: border-color 0.15s, box-shadow 0.15s;
     }
 
-    input:focus {
+    input:focus,
+    select:focus {
       outline: none;
       border-color: var(--focus);
       box-shadow: 0 0 0 3px rgba(22, 128, 120, 0.15);
@@ -278,58 +280,6 @@
     .segment + .segment {
       margin-top: 0.25rem;
     }
-
-    fieldset.month-system {
-      margin: 0 0 1.15rem;
-      padding: 0;
-      border: 0;
-    }
-
-    fieldset.month-system legend {
-      display: block;
-      font-size: 0.82rem;
-      font-weight: 600;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      margin-bottom: 0.4rem;
-      padding: 0;
-    }
-
-    .choice-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0.5rem;
-    }
-
-    .choice {
-      display: flex;
-      align-items: center;
-      gap: 0.45rem;
-      margin: 0;
-      padding: 0.65rem 0.75rem;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: #fff;
-      font-size: 0.95rem;
-      font-weight: 600;
-      color: var(--ink);
-      text-transform: none;
-      letter-spacing: 0;
-      cursor: pointer;
-    }
-
-    .choice:has(input:checked) {
-      border-color: var(--focus);
-      background: var(--accent-soft);
-      color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(22, 128, 120, 0.12);
-    }
-
-    .choice input {
-      margin: 0;
-      accent-color: var(--focus);
-    }
   </style>
 </head>
 <body>
@@ -365,49 +315,31 @@
           dates with polar night or midnight sun have no sunrise, so sunrise-based
           panchanga cannot be computed then.</p>
       </div>
-      <fieldset class="month-system">
-        <legend>Lunar month</legend>
-        <div class="choice-row">
-          <label class="choice">
-            <input type="radio" name="month" value="amanta" checked>
-            Amānta
-          </label>
-          <label class="choice">
-            <input type="radio" name="month" value="purnimanta">
-            Pūrṇimānta
-          </label>
-        </div>
+      <div class="field">
+        <label for="month">Lunar month</label>
+        <select id="month" name="month">
+          <option value="amanta" selected>Amānta</option>
+          <option value="purnimanta">Pūrṇimānta</option>
+        </select>
         <p class="hint">
           Amānta (new moon → new moon) is usual in South India; Pūrṇimānta
           (full moon → full moon) in much of North India. Affects day māsa
           badges and PDF masa labels; festival dates stay on amānta rules.
         </p>
-      </fieldset>
-      <fieldset class="month-system">
-        <legend>Ayanāṃśa</legend>
-        <div class="choice-row">
-          <label class="choice">
-            <input type="radio" name="ayanamsa" value="citra" checked>
-            True Citra
-          </label>
-          <label class="choice">
-            <input type="radio" name="ayanamsa" value="revati">
-            True Revati
-          </label>
-          <label class="choice">
-            <input type="radio" name="ayanamsa" value="krishnamurti">
-            Krishnamurti
-          </label>
-          <label class="choice">
-            <input type="radio" name="ayanamsa" value="raman">
-            Raman
-          </label>
-        </div>
+      </div>
+      <div class="field">
+        <label for="ayanamsa">Ayanāṃśa</label>
+        <select id="ayanamsa" name="ayanamsa">
+          <option value="citra" selected>True Citra</option>
+          <option value="revati">True Revati</option>
+          <option value="krishnamurti">Krishnamurti</option>
+          <option value="raman">Raman</option>
+        </select>
         <p class="hint">
           Sidereal zero-point used for nakṣatra, yoga, and related fields.
           True Citra is the default.
         </p>
-      </fieldset>
+      </div>
     </div>
 
     <div class="card">
@@ -476,6 +408,8 @@
       const pdfMonth = document.getElementById("pdf-month");
       const pdfAyanamsa = document.getElementById("pdf-ayanamsa");
       const metaAyanamsa = document.getElementById("meta-ayanamsa");
+      const monthSelect = document.getElementById("month");
+      const ayanamsaSelect = document.getElementById("ayanamsa");
       const submitBtn = document.getElementById("submit-btn");
       const status = document.getElementById("status");
 
@@ -487,13 +421,11 @@
       };
 
       function selectedMonthSystem() {
-        const monthInput = document.querySelector('input[name="month"]:checked');
-        return (monthInput && monthInput.value) || "amanta";
+        return monthSelect.value || "amanta";
       }
 
       function selectedAyanamsa() {
-        const input = document.querySelector('input[name="ayanamsa"]:checked');
-        return (input && input.value) || "citra";
+        return ayanamsaSelect.value || "citra";
       }
 
       function syncAyanamsaMeta() {
@@ -502,9 +434,7 @@
         metaAyanamsa.textContent = `${label} ayanamsa`;
       }
 
-      document.querySelectorAll('input[name="ayanamsa"]').forEach((input) => {
-        input.addEventListener("change", syncAyanamsaMeta);
-      });
+      ayanamsaSelect.addEventListener("change", syncAyanamsaMeta);
       syncAyanamsaMeta();
 
       if (!startInput.value) {
