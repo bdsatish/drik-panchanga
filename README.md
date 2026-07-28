@@ -194,7 +194,7 @@ above:
 Run the regression tests with:
 
 ```
-python -m unittest discover -p 'test_*.py'
+python -m unittest discover -s tests -t . -p 'test_*.py'
 ```
 
 To leave the virtual environment when finished, run:

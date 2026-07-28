@@ -191,5 +191,5 @@ Generate a calendar PDF:
   python "$ROOT/generate_panchanga_calendar.py" --city Bangalore --start 2026-03
 
 Run tests:
-  python -m unittest discover -s "$ROOT" -p 'test_*.py'
+  python -m unittest discover -s "$ROOT/tests" -t "$ROOT" -p 'test_*.py'
 EOF
