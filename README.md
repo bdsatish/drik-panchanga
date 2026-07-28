@@ -42,7 +42,7 @@ automatically based on the date and place entered in the textboxes.
 Requirements
 ------------
 
-The core astronomy library is packaged for PyPI as `drik-panchanga`:
+The core astronomy library is on PyPI as `drik-panchanga`:
 
 ```
 pip install drik-panchanga

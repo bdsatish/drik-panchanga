@@ -3,3 +3,8 @@ include README.pypi.md
 include panchanga.py
 include pyproject.toml
 exclude README.md
+prune tests
+prune webapp
+prune experimental
+prune scripts
+prune Sample*
