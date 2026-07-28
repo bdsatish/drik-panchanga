@@ -1,0 +1,97 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Unit tests + app smoke
+    runs-on: ubuntu-latest
+    env:
+      SE_EPHE_PATH: ${{ github.workspace }}/ephe
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Cache Swiss Ephemeris data
+        uses: actions/cache@v4
+        with:
+          path: ephe
+          key: swisseph-ephe-v1
+
+      - name: Install OS build deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Fetch Swiss Ephemeris files
+        run: |
+          chmod +x scripts/ensure_ephe.sh scripts/ci_smoke_http.sh
+          ./scripts/ensure_ephe.sh "${SE_EPHE_PATH}"
+
+      - name: Run unit tests
+        run: python -m unittest discover -s . -p 'test_*.py' -v
+
+      - name: Start gunicorn and smoke-test HTTP
+        run: |
+          python -m gunicorn webapp.app:app \
+            --bind 127.0.0.1:8765 \
+            --workers 1 \
+            --threads 2 \
+            --timeout 120 \
+            --no-control-socket \
+            --access-logfile - \
+            --error-logfile - &
+          echo $! > /tmp/panchanga-gunicorn.pid
+          trap 'kill "$(cat /tmp/panchanga-gunicorn.pid)" 2>/dev/null || true' EXIT
+          ./scripts/ci_smoke_http.sh http://127.0.0.1:8765
+
+  docker:
+    name: Docker build + container smoke
+    runs-on: ubuntu-latest
+    env:
+      IMAGE: panchanga:ci
+      PORT: "8080"
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: webapp/Dockerfile
+          load: true
+          tags: ${{ env.IMAGE }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Run container and smoke-test HTTP
+        run: |
+          chmod +x scripts/ci_smoke_http.sh
+          docker run --rm -d \
+            --name panchanga-ci \
+            -p 8080:8080 \
+            -e PORT=8080 \
+            "${IMAGE}"
+          trap 'docker stop panchanga-ci >/dev/null 2>&1 || true' EXIT
+          ./scripts/ci_smoke_http.sh http://127.0.0.1:8080
