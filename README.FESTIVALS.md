@@ -118,6 +118,27 @@ computation). However, we don't need such complexities today, for we can compute
 panchanga exactly for any given day and location. Ekadashi fasting is for
 spiritual upliftment, not panchanga appeasement.
 
+Another drawback is the dissimilarity in the name of the festival and its
+observance. Naraka Chaturdashi and Deepavali always occur on the same day,
+sometimes on Chaturdashi and sometimes on Amavasya -- the festival name of
+"Chaturdashi" becomes meaningless. Consider 2026 Helsinki example:
+
+| Date   | Tithi at sunrise  | Dharma Sindhu                 | Udaya-vyāpinī      |
+|--------|-------------------|-------------------------------|--------------------|
+| Nov 6  | Trayodashi        | Dhanteras (dhana trayodashi)  | Dhanteras          |
+| Nov 7  | Chaturdashi       | No festival today             | Naraka Chaturdashi |
+| Nov 8  | Amavasya          | Naraka Chaturdashi, Deepavali | Deepavali          |
+| Nov 9  | Amavasya (adhika) | Bali Padyami                  | Nothing            |
+| Nov 10 | Pratipada         | No festival today             | Bali Padyami       |
+| Oct 19 | Ashtami           | Durgashtami, Mahanavami       | Durgashtami        |
+| Oct 20 | Navami            | Vijayadashami                 | Mahanavami         |
+| Oct 21 | Dashami           | No festival today             | Vijayadashami      |
+
+The very name "Bali Padyami" presupposes that the festival occurs on the day of
+Pāḍya, i.e. Pratipadā but Dharma Sindhu's complex rules assigns it to Amavasya
+day. Our Udaya-vyāpinī ruleset restores the consistency, as also followed by the
+[official holiday calendar](https://smarteduguide.com/holiday/official-karnataka-high-court-calendar-2026/).
+
 ### Sane rules
 
 This calendar therefore uses a single shared rule for ordinary tithi festivals
