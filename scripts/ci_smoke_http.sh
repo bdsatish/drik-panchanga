@@ -39,7 +39,7 @@ python3 - "${panchanga_json}" <<'PY'
 import json, sys
 data = json.loads(sys.argv[1])
 for key in (
-    "city", "date", "samvatsara", "masa", "rtu", "vaara",
+    "city", "date", "samvatsara", "ayana", "masa", "rtu", "vaara",
     "kali_day", "saka_year", "kali_year",
     "jd", "sunrise_jd", "ayanamsa_degrees",
     "sunrise", "sunset", "day_duration",

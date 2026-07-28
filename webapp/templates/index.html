@@ -559,31 +559,36 @@
             ? ` (${Number(data.ayanamsa_degrees).toFixed(6)}°)`
             : "");
         const timeOrDash = (value) => (value ? escapeHtml(value) : "—");
+        const riseSet = (rise, set) => `${rise} – ${set}`;
+        const samvatLine = (
+          `${escapeHtml(data.samvatsara)} ${escapeHtml(String(data.saka_year))}`
+          + `, Kali (elapsed) ${escapeHtml(String(data.kali_year))}`
+        );
         const rows = [
-          ["Samvatsara", escapeHtml(data.samvatsara)],
-          ["Māsa", escapeHtml(data.masa)],
+          ["Samvatsara", samvatLine],
+          ["Ayana", escapeHtml(data.ayana || "—")],
           ["Ṛtu", escapeHtml(data.rtu)],
+          ["Māsa", escapeHtml(data.masa)],
+          ["Tithi", segmentsHtml(data.tithi)],
+          ["Nakṣatra", segmentsHtml(data.nakshatra)],
           ["Vāra", escapeHtml(data.vaara)],
+          ["Yoga", segmentsHtml(data.yoga)],
+          ["Karaṇa", segmentsHtml(data.karana)],
+          ["Sun", riseSet(timeOrDash(data.sunrise), timeOrDash(data.sunset))],
+          ["Moon", riseSet(
+            moonEventHtml(data.moonrise, data.moonrise_status),
+            moonEventHtml(data.moonset, data.moonset_status),
+          )],
+          ["Day duration", timeOrDash(data.day_duration)],
+          ["Rāhukāla", intervalHtml(data.rahu_kala)],
+          ["Durmuhūrta", intervalsHtml(data.durmuhurta)],
           ["Kali Day", String(data.kali_day)],
-          ["Śālivāhana Śaka", String(data.saka_year)],
-          ["Kali Year", String(data.kali_year)],
           ["Julian day", data.jd != null ? Number(data.jd).toFixed(1) : "—"],
           ["Sunrise JD (UT)", data.sunrise_jd != null
             ? Number(data.sunrise_jd).toFixed(6) : "—"],
           ["Ayanāṃśa", data.ayanamsa_degrees != null
             ? `${escapeHtml(data.ayanamsa)} · ${Number(data.ayanamsa_degrees).toFixed(6)}°`
             : escapeHtml(data.ayanamsa || "—")],
-          ["Sunrise", timeOrDash(data.sunrise)],
-          ["Sunset", timeOrDash(data.sunset)],
-          ["Moonrise", moonEventHtml(data.moonrise, data.moonrise_status)],
-          ["Moonset", moonEventHtml(data.moonset, data.moonset_status)],
-          ["Day duration", timeOrDash(data.day_duration)],
-          ["Rāhukāla", intervalHtml(data.rahu_kala)],
-          ["Durmuhūrta", intervalsHtml(data.durmuhurta)],
-          ["Tithi", segmentsHtml(data.tithi)],
-          ["Nakṣatra", segmentsHtml(data.nakshatra)],
-          ["Yoga", segmentsHtml(data.yoga)],
-          ["Karaṇa", segmentsHtml(data.karana)],
         ];
         dayBody.innerHTML = rows.map(([label, value]) => (
           `<tr><th scope="row">${label}</th><td>${value}</td></tr>`

@@ -141,6 +141,13 @@ def _durmuhurta_intervals(jd, place) -> list[dict]:
     return intervals
 
 
+def ayana_label(raasi_num: int) -> str:
+    """Uttarāyaṇa from Makara–Mithuna (10–12, 1–3); else Dakṣiṇāyana."""
+    if raasi_num >= 10 or raasi_num <= 3:
+        return "Uttarāyaṇa"
+    return "Dakṣiṇāyana"
+
+
 def compute_day_panchanga(city: str, date_text: str, month_system: str | None = "amanta",
                           ayanamsa: str | None = "citra") -> dict:
     """Return named panchanga fields for ``city`` on ``date_text`` (DD/MM/YYYY).
@@ -202,6 +209,8 @@ def compute_day_panchanga(city: str, date_text: str, month_system: str | None = 
         masa_label = f"{masa_name} māsa"
     month_label = month_system_label(amanta)
     ayan_label = ayanamsa_label(ayanamsa_key)
+    sun_raasi = int(panchanga.raasi(sunrise_jd_ut))
+    ayana = ayana_label(sun_raasi)
     moonrise, moonrise_status = probe_moon_event(jd, place, civil, rise=True)
     moonset, moonset_status = probe_moon_event(jd, place, civil, rise=False)
 
@@ -217,6 +226,7 @@ def compute_day_panchanga(city: str, date_text: str, month_system: str | None = 
         "month_system": "amanta" if amanta else "purnimanta",
         "month_system_label": month_label,
         "samvatsara": names["samvats"][str(samvat_num)],
+        "ayana": ayana,
         "masa": masa_label,
         "masa_number": masa_num,
         "is_adhika": bool(is_adhika),
