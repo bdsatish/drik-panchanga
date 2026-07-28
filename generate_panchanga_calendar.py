@@ -247,6 +247,61 @@ def location_from_mapping(name, record):
         raise ValueError(f"Location record for {name!r} needs latitude, longitude, and timezone") from error
 
 
+def city_base_name(key: str) -> str:
+    """Return the place name from a ``Name, ISO`` cities.json key."""
+    if ", " not in key:
+        return key
+    name, sep, country = key.rpartition(", ")
+    if sep and len(country) == 2 and country.isalpha():
+        return name
+    return key
+
+
+def resolve_city_key(city: str, locations: dict) -> str:
+    """Resolve a user city string to a cities.json key.
+
+    Accepts full keys (``Sydney, AU``) or a bare name when it is unique.
+    """
+    query = (city or "").strip()
+    if not query:
+        raise ValueError("City is required.")
+
+    folded = query.casefold()
+    exact = [name for name in locations if name.casefold() == folded]
+    if len(exact) == 1:
+        return exact[0]
+    if len(exact) > 1:
+        raise ValueError(f"City {city!r} matches multiple keys: {', '.join(sorted(exact))}")
+
+    bare = [name for name in locations if city_base_name(name).casefold() == folded]
+    if len(bare) == 1:
+        return bare[0]
+    if len(bare) > 1:
+        options = ", ".join(sorted(bare, key=str.casefold))
+        raise ValueError(
+            f"City {city!r} is ambiguous; use a country code, e.g. one of: {options}")
+
+    import difflib
+
+    suggestions = difflib.get_close_matches(query, list(locations), n=5, cutoff=0.6)
+    if not suggestions:
+        # Also suggest by bare-name similarity against unique bases.
+        bases = sorted({city_base_name(name) for name in locations}, key=str.casefold)
+        near = difflib.get_close_matches(query, bases, n=5, cutoff=0.6)
+        expanded = []
+        for base in near:
+            expanded.extend(
+                sorted(
+                    (name for name in locations if city_base_name(name).casefold() == base.casefold()),
+                    key=str.casefold,
+                ))
+        suggestions = expanded[:8]
+    message = f"City {city!r} was not found in {DEFAULT_CITIES_PATH.name}"
+    if suggestions:
+        message += f". Close matches: {', '.join(suggestions)}"
+    raise ValueError(message)
+
+
 def load_location(city):
     path = DEFAULT_CITIES_PATH
     if not path.exists():
@@ -256,16 +311,7 @@ def load_location(city):
     if not isinstance(locations, dict):
         raise ValueError("cities.json must contain an object keyed by city")
 
-    matching_names = [name for name in locations if name.casefold() == city.casefold()]
-    if not matching_names:
-        import difflib
-
-        suggestions = difflib.get_close_matches(city, list(locations), n=5, cutoff=0.6)
-        message = f"City {city!r} was not found in {path}"
-        if suggestions:
-            message += f". Close matches: {', '.join(suggestions)}"
-        raise ValueError(message)
-    name = matching_names[0]
+    name = resolve_city_key(city, locations)
     return location_from_mapping(name, locations[name])
 
 

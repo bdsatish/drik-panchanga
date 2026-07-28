@@ -28,7 +28,7 @@ import json, sys
 data = json.loads(sys.argv[1])
 cities = data.get("cities") or []
 assert isinstance(cities, list) and cities, data
-assert any(c.casefold() == "bengaluru" for c in cities), cities
+assert any(c.casefold() == "bengaluru, in" for c in cities), cities
 print("cities ok:", cities[:5])
 PY
 
@@ -46,7 +46,7 @@ for key in (
     "tithi", "nakshatra", "yoga", "karana",
 ):
     assert key in data and data[key] not in (None, ""), (key, data)
-assert data["city"] == "Bengaluru", data["city"]
+assert data["city"] in {"Bengaluru", "Bengaluru, IN"}, data["city"]
 assert data["date"] == "15/01/2026", data["date"]
 assert data.get("month_system", "amanta") == "amanta", data.get("month_system")
 assert isinstance(data["tithi"], list) and data["tithi"], data["tithi"]

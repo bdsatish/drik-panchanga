@@ -249,19 +249,43 @@ class Panchanga(wx.Frame):
 
 
     def search_location(self, event):  # wxGlade: Panchanga.<event_handler>
-        city = self.placeTxt.Value.title()  # Convert to title-case
-        if city in self.cities:
+        city = self.placeTxt.Value.strip()
+        match = None
+        folded = city.casefold()
+        for name in self.cities:
+            if name.casefold() == folded:
+                match = name
+                break
+        if match is None:
+            # Bare name when unique among "Name, ISO" keys.
+            bare = []
+            for name in self.cities:
+                base = name.rsplit(", ", 1)[0] if ", " in name else name
+                country = name.rsplit(", ", 1)[-1] if ", " in name else ""
+                if len(country) == 2 and country.isalpha() and base.casefold() == folded:
+                    bare.append(name)
+            if len(bare) == 1:
+                match = bare[0]
+            elif len(bare) > 1:
+                msg = (city + " is ambiguous!\n\nUse a country code:\n\n"
+                       + "\n".join(sorted(bare)))
+                wx.MessageBox(msg, "Error", wx.OK | wx.ICON_ERROR)
+                event.Skip()
+                return
+
+        if match is not None:
             self.searchBtn.SetForegroundColour(wx.Colour(0x2C, 0x2C, 0x2C))
             # self.searchBtn.SetLabel("Found!")
 
             date = self.parse_date()
-            city = self.cities[city]
+            city = self.cities[match]
             lat = city['latitude']
             lon = city['longitude']
             tzname = city['timezone']
             self.tzone = timezone(tzname)
             tz_offset = self.compute_timezone_offset()
             self.place = Place(lat, lon, tz_offset)
+            self.placeTxt.SetValue(match)
 
             # update coordinate textboxes
             self.latTxt.SetValue("%.5f" % lat)

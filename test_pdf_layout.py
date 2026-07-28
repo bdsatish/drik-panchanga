@@ -59,11 +59,11 @@ class PdfLayoutTests(unittest.TestCase):
 
     def test_default_filename_has_no_policy_suffix(self):
         path = default_output_path(load_location("Helsinki"), 2026, 3)
-        self.assertEqual(path.name, "helsinki_panchanga_2026-03_to_2027-04.pdf")
+        self.assertEqual(path.name, "helsinki-fi_panchanga_2026-03_to_2027-04.pdf")
 
     def test_purnimanta_filename_suffix(self):
         path = default_output_path(load_location("Helsinki"), 2026, 3, month_system="purnimanta")
-        self.assertEqual(path.name, "helsinki_panchanga_2026-03_to_2027-04_purnimanta.pdf")
+        self.assertEqual(path.name, "helsinki-fi_panchanga_2026-03_to_2027-04_purnimanta.pdf")
 
     def test_cli_accepts_month_system(self):
         parser = argument_parser()

@@ -353,16 +353,17 @@
           name="city"
           type="text"
           required
-          placeholder="e.g. Tirupati, Espoo, Paris"
+          placeholder="e.g. Tirupati, IN · Sydney, AU · Espoo, FI"
           spellcheck="false"
           aria-autocomplete="list"
           aria-controls="city-suggestions"
           aria-expanded="false"
         >
         <ul id="city-suggestions" class="suggestions" role="listbox"></ul>
-        <p class="hint">Shared by both tools. Matched against cities.json (case-insensitive).
-          High Arctic / Antarctic dates with polar night or midnight sun have no sunrise,
-          so sunrise-based panchanga cannot be computed then.</p>
+        <p class="hint">Shared by both tools. Keys look like <code>Sydney, AU</code>
+          (city + ISO country). Bare names work when unique. High Arctic / Antarctic
+          dates with polar night or midnight sun have no sunrise, so sunrise-based
+          panchanga cannot be computed then.</p>
       </div>
       <fieldset class="month-system">
         <legend>Lunar month</legend>

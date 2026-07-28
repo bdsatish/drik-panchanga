@@ -36,12 +36,17 @@ app = Flask(__name__)
 
 
 @lru_cache(maxsize=1)
-def city_names() -> tuple[str, ...]:
+def city_records() -> dict:
     with DEFAULT_CITIES_PATH.open(encoding="utf-8") as source:
         data = json.load(source)
     if not isinstance(data, dict):
         raise RuntimeError("cities.json must contain an object keyed by city")
-    return tuple(sorted(data.keys(), key=str.casefold))
+    return data
+
+
+@lru_cache(maxsize=1)
+def city_names() -> tuple[str, ...]:
+    return tuple(sorted(city_records().keys(), key=str.casefold))
 
 
 def search_cities(query: str, limit: int = 20) -> list[str]:
@@ -49,18 +54,24 @@ def search_cities(query: str, limit: int = 20) -> list[str]:
     if not query:
         return []
     folded = query.casefold()
+    records = city_records()
     starts = []
     contains = []
     for name in city_names():
         name_folded = name.casefold()
-        if name_folded.startswith(folded):
+        base_folded = name_folded.rsplit(", ", 1)[0]
+        if name_folded.startswith(folded) or base_folded.startswith(folded):
             starts.append(name)
         elif folded in name_folded:
             contains.append(name)
-        if len(starts) >= limit:
-            break
-    if len(starts) >= limit:
-        return starts[:limit]
+    def pop_of(name: str) -> int:
+        try:
+            return int(records[name].get("population") or 0)
+        except (TypeError, ValueError):
+            return 0
+
+    starts.sort(key=lambda name: (-pop_of(name), name.casefold()))
+    contains.sort(key=lambda name: (-pop_of(name), name.casefold()))
     return (starts + contains)[:limit]
 
 
