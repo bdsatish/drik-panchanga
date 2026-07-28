@@ -192,6 +192,12 @@
       text-align: center;
     }
 
+    .status.is-error {
+      color: var(--error);
+      text-align: left;
+      line-height: 1.45;
+    }
+
     footer {
       margin-top: 1.75rem;
       font-size: 0.82rem;
@@ -354,7 +360,9 @@
           aria-expanded="false"
         >
         <ul id="city-suggestions" class="suggestions" role="listbox"></ul>
-        <p class="hint">Shared by both tools. Matched against cities.json (case-insensitive).</p>
+        <p class="hint">Shared by both tools. Matched against cities.json (case-insensitive).
+          High Arctic / Antarctic dates with polar night or midnight sun have no sunrise,
+          so sunrise-based panchanga cannot be computed then.</p>
       </div>
       <fieldset class="month-system">
         <legend>Lunar month</legend>
@@ -546,6 +554,17 @@
         )).join("");
       }
 
+      function moonEventHtml(time, status) {
+        if (time) return escapeHtml(time);
+        const labels = {
+          none_today: "None this civil day",
+          always_below: "None (Moon below horizon)",
+          always_above: "None (Moon above horizon)",
+          unavailable: "None",
+        };
+        return `<span class="ends">${labels[status] || "—"}</span>`;
+      }
+
       function renderDay(data) {
         const monthLabel = data.month_system_label || (
           data.month_system === "purnimanta" ? "Pūrṇimānta" : "Amānta"
@@ -565,8 +584,8 @@
           ["Kali Year", String(data.kali_year)],
           ["Sunrise", timeOrDash(data.sunrise)],
           ["Sunset", timeOrDash(data.sunset)],
-          ["Moonrise", timeOrDash(data.moonrise)],
-          ["Moonset", timeOrDash(data.moonset)],
+          ["Moonrise", moonEventHtml(data.moonrise, data.moonrise_status)],
+          ["Moonset", moonEventHtml(data.moonset, data.moonset_status)],
           ["Day duration", timeOrDash(data.day_duration)],
           ["Rāhukāla", intervalHtml(data.rahu_kala)],
           ["Durmuhūrta", intervalsHtml(data.durmuhurta)],
@@ -630,6 +649,7 @@
         }
         dayBtn.disabled = true;
         dayStatus.textContent = "Computing…";
+        dayStatus.classList.remove("is-error");
         dayResults.classList.remove("visible");
         try {
           const url = `/api/panchanga?city=${encodeURIComponent(city)}`
@@ -644,6 +664,7 @@
           dayStatus.textContent = "";
         } catch (error) {
           dayStatus.textContent = error.message || "Could not compute panchanga.";
+          dayStatus.classList.add("is-error");
         } finally {
           dayBtn.disabled = false;
         }

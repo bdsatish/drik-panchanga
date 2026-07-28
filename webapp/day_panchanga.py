@@ -9,7 +9,13 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import panchanga
-from generate_panchanga_calendar import load_location, month_system_label, parse_month_system, timezone_hours
+from generate_panchanga_calendar import (
+    load_location,
+    month_system_label,
+    parse_month_system,
+    require_local_sunrise,
+    timezone_hours,
+)
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 _NAMES_PATH = _REPO_ROOT / "sanskrit_names.json"
@@ -74,15 +80,42 @@ def place_for_date(location, civil: panchanga.Date) -> panchanga.Place:
     return panchanga.Place(location.latitude, location.longitude, offset)
 
 
-def _optional_event_time(compute, jd, place) -> str | None:
-    """Format a rise/set time, or ``None`` when Swiss Ephemeris cannot find it."""
+def _moon_altitude_at_local_noon(year: int, month: int, day: int, place) -> float:
+    swe = panchanga.swe
+    noon_ut = swe.julday(year, month, day, 12.0) - place.timezone / 24.0
+    xx, _retflag = swe.calc_ut(noon_ut, swe.MOON)
+    _azimuth, true_altitude, _apparent = swe.azalt(
+        noon_ut, swe.ECL2HOR, (place.longitude, place.latitude, 0.0), 0, 0,
+        [xx[0], xx[1], xx[2]])
+    return true_altitude
+
+
+def probe_moon_event(jd, place, civil: panchanga.Date, *, rise: bool) -> tuple[str | None, str]:
+    """Return ``(time_or_None, status)`` for moonrise/moonset on a civil day.
+
+    Status is ``ok``, ``none_today`` (next event is after local midnight+24h),
+    ``always_below``, ``always_above``, or ``unavailable``.
+    """
+    swe = panchanga.swe
+    t0 = jd - place.timezone / 24.0
+    flag = swe.CALC_RISE if rise else swe.CALC_SET
     try:
-        value = compute(jd, place)
-        # sunrise/sunset return [jd, hms]; moonrise/moonset return hms only.
-        hms = value[1] if isinstance(value, (list, tuple)) and len(value) == 2 else value
-        return format_time(hms)
+        rc, times = swe.rise_trans(
+            t0, swe.MOON, geopos=(place.longitude, place.latitude, 0.0),
+            rsmi=panchanga._rise_flags + flag)
     except Exception:
-        return None
+        return None, "unavailable"
+    if rc != 0:
+        altitude = _moon_altitude_at_local_noon(civil.year, civil.month, civil.day, place)
+        if altitude > 0.5:
+            return None, "always_above"
+        if altitude < -0.5:
+            return None, "always_below"
+        return None, "unavailable"
+    local_hours = (times[0] - t0) * 24.0
+    if not 0.0 <= local_hours < 24.0:
+        return None, "none_today"
+    return format_time(panchanga.to_dms(local_hours)), "ok"
 
 
 def _interval_from_hms(start_hms, end_hms) -> dict:
@@ -124,15 +157,19 @@ def compute_day_panchanga(city: str, date_text: str, month_system: str | None = 
     jd = panchanga.gregorian_to_jd(civil)
 
     try:
-        sunrise = panchanga.sunrise(jd, place)
-        sunrise_jd = sunrise[0]
-        if not jd - 1 <= sunrise_jd <= jd + 2:
-            raise RuntimeError("no local sunrise")
+        sunrise = require_local_sunrise(
+            jd, place, location.name, civil.year, civil.month, civil.day)
         sunset = panchanga.sunset(jd, place)
+        sunset_jd = sunset[0]
+        if not jd - 1 <= sunset_jd <= jd + 2:
+            raise RuntimeError("no local sunset")
         day_dur = panchanga.day_duration(jd, place)
+    except RuntimeError as error:
+        raise ValueError(str(error)) from error
     except Exception as error:
-        raise ValueError(f"Cannot compute sunrise panchanga for {location.name} "
-                         f"on {civil.day:02d}/{civil.month:02d}/{civil.year}: {error}") from error
+        raise ValueError(
+            f"Cannot compute sunrise panchanga for {location.name} "
+            f"on {civil.day:02d}/{civil.month:02d}/{civil.year}: {error}") from error
 
     names = sanskrit_names()
     ti = panchanga.tithi(jd, place)
@@ -152,6 +189,8 @@ def compute_day_panchanga(city: str, date_text: str, month_system: str | None = 
     else:
         masa_label = f"{masa_name} māsa"
     month_label = month_system_label(amanta)
+    moonrise, moonrise_status = probe_moon_event(jd, place, civil, rise=True)
+    moonset, moonset_status = probe_moon_event(jd, place, civil, rise=False)
 
     return {
         "city": location.name,
@@ -171,8 +210,10 @@ def compute_day_panchanga(city: str, date_text: str, month_system: str | None = 
         "kali_year": int(kali_year),
         "sunrise": format_time(sunrise[1]),
         "sunset": format_time(sunset[1]),
-        "moonrise": _optional_event_time(panchanga.moonrise, jd, place),
-        "moonset": _optional_event_time(panchanga.moonset, jd, place),
+        "moonrise": moonrise,
+        "moonrise_status": moonrise_status,
+        "moonset": moonset,
+        "moonset_status": moonset_status,
         "day_duration": format_time(day_dur[1]),
         "rahu_kala": _rahu_kala(jd, place),
         "durmuhurta": _durmuhurta_intervals(jd, place),

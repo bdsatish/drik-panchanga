@@ -168,6 +168,61 @@ def month_system_label(amanta):
     return "Amānta" if amanta else "Pūrṇimānta"
 
 
+def sun_altitude_at_local_noon(year, month, day, place):
+    """True solar altitude in degrees at local civil noon."""
+    swe = panchanga.swe
+    noon_ut = swe.julday(year, month, day, 12.0) - place.timezone / 24.0
+    xx, _retflag = swe.calc_ut(noon_ut, swe.SUN)
+    _azimuth, true_altitude, _apparent = swe.azalt(
+        noon_ut, swe.ECL2HOR, (place.longitude, place.latitude, 0.0), 0, 0,
+        [xx[0], xx[1], xx[2]])
+    return true_altitude
+
+
+def classify_missing_sunrise(year, month, day, place):
+    """Why local sunrise is unavailable: ``polar_night``, ``polar_day``, or ``no_sunrise``."""
+    altitude = sun_altitude_at_local_noon(year, month, day, place)
+    if altitude > 0.5:
+        return "polar_day"
+    if altitude < -0.5:
+        return "polar_night"
+    return "no_sunrise"
+
+
+def format_sunrise_unavailable_message(location_name, year, month, day, place):
+    """Human-readable error when Hindu sunrise-day reckoning cannot start."""
+    kind = classify_missing_sunrise(year, month, day, place)
+    date_label = f"{day:02d}/{month:02d}/{year}"
+    lat = abs(place.latitude)
+    hemisphere = "N" if place.latitude >= 0 else "S"
+    if kind == "polar_night":
+        detail = (f"polar night — the Sun stays below the horizon "
+                  f"(about {lat:.1f}°{hemisphere})")
+    elif kind == "polar_day":
+        detail = (f"midnight sun — the Sun stays above the horizon "
+                  f"(about {lat:.1f}°{hemisphere})")
+    else:
+        detail = (f"no local sunrise/sunset "
+                  f"(about {lat:.1f}°{hemisphere}; common near the polar circles)")
+    return (
+        f"Cannot compute sunrise panchanga for {location_name} on {date_label}: "
+        f"{detail}. Hindu civil days begin at local sunrise — choose a date with a "
+        f"sunrise, or a city at lower latitude.")
+
+
+def require_local_sunrise(jd, place, location_name, year, month, day):
+    """Return ``panchanga.sunrise`` result, or raise ``RuntimeError`` with context."""
+    try:
+        sunrise = panchanga.sunrise(jd, place)
+        sunrise_jd = sunrise[0]
+        if not jd - 1 <= sunrise_jd <= jd + 2:
+            raise RuntimeError("no local sunrise")
+        return sunrise
+    except Exception as error:
+        message = format_sunrise_unavailable_message(location_name, year, month, day, place)
+        raise RuntimeError(message) from error
+
+
 def make_location(name, latitude, longitude, timezone_name):
     try:
         latitude = float(latitude)
@@ -321,16 +376,17 @@ def daily_values(year, month, location, *, amanta=True):
         place = panchanga.Place(location.latitude, location.longitude, timezone_hours(timezone, year, month, day))
         jd = panchanga.gregorian_to_jd(date)
         try:
-            sunrise_jd = panchanga.sunrise(jd, place)[0]
-            if not jd - 1 <= sunrise_jd <= jd + 2:
-                raise RuntimeError("no local sunrise")
+            sunrise_jd = require_local_sunrise(jd, place, location.name, year, month, day)[0]
             tithi_number = panchanga.tithi(jd, place)[0]
             nakshatra_number = panchanga.nakshatra(jd, place)[0]
             yoga_number = panchanga.yoga(jd, place)[0]
             masa_number, is_adhika = panchanga.masa(jd, place, amanta=amanta)
+        except RuntimeError:
+            raise
         except Exception as error:
-            raise RuntimeError(f"Cannot calculate sunrise panchanga for {location.name} "
-                               f"on {year:04d}-{month:02d}-{day:02d}: {error}") from error
+            raise RuntimeError(
+                format_sunrise_unavailable_message(location.name, year, month, day, place)
+                + f" ({error})") from error
         result.append((
             day,
             tithi_code(tithi_number),
