@@ -111,24 +111,20 @@ def embed_pdf_metadata(pdf, *, title, subject, ruleset_version, ayanamsa="citra"
     info.copyright = PDF_COPYRIGHT
     info.url = PDF_SOURCE_URL
 
-    def format_info(document, self=info):
-        dates = PDFDate(ts=document._timeStamp, dateFormatter=self._dateFormatter)
-        return PDFDictionary({
-            "Title": PDFString(self.title),
-            "Author": PDFString(self.author),
-            "AuthorEmail": PDFString(self.author_email),
-            "Copyright": PDFString(self.copyright),
-            "URL": PDFString(self.url),
-            "ModDate": dates,
-            "CreationDate": dates,
-            "Producer": PDFString(self.producer),
-            "Creator": PDFString(self.creator),
-            "Subject": PDFString(self.subject),
-            "Keywords": PDFString(self.keywords),
-            "Trapped": PDFName(self.trapped),
-        }).format(document)
-
-    info.format = format_info
+    info.format = lambda document, self=info: PDFDictionary({
+        "Title": PDFString(self.title),
+        "Author": PDFString(self.author),
+        "AuthorEmail": PDFString(self.author_email),
+        "Copyright": PDFString(self.copyright),
+        "URL": PDFString(self.url),
+        "ModDate": PDFDate(ts=document._timeStamp, dateFormatter=self._dateFormatter),
+        "CreationDate": PDFDate(ts=document._timeStamp, dateFormatter=self._dateFormatter),
+        "Producer": PDFString(self.producer),
+        "Creator": PDFString(self.creator),
+        "Subject": PDFString(self.subject),
+        "Keywords": PDFString(self.keywords),
+        "Trapped": PDFName(self.trapped),
+    }).format(document)
 
 
 def month_range(start_year, start_month, count=MONTH_COUNT):

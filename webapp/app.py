@@ -64,14 +64,9 @@ def search_cities(query: str, limit: int = 20) -> list[str]:
             starts.append(name)
         elif folded in name_folded:
             contains.append(name)
-    def pop_of(name: str) -> int:
-        try:
-            return int(records[name].get("population") or 0)
-        except (TypeError, ValueError):
-            return 0
-
-    starts.sort(key=lambda name: (-pop_of(name), name.casefold()))
-    contains.sort(key=lambda name: (-pop_of(name), name.casefold()))
+    sort_key = lambda name: (-int(records[name].get("population") or 0), name.casefold())
+    starts.sort(key=sort_key)
+    contains.sort(key=sort_key)
     return (starts + contains)[:limit]
 
 

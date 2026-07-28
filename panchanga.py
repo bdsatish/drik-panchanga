@@ -178,6 +178,12 @@ def unwrap_angles(angles):
   assert(result == sorted(result))
   return result
 
+def lon_relative_to_base(lon, base_lon):
+  """Bring ``lon`` into (base_lon - 180, base_lon + 180] by adding/subtracting 360°."""
+  while lon < base_lon - 180: lon += 360
+  while lon > base_lon + 180: lon -= 360
+  return lon
+
 # Make angle lie between [-180, 180) instead of [0, 360)
 norm180 = lambda angle: (angle - 360) if angle >= 180 else angle;
 
@@ -752,12 +758,9 @@ def varjyam(jd, place):
           while targ > lon1 + 180: targ -= 360
           
           if (lon1 - targ) * (lon2 - targ) <= 0:
-              def f_start(x, base_lon=lon1, target=targ):
-                  l = lunar_longitude(x)
-                  while l < base_lon - 180: l += 360
-                  while l > base_lon + 180: l -= 360
-                  return l - target
-              t_start = bisection_search(f_start, t, t + 0.1)
+              t_start = bisection_search(
+                  lambda x: lon_relative_to_base(lunar_longitude(x), lon1) - targ,
+                  t, t + 0.1)
               break
           t += 0.1
           
@@ -776,12 +779,9 @@ def varjyam(jd, place):
           while targ > lon1 + 180: targ -= 360
           
           if (lon1 - targ) * (lon2 - targ) <= 0:
-              def f_end(x, base_lon=lon1, target=targ):
-                  l = lunar_longitude(x)
-                  while l < base_lon - 180: l += 360
-                  while l > base_lon + 180: l -= 360
-                  return l - target
-              t_end = bisection_search(f_end, t, t + 0.1)
+              t_end = bisection_search(
+                  lambda x: lon_relative_to_base(lunar_longitude(x), lon1) - targ,
+                  t, t + 0.1)
               break
           t += 0.1
           

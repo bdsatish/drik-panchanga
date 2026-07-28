@@ -341,20 +341,20 @@ def select_rig_upakarma_dates(records, geopos=None, timezone_name=None):
     """Nija Sravana-nakshatra day, postponed to Bhadrapada on kshaya/eclipse."""
     SRAVANA_NAKSHATRA = 22
 
-    def matches_for_masa(masa):
-        return resolve_vriddhi_dates([
-            civil_date for civil_date, _tithi, nakshatra, day_masa, is_adhika, _sunrise_jd in records
-            if day_masa == masa and not is_adhika and nakshatra == SRAVANA_NAKSHATRA
-        ])
-
     # For kshaya nakshatra / eclipse:
     # TTD/Sri-Vaishnava rule: Sravana masa = 5. If unavailable or eclipsed,
     # use Bhadrapada masa = 6 for Sravana Nakshatra.
     # Madhwas use Sravana-S05 instead (e.g. SRS Mutt: 03-08-2022)
     # Smartas use the former civil date when there is Kshaya nakshatra
     # (e.g. Sringeri: 11-08-2022)
-    primary = matches_for_masa("5")
-    fallback = matches_for_masa("6")
+    primary = resolve_vriddhi_dates([
+        civil_date for civil_date, _tithi, nakshatra, day_masa, is_adhika, _sunrise_jd in records
+        if day_masa == "5" and not is_adhika and nakshatra == SRAVANA_NAKSHATRA
+    ])
+    fallback = resolve_vriddhi_dates([
+        civil_date for civil_date, _tithi, nakshatra, day_masa, is_adhika, _sunrise_jd in records
+        if day_masa == "6" and not is_adhika and nakshatra == SRAVANA_NAKSHATRA
+    ])
     return postpone_upakarma_if_eclipse(primary, fallback, geopos, timezone_name)
 
 
@@ -368,14 +368,16 @@ def select_onam_dates(records):
     SIMHA_RAASI = 5
     KANYA_RAASI = 6
 
-    def matches_for_raasi(target_raasi):
-        return resolve_vriddhi_dates([
-            civil_date for civil_date, _tithi, nakshatra, _masa, _is_adhika, sunrise_jd in records
-            if nakshatra == SRAVANA_NAKSHATRA and panchanga.raasi(sunrise_jd) == target_raasi
-        ])
-
-    primary = matches_for_raasi(SIMHA_RAASI)
-    return primary if primary else matches_for_raasi(KANYA_RAASI)
+    primary = resolve_vriddhi_dates([
+        civil_date for civil_date, _tithi, nakshatra, _masa, _is_adhika, sunrise_jd in records
+        if nakshatra == SRAVANA_NAKSHATRA and panchanga.raasi(sunrise_jd) == SIMHA_RAASI
+    ])
+    if primary:
+        return primary
+    return resolve_vriddhi_dates([
+        civil_date for civil_date, _tithi, nakshatra, _masa, _is_adhika, sunrise_jd in records
+        if nakshatra == SRAVANA_NAKSHATRA and panchanga.raasi(sunrise_jd) == KANYA_RAASI
+    ])
 
 
 def select_vaikuntha_ekadashi_dates(records):

@@ -74,20 +74,13 @@ class FindLocalEclipsesTests(unittest.TestCase):
     def test_search_continues_after_skipped_penumbral(self):
         # Helsinki 2025-03 style: a tiny search step re-returns the same
         # penumbral maximum and used to stall before later eclipses.
-        def lun_finder(search_jd, _geopos):
-            if search_jd < 11.0:
-                return (
-                    panchanga.swe.ECL_PENUMBRAL | panchanga.swe.ECL_VISIBLE,
-                    _times(10.5),
-                    None,
-                )
-            if search_jd < 21.0:
-                return (
-                    panchanga.swe.ECL_PARTIAL | panchanga.swe.ECL_VISIBLE,
-                    _times(20.5),
-                    None,
-                )
-            return (0, _times(100.0), None)
+        lun_finder = lambda search_jd, _geopos: (
+            (panchanga.swe.ECL_PENUMBRAL | panchanga.swe.ECL_VISIBLE, _times(10.5), None)
+            if search_jd < 11.0 else
+            (panchanga.swe.ECL_PARTIAL | panchanga.swe.ECL_VISIBLE, _times(20.5), None)
+            if search_jd < 21.0 else
+            (0, _times(100.0), None)
+        )
 
         with mock.patch("festival_rules.panchanga.swe.lun_eclipse_when_loc", side_effect=lun_finder), mock.patch(
                 "festival_rules.panchanga.swe.sol_eclipse_when_loc", return_value=(0, _times(100.0), None)):
@@ -105,10 +98,7 @@ class FormatEclipseLineTests(unittest.TestCase):
 
         ist = ZoneInfo("Asia/Kolkata")
 
-        def to_jd(local_dt):
-            return julian_day_from_datetime(local_dt)
-
-        maximum = to_jd(datetime(2026, 3, 3, 10, 0, tzinfo=ist))
+        maximum = julian_day_from_datetime(datetime(2026, 3, 3, 10, 0, tzinfo=ist))
         line = format_eclipse_line([("Lunar", "Partial", maximum)], "Asia/Kolkata")
         self.assertEqual(line, "Eclipses: Lunar Mar 03 (Partial) max 10:00")
         self.assertEqual(jd_to_local_civil_date(maximum, "Asia/Kolkata").isoformat(), "2026-03-03")
@@ -119,11 +109,8 @@ class FormatEclipseLineTests(unittest.TestCase):
 
         ist = ZoneInfo("Asia/Kolkata")
 
-        def to_jd(local_dt):
-            return julian_day_from_datetime(local_dt)
-
-        maximum = to_jd(datetime(2026, 3, 3, 10, 0, tzinfo=ist))
-        sunrise = to_jd(datetime(2026, 3, 3, 6, 45, tzinfo=ist))
+        maximum = julian_day_from_datetime(datetime(2026, 3, 3, 10, 0, tzinfo=ist))
+        sunrise = julian_day_from_datetime(datetime(2026, 3, 3, 6, 45, tzinfo=ist))
         line = format_eclipse_line([("Lunar", "Partial", maximum)], "Asia/Kolkata",
                                    sunrise_by_date={date(2026, 3, 3): sunrise})
         self.assertEqual(line, "Eclipses: Lunar Mar 03 (Partial) max 10:00, sunrise 06:45")
@@ -137,10 +124,7 @@ class EclipseCivilDatesTests(unittest.TestCase):
 
         ist = ZoneInfo("Asia/Kolkata")
 
-        def to_jd(local_dt):
-            return julian_day_from_datetime(local_dt)
-
-        maximum = to_jd(datetime(2026, 3, 4, 0, 5, tzinfo=ist))
+        maximum = julian_day_from_datetime(datetime(2026, 3, 4, 0, 5, tzinfo=ist))
         eclipse = ("Lunar", "Partial", maximum)
         dates = eclipse_civil_dates([eclipse], "Asia/Kolkata")
         self.assertEqual(dates, {date(2026, 3, 4)})
