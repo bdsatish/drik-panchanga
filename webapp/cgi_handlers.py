@@ -105,12 +105,13 @@ def handle_cities() -> None:
 
 
 def handle_panchanga() -> None:
-    """GET panchanga.py?city=...&date=DD/MM/YYYY → JSON day panchanga."""
+    """GET panchanga.py?city=...&date=DD/MM/YYYY[&month=amanta|purnimanta] → JSON."""
     try:
         params = _query_params()
         city = (params.get("city") or [""])[0]
         date = (params.get("date") or [""])[0]
-        write_json(compute_day_panchanga(city, date))
+        month = (params.get("month") or ["amanta"])[0]
+        write_json(compute_day_panchanga(city, date, month_system=month))
     except ValueError as error:
         write_error(str(error), as_json=True)
     except Exception as error:  # noqa: BLE001

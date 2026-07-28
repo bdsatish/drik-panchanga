@@ -272,6 +272,58 @@
     .segment + .segment {
       margin-top: 0.25rem;
     }
+
+    fieldset.month-system {
+      margin: 0 0 1.15rem;
+      padding: 0;
+      border: 0;
+    }
+
+    fieldset.month-system legend {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 0.4rem;
+      padding: 0;
+    }
+
+    .choice-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
+    }
+
+    .choice {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      margin: 0;
+      padding: 0.65rem 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #fff;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--ink);
+      text-transform: none;
+      letter-spacing: 0;
+      cursor: pointer;
+    }
+
+    .choice:has(input:checked) {
+      border-color: var(--focus);
+      background: var(--accent-soft);
+      color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(22, 128, 120, 0.12);
+    }
+
+    .choice input {
+      margin: 0;
+      accent-color: var(--focus);
+    }
   </style>
 </head>
 <body>
@@ -314,6 +366,24 @@
           <input id="date" name="date" type="text" required placeholder="DD/MM/YYYY" inputmode="numeric">
           <p class="hint">Proleptic Gregorian; negative years allowed (e.g. 30/01/-1316).</p>
         </div>
+        <fieldset class="month-system">
+          <legend>Lunar month</legend>
+          <div class="choice-row">
+            <label class="choice">
+              <input type="radio" name="month" value="amanta" checked>
+              Amānta
+            </label>
+            <label class="choice">
+              <input type="radio" name="month" value="purnimanta">
+              Pūrṇimānta
+            </label>
+          </div>
+          <p class="hint">
+            Amānta (new moon → new moon) is usual in South India; Pūrṇimānta
+            (full moon → full moon) in much of North India. Affects māsa, ṛtu,
+            and year counters.
+          </p>
+        </fieldset>
         <button type="submit" id="day-btn">Show panchanga</button>
         <p class="status" id="day-status" aria-live="polite"></p>
       </form>
@@ -457,9 +527,25 @@
         )).join("");
       }
 
+      function intervalHtml(interval) {
+        if (!interval || !interval.start || !interval.end) return "—";
+        return `${escapeHtml(interval.start)} – ${escapeHtml(interval.end)}`;
+      }
+
+      function intervalsHtml(intervals) {
+        if (!intervals || !intervals.length) return "—";
+        return intervals.map((interval) => (
+          `<div class="segment">${intervalHtml(interval)}</div>`
+        )).join("");
+      }
+
       function renderDay(data) {
+        const monthLabel = data.month_system_label || (
+          data.month_system === "purnimanta" ? "Pūrṇimānta" : "Amānta"
+        );
         dayContext.innerHTML =
           `<strong>${escapeHtml(data.city)}</strong> · ${escapeHtml(data.date)}`
+          + ` · ${escapeHtml(monthLabel)}`
           + ` · ${escapeHtml(data.ayanamsa)}`;
         const timeOrDash = (value) => (value ? escapeHtml(value) : "—");
         const rows = [
@@ -475,6 +561,8 @@
           ["Moonrise", timeOrDash(data.moonrise)],
           ["Moonset", timeOrDash(data.moonset)],
           ["Day duration", timeOrDash(data.day_duration)],
+          ["Rāhukāla", intervalHtml(data.rahu_kala)],
+          ["Durmuhūrta", intervalsHtml(data.durmuhurta)],
           ["Tithi", segmentsHtml(data.tithi)],
           ["Nakṣatra", segmentsHtml(data.nakshatra)],
           ["Yoga", segmentsHtml(data.yoga)],
@@ -528,6 +616,8 @@
         event.preventDefault();
         const city = cityInput.value.trim();
         const date = dateInput.value.trim();
+        const monthInput = dayForm.querySelector('input[name="month"]:checked');
+        const month = (monthInput && monthInput.value) || "amanta";
         if (!city) {
           dayStatus.textContent = "Enter a city.";
           return;
@@ -537,7 +627,8 @@
         dayResults.classList.remove("visible");
         try {
           const url = `/api/panchanga?city=${encodeURIComponent(city)}`
-            + `&date=${encodeURIComponent(date)}`;
+            + `&date=${encodeURIComponent(date)}`
+            + `&month=${encodeURIComponent(month)}`;
           const response = await fetch(url);
           const data = await response.json();
           if (!response.ok) {

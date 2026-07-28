@@ -90,8 +90,9 @@ def api_cities():
 def api_panchanga():
     city = (request.args.get("city") or "").strip()
     date = (request.args.get("date") or "").strip()
+    month = (request.args.get("month") or "amanta").strip()
     try:
-        return jsonify(compute_day_panchanga(city, date))
+        return jsonify(compute_day_panchanga(city, date, month_system=month))
     except ValueError as error:
         abort(400, description=str(error))
 

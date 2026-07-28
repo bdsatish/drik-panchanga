@@ -42,13 +42,28 @@ for key in (
     "city", "date", "samvatsara", "masa", "rtu", "vaara",
     "kali_day", "saka_year", "kali_year",
     "sunrise", "sunset", "day_duration",
+    "rahu_kala", "durmuhurta",
     "tithi", "nakshatra", "yoga", "karana",
 ):
     assert key in data and data[key] not in (None, ""), (key, data)
 assert data["city"] == "Bengaluru", data["city"]
 assert data["date"] == "15/01/2026", data["date"]
+assert data.get("month_system", "amanta") == "amanta", data.get("month_system")
 assert isinstance(data["tithi"], list) and data["tithi"], data["tithi"]
+assert data["rahu_kala"].get("start") and data["rahu_kala"].get("end"), data["rahu_kala"]
+assert isinstance(data["durmuhurta"], list) and data["durmuhurta"], data["durmuhurta"]
 print("panchanga ok:", data["vaara"], data["masa"])
+PY
+
+echo "smoke: GET /api/panchanga (purnimanta)"
+purni_json="$(curl -fsS --max-time 30 \
+  "${BASE_URL}/api/panchanga?city=Bengaluru&date=15/03/2023&month=purnimanta")"
+python3 - "${purni_json}" <<'PY'
+import json, sys
+data = json.loads(sys.argv[1])
+assert data["month_system"] == "purnimanta", data["month_system"]
+assert data["masa_number"] == 1, data
+print("purnimanta ok:", data["masa"])
 PY
 
 echo "smoke: POST /generate"

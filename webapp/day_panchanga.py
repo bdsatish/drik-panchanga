@@ -45,6 +45,20 @@ def parse_civil_date(text: str) -> panchanga.Date:
     return panchanga.Date(year, month, day)
 
 
+def parse_month_system(text: str | None) -> bool:
+    """Return ``True`` for amānta, ``False`` for pūrṇimānta.
+
+    Accepts ``amanta`` / ``purnimanta`` (default amānta). Also ``true``/``false``
+    and ``1``/``0`` for the amānta flag.
+    """
+    value = (text or "amanta").strip().casefold()
+    if value in {"amanta", "āmānta", "amaanta", "true", "1", "yes", "on"}:
+        return True
+    if value in {"purnimanta", "pūrṇimānta", "poornimanta", "false", "0", "no", "off"}:
+        return False
+    raise ValueError("Month system must be 'amanta' or 'purnimanta'.")
+
+
 def format_time(hms) -> str:
     hours, minutes, seconds = hms
     return f"{int(hours):02d}:{int(minutes):02d}:{int(seconds):02d}"
@@ -85,11 +99,37 @@ def _optional_event_time(compute, jd, place) -> str | None:
         return None
 
 
-def compute_day_panchanga(city: str, date_text: str) -> dict:
-    """Return named panchanga fields for ``city`` on ``date_text`` (DD/MM/YYYY)."""
+def _interval_from_hms(start_hms, end_hms) -> dict:
+    return {"start": format_time(start_hms), "end": format_time(end_hms)}
+
+
+def _rahu_kala(jd, place) -> dict:
+    start_hms, end_hms = panchanga.rahu_kalam(jd, place)
+    return _interval_from_hms(start_hms, end_hms)
+
+
+def _durmuhurta_intervals(jd, place) -> list[dict]:
+    """One or two daytime (Tue: second is nocturnal) durmuhūrta windows."""
+    starts, ends = panchanga.durmuhurtam(jd, place)
+    intervals = []
+    for start, end in zip(starts, ends):
+        # Unused slots stay at the 0 sentinel from panchanga.durmuhurtam.
+        if start == 0 and end == 0:
+            continue
+        intervals.append(_interval_from_hms(panchanga.to_dms(start), panchanga.to_dms(end)))
+    return intervals
+
+
+def compute_day_panchanga(city: str, date_text: str, month_system: str | None = "amanta") -> dict:
+    """Return named panchanga fields for ``city`` on ``date_text`` (DD/MM/YYYY).
+
+    ``month_system`` is ``amanta`` (default) or ``purnimanta``; it affects māsa,
+    ṛtu, samvatsara, and Kali/Śaka year counters derived from the lunar month.
+    """
     city = (city or "").strip()
     if not city:
         raise ValueError("City is required.")
+    amanta = parse_month_system(month_system)
     civil = parse_civil_date(date_text)
     location = load_location(city)
     place = place_for_date(location, civil)
@@ -113,7 +153,7 @@ def compute_day_panchanga(city: str, date_text: str) -> dict:
     nak = panchanga.nakshatra(jd, place)
     yog = panchanga.yoga(jd, place)
     kar = panchanga.karana(jd, place)
-    masa_num, is_adhika = panchanga.masa(jd, place)
+    masa_num, is_adhika = panchanga.masa(jd, place, amanta=amanta)
     rtu_num = panchanga.ritu(masa_num)
     samvat_num = panchanga.samvatsara(jd, masa_num)
     vara_num = panchanga.vaara(jd)
@@ -125,12 +165,15 @@ def compute_day_panchanga(city: str, date_text: str) -> dict:
         masa_label = f"Adhika {masa_name} māsa"
     else:
         masa_label = f"{masa_name} māsa"
+    month_label = "Amānta" if amanta else "Pūrṇimānta"
 
     return {
         "city": location.name,
         "date": f"{civil.day:02d}/{civil.month:02d}/{civil.year}",
         "timezone": location.timezone_name,
         "ayanamsa": "True Citra",
+        "month_system": "amanta" if amanta else "purnimanta",
+        "month_system_label": month_label,
         "samvatsara": names["samvats"][str(samvat_num)],
         "masa": masa_label,
         "masa_number": masa_num,
@@ -145,6 +188,8 @@ def compute_day_panchanga(city: str, date_text: str) -> dict:
         "moonrise": _optional_event_time(panchanga.moonrise, jd, place),
         "moonset": _optional_event_time(panchanga.moonset, jd, place),
         "day_duration": format_time(day_dur[1]),
+        "rahu_kala": _rahu_kala(jd, place),
+        "durmuhurta": _durmuhurta_intervals(jd, place),
         "tithi": _named_segments(ti, names["tithis"]),
         "nakshatra": _named_segments(nak, names["nakshatras"]),
         "yoga": _named_segments(yog, names["yogas"]),
