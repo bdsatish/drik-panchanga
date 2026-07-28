@@ -41,6 +41,7 @@ data = json.loads(sys.argv[1])
 for key in (
     "city", "date", "samvatsara", "masa", "rtu", "vaara",
     "kali_day", "saka_year", "kali_year",
+    "jd", "sunrise_jd", "ayanamsa_degrees",
     "sunrise", "sunset", "day_duration",
     "rahu_kala", "durmuhurta",
     "tithi", "nakshatra", "yoga", "karana",
@@ -52,7 +53,8 @@ assert data.get("month_system", "amanta") == "amanta", data.get("month_system")
 assert isinstance(data["tithi"], list) and data["tithi"], data["tithi"]
 assert data["rahu_kala"].get("start") and data["rahu_kala"].get("end"), data["rahu_kala"]
 assert isinstance(data["durmuhurta"], list) and data["durmuhurta"], data["durmuhurta"]
-print("panchanga ok:", data["vaara"], data["masa"])
+assert float(data["jd"]) > 0 and float(data["ayanamsa_degrees"]) > 0
+print("panchanga ok:", data["vaara"], data["masa"], f"JD {data['jd']}", f"ayan {data['ayanamsa_degrees']}°")
 PY
 
 echo "smoke: GET /api/panchanga (purnimanta)"

@@ -182,6 +182,12 @@ def compute_day_panchanga(city: str, date_text: str, month_system: str | None = 
     vara_num = panchanga.vaara(jd)
     kali_year, saka_year = panchanga.elapsed_year(jd, masa_num)
     kali_day = int(panchanga.ahargana(jd))
+    sunrise_jd_ut = sunrise[0] - place.timezone / 24.0
+    panchanga.set_ayanamsa_mode()
+    try:
+        ayanamsa_degrees = float(panchanga.swe.get_ayanamsa_ut(sunrise_jd_ut))
+    finally:
+        panchanga.reset_ayanamsa_mode()
 
     masa_name = names["masas"][str(masa_num)]
     if is_adhika:
@@ -196,7 +202,10 @@ def compute_day_panchanga(city: str, date_text: str, month_system: str | None = 
         "city": location.name,
         "date": f"{civil.day:02d}/{civil.month:02d}/{civil.year}",
         "timezone": location.timezone_name,
+        "jd": jd,
+        "sunrise_jd": sunrise_jd_ut,
         "ayanamsa": "True Citra",
+        "ayanamsa_degrees": round(ayanamsa_degrees, 8),
         "month_system": "amanta" if amanta else "purnimanta",
         "month_system_label": month_label,
         "samvatsara": names["samvats"][str(samvat_num)],
