@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "drik-panchanga"
+version = "0.1.0"
+description = "Observational Indian lunisolar calendar (Drik Panchanga) using Swiss Ephemeris"
+readme = "README.pypi.md"
+license = { text = "AGPL-3.0-or-later" }
+requires-python = ">=3.9"
+authors = [
+  { name = "Satish BD" },
+]
+keywords = [
+  "panchanga",
+  "hindu",
+  "calendar",
+  "tithi",
+  "nakshatra",
+  "swiss-ephemeris",
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Topic :: Religion",
+  "Topic :: Scientific/Engineering :: Astronomy",
+]
+dependencies = [
+  "pyswisseph",
+]
+
+[project.urls]
+Homepage = "https://github.com/bdsatish/drik-panchanga"
+Repository = "https://github.com/bdsatish/drik-panchanga"
+Issues = "https://github.com/bdsatish/drik-panchanga/issues"
+
+# Ship only the core astronomy module — not the webapp, PDF calendar, or data files.
+[tool.setuptools]
+py-modules = ["panchanga"]
+packages = []

@@ -42,8 +42,18 @@ automatically based on the date and place entered in the textboxes.
 Requirements
 ------------
 
-Tested with Python 3.12, wxgtk 4.2.2, wxglade 0.8.1. The core of the library
-(`panchanga.py`) can be imported into other code or used from the command line.
+The core astronomy library is on PyPI:
+
+```
+pip install drik-panchanga
+```
+
+That installs only `panchanga.py` (plus `pyswisseph`). Swiss Ephemeris still
+needs `.se1` data files; set `SE_EPHE_PATH` or use `~/.local/share/swisseph`
+(see `setup_venv.sh` in this repository).
+
+For the full project (PDF calendar, web UI, GUI), clone the repository.
+Tested with Python 3.12, wxgtk 4.2.2, wxglade 0.8.1.
 
 To run the GUI (`gui.py`):
 
