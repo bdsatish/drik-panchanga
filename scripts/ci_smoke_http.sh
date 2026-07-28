@@ -50,6 +50,8 @@ for key in (
 assert data["city"] in {"Bengaluru", "Bengaluru, IN"}, data["city"]
 assert data["date"] == "15/01/2026", data["date"]
 assert data.get("month_system", "amanta") == "amanta", data.get("month_system")
+assert data.get("ayanamsa") == "True Citra", data.get("ayanamsa")
+assert data.get("ayanamsa_key", "citra") == "citra", data.get("ayanamsa_key")
 assert isinstance(data["tithi"], list) and data["tithi"], data["tithi"]
 assert data["rahu_kala"].get("start") and data["rahu_kala"].get("end"), data["rahu_kala"]
 assert isinstance(data["durmuhurta"], list) and data["durmuhurta"], data["durmuhurta"]
@@ -66,6 +68,18 @@ data = json.loads(sys.argv[1])
 assert data["month_system"] == "purnimanta", data["month_system"]
 assert data["masa_number"] == 1, data
 print("purnimanta ok:", data["masa"])
+PY
+
+echo "smoke: GET /api/panchanga (raman ayanamsa)"
+raman_json="$(curl -fsS --max-time 30 \
+  "${BASE_URL}/api/panchanga?city=Bengaluru&date=15/01/2026&ayanamsa=raman")"
+python3 - "${raman_json}" <<'PY'
+import json, sys
+data = json.loads(sys.argv[1])
+assert data["ayanamsa"] == "Raman", data["ayanamsa"]
+assert data["ayanamsa_key"] == "raman", data["ayanamsa_key"]
+assert float(data["ayanamsa_degrees"]) > 0
+print("raman ok:", data["ayanamsa"], f"{data['ayanamsa_degrees']}°")
 PY
 
 echo "smoke: POST /generate"

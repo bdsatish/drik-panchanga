@@ -10,8 +10,10 @@ from zoneinfo import ZoneInfo
 
 import panchanga
 from generate_panchanga_calendar import (
+    ayanamsa_label,
     load_location,
     month_system_label,
+    parse_ayanamsa,
     parse_month_system,
     require_local_sunrise,
     timezone_hours,
@@ -139,21 +141,25 @@ def _durmuhurta_intervals(jd, place) -> list[dict]:
     return intervals
 
 
-def compute_day_panchanga(city: str, date_text: str, month_system: str | None = "amanta") -> dict:
+def compute_day_panchanga(city: str, date_text: str, month_system: str | None = "amanta",
+                          ayanamsa: str | None = "citra") -> dict:
     """Return named panchanga fields for ``city`` on ``date_text`` (DD/MM/YYYY).
 
     ``month_system`` is ``amanta`` (default) or ``purnimanta``; it affects māsa,
     ṛtu, samvatsara, and Kali/Śaka year counters derived from the lunar month.
+
+    ``ayanamsa`` is ``citra`` (default), ``revati``, ``krishnamurti``, or ``raman``.
     """
     city = (city or "").strip()
     if not city:
         raise ValueError("City is required.")
     amanta = parse_month_system(month_system)
+    ayanamsa_key = parse_ayanamsa(ayanamsa)
     civil = parse_civil_date(date_text)
     location = load_location(city)
     place = place_for_date(location, civil)
 
-    panchanga.set_chosen_ayanamsa("citra")
+    panchanga.set_chosen_ayanamsa(ayanamsa_key)
     jd = panchanga.gregorian_to_jd(civil)
 
     try:
@@ -195,6 +201,7 @@ def compute_day_panchanga(city: str, date_text: str, month_system: str | None = 
     else:
         masa_label = f"{masa_name} māsa"
     month_label = month_system_label(amanta)
+    ayan_label = ayanamsa_label(ayanamsa_key)
     moonrise, moonrise_status = probe_moon_event(jd, place, civil, rise=True)
     moonset, moonset_status = probe_moon_event(jd, place, civil, rise=False)
 
@@ -204,7 +211,8 @@ def compute_day_panchanga(city: str, date_text: str, month_system: str | None = 
         "timezone": location.timezone_name,
         "jd": jd,
         "sunrise_jd": sunrise_jd_ut,
-        "ayanamsa": "True Citra",
+        "ayanamsa": ayan_label,
+        "ayanamsa_key": ayanamsa_key,
         "ayanamsa_degrees": round(ayanamsa_degrees, 8),
         "month_system": "amanta" if amanta else "purnimanta",
         "month_system_label": month_label,

@@ -104,7 +104,8 @@ covering 14 consecutive Gregorian months. Each day shows:
 * `Y`: yoga number (01-27)
 * the amanta lunar month at its first sunrise-visible tithi
 
-Calculations use Swiss Ephemeris with the True Citra ayanamsa. Adhika months
+Calculations use Swiss Ephemeris. The default ayanamsa is True Citra; the web UI
+and CLI also offer True Revati, Krishnamurti, and Raman. Adhika months
 have a gold cell and Sundays have a red right edge. The teal underline marks
 Ekadashi upavasa (S11 / K11 in the ruleset) under the same sunrise rule as
 festivals.  The `T` column shows only 01-15; Sukla is upright bold and Krsna is

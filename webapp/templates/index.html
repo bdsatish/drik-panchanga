@@ -383,6 +383,31 @@
           badges and PDF masa labels; festival dates stay on amānta rules.
         </p>
       </fieldset>
+      <fieldset class="month-system">
+        <legend>Ayanāṃśa</legend>
+        <div class="choice-row">
+          <label class="choice">
+            <input type="radio" name="ayanamsa" value="citra" checked>
+            True Citra
+          </label>
+          <label class="choice">
+            <input type="radio" name="ayanamsa" value="revati">
+            True Revati
+          </label>
+          <label class="choice">
+            <input type="radio" name="ayanamsa" value="krishnamurti">
+            Krishnamurti
+          </label>
+          <label class="choice">
+            <input type="radio" name="ayanamsa" value="raman">
+            Raman
+          </label>
+        </div>
+        <p class="hint">
+          Sidereal zero-point used for nakṣatra, yoga, and related fields.
+          True Citra is the default.
+        </p>
+      </fieldset>
     </div>
 
     <div class="card">
@@ -410,6 +435,7 @@
       <form id="generate-form" method="post" action="/generate" autocomplete="off">
         <input type="hidden" name="city" id="pdf-city">
         <input type="hidden" name="month" id="pdf-month" value="amanta">
+        <input type="hidden" name="ayanamsa" id="pdf-ayanamsa" value="citra">
         <div class="field">
           <label for="start">First month</label>
           <input id="start" name="start" type="month" required>
@@ -420,7 +446,7 @@
       </form>
 
       <div class="meta">
-        <span>True Citra ayanamsa</span>
+        <span id="meta-ayanamsa">True Citra ayanamsa</span>
         <span>Udaya-Vyapini festivals</span>
         <span>~1–3 s PDF</span>
       </div>
@@ -448,13 +474,38 @@
       const pdfForm = document.getElementById("generate-form");
       const pdfCity = document.getElementById("pdf-city");
       const pdfMonth = document.getElementById("pdf-month");
+      const pdfAyanamsa = document.getElementById("pdf-ayanamsa");
+      const metaAyanamsa = document.getElementById("meta-ayanamsa");
       const submitBtn = document.getElementById("submit-btn");
       const status = document.getElementById("status");
+
+      const AYANAMSA_LABELS = {
+        citra: "True Citra",
+        revati: "True Revati",
+        krishnamurti: "Krishnamurti",
+        raman: "Raman",
+      };
 
       function selectedMonthSystem() {
         const monthInput = document.querySelector('input[name="month"]:checked');
         return (monthInput && monthInput.value) || "amanta";
       }
+
+      function selectedAyanamsa() {
+        const input = document.querySelector('input[name="ayanamsa"]:checked');
+        return (input && input.value) || "citra";
+      }
+
+      function syncAyanamsaMeta() {
+        const key = selectedAyanamsa();
+        const label = AYANAMSA_LABELS[key] || "True Citra";
+        metaAyanamsa.textContent = `${label} ayanamsa`;
+      }
+
+      document.querySelectorAll('input[name="ayanamsa"]').forEach((input) => {
+        input.addEventListener("change", syncAyanamsaMeta);
+      });
+      syncAyanamsaMeta();
 
       if (!startInput.value) {
         const now = new Date();
@@ -653,6 +704,7 @@
         const city = cityInput.value.trim();
         const date = dateInput.value.trim();
         const month = selectedMonthSystem();
+        const ayanamsa = selectedAyanamsa();
         if (!city) {
           dayStatus.textContent = "Enter a city.";
           return;
@@ -664,7 +716,8 @@
         try {
           const url = `/api/panchanga?city=${encodeURIComponent(city)}`
             + `&date=${encodeURIComponent(date)}`
-            + `&month=${encodeURIComponent(month)}`;
+            + `&month=${encodeURIComponent(month)}`
+            + `&ayanamsa=${encodeURIComponent(ayanamsa)}`;
           const response = await fetch(url);
           const data = await response.json();
           if (!response.ok) {
@@ -689,6 +742,7 @@
         }
         pdfCity.value = city;
         pdfMonth.value = selectedMonthSystem();
+        pdfAyanamsa.value = selectedAyanamsa();
         submitBtn.disabled = true;
         status.textContent = "Generating calendar… this usually takes a few seconds.";
         setTimeout(() => {

@@ -105,13 +105,14 @@ def handle_cities() -> None:
 
 
 def handle_panchanga() -> None:
-    """GET panchanga.py?city=...&date=DD/MM/YYYY[&month=amanta|purnimanta] → JSON."""
+    """GET panchanga.py?city=...&date=...[&month=...][&ayanamsa=...] → JSON."""
     try:
         params = _query_params()
         city = (params.get("city") or [""])[0]
         date = (params.get("date") or [""])[0]
         month = (params.get("month") or ["amanta"])[0]
-        write_json(compute_day_panchanga(city, date, month_system=month))
+        ayanamsa = (params.get("ayanamsa") or ["citra"])[0]
+        write_json(compute_day_panchanga(city, date, month_system=month, ayanamsa=ayanamsa))
     except ValueError as error:
         write_error(str(error), as_json=True)
     except Exception as error:  # noqa: BLE001
@@ -130,6 +131,7 @@ def handle_generate() -> None:
         city = (form.get("city") or "").strip()
         start = (form.get("start") or "").strip()
         month = (form.get("month") or "amanta").strip()
+        ayanamsa = (form.get("ayanamsa") or "citra").strip()
         if not city:
             write_error("City is required.")
             return
@@ -139,13 +141,14 @@ def handle_generate() -> None:
 
         start_year, start_month = parse_start_month(start)
         location = load_location(city)
-        output_name = default_output_path(location, start_year, start_month, month_system=month).name
+        output_name = default_output_path(
+            location, start_year, start_month, month_system=month, ayanamsa=ayanamsa).name
         tmp_dir = Path(tempfile.mkdtemp(prefix="panchanga-cgi-"))
         output_path = tmp_dir / output_name
         try:
             generated = build_pdf(
                 location, start_year, start_month, output_path, festivals_path=DEFAULT_FESTIVALS_PATH,
-                month_system=month)
+                month_system=month, ayanamsa=ayanamsa)
             pdf_bytes = generated.read_bytes()
             download_name = safe_download_name(generated)
         finally:

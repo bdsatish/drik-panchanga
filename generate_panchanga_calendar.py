@@ -88,7 +88,7 @@ YOGA_KEY_LINE = ("Y: 01 Viskumbha, 02 Priti, 03 Ayusman, 04 Saubhagya, 05 Sobhan
                  "22 Sadhya, 23 Subha, 24 Sukla, 25 Brahma, 26 Aindra, 27 Vaidhrti")
 
 
-def embed_pdf_metadata(pdf, *, title, subject, ruleset_version):
+def embed_pdf_metadata(pdf, *, title, subject, ruleset_version, ayanamsa="citra"):
     """Set Info dictionary fields, including custom copyright/email/URL keys."""
     from reportlab.pdfbase.pdfdoc import (
         PDFDate,
@@ -97,12 +97,13 @@ def embed_pdf_metadata(pdf, *, title, subject, ruleset_version):
         PDFString,
     )
 
+    ayan_label = ayanamsa_label(ayanamsa)
     pdf.setTitle(title)
     pdf.setAuthor(PDF_AUTHOR)
     pdf.setSubject(subject)
     pdf.setCreator(PDF_SOURCE_URL)
     pdf.setKeywords(f"ruleset={ruleset_version}; layout={LAYOUT_VERSION}; "
-                    f"ayanamsa=True Citra; author-email={PDF_AUTHOR_EMAIL}; "
+                    f"ayanamsa={ayan_label}; author-email={PDF_AUTHOR_EMAIL}; "
                     f"copyright={PDF_COPYRIGHT}; url={PDF_SOURCE_URL}")
 
     info = pdf._doc.info
@@ -166,6 +167,40 @@ def parse_month_system(text):
 
 def month_system_label(amanta):
     return "Amānta" if amanta else "Pūrṇimānta"
+
+
+# Web/CLI ayanāṃśa choices → panchanga.set_chosen_ayanamsa() keys and labels.
+AYANAMSA_OPTIONS = {
+    "citra": "True Citra",
+    "revati": "True Revati",
+    "krishnamurti": "Krishnamurti",
+    "raman": "Raman",
+}
+
+
+def parse_ayanamsa(text):
+    """Return ayanāṃśa key (``citra``, ``revati``, ``krishnamurti``, ``raman``)."""
+    value = (text or "citra").strip().casefold().replace(" ", "_").replace("-", "_")
+    aliases = {
+        "citra": "citra",
+        "true_citra": "citra",
+        "truecitra": "citra",
+        "revati": "revati",
+        "true_revati": "revati",
+        "truerevati": "revati",
+        "krishnamurti": "krishnamurti",
+        "kp": "krishnamurti",
+        "raman": "raman",
+    }
+    key = aliases.get(value)
+    if key is None:
+        allowed = ", ".join(AYANAMSA_OPTIONS)
+        raise ValueError(f"Ayanamsa must be one of: {allowed}.")
+    return key
+
+
+def ayanamsa_label(key):
+    return AYANAMSA_OPTIONS[parse_ayanamsa(key)]
 
 
 def sun_altitude_at_local_noon(year, month, day, place):
@@ -642,7 +677,7 @@ def coordinate_label(value, positive, negative):
     return f"{abs(value):.5f} {direction}"
 
 
-def draw_page_header(pdf, location, months, ruleset_version, *, amanta=True):
+def draw_page_header(pdf, location, months, ruleset_version, *, amanta=True, ayanamsa="citra"):
     page_width, page_height = landscape(A4)
     title = f"{location.name} Panchanga: {month_span_label(months)}"
     pdf.setFillColor(INK)
@@ -652,8 +687,10 @@ def draw_page_header(pdf, location, months, ruleset_version, *, amanta=True):
     pdf.setFillColor(MUTED)
     pdf.setFont("Helvetica", 7.5)
     masa_label = "Amanta" if amanta else "Purnimanta"
+    ayan_label = ayanamsa_label(ayanamsa)
     pdf.drawString(
-        18, page_height - 31, "At local sunrise | True Citra ayanamsa | Equal nakshatras | "
+        18, page_height - 31, "At local sunrise | "
+        f"{ayan_label} ayanamsa | Equal nakshatras | "
         f"{masa_label} masa | "
         f"{coordinate_label(location.latitude, 'N', 'S')}, "
         f"{coordinate_label(location.longitude, 'E', 'W')} | "
@@ -711,9 +748,11 @@ def draw_page_footer(pdf, festival_entries, eclipse_line="Eclipses: None"):
     pdf.drawString(18, 12, YOGA_KEY_LINE)
 
 
-def build_pdf(location, start_year, start_month, output_path, *, festivals_path=None, month_system="amanta"):
+def build_pdf(location, start_year, start_month, output_path, *, festivals_path=None, month_system="amanta",
+              ayanamsa="citra"):
     amanta = parse_month_system(month_system)
-    panchanga.set_chosen_ayanamsa("citra")
+    ayanamsa_key = parse_ayanamsa(ayanamsa)
+    panchanga.set_chosen_ayanamsa(ayanamsa_key)
     months = list(month_range(start_year, start_month))
     if start_month == 1:
         context_start = (start_year - 1, 12)
@@ -765,12 +804,15 @@ def build_pdf(location, start_year, start_month, output_path, *, festivals_path=
     output_path = Path(output_path)
     pdf = canvas.Canvas(str(output_path), pagesize=(page_width, page_height))
     masa_label = "amanta" if amanta else "purnimanta"
+    ayan_label = ayanamsa_label(ayanamsa_key)
     embed_pdf_metadata(
         pdf, title=f"{location.name} Panchanga {month_span_label(months)}",
-        subject=(f"Daily tithi, True Citra nakshatra, yoga, and {masa_label} masa at "
-                 f"{location.name} sunrise"), ruleset_version=RULESET_VERSION)
+        subject=(f"Daily tithi, {ayan_label} nakshatra, yoga, and {masa_label} masa at "
+                 f"{location.name} sunrise"),
+        ruleset_version=RULESET_VERSION, ayanamsa=ayanamsa_key)
 
-    draw_page_header(pdf, location, months, RULESET_VERSION, amanta=amanta)
+    draw_page_header(
+        pdf, location, months, RULESET_VERSION, amanta=amanta, ayanamsa=ayanamsa_key)
 
     margin = 18
     day_column_width = 24
@@ -791,11 +833,17 @@ def build_pdf(location, start_year, start_month, output_path, *, festivals_path=
     return output_path
 
 
-def default_output_path(location, start_year, start_month, *, month_system="amanta"):
+def default_output_path(location, start_year, start_month, *, month_system="amanta", ayanamsa="citra"):
     months = list(month_range(start_year, start_month))
     end_year, end_month = months[-1]
     city_slug = re.sub(r"[^a-z0-9]+", "-", location.name.casefold()).strip("-") or "location"
-    suffix = "" if parse_month_system(month_system) else "_purnimanta"
+    parts = []
+    if not parse_month_system(month_system):
+        parts.append("purnimanta")
+    ayanamsa_key = parse_ayanamsa(ayanamsa)
+    if ayanamsa_key != "citra":
+        parts.append(ayanamsa_key)
+    suffix = ("_" + "_".join(parts)) if parts else ""
     return Path(f"{city_slug}_panchanga_"
                 f"{start_year:04d}-{start_month:02d}_to_"
                 f"{end_year:04d}-{end_month:02d}{suffix}.pdf")
@@ -810,6 +858,9 @@ def argument_parser():
         "--month", default="amanta", metavar="SYSTEM",
         help="lunar month reckoning: amanta (default) or purnimanta")
     parser.add_argument(
+        "--ayanamsa", default="citra", metavar="NAME",
+        help=("ayanamsa: citra (default), revati, krishnamurti, or raman"))
+    parser.add_argument(
         "--festivals", type=Path, default=DEFAULT_FESTIVALS_PATH,
         help=(f"INI file selecting which festivals to include "
               f"(default: {DEFAULT_FESTIVALS_PATH.name})"))
@@ -823,12 +874,14 @@ def main(argv=None):
         start_year, start_month = parse_start_month(arguments.start)
         location = load_location(arguments.city)
         month_system = arguments.month
+        ayanamsa = arguments.ayanamsa
         parse_month_system(month_system)  # validate early
+        parse_ayanamsa(ayanamsa)
         output_path = arguments.output or default_output_path(
-            location, start_year, start_month, month_system=month_system)
+            location, start_year, start_month, month_system=month_system, ayanamsa=ayanamsa)
         generated = build_pdf(
             location, start_year, start_month, output_path, festivals_path=arguments.festivals,
-            month_system=month_system)
+            month_system=month_system, ayanamsa=ayanamsa)
     except (OSError, ValueError, RuntimeError) as error:
         parser.error(str(error))
     print(generated.resolve())

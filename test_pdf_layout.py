@@ -65,11 +65,22 @@ class PdfLayoutTests(unittest.TestCase):
         path = default_output_path(load_location("Helsinki"), 2026, 3, month_system="purnimanta")
         self.assertEqual(path.name, "helsinki-fi_panchanga_2026-03_to_2027-04_purnimanta.pdf")
 
+    def test_ayanamsa_filename_suffix(self):
+        path = default_output_path(
+            load_location("Helsinki"), 2026, 3, ayanamsa="raman")
+        self.assertEqual(path.name, "helsinki-fi_panchanga_2026-03_to_2027-04_raman.pdf")
+
     def test_cli_accepts_month_system(self):
         parser = argument_parser()
         arguments = parser.parse_args(
             ["--city", "Helsinki", "--start", "2026-03", "--month", "purnimanta"])
         self.assertEqual(arguments.month, "purnimanta")
+
+    def test_cli_accepts_ayanamsa(self):
+        parser = argument_parser()
+        arguments = parser.parse_args(
+            ["--city", "Helsinki", "--start", "2026-03", "--ayanamsa", "revati"])
+        self.assertEqual(arguments.ayanamsa, "revati")
 
     def test_purnimanta_header_is_embedded(self):
         with TemporaryDirectory() as directory:

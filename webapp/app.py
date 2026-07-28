@@ -102,8 +102,9 @@ def api_panchanga():
     city = (request.args.get("city") or "").strip()
     date = (request.args.get("date") or "").strip()
     month = (request.args.get("month") or "amanta").strip()
+    ayanamsa = (request.args.get("ayanamsa") or "citra").strip()
     try:
-        return jsonify(compute_day_panchanga(city, date, month_system=month))
+        return jsonify(compute_day_panchanga(city, date, month_system=month, ayanamsa=ayanamsa))
     except ValueError as error:
         abort(400, description=str(error))
 
@@ -113,6 +114,7 @@ def generate():
     city = (request.form.get("city") or "").strip()
     start = (request.form.get("start") or "").strip()
     month = (request.form.get("month") or "amanta").strip()
+    ayanamsa = (request.form.get("ayanamsa") or "citra").strip()
     if not city:
         abort(400, description="City is required.")
     if not start:
@@ -124,14 +126,15 @@ def generate():
     except ValueError as error:
         abort(400, description=str(error))
 
-    output_name = default_output_path(location, start_year, start_month, month_system=month).name
+    output_name = default_output_path(
+        location, start_year, start_month, month_system=month, ayanamsa=ayanamsa).name
     tmp_dir = Path(tempfile.mkdtemp(prefix="panchanga-web-"))
     output_path = tmp_dir / output_name
     try:
         try:
             generated = build_pdf(
                 location, start_year, start_month, output_path, festivals_path=DEFAULT_FESTIVALS_PATH,
-                month_system=month)
+                month_system=month, ayanamsa=ayanamsa)
         except (OSError, ValueError, RuntimeError) as error:
             abort(400, description=str(error))
         # Load into memory so the temp directory can be removed immediately.
