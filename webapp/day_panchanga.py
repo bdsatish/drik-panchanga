@@ -9,7 +9,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import panchanga
-from generate_panchanga_calendar import load_location, timezone_hours
+from generate_panchanga_calendar import load_location, month_system_label, parse_month_system, timezone_hours
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 _NAMES_PATH = _REPO_ROOT / "sanskrit_names.json"
@@ -43,20 +43,6 @@ def parse_civil_date(text: str) -> panchanga.Date:
     if not 1 <= month <= 12 or not 1 <= day <= 31:
         raise ValueError(f"Invalid date {text!r}.")
     return panchanga.Date(year, month, day)
-
-
-def parse_month_system(text: str | None) -> bool:
-    """Return ``True`` for amānta, ``False`` for pūrṇimānta.
-
-    Accepts ``amanta`` / ``purnimanta`` (default amānta). Also ``true``/``false``
-    and ``1``/``0`` for the amānta flag.
-    """
-    value = (text or "amanta").strip().casefold()
-    if value in {"amanta", "āmānta", "amaanta", "true", "1", "yes", "on"}:
-        return True
-    if value in {"purnimanta", "pūrṇimānta", "poornimanta", "false", "0", "no", "off"}:
-        return False
-    raise ValueError("Month system must be 'amanta' or 'purnimanta'.")
 
 
 def format_time(hms) -> str:
@@ -165,7 +151,7 @@ def compute_day_panchanga(city: str, date_text: str, month_system: str | None = 
         masa_label = f"Adhika {masa_name} māsa"
     else:
         masa_label = f"{masa_name} māsa"
-    month_label = "Amānta" if amanta else "Pūrṇimānta"
+    month_label = month_system_label(amanta)
 
     return {
         "city": location.name,

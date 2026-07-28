@@ -150,6 +150,24 @@ def parse_start_month(value):
     return year, month
 
 
+def parse_month_system(text):
+    """Return ``True`` for amānta, ``False`` for pūrṇimānta.
+
+    Accepts ``amanta`` / ``purnimanta`` (default amānta). Also ``true``/``false``
+    and ``1``/``0`` for the amānta flag.
+    """
+    value = (text or "amanta").strip().casefold()
+    if value in {"amanta", "āmānta", "amaanta", "true", "1", "yes", "on"}:
+        return True
+    if value in {"purnimanta", "pūrṇimānta", "poornimanta", "false", "0", "no", "off"}:
+        return False
+    raise ValueError("Month system must be 'amanta' or 'purnimanta'.")
+
+
+def month_system_label(amanta):
+    return "Amānta" if amanta else "Pūrṇimānta"
+
+
 def make_location(name, latitude, longitude, timezone_name):
     try:
         latitude = float(latitude)
@@ -294,7 +312,7 @@ def tithi_font(is_sukla):
     return "Helvetica-Bold" if is_sukla else "Helvetica-BoldOblique"
 
 
-def daily_values(year, month, location):
+def daily_values(year, month, location, *, amanta=True):
     result = []
     timezone = ZoneInfo(location.timezone_name)
     days = calendar.monthrange(year, month)[1]
@@ -309,7 +327,7 @@ def daily_values(year, month, location):
             tithi_number = panchanga.tithi(jd, place)[0]
             nakshatra_number = panchanga.nakshatra(jd, place)[0]
             yoga_number = panchanga.yoga(jd, place)[0]
-            masa_number, is_adhika = panchanga.masa(jd, place)
+            masa_number, is_adhika = panchanga.masa(jd, place, amanta=amanta)
         except Exception as error:
             raise RuntimeError(f"Cannot calculate sunrise panchanga for {location.name} "
                                f"on {year:04d}-{month:02d}-{day:02d}: {error}") from error
@@ -522,7 +540,7 @@ def coordinate_label(value, positive, negative):
     return f"{abs(value):.5f} {direction}"
 
 
-def draw_page_header(pdf, location, months, ruleset_version):
+def draw_page_header(pdf, location, months, ruleset_version, *, amanta=True):
     page_width, page_height = landscape(A4)
     title = f"{location.name} Panchanga: {month_span_label(months)}"
     pdf.setFillColor(INK)
@@ -531,8 +549,10 @@ def draw_page_header(pdf, location, months, ruleset_version):
     pdf.drawString(18, page_height - 20, title)
     pdf.setFillColor(MUTED)
     pdf.setFont("Helvetica", 7.5)
+    masa_label = "Amanta" if amanta else "Purnimanta"
     pdf.drawString(
-        18, page_height - 31, "At local sunrise | True Citra ayanamsa | Equal nakshatras | Amanta masa | "
+        18, page_height - 31, "At local sunrise | True Citra ayanamsa | Equal nakshatras | "
+        f"{masa_label} masa | "
         f"{coordinate_label(location.latitude, 'N', 'S')}, "
         f"{coordinate_label(location.longitude, 'E', 'W')} | "
         f"{location.timezone_name} civil time")
@@ -584,12 +604,13 @@ def draw_page_footer(pdf, festival_entries, eclipse_line="Eclipses: None"):
         18, 28, "Masa: a small upper-left badge marks its first visible tithi; "
         "gold fill denotes adhika. 1 Caitra, 2 Vaisakha, 3 Jyestha, "
         "4 Asadha, 5 Sravana, 6 Bhadrapada, 7 Asvina, 8 Kartika, "
-        "9 Margasirsa, 10 Pusya, 11 Magha, 12 Phalguna.")
+        "9 Margasirsa, 10 Pusya, 11 Magha, 12 Phalguna. Festival dates use amanta rules.")
     pdf.drawString(18, 20, f"{NAKSHATRA_KEY_LINES[0]}, {NAKSHATRA_KEY_LINES[1]}")
     pdf.drawString(18, 12, YOGA_KEY_LINE)
 
 
-def build_pdf(location, start_year, start_month, output_path, *, festivals_path=None):
+def build_pdf(location, start_year, start_month, output_path, *, festivals_path=None, month_system="amanta"):
+    amanta = parse_month_system(month_system)
     panchanga.set_chosen_ayanamsa("citra")
     months = list(month_range(start_year, start_month))
     if start_month == 1:
@@ -597,14 +618,30 @@ def build_pdf(location, start_year, start_month, output_path, *, festivals_path=
     else:
         context_start = (start_year, start_month - 1)
     context_months = list(month_range(*context_start, count=MONTH_COUNT + 2))
-    context_data = {(year, month): daily_values(year, month, location) for year, month in context_months}
+    # Display masa badges use the selected system; festival catalog stays amānta.
+    context_data = {
+        (year, month): daily_values(year, month, location, amanta=amanta)
+        for year, month in context_months
+    }
     month_data = {(year, month): context_data[(year, month)] for year, month in months}
+    if amanta:
+        festival_context_data = context_data
+        festival_month_data = month_data
+    else:
+        festival_context_data = {
+            (year, month): daily_values(year, month, location, amanta=True)
+            for year, month in context_months
+        }
+        festival_month_data = {
+            (year, month): festival_context_data[(year, month)]
+            for year, month in months
+        }
     festivals_path = Path(festivals_path) if festivals_path is not None else DEFAULT_FESTIVALS_PATH
     enabled_names = load_festival_selection(festivals_path)
     geopos = (location.longitude, location.latitude, 0.0)
     festivals_by_date, festival_entries = resolve_festivals(
-        months, month_data, context_months=context_months, context_data=context_data, geopos=geopos,
-        timezone_name=location.timezone_name, enabled_names=enabled_names)
+        months, festival_month_data, context_months=context_months, context_data=festival_context_data,
+        geopos=geopos, timezone_name=location.timezone_name, enabled_names=enabled_names)
 
     range_start = CivilDate(start_year, start_month, 1)
     end_year, end_month = months[-1]
@@ -617,19 +654,21 @@ def build_pdf(location, start_year, start_month, output_path, *, festivals_path=
     eclipse_dates = eclipse_civil_dates(eclipses, location.timezone_name)
     ekadashi_dates = {
         value
-        for value in resolve_ekadashi_dates(context_months, context_data) if range_start <= value <= range_end
+        for value in resolve_ekadashi_dates(context_months, festival_context_data)
+        if range_start <= value <= range_end
     }
     mark_masa_starts(months, month_data)
 
     page_width, page_height = landscape(A4)
     output_path = Path(output_path)
     pdf = canvas.Canvas(str(output_path), pagesize=(page_width, page_height))
+    masa_label = "amanta" if amanta else "purnimanta"
     embed_pdf_metadata(
         pdf, title=f"{location.name} Panchanga {month_span_label(months)}",
-        subject=(f"Daily tithi, True Citra nakshatra, yoga, and amanta masa at "
+        subject=(f"Daily tithi, True Citra nakshatra, yoga, and {masa_label} masa at "
                  f"{location.name} sunrise"), ruleset_version=RULESET_VERSION)
 
-    draw_page_header(pdf, location, months, RULESET_VERSION)
+    draw_page_header(pdf, location, months, RULESET_VERSION, amanta=amanta)
 
     margin = 18
     day_column_width = 24
@@ -650,13 +689,14 @@ def build_pdf(location, start_year, start_month, output_path, *, festivals_path=
     return output_path
 
 
-def default_output_path(location, start_year, start_month):
+def default_output_path(location, start_year, start_month, *, month_system="amanta"):
     months = list(month_range(start_year, start_month))
     end_year, end_month = months[-1]
     city_slug = re.sub(r"[^a-z0-9]+", "-", location.name.casefold()).strip("-") or "location"
+    suffix = "" if parse_month_system(month_system) else "_purnimanta"
     return Path(f"{city_slug}_panchanga_"
                 f"{start_year:04d}-{start_month:02d}_to_"
-                f"{end_year:04d}-{end_month:02d}.pdf")
+                f"{end_year:04d}-{end_month:02d}{suffix}.pdf")
 
 
 def argument_parser():
@@ -664,6 +704,9 @@ def argument_parser():
     parser.add_argument("--city", required=True, help=f"city name as listed in {DEFAULT_CITIES_PATH.name}")
     parser.add_argument("--start", required=True, metavar="YYYY-MM", help="first of the 14 consecutive calendar months")
     parser.add_argument("-o", "--output", type=Path, help="output PDF path (default: generated from city and range)")
+    parser.add_argument(
+        "--month", default="amanta", metavar="SYSTEM",
+        help="lunar month reckoning: amanta (default) or purnimanta")
     parser.add_argument(
         "--festivals", type=Path, default=DEFAULT_FESTIVALS_PATH,
         help=(f"INI file selecting which festivals to include "
@@ -677,8 +720,13 @@ def main(argv=None):
     try:
         start_year, start_month = parse_start_month(arguments.start)
         location = load_location(arguments.city)
-        output_path = arguments.output or default_output_path(location, start_year, start_month)
-        generated = build_pdf(location, start_year, start_month, output_path, festivals_path=arguments.festivals)
+        month_system = arguments.month
+        parse_month_system(month_system)  # validate early
+        output_path = arguments.output or default_output_path(
+            location, start_year, start_month, month_system=month_system)
+        generated = build_pdf(
+            location, start_year, start_month, output_path, festivals_path=arguments.festivals,
+            month_system=month_system)
     except (OSError, ValueError, RuntimeError) as error:
         parser.error(str(error))
     print(generated.resolve())

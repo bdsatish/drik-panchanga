@@ -74,6 +74,7 @@ curl -fsS --max-time 120 \
   -X POST \
   -F "city=Bengaluru" \
   -F "start=2026-03" \
+  -F "month=amanta" \
   -o "${pdf_tmp}" \
   "${BASE_URL}/generate"
 python3 - "${pdf_tmp}" <<'PY'
@@ -83,7 +84,25 @@ path = Path(sys.argv[1])
 data = path.read_bytes()
 assert data.startswith(b"%PDF"), data[:20]
 assert len(data) > 1000, len(data)
+assert b"amanta masa" in data, "expected amanta masa in PDF metadata"
 print("pdf ok:", len(data), "bytes")
+PY
+
+echo "smoke: POST /generate (purnimanta)"
+curl -fsS --max-time 180 \
+  -X POST \
+  -F "city=Bengaluru" \
+  -F "start=2023-03" \
+  -F "month=purnimanta" \
+  -o "${pdf_tmp}" \
+  "${BASE_URL}/generate"
+python3 - "${pdf_tmp}" <<'PY'
+import sys
+from pathlib import Path
+data = Path(sys.argv[1]).read_bytes()
+assert data.startswith(b"%PDF"), data[:20]
+assert b"purnimanta masa" in data, "expected purnimanta masa in PDF metadata"
+print("purnimanta pdf ok:", len(data), "bytes")
 PY
 
 echo "smoke: all checks passed"

@@ -61,6 +61,27 @@ class PdfLayoutTests(unittest.TestCase):
         path = default_output_path(load_location("Helsinki"), 2026, 3)
         self.assertEqual(path.name, "helsinki_panchanga_2026-03_to_2027-04.pdf")
 
+    def test_purnimanta_filename_suffix(self):
+        path = default_output_path(load_location("Helsinki"), 2026, 3, month_system="purnimanta")
+        self.assertEqual(path.name, "helsinki_panchanga_2026-03_to_2027-04_purnimanta.pdf")
+
+    def test_cli_accepts_month_system(self):
+        parser = argument_parser()
+        arguments = parser.parse_args(
+            ["--city", "Helsinki", "--start", "2026-03", "--month", "purnimanta"])
+        self.assertEqual(arguments.month, "purnimanta")
+
+    def test_purnimanta_header_is_embedded(self):
+        with TemporaryDirectory() as directory:
+            output = Path(directory) / "calendar.pdf"
+            with mock.patch("generate_panchanga_calendar.find_local_eclipses", return_value=[]):
+                build_pdf(
+                    load_location("Bengaluru"), 2023, 3, output, month_system="purnimanta")
+            document = output.read_bytes()
+        # Subject is uncompressed in the Info dict; page content streams are flate-encoded.
+        self.assertIn(b"purnimanta masa", document)
+        self.assertNotIn(b"and amanta masa", document)
+
     def test_long_labels_are_fitted_without_overflow(self):
         pdf = Canvas(BytesIO())
         text = ("A Particularly Long Location Name Panchanga: "

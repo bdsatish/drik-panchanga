@@ -119,7 +119,7 @@ def handle_panchanga() -> None:
 
 
 def handle_generate() -> None:
-    """POST generate.py with city + start → PDF attachment."""
+    """POST generate.py with city + start + optional month → PDF attachment."""
     method = os.environ.get("REQUEST_METHOD", "GET").upper()
     if method != "POST":
         write_error("Use POST with form fields city and start (YYYY-MM).", status="405 Method Not Allowed")
@@ -129,6 +129,7 @@ def handle_generate() -> None:
         form = _parse_urlencoded_post()
         city = (form.get("city") or "").strip()
         start = (form.get("start") or "").strip()
+        month = (form.get("month") or "amanta").strip()
         if not city:
             write_error("City is required.")
             return
@@ -138,11 +139,13 @@ def handle_generate() -> None:
 
         start_year, start_month = parse_start_month(start)
         location = load_location(city)
-        output_name = default_output_path(location, start_year, start_month).name
+        output_name = default_output_path(location, start_year, start_month, month_system=month).name
         tmp_dir = Path(tempfile.mkdtemp(prefix="panchanga-cgi-"))
         output_path = tmp_dir / output_name
         try:
-            generated = build_pdf(location, start_year, start_month, output_path, festivals_path=DEFAULT_FESTIVALS_PATH)
+            generated = build_pdf(
+                location, start_year, start_month, output_path, festivals_path=DEFAULT_FESTIVALS_PATH,
+                month_system=month)
             pdf_bytes = generated.read_bytes()
             download_name = safe_download_name(generated)
         finally:

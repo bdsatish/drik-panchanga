@@ -101,6 +101,7 @@ def api_panchanga():
 def generate():
     city = (request.form.get("city") or "").strip()
     start = (request.form.get("start") or "").strip()
+    month = (request.form.get("month") or "amanta").strip()
     if not city:
         abort(400, description="City is required.")
     if not start:
@@ -112,12 +113,14 @@ def generate():
     except ValueError as error:
         abort(400, description=str(error))
 
-    output_name = default_output_path(location, start_year, start_month).name
+    output_name = default_output_path(location, start_year, start_month, month_system=month).name
     tmp_dir = Path(tempfile.mkdtemp(prefix="panchanga-web-"))
     output_path = tmp_dir / output_name
     try:
         try:
-            generated = build_pdf(location, start_year, start_month, output_path, festivals_path=DEFAULT_FESTIVALS_PATH)
+            generated = build_pdf(
+                location, start_year, start_month, output_path, festivals_path=DEFAULT_FESTIVALS_PATH,
+                month_system=month)
         except (OSError, ValueError, RuntimeError) as error:
             abort(400, description=str(error))
         # Load into memory so the temp directory can be removed immediately.

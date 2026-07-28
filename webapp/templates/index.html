@@ -356,6 +356,24 @@
         <ul id="city-suggestions" class="suggestions" role="listbox"></ul>
         <p class="hint">Shared by both tools. Matched against cities.json (case-insensitive).</p>
       </div>
+      <fieldset class="month-system">
+        <legend>Lunar month</legend>
+        <div class="choice-row">
+          <label class="choice">
+            <input type="radio" name="month" value="amanta" checked>
+            Amānta
+          </label>
+          <label class="choice">
+            <input type="radio" name="month" value="purnimanta">
+            Pūrṇimānta
+          </label>
+        </div>
+        <p class="hint">
+          Amānta (new moon → new moon) is usual in South India; Pūrṇimānta
+          (full moon → full moon) in much of North India. Affects day māsa
+          badges and PDF masa labels; festival dates stay on amānta rules.
+        </p>
+      </fieldset>
     </div>
 
     <div class="card">
@@ -366,24 +384,6 @@
           <input id="date" name="date" type="text" required placeholder="DD/MM/YYYY" inputmode="numeric">
           <p class="hint">Proleptic Gregorian; negative years allowed (e.g. 30/01/-1316).</p>
         </div>
-        <fieldset class="month-system">
-          <legend>Lunar month</legend>
-          <div class="choice-row">
-            <label class="choice">
-              <input type="radio" name="month" value="amanta" checked>
-              Amānta
-            </label>
-            <label class="choice">
-              <input type="radio" name="month" value="purnimanta">
-              Pūrṇimānta
-            </label>
-          </div>
-          <p class="hint">
-            Amānta (new moon → new moon) is usual in South India; Pūrṇimānta
-            (full moon → full moon) in much of North India. Affects māsa, ṛtu,
-            and year counters.
-          </p>
-        </fieldset>
         <button type="submit" id="day-btn">Show panchanga</button>
         <p class="status" id="day-status" aria-live="polite"></p>
       </form>
@@ -400,6 +400,7 @@
       <h2>Calendar PDF</h2>
       <form id="generate-form" method="post" action="/generate" autocomplete="off">
         <input type="hidden" name="city" id="pdf-city">
+        <input type="hidden" name="month" id="pdf-month" value="amanta">
         <div class="field">
           <label for="start">First month</label>
           <input id="start" name="start" type="month" required>
@@ -437,8 +438,14 @@
       const dayBody = document.getElementById("day-body");
       const pdfForm = document.getElementById("generate-form");
       const pdfCity = document.getElementById("pdf-city");
+      const pdfMonth = document.getElementById("pdf-month");
       const submitBtn = document.getElementById("submit-btn");
       const status = document.getElementById("status");
+
+      function selectedMonthSystem() {
+        const monthInput = document.querySelector('input[name="month"]:checked');
+        return (monthInput && monthInput.value) || "amanta";
+      }
 
       if (!startInput.value) {
         const now = new Date();
@@ -616,8 +623,7 @@
         event.preventDefault();
         const city = cityInput.value.trim();
         const date = dateInput.value.trim();
-        const monthInput = dayForm.querySelector('input[name="month"]:checked');
-        const month = (monthInput && monthInput.value) || "amanta";
+        const month = selectedMonthSystem();
         if (!city) {
           dayStatus.textContent = "Enter a city.";
           return;
@@ -651,6 +657,7 @@
           return;
         }
         pdfCity.value = city;
+        pdfMonth.value = selectedMonthSystem();
         submitBtn.disabled = true;
         status.textContent = "Generating calendar… this usually takes a few seconds.";
         setTimeout(() => {
