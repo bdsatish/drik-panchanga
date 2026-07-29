@@ -53,7 +53,7 @@ needs `.se1` data files; set `SE_EPHE_PATH` or use `~/.local/share/swisseph`
 (see `setup_venv.sh` in this repository).
 
 For the full project (PDF calendar, web UI, GUI), clone the repository.
-Tested with Python 3.12, wxgtk 4.2.2, wxglade 0.8.1.
+Tested with Python 3.12, Swiss Ephemeris 2.10.03 (20230604), wxgtk 4.2.2, wxglade 0.8.1.
 
 To run the GUI (`gui.py`):
 

@@ -189,6 +189,14 @@ ketu = lambda rahu: (rahu + 180) % 360
 swe.set_ephe_path(os.environ.get('SE_EPHE_PATH') or default_se_ephe_path())
 init_swisseph = lambda: None
 
+def sweph_version():
+  """Swiss Ephemeris version string, e.g. ``'2.10.03 (20230604)'``.
+
+  ``swe.version`` is the C library version; ``swe.__version__`` is the
+  pyswisseph Python binding release date.
+  """
+  return f"{swe.version} ({swe.__version__})"
+
 def function(point):
     swe.set_sid_mode(swe.SIDM_USER, point, 0.0)
     #swe.set_sid_mode(swe.SIDM_LAHIRI)

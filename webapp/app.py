@@ -30,9 +30,15 @@ if str(_REPO_ROOT) not in sys.path:
 from generate_panchanga_calendar import (  # noqa: E402
     DEFAULT_CITIES_PATH, DEFAULT_FESTIVALS_PATH, build_pdf, default_output_path, load_location, parse_start_month,
 )
+from panchanga import sweph_version
 from webapp.day_panchanga import compute_day_panchanga  # noqa: E402
 
 app = Flask(__name__)
+
+
+@app.context_processor
+def inject_sweph_version():
+    return {"sweph_version": sweph_version()}
 
 
 @lru_cache(maxsize=1)

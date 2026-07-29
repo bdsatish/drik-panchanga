@@ -25,6 +25,7 @@ from festival_rules import (
     resolve_festivals,
 )
 import panchanga
+from panchanga import sweph_version
 
 MONTH_COUNT = 14
 DEFAULT_CITIES_PATH = Path(__file__).with_name("cities.json")
@@ -103,7 +104,8 @@ def embed_pdf_metadata(pdf, *, title, subject, ruleset_version, ayanamsa="citra"
     pdf.setSubject(subject)
     pdf.setCreator(PDF_SOURCE_URL)
     pdf.setKeywords(f"ruleset={ruleset_version}; layout={LAYOUT_VERSION}; "
-                    f"ayanamsa={ayan_label}; author-email={PDF_AUTHOR_EMAIL}; "
+                    f"ayanamsa={ayan_label}; sweph={sweph_version()}; "
+                    f"author-email={PDF_AUTHOR_EMAIL}; "
                     f"copyright={PDF_COPYRIGHT}; url={PDF_SOURCE_URL}")
 
     info = pdf._doc.info
@@ -706,7 +708,8 @@ def draw_page_header(pdf, location, months, ruleset_version, *, amanta=True, aya
         f"{coordinate_label(location.longitude, 'E', 'W')} | "
         f"{location.timezone_name} civil time")
     pdf.setFont("Helvetica", 4.7)
-    pdf.drawRightString(page_width - 18, page_height - 19, f"Ruleset: {ruleset_version} | Layout: {LAYOUT_VERSION}")
+    pdf.drawRightString(page_width - 18, page_height - 19,
+                        f"SwEph {sweph_version()} | Ruleset: {ruleset_version} | Layout: {LAYOUT_VERSION}")
 
 
 def draw_page_footer(pdf, festival_entries, eclipse_line="Eclipses: None"):
