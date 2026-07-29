@@ -188,7 +188,7 @@ Activate the environment:
   source "$VENV_DIR/bin/activate"
 
 Generate a calendar PDF:
-  python "$ROOT/generate_panchanga_calendar.py" --city Bangalore --start 2026-03
+  python "$ROOT/generate_panchanga_calendar.py" --city "Bengaluru, IN" --start 2026-03
 
 Run tests:
   python -m unittest discover -s "$ROOT/tests" -t "$ROOT" -p 'test_*.py'

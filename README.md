@@ -159,17 +159,19 @@ source .venv/bin/activate
 Select a city and the first month of the 14-month range:
 
 ```
-python generate_panchanga_calendar.py  --city Bengaluru --start 2026-06
+python generate_panchanga_calendar.py --city Bengaluru --start 2026-06
 ```
 
-Cities are read from `cities.json` next to the generator. Keys are
-`AsciiName, ISO` (for example `Sydney, AU`). Matching is case-insensitive; a
-bare name such as `Bengaluru` still works when it is unique. Ambiguous names
-must include the country code (`Sydney, AU` vs `Sydney, CA`). Use
-`--output FILE.pdf` to choose the output path:
+Cities are stored in `cities.json` as ``AsciiName, ISO`` (ISO 3166-1 alpha-2),
+e.g. `Bengaluru, IN`. For ``--city``, a bare name is enough when it is unique
+(`Bengaluru`, `Helsinki`, `Ujjain`). If several countries share the name, pass
+the country code (`Sydney, AU` vs `Sydney, CA`). Matching is case-insensitive;
+the space after the comma is optional (`helsinki,fi` works). When the value
+contains a comma, quote it in the shell. Use `--output FILE.pdf` to choose the
+output path:
 
 ```
-python generate_panchanga_calendar.py  --city Ujjain  --start 2026-03 \
+python generate_panchanga_calendar.py --city "Ujjain, IN" --start 2026-03 \
   --output ujjain_panchanga_mar2026_apr2027.pdf
 ```
 
@@ -182,7 +184,7 @@ compromise; edit the cfg to match your locality. At most 30 festivals can be
 enabled (the footer is a fixed 6×5 grid).
 
 Date-selection rules (sunrise, vriddhi/kshaya, non-tithi festivals, and so on)
-are documented in [README_FESTIVALS.md](README_FESTIVALS.md).
+are documented in [README.FESTIVALS.md](README.FESTIVALS.md).
 
 #### Example: Ujjain, March 2026 through March 2027
 
@@ -216,7 +218,8 @@ python -m webapp.app
 ```
 
 Then open [http://127.0.0.1:8765/](http://127.0.0.1:8765/). Enter a city
-(autocomplete against `cities.json`), then either:
+(autocomplete against `cities.json`). Unique bare names work (`Bengaluru`);
+ambiguous ones need ``Name, ISO`` (e.g. `Sydney, AU`). Then either:
 
 * look up a single day’s panchanga with a `DD/MM/YYYY` date (negative years
   allowed as proleptic Gregorian), or

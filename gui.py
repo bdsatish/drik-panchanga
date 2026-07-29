@@ -46,7 +46,7 @@ class Panchanga(wx.Frame):
         self.SetSize((675, 800))
         self.dateTxt = wx.TextCtrl(self, wx.ID_ANY, "23/01/2013")
         self.searchBtn = wx.Button(self, wx.ID_ANY, "Search")
-        self.placeTxt = wx.TextCtrl(self, wx.ID_ANY, "Bangalore")
+        self.placeTxt = wx.TextCtrl(self, wx.ID_ANY, "Bengaluru, IN")
         self.computeBtn = wx.Button(self, wx.ID_ANY, "Compute")
         self.latTxt = wx.TextCtrl(self, wx.ID_ANY, "12.97194", style=wx.TE_PROCESS_TAB)
         self.lonTxt = wx.TextCtrl(self, wx.ID_ANY, "77.59369", style=wx.TE_PROCESS_TAB)

@@ -34,7 +34,9 @@ PY
 
 echo "smoke: GET /api/panchanga"
 panchanga_json="$(curl -fsS --max-time 30 \
-  "${BASE_URL}/api/panchanga?city=Bengaluru&date=15/01/2026")"
+  --get "${BASE_URL}/api/panchanga" \
+  --data-urlencode "city=Bengaluru, IN" \
+  --data-urlencode "date=15/01/2026")"
 python3 - "${panchanga_json}" <<'PY'
 import json, sys
 data = json.loads(sys.argv[1])
@@ -47,7 +49,7 @@ for key in (
     "tithi", "nakshatra", "yoga", "karana",
 ):
     assert key in data and data[key] not in (None, ""), (key, data)
-assert data["city"] in {"Bengaluru", "Bengaluru, IN"}, data["city"]
+assert data["city"] == "Bengaluru, IN", data["city"]
 assert data["date"] == "15/01/2026", data["date"]
 assert data.get("month_system", "amanta") == "amanta", data.get("month_system")
 assert data.get("ayanamsa") == "True Citra", data.get("ayanamsa")
@@ -61,7 +63,10 @@ PY
 
 echo "smoke: GET /api/panchanga (purnimanta)"
 purni_json="$(curl -fsS --max-time 30 \
-  "${BASE_URL}/api/panchanga?city=Bengaluru&date=15/03/2023&month=purnimanta")"
+  --get "${BASE_URL}/api/panchanga" \
+  --data-urlencode "city=Bengaluru, IN" \
+  --data-urlencode "date=15/03/2023" \
+  --data-urlencode "month=purnimanta")"
 python3 - "${purni_json}" <<'PY'
 import json, sys
 data = json.loads(sys.argv[1])
@@ -72,7 +77,10 @@ PY
 
 echo "smoke: GET /api/panchanga (raman ayanamsa)"
 raman_json="$(curl -fsS --max-time 30 \
-  "${BASE_URL}/api/panchanga?city=Bengaluru&date=15/01/2026&ayanamsa=raman")"
+  --get "${BASE_URL}/api/panchanga" \
+  --data-urlencode "city=Bengaluru, IN" \
+  --data-urlencode "date=15/01/2026" \
+  --data-urlencode "ayanamsa=raman")"
 python3 - "${raman_json}" <<'PY'
 import json, sys
 data = json.loads(sys.argv[1])
@@ -88,7 +96,7 @@ cleanup() { rm -f "${pdf_tmp}"; }
 trap cleanup EXIT
 curl -fsS --max-time 120 \
   -X POST \
-  -F "city=Bengaluru" \
+  -F "city=Bengaluru, IN" \
   -F "start=2026-03" \
   -F "month=amanta" \
   -o "${pdf_tmp}" \
@@ -107,7 +115,7 @@ PY
 echo "smoke: POST /generate (purnimanta)"
 curl -fsS --max-time 180 \
   -X POST \
-  -F "city=Bengaluru" \
+  -F "city=Bengaluru, IN" \
   -F "start=2023-03" \
   -F "month=purnimanta" \
   -o "${pdf_tmp}" \

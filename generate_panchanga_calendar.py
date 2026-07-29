@@ -280,20 +280,31 @@ def location_from_mapping(name, record):
 
 def city_base_name(key: str) -> str:
     """Return the place name from a ``Name, ISO`` cities.json key."""
-    if ", " not in key:
-        return key
-    name, sep, country = key.rpartition(", ")
-    if sep and len(country) == 2 and country.isalpha():
-        return name
+    match = re.fullmatch(r"(.+),\s*([A-Za-z]{2})", (key or "").strip())
+    if match:
+        return match.group(1).rstrip()
     return key
+
+
+def normalize_city_query(city: str) -> str:
+    """Canonicalize user input toward ``Name, ISO`` (space after comma, upper ISO).
+
+    Accepts ``Helsinki, FI``, ``Helsinki,FI``, and mixed whitespace/case.
+    """
+    query = " ".join((city or "").split())
+    match = re.fullmatch(r"(.+),\s*([A-Za-z]{2})", query)
+    if match:
+        return f"{match.group(1).rstrip()}, {match.group(2).upper()}"
+    return query
 
 
 def resolve_city_key(city: str, locations: dict) -> str:
     """Resolve a user city string to a cities.json key.
 
-    Accepts full keys (``Sydney, AU``) or a bare name when it is unique.
+    Accepts full keys (``Sydney, AU`` or ``Sydney,AU``) or a bare name when
+    it is unique.
     """
-    query = (city or "").strip()
+    query = normalize_city_query(city)
     if not query:
         raise ValueError("City is required.")
 
@@ -847,7 +858,10 @@ def default_output_path(location, start_year, start_month, *, month_system="aman
 
 def argument_parser():
     parser = argparse.ArgumentParser(description=("Generate a one-page A4 panchanga for 14 consecutive months."))
-    parser.add_argument("--city", required=True, help=f"city name as listed in {DEFAULT_CITIES_PATH.name}")
+    parser.add_argument(
+        "--city", required=True,
+        help=(f"city as listed in {DEFAULT_CITIES_PATH.name} "
+              f'(e.g. "Helsinki, FI" or Helsinki,FI)'))
     parser.add_argument("--start", required=True, metavar="YYYY-MM", help="first of the 14 consecutive calendar months")
     parser.add_argument("-o", "--output", type=Path, help="output PDF path (default: generated from city and range)")
     parser.add_argument(

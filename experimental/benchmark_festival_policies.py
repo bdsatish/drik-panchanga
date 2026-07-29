@@ -244,8 +244,8 @@ def main():
     )
     parser.add_argument(
         "--city",
-        default="Bengaluru",
-        help="city name from cities.json (default: Bengaluru)",
+        default="Bengaluru, IN",
+        help='city key from cities.json (default: "Bengaluru, IN")',
     )
     parser.add_argument("--start-year", type=int, default=2026, help="first year")
     parser.add_argument("--end-year", type=int, default=None, help="last year (inclusive)")

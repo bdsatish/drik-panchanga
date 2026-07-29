@@ -17,7 +17,7 @@ Select a policy when generating a calendar:
 
 ```bash
 python generate_panchanga_calendar.py \
-  --city Helsinki \
+  --city "Helsinki, FI" \
   --start 2026-03 \
   --festival-policy generic-kala
 ```
