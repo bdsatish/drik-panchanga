@@ -18,7 +18,6 @@ from __future__ import annotations
 import csv
 import json
 import os
-import re
 import urllib.request
 import zipfile
 
@@ -28,76 +27,22 @@ TXT_PATH = "/tmp/cities15000.txt"
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 MIN_POPULATION = 60000
 
-# Key shape: place name, then ", ", then a 2-letter ISO country code.
-_KEY_RE = re.compile(r"^(.+),\s*([A-Za-z]{2})$")
-
-
-def asciiname_without_commas(asciiname: str) -> str:
-    """Drop GeoNames composite suffixes so the place name has no commas."""
-    return asciiname.split(",", 1)[0].strip()
-
-
-def strip_commas_from_city_keys(cities: dict[str, dict]) -> tuple[dict[str, dict], int]:
-    """Rename keys whose place name still contains commas (post-generation pass).
-
-    Returns ``(cleaned_cities, rename_count)``. When two keys collapse to the
-    same ``Name, ISO``, the higher-population entry wins.
-    """
-    cleaned: dict[str, dict] = {}
-    renamed = 0
-    for key, entry in cities.items():
-        match = _KEY_RE.fullmatch(key.strip())
-        if not match:
-            cleaned[key] = entry
-            continue
-        place, country = match.group(1).rstrip(), match.group(2).upper()
-        if "," not in place:
-            new_key = f"{place}, {country}"
-        else:
-            new_key = f"{asciiname_without_commas(place)}, {country}"
-            renamed += 1
-        previous = cleaned.get(new_key)
-        if previous is None or entry["population"] > previous["population"]:
-            cleaned[new_key] = entry
-    return cleaned, renamed
-
-
-def build_cities(txt_path: str = TXT_PATH, min_population: int = MIN_POPULATION) -> tuple[dict[str, dict], int]:
-    """Parse the GeoNames dump into ``{Name, ISO: record}`` (commas already stripped)."""
+def build_cities(txt_path: str = TXT_PATH, min_population: int = MIN_POPULATION) -> dict[str, dict]:
+    """Parse the GeoNames dump into ``{Name, ISO}`` record."""
     cities: dict[str, dict] = {}
-    replaced_same_key = 0
     with open(txt_path, "r", encoding="utf-8") as fin:
         reader = csv.reader(fin, dialect="excel-tab")
         for record in reader:
-            (
-                _geonameid,
-                _name,
-                asciiname,
-                _alternatenames,
-                latitude,
-                longitude,
-                _featureclass,
-                _featurecode,
-                countrycode,
-                _cc2,
-                _admin1code,
-                _admin2code,
-                _admin3code,
-                _admin4code,
-                population,
-                _elevation,
-                _dem,
-                timezone,
-                _modificationdate,
-            ) = record
+            asciiname = record[2]
+            latitude, longitude = record[4], record[5]
+            countrycode = record[8]
+            population = int(record[14])
+            timezone = record[17]
 
-            if not asciiname or not countrycode:
-                continue
-            population = int(population)
-            if population <= min_population:
+            if not asciiname or not countrycode or population <= min_population:
                 continue
 
-            place = asciiname_without_commas(asciiname)
+            place = asciiname.split(",", 1)[0].strip()
             if not place:
                 continue
             key = f"{place}, {countrycode.upper()}"
@@ -110,10 +55,8 @@ def build_cities(txt_path: str = TXT_PATH, min_population: int = MIN_POPULATION)
             }
             previous = cities.get(key)
             if previous is None or population > previous["population"]:
-                if previous is not None:
-                    replaced_same_key += 1
                 cities[key] = entry
-    return cities, replaced_same_key
+    return cities
 
 
 def ensure_dump(txt_path: str = TXT_PATH, zip_path: str = ZIP_PATH, url: str = URL) -> None:
@@ -129,17 +72,13 @@ def ensure_dump(txt_path: str = TXT_PATH, zip_path: str = ZIP_PATH, url: str = U
 
 def main() -> None:
     ensure_dump()
-    cities, replaced_same_key = build_cities()
-    cities, comma_renames = strip_commas_from_city_keys(cities)
-
+    cities = build_cities()
     out_path = os.path.join(SCRIPT_DIR, "cities.json")
     with open(out_path, "w", encoding="utf-8") as fjson:
         json.dump(cities, fjson, ensure_ascii=False, sort_keys=True)
         fjson.write("\n")
 
     print(f"Wrote {len(cities)} cities to {out_path}")
-    print(f"Same-key population replacements: {replaced_same_key}")
-    print(f"Comma-stripped place-name renames: {comma_renames}")
 
 
 if __name__ == "__main__":
