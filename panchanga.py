@@ -100,41 +100,31 @@ def set_chosen_ayanamsa(ayanamsa = 'lahiri'):
   global chosen_ayanamsa
   chosen_ayanamsa = ayanamsa.lower()
 
+_AYANAMSA_MODES = {
+  'citra': (swe.SIDM_TRUE_CITRA,),
+  'revati': (swe.SIDM_TRUE_REVATI,),
+  'pushya': (swe.SIDM_TRUE_PUSHYA,),
+  'mula': (swe.SIDM_TRUE_MULA,),
+  'rohini': (swe.SIDM_USER, 1845436.103611175, 0),
+  # In unequal nakshatra spacing, Rohini spans 20° (b/w 33°20 - 53°20) rather
+  # than the usual 13°20.  So we fix Aldebaran at middle of Rohini, 43°20'
+  # instead of 46°40'.
+  'rohini_garga': (swe.SIDM_USER, 1757748.5933482398, 0),
+  'lahiri': (swe.SIDM_LAHIRI,),
+  'krishnamurti': (swe.SIDM_KRISHNAMURTI,),
+  'raman': (swe.SIDM_RAMAN,),
+  'usha_shashi': (swe.SIDM_USHASHASHI,),
+  'ushashashi': (swe.SIDM_USHASHASHI,),
+  'suryasiddhanta': (swe.SIDM_SURYASIDDHANTA,),
+  'revati_359_50': (swe.SIDM_USER, 1926892.343164331, 0),
+  'galc_cent_mid_mula': (swe.SIDM_USER, 1922011.128853056, 0),
+}
+
 def set_ayanamsa_mode():
-  ayanamsa = chosen_ayanamsa.lower()
-  # Fixed stars...
-  if ayanamsa == 'citra':
-    swe.set_sid_mode(swe.SIDM_TRUE_CITRA)
-  elif ayanamsa == 'revati':
-    swe.set_sid_mode(swe.SIDM_TRUE_REVATI)
-  elif ayanamsa == 'pushya':
-    swe.set_sid_mode(swe.SIDM_TRUE_PUSHYA)
-  elif ayanamsa == 'mula':
-    swe.set_sid_mode(swe.SIDM_TRUE_MULA)
-  elif ayanamsa == 'rohini':
-    swe.set_sid_mode(swe.SIDM_USER, 1845436.103611175, 0) # 1845433.3947758612?
-  elif ayanamsa == 'rohini_garga':
-    # In unequal nakshatra spacing, Rohini spans 20° (b/w 33°20 - 53°20) rather than the usual 13°20
-    # So we fix Aldebaran at middle of Rohini, 43°20' instead of 46°40'
-    swe.set_sid_mode(swe.SIDM_USER, 1757748.5933482398, 0)
-  # Persons who created it...
-  elif ayanamsa == 'lahiri':
-    swe.set_sid_mode(swe.SIDM_LAHIRI)
-  elif ayanamsa == 'krishnamurti':
-    swe.set_sid_mode(swe.SIDM_KRISHNAMURTI)
-  elif ayanamsa == 'raman':
-    swe.set_sid_mode(swe.SIDM_RAMAN)
-  elif ayanamsa == 'usha_shashi' or ayanamsa == 'ushashashi':
-    swe.set_sid_mode(swe.SIDM_USHASHASHI)
-  # Research interests...
-  elif ayanamsa == 'suryasiddhanta':
-    swe.set_sid_mode(swe.SIDM_SURYASIDDHANTA)
-  elif ayanamsa == 'revati_359_50':
-    swe.set_sid_mode(swe.SIDM_USER, 1926892.343164331, 0)
-  elif ayanamsa == 'galc_cent_mid_mula':
-    swe.set_sid_mode(swe.SIDM_USER, 1922011.128853056, 0)
-  else: # 'default'
-    swe.set_sid_mode(swe.SIDM_FAGAN_BRADLEY)
+  args = _AYANAMSA_MODES.get(chosen_ayanamsa.lower())
+  if args is None:
+    args = (swe.SIDM_FAGAN_BRADLEY,)
+  swe.set_sid_mode(*args)
 
 reset_ayanamsa_mode = lambda: swe.set_sid_mode(swe.SIDM_FAGAN_BRADLEY)
 
