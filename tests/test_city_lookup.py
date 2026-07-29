@@ -21,6 +21,13 @@ class CityLookupTests(unittest.TestCase):
             load_location("Sydney")
         self.assertEqual(load_location("Sydney,AU").name, "Sydney, AU")
 
+    def test_former_multi_comma_geonames_are_plain_keys(self):
+        # GeoNames AsciiNames used to embed commas (admin composites); geonames.py
+        # stores only the leading place name so keys stay ``Name, ISO``.
+        self.assertEqual(load_location("Mianzhu").name, "Mianzhu, CN")
+        self.assertEqual(load_location("Misato").name, "Misato, JP")
+        self.assertEqual(load_location("Misato,JP").name, "Misato, JP")
+
 
 if __name__ == "__main__":
     unittest.main()

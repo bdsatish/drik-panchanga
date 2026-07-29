@@ -279,20 +279,23 @@ def location_from_mapping(name, record):
 
 
 def city_base_name(key: str) -> str:
-    """Return the place name from a ``Name, ISO`` cities.json key."""
-    match = re.fullmatch(r"(.+),\s*([A-Za-z]{2})", (key or "").strip())
-    if match:
-        return match.group(1).rstrip()
-    return key
+    """Return the place name from a ``Name, ISO`` cities.json key.
+
+    Keys always use a single comma (before the country code); place names
+    themselves never contain commas.
+    """
+    name, sep, _country = (key or "").rpartition(", ")
+    return name if sep else key
 
 
 def normalize_city_query(city: str) -> str:
     """Canonicalize user input toward ``Name, ISO`` (space after comma, upper ISO).
 
     Accepts ``Helsinki, FI``, ``Helsinki,FI``, and mixed whitespace/case.
+    Place names never contain commas, so the last ``, XX`` is always the country.
     """
     query = " ".join((city or "").split())
-    match = re.fullmatch(r"(.+),\s*([A-Za-z]{2})", query)
+    match = re.fullmatch(r"([^,]+),\s*([A-Za-z]{2})", query)
     if match:
         return f"{match.group(1).rstrip()}, {match.group(2).upper()}"
     return query

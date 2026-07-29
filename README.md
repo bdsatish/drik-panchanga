@@ -162,16 +162,15 @@ Select a city and the first month of the 14-month range:
 python generate_panchanga_calendar.py --city Bengaluru --start 2026-06
 ```
 
-Cities are stored in `cities.json` as ``AsciiName, ISO`` (ISO 3166-1 alpha-2),
-e.g. `Bengaluru, IN`. For ``--city``, a bare name is enough when it is unique
-(`Bengaluru`, `Helsinki`, `Ujjain`). If several countries share the name, pass
-the country code (`Sydney, AU` vs `Sydney, CA`). Matching is case-insensitive;
-the space after the comma is optional (`helsinki,fi` works). When the value
-contains a comma, quote it in the shell. Use `--output FILE.pdf` to choose the
+Cities are stored in `cities.json` as ``AsciiName, ISO``, e.g. `Bengaluru, IN`
+(2-letter ISO country code). For ``--city``, a bare name is enough when it's
+unique. If several countries share the city name, pass the country code
+(`Sydney, AU` vs `Sydney, CA`). Matching is case-insensitive; the space after
+the comma is optional (`ujjain,in` works). Use `--output FILE.pdf` to choose the
 output path:
 
 ```
-python generate_panchanga_calendar.py --city "Ujjain, IN" --start 2026-03 \
+python generate_panchanga_calendar.py --city "Ujjain,IN" --start 2026-03 \
   --output ujjain_panchanga_mar2026_apr2027.pdf
 ```
 
