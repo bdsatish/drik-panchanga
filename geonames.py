@@ -13,8 +13,6 @@ the row with the larger population is kept.
 Download source: http://download.geonames.org/export/dump/cities15000.zip
 """
 
-from __future__ import annotations
-
 import csv
 import json
 import os

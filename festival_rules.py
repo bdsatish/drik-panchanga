@@ -76,6 +76,7 @@ CIVIL_DATE, TITHI, NAKSHATRA, MASA, IS_ADHIKA, SUNRISE_JD = range(6)
 
 _TRUTHY = frozenset({"yes", "true", "1", "on"})
 _FALSY = frozenset({"no", "false", "0", "off"})
+SRAVANA_NAKSHATRA = 22
 
 
 def all_festival_names():
@@ -130,14 +131,14 @@ def collect_records(months, month_data):
     """
     records = []
     for year, month in months:
-        for day, tithi, nakshatra, _yoga, masa, is_adhika, sunrise_jd in month_data[(year, month)]:
+        for row in month_data[(year, month)]:
             records.append((
-                CivilDate(year, month, day),
-                tithi,
-                nakshatra,
-                masa,
-                is_adhika,
-                sunrise_jd,
+                CivilDate(year, month, row[0]),
+                row[1],   # tithi
+                row[2],   # nakshatra
+                row[4],   # masa
+                row[5],   # is_adhika
+                row[6],   # sunrise_jd
             ))
     return records
 
@@ -202,8 +203,8 @@ def select_kshaya_dates(records, tithi, *, masa=None, allow_adhika=False):
     matches = []
     ordered = sorted(records)
     for record, following in zip(ordered, ordered[1:]):
-        civil_date, day_tithi, _nak, day_masa, _adhika, _jd = record
-        next_date, next_tithi, _nak, next_masa, _adhika, _jd = following
+        civil_date, day_tithi, _, day_masa, _, _ = record
+        next_date, next_tithi, _, next_masa, _, _ = following
         if next_date != civil_date + timedelta(days=1):
             continue
         start_tithi = plain_tithi_number(day_tithi)
@@ -228,7 +229,7 @@ def select_tithi_dates(records, tithi, *, masa=None, allow_adhika=False):
     """
     masa_codes = masa_codes_for(masa, allow_adhika)
     sunrise_matches = resolve_vriddhi_dates([
-        civil_date for civil_date, day_tithi, _nakshatra, day_masa, _is_adhika, _sunrise_jd in records
+        civil_date for civil_date, day_tithi, _, day_masa, _, _ in records
         if day_tithi == tithi and (masa_codes is None or day_masa in masa_codes)
     ])
     sunrise_dates = set(sunrise_matches)
@@ -339,8 +340,6 @@ def select_yajur_upakarma_dates(records, geopos=None, timezone_name=None):
 
 def select_rig_upakarma_dates(records, geopos=None, timezone_name=None):
     """Nija Sravana-nakshatra day, postponed to Bhadrapada on kshaya/eclipse."""
-    SRAVANA_NAKSHATRA = 22
-
     # For kshaya nakshatra / eclipse:
     # TTD/Sri-Vaishnava rule: Sravana masa = 5. If unavailable or eclipsed,
     # use Bhadrapada masa = 6 for Sravana Nakshatra.
@@ -348,11 +347,11 @@ def select_rig_upakarma_dates(records, geopos=None, timezone_name=None):
     # Smartas use the former civil date when there is Kshaya nakshatra
     # (e.g. Sringeri: 11-08-2022)
     primary = resolve_vriddhi_dates([
-        civil_date for civil_date, _tithi, nakshatra, day_masa, is_adhika, _sunrise_jd in records
+        civil_date for civil_date, _, nakshatra, day_masa, is_adhika, _ in records
         if day_masa == "5" and not is_adhika and nakshatra == SRAVANA_NAKSHATRA
     ])
     fallback = resolve_vriddhi_dates([
-        civil_date for civil_date, _tithi, nakshatra, day_masa, is_adhika, _sunrise_jd in records
+        civil_date for civil_date, _, nakshatra, day_masa, is_adhika, _ in records
         if day_masa == "6" and not is_adhika and nakshatra == SRAVANA_NAKSHATRA
     ])
     return postpone_upakarma_if_eclipse(primary, fallback, geopos, timezone_name)
@@ -364,18 +363,17 @@ def select_onam_dates(records):
     Same sunrise/vriddhi/kshaya-fallback pattern as Rig Upakarma, but keyed on
     solar rasi (Simha then Kanya) rather than lunar masa, with no eclipse test.
     """
-    SRAVANA_NAKSHATRA = 22
     SIMHA_RAASI = 5
     KANYA_RAASI = 6
 
     primary = resolve_vriddhi_dates([
-        civil_date for civil_date, _tithi, nakshatra, _masa, _is_adhika, sunrise_jd in records
+        civil_date for civil_date, _, nakshatra, _, _, sunrise_jd in records
         if nakshatra == SRAVANA_NAKSHATRA and panchanga.raasi(sunrise_jd) == SIMHA_RAASI
     ])
     if primary:
         return primary
     return resolve_vriddhi_dates([
-        civil_date for civil_date, _tithi, nakshatra, _masa, _is_adhika, sunrise_jd in records
+        civil_date for civil_date, _, nakshatra, _, _, sunrise_jd in records
         if nakshatra == SRAVANA_NAKSHATRA and panchanga.raasi(sunrise_jd) == KANYA_RAASI
     ])
 
@@ -388,7 +386,7 @@ def select_vaikuntha_ekadashi_dates(records):
         record = records_by_date.get(civil_date)
         if record is None:
             continue
-        _date, tithi, _nakshatra, masa, _is_adhika, sunrise_jd = record
+        _date, tithi, _, masa, _, sunrise_jd = record
         if masa not in {"9", "10"} or not str(tithi).startswith("S"):
             continue
         if panchanga.raasi(sunrise_jd) == 9:
@@ -400,7 +398,7 @@ def select_sankranti_dates(records, target_raasi):
     """First civil sunrise after each transition into ``target_raasi``."""
     selected = []
     previous_raasi = None
-    for civil_date, _tithi, _nakshatra, _masa, _is_adhika, sunrise_jd in sorted(records):
+    for civil_date, _, _, _, _, sunrise_jd in sorted(records):
         raasi = panchanga.raasi(sunrise_jd)
         if raasi == target_raasi and previous_raasi != target_raasi:
             if previous_raasi is not None:
