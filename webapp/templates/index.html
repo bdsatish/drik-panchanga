@@ -582,7 +582,10 @@
         const rows = [
           ["Samvatsara", samvatLine],
           ["Ayana", escapeHtml(data.ayana || "—")],
-          ["Ṛtu", escapeHtml(data.rtu)],
+          ["Ṛtu", (
+            `Vedic ${escapeHtml(data.rtu || "—")}`
+            + ` · Drik ${escapeHtml(data.drik_rtu || "—")}`
+          )],
           ["Māsa", escapeHtml(data.masa)],
           ["Tithi", segmentsHtml(data.tithi)],
           ["Nakṣatra", segmentsHtml(data.nakshatra)],
@@ -601,9 +604,6 @@
           ["Julian day", data.jd != null ? Number(data.jd).toFixed(1) : "—"],
           ["Sunrise JD (UT)", data.sunrise_jd != null
             ? Number(data.sunrise_jd).toFixed(6) : "—"],
-          ["Ayanāṃśa", data.ayanamsa_degrees != null
-            ? `${escapeHtml(data.ayanamsa)} · ${Number(data.ayanamsa_degrees).toFixed(6)}°`
-            : escapeHtml(data.ayanamsa || "—")],
         ];
         dayBody.innerHTML = rows.map(([label, value]) => (
           `<tr><th scope="row">${label}</th><td>${value}</td></tr>`

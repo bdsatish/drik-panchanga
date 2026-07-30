@@ -153,7 +153,8 @@ def compute_day_panchanga(city: str, date_text: str, month_system: str | None = 
     """Return named panchanga fields for ``city`` on ``date_text`` (DD/MM/YYYY).
 
     ``month_system`` is ``amanta`` (default) or ``purnimanta``; it affects māsa,
-    ṛtu, samvatsara, and Kali/Śaka year counters derived from the lunar month.
+    ṛtu (Vedic and Drik pairings), samvatsara, and Kali/Śaka year counters
+    derived from the lunar month.
 
     ``ayanamsa`` is ``citra`` (default), ``revati``, ``krishnamurti``, or ``raman``.
     """
@@ -191,6 +192,7 @@ def compute_day_panchanga(city: str, date_text: str, month_system: str | None = 
     kar = panchanga.karana(jd, place)
     masa_num, is_adhika = panchanga.masa(jd, place, amanta=amanta)
     rtu_num = panchanga.ritu(masa_num)
+    drik_rtu_num = panchanga.drik_ritu(masa_num)
     samvat_num = panchanga.samvatsara(jd, masa_num)
     vara_num = panchanga.vaara(jd)
     kali_year, saka_year = panchanga.elapsed_year(jd, masa_num)
@@ -231,6 +233,7 @@ def compute_day_panchanga(city: str, date_text: str, month_system: str | None = 
         "masa_number": masa_num,
         "is_adhika": bool(is_adhika),
         "rtu": f"{names['ritus'][str(rtu_num)]} ṛtu",
+        "drik_rtu": f"{names['ritus'][str(drik_rtu_num)]} ṛtu",
         "vaara": names["varas"][str(vara_num)],
         "kali_day": kali_day,
         "saka_year": int(saka_year),

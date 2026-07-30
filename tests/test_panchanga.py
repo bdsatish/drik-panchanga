@@ -15,7 +15,7 @@ from panchanga import (Date, Place, gregorian_to_jd, from_dms,
     nakshatra_end_point, yoga, karana, vaara, masa, varjyam, ascendant, navamsa,
     navamsa_from_long, planetary_positions, day_duration, gauri_chogadiya,
     trikalam, rahu_kalam, yamaganda_kalam, gulika_kalam, durmuhurtam,
-    abhijit_muhurta, elapsed_year, samvatsara, ritu, raasi, lunar_phase,
+    abhijit_muhurta, elapsed_year, samvatsara, ritu, drik_ritu, raasi, lunar_phase,
     new_moon, full_moon, local_time_to_jdut1, sweph_version,
     default_se_ephe_path, get_planet_name, to_dms, to_dms_prec, unwrap_angles,
     lon_relative_to_base, inverse_lagrange, bisection_search,
@@ -382,6 +382,22 @@ class HelperMathTests(PanchangaTestCase):
         self.assertEqual(ritu(1), 0)
         self.assertEqual(ritu(2), 0)
         self.assertEqual(ritu(12), 5)
+
+    def test_drik_ritu(self):
+        # Vasanta = Phālguna, Chaitra
+        self.assertEqual(drik_ritu(12), 0)
+        self.assertEqual(drik_ritu(1), 0)
+        # Grīṣma … Śiśira
+        self.assertEqual(drik_ritu(2), 1)
+        self.assertEqual(drik_ritu(3), 1)
+        self.assertEqual(drik_ritu(4), 2)
+        self.assertEqual(drik_ritu(5), 2)
+        self.assertEqual(drik_ritu(6), 3)
+        self.assertEqual(drik_ritu(7), 3)
+        self.assertEqual(drik_ritu(8), 4)
+        self.assertEqual(drik_ritu(9), 4)
+        self.assertEqual(drik_ritu(10), 5)
+        self.assertEqual(drik_ritu(11), 5)
 
 
 class PathAndModeTests(PanchangaTestCase):

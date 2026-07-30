@@ -619,8 +619,21 @@ def samvatsara(jd, maasa_num):
   return samvat
 
 def ritu(masa_num):
-  """0 = Vasanta,...,5 = Shishira"""
+  """0 = Vasanta,...,5 = Shishira
+
+  Solar-month pairing: Chaitra–Vaiśākha, ..., Māgha–Phālguna
+  (masa 1–2, 3–4, …, 11–12).
+  """
   return (masa_num - 1) // 2
+
+def drik_ritu(masa_num):
+  """0 = Vasanta,...,5 = Shishira from lunar months (Drik / civil pairing).
+
+  Vasanta = Phālguna–Chaitra (12, 1), Grīṣma = Vaiśākha–Jyeṣṭha (2, 3),
+  Varṣā = Āṣāḍha–Śrāvaṇa (4, 5), Śarad = Bhādrapada–Āśvina (6, 7),
+  Hemanta = Kārtika–Mārgaśīrṣa (8, 9), Śiśira = Pauṣa–Māgha (10, 11).
+  """
+  return (masa_num % 12) // 2
 
 def day_duration(jd, place):
   srise = sunrise(jd, place)[0]  # julian day num
