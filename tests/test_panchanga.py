@@ -4,13 +4,24 @@ Extracted from the inline ``_tests()`` functions that used to live at the
 bottom of ``panchanga.py``.
 """
 
+import os
 import unittest
+from unittest import mock
 import swisseph as swe
 
+import panchanga
 from panchanga import (Date, Place, gregorian_to_jd, from_dms,
-    sunrise, sunset, moonrise, moonset, tithi, nakshatra, nakshatra_pada,
-    yoga, karana, vaara, masa, varjyam, ascendant, navamsa,
-    set_nakshatra_system, set_chosen_ayanamsa, reset_ayanamsa_mode)
+    sunrise, sunset, moonrise, moonrise_jd, moonset, tithi, nakshatra, nakshatra_pada,
+    nakshatra_end_point, yoga, karana, vaara, masa, varjyam, ascendant, navamsa,
+    navamsa_from_long, planetary_positions, day_duration, gauri_chogadiya,
+    trikalam, rahu_kalam, yamaganda_kalam, gulika_kalam, durmuhurtam,
+    abhijit_muhurta, elapsed_year, samvatsara, ritu, raasi, lunar_phase,
+    new_moon, full_moon, local_time_to_jdut1, sweph_version,
+    default_se_ephe_path, get_planet_name, to_dms, to_dms_prec, unwrap_angles,
+    lon_relative_to_base, inverse_lagrange, bisection_search,
+    sidereal_saptarshi_nakshatra, saptarshi_nakshatra_traditional,
+    set_nakshatra_system, set_chosen_ayanamsa, set_ayanamsa_mode,
+    set_coordinate_mode, reset_ayanamsa_mode)
 
 
 bangalore = Place(12.972, 77.594, +5.5)
@@ -247,6 +258,210 @@ class NavamsaTests(PanchangaTestCase):
             [6, 4], [10, 11], [9, 5], [7, 10], [8, 10],
         ]
         self.assertEqual(result, expected)
+
+    def test_navamsa_from_long(self):
+        self.assertEqual(navamsa_from_long(0), 0)
+        self.assertEqual(navamsa_from_long(40), 0)
+        self.assertEqual(navamsa_from_long(3 + 20 / 60), 1)
+
+
+class HelperMathTests(PanchangaTestCase):
+    """Pure helpers that do not need Swiss Ephemeris data."""
+
+    def test_from_dms_and_to_dms(self):
+        self.assertAlmostEqual(from_dms(23, 30, 30), 23.508333, places=5)
+        self.assertEqual(to_dms(12.5), [12, 30, 0])
+        degrees, minutes, seconds = to_dms_prec(12.5)
+        self.assertEqual([degrees, minutes], [12, 30])
+        self.assertAlmostEqual(seconds, 0, places=5)
+
+    def test_unwrap_angles(self):
+        self.assertEqual(unwrap_angles([350, 10, 20]), [350, 370, 380])
+
+    def test_lon_relative_to_base(self):
+        self.assertEqual(lon_relative_to_base(10, 350), 370)
+        self.assertEqual(lon_relative_to_base(350, 10), -10)
+
+    def test_inverse_lagrange_linear(self):
+        self.assertAlmostEqual(inverse_lagrange([0, 1], [0, 10], 5), 0.5)
+
+    def test_bisection_search(self):
+        self.assertAlmostEqual(bisection_search(lambda x: x - 2, 0, 5), 2, places=6)
+
+    def test_get_planet_name(self):
+        self.assertEqual(get_planet_name(swe.SUN), "Surya")
+        self.assertEqual(get_planet_name(swe.MOON), "Candra")
+        self.assertEqual(get_planet_name(swe.MARS), "Mangala")
+        self.assertEqual(get_planet_name(swe.RAHU), "Rahu")
+        self.assertEqual(get_planet_name(swe.KETU), "Ketu")
+
+    def test_sweph_version_format(self):
+        version = sweph_version()
+        self.assertRegex(version, r"^\d+\.\d+\.\d+ \(\d{8}\)$")
+
+    def test_ritu(self):
+        self.assertEqual(ritu(1), 0)
+        self.assertEqual(ritu(2), 0)
+        self.assertEqual(ritu(12), 5)
+
+
+class PathAndModeTests(PanchangaTestCase):
+    """Ephemeris path helpers and coordinate / ayanamsa mode setters."""
+
+    def test_default_se_ephe_path_unix(self):
+        with mock.patch.object(panchanga.sys, "platform", "linux"):
+            with mock.patch.dict(os.environ, {"XDG_DATA_HOME": "/tmp/xdg"}, clear=False):
+                self.assertEqual(default_se_ephe_path(), os.path.join("/tmp/xdg", "swisseph"))
+            with mock.patch.dict(os.environ, {}, clear=True):
+                with mock.patch.object(panchanga.os.path, "expanduser", return_value="/home/u"):
+                    path = default_se_ephe_path()
+        self.assertTrue(path.endswith(os.path.join(".local", "share", "swisseph")))
+
+    def test_default_se_ephe_path_windows(self):
+        with mock.patch.object(panchanga.sys, "platform", "win32"):
+            with mock.patch.dict(os.environ, {"LOCALAPPDATA": r"C:\Users\u\AppData\Local"}, clear=False):
+                self.assertEqual(
+                    default_se_ephe_path(),
+                    os.path.join(r"C:\Users\u\AppData\Local", "swisseph"),
+                )
+            env = {key: value for key, value in os.environ.items() if key != "LOCALAPPDATA"}
+            with mock.patch.dict(os.environ, env, clear=True):
+                with mock.patch.object(panchanga.os.path, "expanduser", return_value=r"C:\Users\u"):
+                    path = default_se_ephe_path()
+        self.assertTrue(path.endswith(os.path.join("AppData", "Local", "swisseph")))
+
+    def test_set_coordinate_mode(self):
+        set_coordinate_mode("tropical")
+        self.addCleanup(set_coordinate_mode, "sidereal")
+        self.assertEqual(panchanga.coordinate_flag, swe.FLG_TROPICAL)
+        set_coordinate_mode("sidereal")
+        self.assertEqual(panchanga.coordinate_flag, swe.FLG_SIDEREAL)
+        with mock.patch("builtins.print"):
+            set_coordinate_mode("bogus")
+        self.assertEqual(panchanga.coordinate_flag, swe.FLG_SIDEREAL)
+
+    def test_set_nakshatra_system_unknown(self):
+        with mock.patch("builtins.print"):
+            set_nakshatra_system("bogus")
+        self.assertEqual(panchanga.nakshatra_system, "equal")
+
+    def test_unknown_ayanamsa_falls_back_to_fagan_bradley(self):
+        set_chosen_ayanamsa("not-a-real-ayanamsa")
+        self.addCleanup(set_chosen_ayanamsa, "citra")
+        set_ayanamsa_mode()
+        reset_ayanamsa_mode()
+
+
+class CalendarUtilityTests(PanchangaTestCase):
+    """Elapsed year, samvatsara, moon phases, and local-time conversion."""
+
+    def test_elapsed_year_and_samvatsara(self):
+        kali, saka = elapsed_year(date2, 10)
+        self.assertIsInstance(kali, int)
+        self.assertEqual(saka, kali - 3179)
+        self.assertGreater(kali, 5000)
+        year_index = samvatsara(date2, 10)
+        self.assertGreaterEqual(year_index, 0)
+        self.assertLess(year_index, 60)
+
+    def test_raasi_and_lunar_phase(self):
+        sign = raasi(date2)
+        self.assertGreaterEqual(sign, 1)
+        self.assertLessEqual(sign, 12)
+        phase = lunar_phase(date2)
+        self.assertGreaterEqual(phase, 0)
+        self.assertLess(phase, 360)
+
+    def test_new_and_full_moon(self):
+        ti = tithi(date2, bangalore)[0]
+        previous_new = new_moon(date2, ti, opt=-1)
+        next_new = new_moon(date2, ti, opt=+1)
+        self.assertLess(previous_new, date2)
+        self.assertGreaterEqual(next_new, date2)
+        previous_full = full_moon(date2, ti, opt=-1)
+        next_full = full_moon(date2, ti, opt=+1)
+        self.assertLess(previous_full, next_full)
+        self.assertAlmostEqual(min(lunar_phase(previous_new) % 360, 360 - (lunar_phase(previous_new) % 360)), 0, delta=1.0)
+        self.assertAlmostEqual(lunar_phase(previous_full), 180, delta=1.0)
+
+    def test_local_time_to_jdut1(self):
+        jd = local_time_to_jdut1(2013, 1, 18, 12, 0, 0, timezone=5.5)
+        self.assertIsInstance(jd, float)
+        self.assertGreater(jd, date2)
+        self.assertLess(jd, date2 + 1)
+
+    def test_moonrise_jd_matches_moonrise(self):
+        rise_jd = moonrise_jd(date2, bangalore)
+        self.assertEqual(moonrise(date2, bangalore), to_dms((rise_jd - date2) * 24))
+
+    def test_nakshatra_end_point_equal_and_unequal(self):
+        self.assertAlmostEqual(nakshatra_end_point(1), 360 / 27)
+        set_nakshatra_system("unequal")
+        self.addCleanup(set_nakshatra_system, "equal")
+        self.assertAlmostEqual(nakshatra_end_point(1), 13 + 20 / 60)
+
+
+class MuhurtaTests(PanchangaTestCase):
+    """Day parts: duration, chogadiya, trikalam, durmuhurtam, abhijit."""
+
+    def test_day_duration(self):
+        hours, as_dms = day_duration(date2, bangalore)
+        self.assertGreater(hours, 10)
+        self.assertLess(hours, 14)
+        self.assertEqual(as_dms, to_dms(hours))
+
+    def test_gauri_chogadiya(self):
+        ends = gauri_chogadiya(date2, bangalore)
+        self.assertEqual(len(ends), 16)
+        self.assertEqual(len(ends[0]), 3)
+
+    def test_trikalam_aliases(self):
+        rahu = rahu_kalam(date2, bangalore)
+        yama = yamaganda_kalam(date2, bangalore)
+        gulika = gulika_kalam(date2, bangalore)
+        for window in (rahu, yama, gulika):
+            self.assertEqual(len(window), 2)
+            self.assertEqual(len(window[0]), 3)
+            self.assertEqual(len(window[1]), 3)
+        self.assertEqual(trikalam(date2, bangalore, "rahu"), rahu)
+
+    def test_durmuhurtam_and_abhijit(self):
+        starts, ends = durmuhurtam(date2, bangalore)
+        self.assertEqual(len(starts), 2)
+        self.assertEqual(len(ends), 2)
+        abhijit = abhijit_muhurta(date2, bangalore)
+        self.assertEqual(len(abhijit), 2)
+        self.assertLess(abhijit[0], abhijit[1])
+
+
+class PlanetaryPositionTests(PanchangaTestCase):
+    """Instantaneous planetary positions and Saptarshi helpers."""
+
+    def test_planetary_positions(self):
+        jd = swe.julday(2015, 9, 25, 13 + 29 / 60. + 13 / 3600.)
+        positions = planetary_positions(jd, bangalore)
+        self.assertEqual(len(positions), len(panchanga.planet_list))
+        for planet, constellation, coordinates, pada in positions:
+            self.assertIn(planet, panchanga.planet_list)
+            self.assertGreaterEqual(constellation, 0)
+            self.assertLessEqual(constellation, 11)
+            self.assertEqual(len(coordinates), 3)
+            self.assertEqual(len(pada), 2)
+
+    def test_sidereal_saptarshi_nakshatra(self):
+        result = sidereal_saptarshi_nakshatra(date2)
+        self.assertGreaterEqual(result["mean_nakshatra"], 1)
+        self.assertLessEqual(result["mean_nakshatra"], 27)
+        self.assertGreaterEqual(result["mean_pada"], 1)
+        self.assertLessEqual(result["mean_pada"], 4)
+        self.assertEqual(len(result["individual"]), 7)
+        self.assertGreaterEqual(result["mean_longitude"], 0)
+        self.assertLess(result["mean_longitude"], 360)
+
+    def test_saptarshi_nakshatra_traditional(self):
+        nak = saptarshi_nakshatra_traditional(date2)
+        self.assertGreaterEqual(nak, 1)
+        self.assertLessEqual(nak, 27)
 
 
 if __name__ == "__main__":

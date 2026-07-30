@@ -140,7 +140,7 @@ garga_end_points = [ degs + mins / 60 for degs, mins in [
 
 # Temporary function
 def get_planet_name(planet):
-  names = { swe.SUN: 'Surya', swe.MOON: 'Candra', swe.KUJA: 'Mangala',
+  names = { swe.SUN: 'Surya', swe.MOON: 'Candra', swe.MARS: 'Mangala',
             swe.MERCURY: 'Budha', swe.JUPITER: 'Guru', swe.VENUS: 'Sukra',
             swe.SATURN: 'Sani', swe.RAHU: 'Rahu', swe.KETU: 'Ketu', swe.PLUTO: 'Ketu'}
   return names[planet]
