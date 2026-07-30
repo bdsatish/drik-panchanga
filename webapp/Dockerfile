@@ -11,7 +11,7 @@ WORKDIR /app
 
 # Install Python deps first (better layer cache).
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt 'gunicorn>=22,<27'
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Core calendar library + web package (see root .dockerignore).
 COPY generate_panchanga_calendar.py festival_rules.py panchanga.py \

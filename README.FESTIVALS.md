@@ -85,7 +85,7 @@ cannot provide a local sunrise.
 Rationale
 ---------
 
-### Inconsitent sindhu books
+### Inconsistent sindhu books
 
 *Dharma-sindhu* and *Nirnaya-sindhu* decide many observances with layered kala
 tests (Arunodaya, Purvahna, Madhyahna, Aparahna, Pradosha, Nishitha),
@@ -94,7 +94,7 @@ matters for ritual timing, but it is a poor fit for a one-page PDF calendar
 whose job is to mark which *civil day* carries each festival for a given city
 and year. There is usually no consistent logic either; just that regional and
 historical preferences are codified in these books. For a universal Hindu, these
-principles are meaniningless.
+principles are meaningless.
 
 For example, "4-ghati before arunodaya" maps to 96 minutes before sunrise, which
 is acceptable in India, but at higher latitudes (e.g. Europe or USA), there

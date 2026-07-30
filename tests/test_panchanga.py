@@ -7,11 +7,10 @@ bottom of ``panchanga.py``.
 import unittest
 import swisseph as swe
 
-import panchanga
 from panchanga import (Date, Place, gregorian_to_jd, from_dms,
     sunrise, sunset, moonrise, moonset, tithi, nakshatra, nakshatra_pada,
     yoga, karana, vaara, masa, varjyam, ascendant, navamsa,
-    set_nakshatra_system, set_chosen_ayanamsa)
+    set_nakshatra_system, set_chosen_ayanamsa, reset_ayanamsa_mode)
 
 
 bangalore = Place(12.972, 77.594, +5.5)
@@ -24,7 +23,19 @@ date3 = gregorian_to_jd(Date(1985, 6, 9))
 date4 = gregorian_to_jd(Date(2009, 6, 21))
 
 
-class SunriseSetTests(unittest.TestCase):
+class PanchangaTestCase(unittest.TestCase):
+    """Pin library globals so order vs other test modules cannot leak in."""
+
+    def setUp(self):
+        set_chosen_ayanamsa("citra")
+        set_nakshatra_system("equal")
+
+    def tearDown(self):
+        set_nakshatra_system("equal")
+        reset_ayanamsa_mode()
+
+
+class SunriseSetTests(PanchangaTestCase):
     """Sunrise, sunset, moonrise, moonset, vaara, karana."""
 
     def test_moonrise(self):
@@ -49,7 +60,7 @@ class SunriseSetTests(unittest.TestCase):
         sunrise(date4, shillong)
 
 
-class VarjyamTests(unittest.TestCase):
+class VarjyamTests(PanchangaTestCase):
     """Varjyam computation."""
 
     def test_varjyam_delhi(self):
@@ -60,7 +71,7 @@ class VarjyamTests(unittest.TestCase):
         self.assertEqual(v, [[[7, 12, 6], [8, 42, 56]], [[26, 21, 48], [27, 55, 30]]])
 
 
-class TithiTests(unittest.TestCase):
+class TithiTests(PanchangaTestCase):
     """Tithi computation with various dates and locations."""
 
     def test_krishna_ashtami(self):
@@ -105,7 +116,7 @@ class TithiTests(unittest.TestCase):
         self.assertEqual(result[0], 10)
 
 
-class NakshatraTests(unittest.TestCase):
+class NakshatraTests(PanchangaTestCase):
     """Nakshatra and nakshatra_pada."""
 
     def test_nakshatra_date1_bangalore(self):
@@ -143,7 +154,7 @@ class NakshatraTests(unittest.TestCase):
         self.assertEqual(nakshatra_pada(from_dms(23, 0)), [2, 3])
 
 
-class YogaTests(unittest.TestCase):
+class YogaTests(PanchangaTestCase):
     """Yoga computation."""
 
     def test_yoga_date3(self):
@@ -160,7 +171,7 @@ class YogaTests(unittest.TestCase):
         self.assertEqual(result[0], 16)
 
 
-class MasaTests(unittest.TestCase):
+class MasaTests(PanchangaTestCase):
     """Masa computation with amanta and purnimanta systems."""
 
     def test_feb10_bangalore(self):
@@ -211,7 +222,7 @@ class MasaTests(unittest.TestCase):
         self.assertEqual(masa(mar15, bangalore, amanta=False), [1, False])
 
 
-class AscendantTests(unittest.TestCase):
+class AscendantTests(PanchangaTestCase):
     """Ascendant computation."""
 
     def test_ascendant_sep24(self):
@@ -225,7 +236,7 @@ class AscendantTests(unittest.TestCase):
         self.assertEqual(result, [8, [20, 24, 47], [20, 3]])
 
 
-class NavamsaTests(unittest.TestCase):
+class NavamsaTests(PanchangaTestCase):
     """Navamsa computation."""
 
     def test_navamsa(self):

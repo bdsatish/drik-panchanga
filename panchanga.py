@@ -37,7 +37,7 @@ import swisseph as swe
 # Call the corresponding setter functions to modify these
 coordinate_flag = swe.FLG_SIDEREAL
 nakshatra_system = 'equal'
-chosen_ayanamsa = 'Lahiri'
+chosen_ayanamsa = 'citra'
 # ---------
 
 def default_se_ephe_path():
@@ -96,7 +96,7 @@ def set_nakshatra_system(system = 'classical'):
     nakshatra_system = 'equal'
     print('Unknown nakshatra system mode. Assuming classical equal spacing.')
 
-def set_chosen_ayanamsa(ayanamsa = 'lahiri'):
+def set_chosen_ayanamsa(ayanamsa = 'citra'):
   global chosen_ayanamsa
   chosen_ayanamsa = ayanamsa.lower()
 
