@@ -124,13 +124,6 @@ def yoga_key_line() -> str:
     return "Y: " + ", ".join(names)
 
 
-def pdf_font_ttc() -> Path:
-    """Return the vendored IndUni-H TrueType Collection."""
-    if not PDF_FONT_TTC.is_file():
-        raise FileNotFoundError(f"Missing PDF font collection: {PDF_FONT_TTC}")
-    return PDF_FONT_TTC
-
-
 def ensure_pdf_fonts() -> None:
     """Register IndUni-H faces from the vendored ``.ttc`` for all PDF text."""
     global _pdf_fonts_registered
@@ -139,7 +132,9 @@ def ensure_pdf_fonts() -> None:
     from reportlab.pdfbase import pdfmetrics
     from reportlab.pdfbase.ttfonts import TTFont
 
-    ttc = str(pdf_font_ttc())
+    if not PDF_FONT_TTC.is_file():
+        raise FileNotFoundError(f"Missing PDF font collection: {PDF_FONT_TTC}")
+    ttc = str(PDF_FONT_TTC)
     names = (PDF_FONT, PDF_FONT_BOLD, PDF_FONT_ITALIC, PDF_FONT_BOLD_ITALIC)
     for name, index in zip(names, PDF_FONT_TTC_INDICES):
         pdfmetrics.registerFont(TTFont(name, ttc, subfontIndex=index))
@@ -521,7 +516,6 @@ def tithi_ink(is_sukla, is_masa_start=False, is_adhika=False):
 
 def tithi_font(is_sukla):
     """Font for the T cell: upright bold for Sukla, bold italic for Krsna."""
-    ensure_pdf_fonts()
     return PDF_FONT_BOLD if is_sukla else PDF_FONT_BOLD_ITALIC
 
 
@@ -586,7 +580,6 @@ def mark_masa_starts(months, month_data):
 
 
 def draw_centered(pdf, text, center_x, baseline_y, font, size, color=INK):
-    ensure_pdf_fonts()
     pdf.setFont(font, size)
     pdf.setFillColor(color)
     pdf.drawCentredString(center_x, baseline_y, text)
@@ -594,7 +587,6 @@ def draw_centered(pdf, text, center_x, baseline_y, font, size, color=INK):
 
 def fitted_font_size(pdf, text, font, maximum, minimum, available_width, context):
     """Shrink text to fit; raise if it still overflows at ``minimum``."""
-    ensure_pdf_fonts()
     natural_width = pdf.stringWidth(text, font, maximum)
     if natural_width <= available_width:
         size = maximum
@@ -757,7 +749,6 @@ def coordinate_label(value, positive, negative):
 
 
 def draw_page_header(pdf, location, months, ruleset_version, *, amanta=True, ayanamsa="citra"):
-    ensure_pdf_fonts()
     page_width, page_height = landscape(A4)
     title = f"{location.name} Panchanga: {month_span_label(months)}"
     pdf.setFillColor(INK)
@@ -781,7 +772,6 @@ def draw_page_header(pdf, location, months, ruleset_version, *, amanta=True, aya
 
 
 def draw_page_footer(pdf, festival_entries, eclipse_line="Eclipses: None"):
-    ensure_pdf_fonts()
     if len(festival_entries) > FOOTER_FESTIVAL_SLOTS:
         raise ValueError(
             f"Festival footer holds at most {FOOTER_FESTIVAL_SLOTS} entries "

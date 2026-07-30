@@ -17,9 +17,9 @@ from generate_panchanga_calendar import (
     KRSNA_INK,
     LAYOUT_VERSION,
     MASA_START_INK,
-    PDF_FONT,
     PDF_FONT_BOLD,
     PDF_FONT_BOLD_ITALIC,
+    PDF_FONT_TTC,
     RULESET_VERSION,
     argument_parser,
     build_pdf,
@@ -28,7 +28,6 @@ from generate_panchanga_calendar import (
     ensure_pdf_fonts,
     fitted_font_size,
     load_location,
-    pdf_font_ttc,
     tithi_display_parts,
     tithi_font,
     tithi_ink,
@@ -117,6 +116,7 @@ class PdfLayoutTests(unittest.TestCase):
             draw_page_footer(pdf, entries)
 
     def test_footer_accepts_full_slot_count(self):
+        ensure_pdf_fonts()
         pdf = Canvas(BytesIO())
         entries = [(index, "Jan 01", f"Festival {index}")
                    for index in range(1, FOOTER_FESTIVAL_SLOTS + 1)]
@@ -129,7 +129,8 @@ class PdfLayoutTests(unittest.TestCase):
         self.assertIn("Vaiśākha", masa_key_line())
         self.assertIn("Aśvinī", nakshatra_key_line())
         self.assertIn("Viṣkumbha", yoga_key_line())
-        self.assertEqual(pdf_font_ttc().name, "IndUni-H.ttc")
+        self.assertEqual(PDF_FONT_TTC.name, "IndUni-H.ttc")
+        self.assertTrue(PDF_FONT_TTC.is_file())
         ensure_pdf_fonts()
         self.assertEqual(tithi_font(True), PDF_FONT_BOLD)
 
