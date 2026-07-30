@@ -14,7 +14,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt 'gunicorn>=22,<27'
 
 # Core calendar library + web package (see root .dockerignore).
-COPY generate_panchanga_calendar.py festival_rules.py panchanga.py vedic.py \
+COPY generate_panchanga_calendar.py festival_rules.py panchanga.py \
      cities.json festivals.cfg sanskrit_names.json ./
 COPY webapp ./webapp
 COPY webapp/docker-entrypoint.sh /docker-entrypoint.sh
