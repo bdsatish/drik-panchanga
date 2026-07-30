@@ -232,6 +232,85 @@ class MasaTests(PanchangaTestCase):
         self.assertEqual(masa(mar15, bangalore, amanta=True), [12, False])
         self.assertEqual(masa(mar15, bangalore, amanta=False), [1, False])
 
+    def test_purnimanta_matches_amanta_on_shukla(self):
+        """Śukla pakṣa month names must agree in both systems."""
+        from datetime import date, timedelta
+        day = date(2023, 1, 1)
+        for _ in range(365):
+            jd = gregorian_to_jd(Date(day.year, day.month, day.day))
+            ti = tithi(jd, bangalore)[0]
+            if ti <= 15:
+                amanta_masa, amanta_adhika = masa(jd, bangalore, amanta=True)
+                purni_masa, purni_adhika = masa(jd, bangalore, amanta=False)
+                self.assertEqual(
+                    (purni_masa, purni_adhika), (amanta_masa, amanta_adhika),
+                    msg=f"{day} ti={ti}")
+            day += timedelta(days=1)
+
+    def test_purnimanta_is_next_month_on_ordinary_krishna(self):
+        """Ordinary kṛṣṇa: pūrṇimānta is the month after amānta."""
+        from datetime import date, timedelta
+        day = date(2023, 1, 1)
+        for _ in range(365):
+            jd = gregorian_to_jd(Date(day.year, day.month, day.day))
+            ti = tithi(jd, bangalore)[0]
+            if ti >= 16:
+                amanta_masa, amanta_adhika = masa(jd, bangalore, amanta=True)
+                purni_masa, purni_adhika = masa(jd, bangalore, amanta=False)
+                self.assertEqual(purni_adhika, amanta_adhika, msg=f"{day} ti={ti}")
+                if amanta_adhika:
+                    self.assertEqual(purni_masa, amanta_masa, msg=f"{day} ti={ti}")
+                else:
+                    self.assertEqual(purni_masa, amanta_masa % 12 + 1, msg=f"{day} ti={ti}")
+            day += timedelta(days=1)
+
+    def test_purnimanta_magha_krishna_is_phalguna(self):
+        """Amānta Māgha-kṛṣṇa must be pūrṇimānta Phālguna (not Chaitra)."""
+        feb10 = gregorian_to_jd(Date(2023, 2, 10))
+        self.assertEqual(masa(feb10, bangalore, amanta=True), [11, False])
+        self.assertEqual(masa(feb10, bangalore, amanta=False), [12, False])
+
+    def test_purnimanta_adhika_keeps_amanta_name(self):
+        """Drik/MyPanchang: one NM-based Adhika-X for both systems, no kṛṣṇa +1."""
+        # 2023 Adhika Śrāvaṇa (amānta): 18 Jul – 16 Aug.
+        jul25 = gregorian_to_jd(Date(2023, 7, 25))  # śukla in adhika
+        self.assertEqual(masa(jul25, bangalore, amanta=True), [5, True])
+        self.assertEqual(masa(jul25, bangalore, amanta=False), [5, True])
+
+        aug10 = gregorian_to_jd(Date(2023, 8, 10))  # kṛṣṇa in adhika
+        self.assertEqual(masa(aug10, bangalore, amanta=True), [5, True])
+        self.assertEqual(masa(aug10, bangalore, amanta=False), [5, True])
+
+        # 2012 Adhika Bhādrapada (amānta): 18 Aug – 16 Sep.
+        aug20 = gregorian_to_jd(Date(2012, 8, 20))
+        self.assertEqual(masa(aug20, bangalore, amanta=True), [6, True])
+        self.assertEqual(masa(aug20, bangalore, amanta=False), [6, True])
+        sep5 = gregorian_to_jd(Date(2012, 9, 5))
+        self.assertEqual(masa(sep5, bangalore, amanta=True), [6, True])
+        self.assertEqual(masa(sep5, bangalore, amanta=False), [6, True])
+
+    def test_purnimanta_no_false_fm_adhika_in_2022(self):
+        """2022 has no NM-adhika; sites do not mark Adhika Jyeṣṭha."""
+        may20 = gregorian_to_jd(Date(2022, 5, 20))
+        self.assertEqual(masa(may20, bangalore, amanta=True), [2, False])
+        self.assertEqual(masa(may20, bangalore, amanta=False), [3, False])
+
+        jun5 = gregorian_to_jd(Date(2022, 6, 5))
+        self.assertEqual(masa(jun5, bangalore, amanta=True), [3, False])
+        self.assertEqual(masa(jun5, bangalore, amanta=False), [3, False])
+
+    def test_full_moon_on_purnima_is_current_not_next_month(self):
+        """opt=+1 on tithi 15 must return today's full moon."""
+        jd = gregorian_to_jd(Date(2023, 1, 6))
+        ti = tithi(jd, bangalore)[0]
+        self.assertEqual(ti, 15)
+        crit = sunrise(jd, bangalore)[0]
+        current = full_moon(crit, ti, +1)
+        previous = full_moon(crit, ti, -1)
+        self.assertLess(abs(current - crit), 2)
+        self.assertGreater(current - previous, 25)
+        self.assertLess(current - previous, 35)
+
 
 class AscendantTests(PanchangaTestCase):
     """Ascendant computation."""

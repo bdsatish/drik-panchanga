@@ -520,19 +520,33 @@ def vaara(jd):
 def masa(jd, place, amanta = True):
   """Returns lunar month and if it is adhika or not.
      Set amanta = False for Purnimanta month.
-     1 = Chaitra, 2 = Vaisakha, ..., 12 = Phalguna"""
+     1 = Chaitra, 2 = Vaisakha, ..., 12 = Phalguna
+
+     Amānta months run new-moon to new-moon. The month is named from the
+     solar rāśi of the preceding new moon (maasa = rāśi + 1). Adhika is when
+     consecutive new moons fall in the same solar rāśi (no saṅkrānti between).
+
+     Pūrṇimānta naming follows common North-Indian panchānga practice: adhika is
+     the same NM-based flag, and during an adhika span both systems keep that
+     adhika month name. Away from adhika, śukla matches amānta and kṛṣṇa takes
+     the next month (amānta Māgha-kṛṣṇa = pūrṇimānta Phālguna-kṛṣṇa).
+
+  """
   ti = tithi(jd, place)[0]
-  critical = sunrise(jd, place)[0]  # - tz/24 ?
-  last_moon = new_moon(critical, ti, -1) if amanta else full_moon(critical, ti, -1)
-  next_moon = new_moon(critical, ti, +1) if amanta else full_moon(critical, ti, +1)
-  this_solar_month = raasi(last_moon)
-  next_solar_month = raasi(next_moon)
+  critical = sunrise(jd, place)[0]
+  last_new_moon = new_moon(critical, ti, -1)
+  next_new_moon = new_moon(critical, ti, +1)
+  this_solar_month = raasi(last_new_moon)
+  next_solar_month = raasi(next_new_moon)
   is_leap_month = (this_solar_month == next_solar_month)
-  if amanta:
-    maasa = this_solar_month + 1
-  else:
-    maasa = 1 if (this_solar_month == 10 and ti >= 15) else this_solar_month + 2
-  if maasa > 12: maasa = (maasa % 12)
+  maasa = this_solar_month + 1
+  if maasa > 12:
+    maasa = maasa % 12
+
+  if not amanta and not is_leap_month and ti >= 16:
+    # Ordinary kṛṣṇa: next month. During adhika, keep the amānta adhika name.
+    maasa = maasa % 12 + 1
+
   return [int(maasa), is_leap_month]
 
 # epoch-midnight to given midnight
@@ -568,11 +582,14 @@ def full_moon(jd, tithi_, opt = -1):
   """Returns JDN, where
      opt = -1:  JDN < jd such that lunar_phase(JDN) = 180 degrees
      opt = +1:  JDN >= jd such that lunar_phase(JDN) = 180 degrees
+
+     On pūrṇimā (tithi 15), opt=+1 is the current full moon (at/after jd),
+     not the one a synodic month later.
   """
   if opt == -1:    # previous full moon
     start = jd - (tithi_ - 15) if tithi_ > 15 else jd - (tithi_ + 15)
-  if opt == +1:   # next full moon
-    start = jd + (15 - tithi_) if tithi_ < 15 else jd - tithi_ + 45
+  if opt == +1:   # next full moon (including today when tithi_ == 15)
+    start = jd + (15 - tithi_) if tithi_ <= 15 else jd - tithi_ + 45
   # Search within a span of (start +- 2) days
   x = [ -2 + offset/4 for offset in range(17) ]
   y = [lunar_phase(start + i) for i in x]
