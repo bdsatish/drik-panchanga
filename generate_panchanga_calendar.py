@@ -5,6 +5,7 @@ import argparse
 import calendar
 import json
 import re
+from functools import lru_cache
 from dataclasses import dataclass
 from datetime import date as CivilDate
 from datetime import datetime
@@ -30,9 +31,10 @@ from panchanga import sweph_version
 MONTH_COUNT = 14
 DEFAULT_CITIES_PATH = Path(__file__).with_name("cities.json")
 DEFAULT_FESTIVALS_PATH = Path(__file__).with_name("festivals.cfg")
+DEFAULT_NAMES_PATH = Path(__file__).with_name("sanskrit_names.json")
 FOOTER_FESTIVAL_SLOTS = 30  # 6 columns x 5 rows in draw_page_footer
 RULESET_VERSION = "Udaya-Vyapini-1.1"
-LAYOUT_VERSION = "A4-1.9"
+LAYOUT_VERSION = "A4-1.10"
 PDF_AUTHOR = "Satish BD"
 PDF_AUTHOR_EMAIL = "bdsatish@gmail.com"
 PDF_COPYRIGHT = ("Copyright © Satish BD. Licensed under the GNU Affero GPL "
@@ -74,19 +76,42 @@ FESTIVAL_INK = HexColor("#9A3154")
 EKADASHI_MARK = HexColor("#168078")
 ECLIPSE_MARK = HexColor("#8B4518")
 
-NAKSHATRA_KEY_LINES = (
-    "N: 1 Asvini, 2 Bharani, 3 Krittika, 4 Rohini, 5 Mrgasira, 6 Ardra, "
-    "7 Punarvasu, 8 Pusya, 9 Aslesa, 10 Magha, 11 Purvaphalguni, "
-    "12 Uttaraphalguni, 13 Hasta, 14 Citra",
-    "15 Svati, 16 Visakha, 17 Anuradha, 18 Jyestha, 19 Mula, 20 Purvasadha, "
-    "21 Uttarasadha, 22 Sravana, 23 Dhanistha, 24 Satabhisa, "
-    "25 Purvabhadra, 26 Uttarabhadra, 27 Revati",
-)
-YOGA_KEY_LINE = ("Y: 01 Viskumbha, 02 Priti, 03 Ayusman, 04 Saubhagya, 05 Sobhana, "
-                 "06 Atiganda, 07 Sukarma, 08 Dhrti, 09 Sula, 10 Ganda, 11 Vrddhi, "
-                 "12 Dhruva, 13 Vyaghata, 14 Harsana, 15 Vajra, 16 Siddhi, "
-                 "17 Vyatipata, 18 Variyana, 19 Parigha, 20 Siva, 21 Siddha, "
-                 "22 Sadhya, 23 Subha, 24 Sukla, 25 Brahma, 26 Aindra, 27 Vaidhrti")
+
+def _load_json_with_comments(path: Path) -> dict:
+    content = path.read_text(encoding="utf-8")
+    content = re.sub(r"//.*", "", content)
+    content = re.sub(r"/\*.*?\*/", "", content, flags=re.DOTALL)
+    return json.loads(content)
+
+
+@lru_cache(maxsize=1)
+def sanskrit_names() -> dict:
+    return _load_json_with_comments(DEFAULT_NAMES_PATH)
+
+
+def _numbered_iast_names(mapping: dict, *, width: int | None = None) -> list[str]:
+    items = sorted(mapping.items(), key=lambda item: int(item[0]))
+    if width is None:
+        return [f"{key} {name}" for key, name in items]
+    return [f"{int(key):0{width}d} {name}" for key, name in items]
+
+
+def masa_key_line() -> str:
+    names = ", ".join(_numbered_iast_names(sanskrit_names()["masas"]))
+    return (
+        "Māsa: a small upper-left badge marks its first visible tithi; "
+        f"gold fill denotes adhika. {names}. Festival dates use amānta rules."
+    )
+
+
+def nakshatra_key_line() -> str:
+    names = _numbered_iast_names(sanskrit_names()["nakshatras"])
+    return "N: " + ", ".join(names)
+
+
+def yoga_key_line() -> str:
+    names = _numbered_iast_names(sanskrit_names()["yogas"], width=2)
+    return "Y: " + ", ".join(names)
 
 
 def embed_pdf_metadata(pdf, *, title, subject, ruleset_version, ayanamsa="citra"):
@@ -751,14 +776,20 @@ def draw_page_footer(pdf, festival_entries, eclipse_line="Eclipses: None"):
         "Tiny red numbers refer to the festival key. Sundays have a red right "
         "edge; Ekadashi upavasa has a teal T-cell underline; eclipses have a "
         "brown X in the lower-left corner.")
-    pdf.setFont("Helvetica", 5.3)
-    pdf.drawString(
-        18, 28, "Masa: a small upper-left badge marks its first visible tithi; "
-        "gold fill denotes adhika. 1 Caitra, 2 Vaisakha, 3 Jyestha, "
-        "4 Asadha, 5 Sravana, 6 Bhadrapada, 7 Asvina, 8 Kartika, "
-        "9 Margasirsa, 10 Pusya, 11 Magha, 12 Phalguna. Festival dates use amanta rules.")
-    pdf.drawString(18, 20, f"{NAKSHATRA_KEY_LINES[0]}, {NAKSHATRA_KEY_LINES[1]}")
-    pdf.drawString(18, 12, YOGA_KEY_LINE)
+    page_width = landscape(A4)[0]
+    masa_line = masa_key_line()
+    nakshatra_line = nakshatra_key_line()
+    yoga_line = yoga_key_line()
+    masa_size = fitted_font_size(pdf, masa_line, "Helvetica", 5.3, 4.4, page_width - 36, "masa key")
+    nakshatra_size = fitted_font_size(
+        pdf, nakshatra_line, "Helvetica", 5.3, 4.4, page_width - 36, "nakshatra key")
+    yoga_size = fitted_font_size(pdf, yoga_line, "Helvetica", 5.3, 4.4, page_width - 36, "yoga key")
+    pdf.setFont("Helvetica", masa_size)
+    pdf.drawString(18, 28, masa_line)
+    pdf.setFont("Helvetica", nakshatra_size)
+    pdf.drawString(18, 20, nakshatra_line)
+    pdf.setFont("Helvetica", yoga_size)
+    pdf.drawString(18, 12, yoga_line)
 
 
 def build_pdf(location, start_year, start_month, output_path, *, festivals_path=None, month_system="amanta",

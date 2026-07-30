@@ -114,6 +114,14 @@ class PdfLayoutTests(unittest.TestCase):
                    for index in range(1, FOOTER_FESTIVAL_SLOTS + 1)]
         draw_page_footer(pdf, entries)
 
+    def test_footer_key_lines_use_iast_names(self):
+        from generate_panchanga_calendar import (
+            masa_key_line, nakshatra_key_line, yoga_key_line,
+        )
+        self.assertIn("Vaiśākha", masa_key_line())
+        self.assertIn("Aśvinī", nakshatra_key_line())
+        self.assertIn("Viṣkumbha", yoga_key_line())
+
 
 class TithiDisplayTests(unittest.TestCase):
 
