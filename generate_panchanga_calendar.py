@@ -34,12 +34,22 @@ DEFAULT_FESTIVALS_PATH = Path(__file__).with_name("festivals.cfg")
 DEFAULT_NAMES_PATH = Path(__file__).with_name("sanskrit_names.json")
 FOOTER_FESTIVAL_SLOTS = 30  # 6 columns x 5 rows in draw_page_footer
 RULESET_VERSION = "Udaya-Vyapini-1.1"
-LAYOUT_VERSION = "A4-1.10"
+LAYOUT_VERSION = "A4-1.11"
 PDF_AUTHOR = "Satish BD"
 PDF_AUTHOR_EMAIL = "bdsatish@gmail.com"
 PDF_COPYRIGHT = ("Copyright © Satish BD. Licensed under the GNU Affero GPL "
                  "version 3 (or later).")
 PDF_SOURCE_URL = "https://github.com/bdsatish/drik-panchanga"
+
+# ReportLab font names after ensure_pdf_fonts() registers IndUni-H.
+PDF_FONT = "Panchanga"
+PDF_FONT_BOLD = "Panchanga-Bold"
+PDF_FONT_ITALIC = "Panchanga-Italic"
+PDF_FONT_BOLD_ITALIC = "Panchanga-BoldItalic"
+# Vendored TrueType Collection: Regular / Bold / Oblique / BoldOblique.
+PDF_FONT_TTC = Path(__file__).resolve().parent / "fonts" / "IndUni-H.ttc"
+PDF_FONT_TTC_INDICES = (0, 1, 2, 3)
+_pdf_fonts_registered = False
 
 # PDF layout proportions. Tweak these together.
 MONTH_HEADER_HEIGHT = 20
@@ -112,6 +122,35 @@ def nakshatra_key_line() -> str:
 def yoga_key_line() -> str:
     names = _numbered_iast_names(sanskrit_names()["yogas"], width=2)
     return "Y: " + ", ".join(names)
+
+
+def pdf_font_ttc() -> Path:
+    """Return the vendored IndUni-H TrueType Collection."""
+    if not PDF_FONT_TTC.is_file():
+        raise FileNotFoundError(f"Missing PDF font collection: {PDF_FONT_TTC}")
+    return PDF_FONT_TTC
+
+
+def ensure_pdf_fonts() -> None:
+    """Register IndUni-H faces from the vendored ``.ttc`` for all PDF text."""
+    global _pdf_fonts_registered
+    if _pdf_fonts_registered:
+        return
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+
+    ttc = str(pdf_font_ttc())
+    names = (PDF_FONT, PDF_FONT_BOLD, PDF_FONT_ITALIC, PDF_FONT_BOLD_ITALIC)
+    for name, index in zip(names, PDF_FONT_TTC_INDICES):
+        pdfmetrics.registerFont(TTFont(name, ttc, subfontIndex=index))
+    pdfmetrics.registerFontFamily(
+        PDF_FONT,
+        normal=PDF_FONT,
+        bold=PDF_FONT_BOLD,
+        italic=PDF_FONT_ITALIC,
+        boldItalic=PDF_FONT_BOLD_ITALIC,
+    )
+    _pdf_fonts_registered = True
 
 
 def embed_pdf_metadata(pdf, *, title, subject, ruleset_version, ayanamsa="citra"):
@@ -482,7 +521,8 @@ def tithi_ink(is_sukla, is_masa_start=False, is_adhika=False):
 
 def tithi_font(is_sukla):
     """Font for the T cell: upright bold for Sukla, bold italic for Krsna."""
-    return "Helvetica-Bold" if is_sukla else "Helvetica-BoldOblique"
+    ensure_pdf_fonts()
+    return PDF_FONT_BOLD if is_sukla else PDF_FONT_BOLD_ITALIC
 
 
 def daily_values(year, month, location, *, amanta=True):
@@ -546,6 +586,7 @@ def mark_masa_starts(months, month_data):
 
 
 def draw_centered(pdf, text, center_x, baseline_y, font, size, color=INK):
+    ensure_pdf_fonts()
     pdf.setFont(font, size)
     pdf.setFillColor(color)
     pdf.drawCentredString(center_x, baseline_y, text)
@@ -553,6 +594,7 @@ def draw_centered(pdf, text, center_x, baseline_y, font, size, color=INK):
 
 def fitted_font_size(pdf, text, font, maximum, minimum, available_width, context):
     """Shrink text to fit; raise if it still overflows at ``minimum``."""
+    ensure_pdf_fonts()
     natural_width = pdf.stringWidth(text, font, maximum)
     if natural_width <= available_width:
         size = maximum
@@ -568,14 +610,14 @@ def draw_day_column(pdf, x, top, width):
 
     pdf.setFillColor(ACCENT)
     pdf.rect(x, top - header_height, width, header_height, stroke=0, fill=1)
-    draw_centered(pdf, "DAY", x + width / 2, top - 21, "Helvetica-Bold", 7.2, white)
+    draw_centered(pdf, "DAY", x + width / 2, top - 21, PDF_FONT_BOLD, 7.2, white)
 
     rows_top = top - header_height
     for index in range(31):
         row_y = rows_top - (index + 1) * ROW_HEIGHT
         pdf.setFillColor(ALT_ROW if index % 2 else white)
         pdf.rect(x, row_y, width, ROW_HEIGHT, stroke=0, fill=1)
-        draw_centered(pdf, str(index + 1), x + width / 2, row_y + 4.1, "Helvetica", 7.4, INK)
+        draw_centered(pdf, str(index + 1), x + width / 2, row_y + 4.1, PDF_FONT, 7.4, INK)
 
     bottom = rows_top - 31 * ROW_HEIGHT
     pdf.setStrokeColor(GRID)
@@ -593,7 +635,7 @@ def draw_month(pdf, year, month, values, festivals_by_date, ekadashi_dates, ecli
 
     pdf.setFillColor(ACCENT)
     pdf.rect(x, top - MONTH_HEADER_HEIGHT, width, MONTH_HEADER_HEIGHT, stroke=0, fill=1)
-    draw_centered(pdf, f"{calendar.month_abbr[month]} '{str(year)[2:]}", x + width / 2, top - 14, "Helvetica-Bold", 8.0,
+    draw_centered(pdf, f"{calendar.month_abbr[month]} '{str(year)[2:]}", x + width / 2, top - 14, PDF_FONT_BOLD, 8.0,
                   white)
 
     header_top = top - MONTH_HEADER_HEIGHT
@@ -606,7 +648,7 @@ def draw_month(pdf, year, month, values, festivals_by_date, ekadashi_dates, ecli
         x + tithi_column_width + nakshatra_column_width + yoga_column_width / 2,
     )
     for label, center in zip(("T", "N", "Y"), centers):
-        draw_centered(pdf, label, center, header_top - 10.5, "Helvetica-Bold", 7.0, MUTED)
+        draw_centered(pdf, label, center, header_top - 10.5, PDF_FONT_BOLD, 7.0, MUTED)
 
     rows_top = header_top - COLUMN_HEADER_HEIGHT
     values_by_day = {
@@ -659,7 +701,7 @@ def draw_month(pdf, year, month, values, festivals_by_date, ekadashi_dates, ecli
             pdf.setFillColor(ADHIKA_ROW if is_adhika else MASA_START_ROW)
             pdf.rect(x, row_y, tithi_column_width, ROW_HEIGHT, stroke=0, fill=1)
             pdf.setFillColor(ADHIKA_INK if is_adhika else MASA_START_INK)
-            pdf.setFont("Helvetica-Bold", 5.2)
+            pdf.setFont(PDF_FONT_BOLD, 5.2)
             pdf.drawString(x + 2.4, row_y + 8.2, masa_badge.removeprefix("A"))
         if is_sunday:
             pdf.setFillColor(SUNDAY_MARK)
@@ -675,14 +717,14 @@ def draw_month(pdf, year, month, values, festivals_by_date, ekadashi_dates, ecli
         baseline = row_y + (3.0 if festival_numbers else 4.1)
         draw_centered(pdf, tithi_display, centers[0], baseline, tithi_font(is_sukla), 7.4,
                       tithi_ink(is_sukla, is_masa_start, is_adhika))
-        draw_centered(pdf, f"{nakshatra:02d}", centers[1], baseline, "Helvetica", 7.3, INK)
-        draw_centered(pdf, f"{yoga:02d}", centers[2], baseline, "Helvetica", 7.3, INK)
+        draw_centered(pdf, f"{nakshatra:02d}", centers[1], baseline, PDF_FONT, 7.3, INK)
+        draw_centered(pdf, f"{yoga:02d}", centers[2], baseline, PDF_FONT, 7.3, INK)
         if festival_numbers:
             pdf.setFillColor(FESTIVAL_INK)
             marker_size = 5.0 if len(festival_numbers) <= 2 else 4.0
             marker_spacing = 4.8 if len(festival_numbers) <= 2 else 3.5
             marker_top = row_y + (8.8 if len(festival_numbers) <= 2 else 9.5)
-            pdf.setFont("Helvetica-Bold", marker_size)
+            pdf.setFont(PDF_FONT_BOLD, marker_size)
             for marker_index, number in enumerate(festival_numbers):
                 pdf.drawRightString(x + tithi_column_width - 1.6, marker_top - marker_index * marker_spacing,
                                     str(number))
@@ -715,14 +757,15 @@ def coordinate_label(value, positive, negative):
 
 
 def draw_page_header(pdf, location, months, ruleset_version, *, amanta=True, ayanamsa="citra"):
+    ensure_pdf_fonts()
     page_width, page_height = landscape(A4)
     title = f"{location.name} Panchanga: {month_span_label(months)}"
     pdf.setFillColor(INK)
-    title_size = fitted_font_size(pdf, title, "Helvetica-Bold", 11, 8, page_width - 36, "page title")
-    pdf.setFont("Helvetica-Bold", title_size)
+    title_size = fitted_font_size(pdf, title, PDF_FONT_BOLD, 11, 8, page_width - 36, "page title")
+    pdf.setFont(PDF_FONT_BOLD, title_size)
     pdf.drawString(18, page_height - 20, title)
     pdf.setFillColor(MUTED)
-    pdf.setFont("Helvetica", 7.5)
+    pdf.setFont(PDF_FONT, 7.5)
     masa_label = "Amanta" if amanta else "Purnimanta"
     ayan_label = ayanamsa_label(ayanamsa)
     pdf.drawString(
@@ -732,12 +775,13 @@ def draw_page_header(pdf, location, months, ruleset_version, *, amanta=True, aya
         f"{coordinate_label(location.latitude, 'N', 'S')}, "
         f"{coordinate_label(location.longitude, 'E', 'W')} | "
         f"{location.timezone_name} civil time")
-    pdf.setFont("Helvetica", 4.7)
+    pdf.setFont(PDF_FONT, 4.7)
     pdf.drawRightString(page_width - 18, page_height - 19,
                         f"SwEph {sweph_version()} | Ruleset: {ruleset_version} | Layout: {LAYOUT_VERSION}")
 
 
 def draw_page_footer(pdf, festival_entries, eclipse_line="Eclipses: None"):
+    ensure_pdf_fonts()
     if len(festival_entries) > FOOTER_FESTIVAL_SLOTS:
         raise ValueError(
             f"Festival footer holds at most {FOOTER_FESTIVAL_SLOTS} entries "
@@ -755,22 +799,22 @@ def draw_page_footer(pdf, festival_entries, eclipse_line="Eclipses: None"):
         marker = str(number)
         entry = f"{name}: {festival_date}"
         marker_size = 5.0
-        marker_width = pdf.stringWidth(marker, "Helvetica-Bold", marker_size)
+        marker_width = pdf.stringWidth(marker, PDF_FONT_BOLD, marker_size)
         marker_gap = 2.0
         entry_width = column_width - 4 - marker_width - marker_gap
-        entry_size = fitted_font_size(pdf, entry, "Helvetica", 7.5, 5.5, entry_width, f"festival entry {number}")
+        entry_size = fitted_font_size(pdf, entry, PDF_FONT, 7.5, 5.5, entry_width, f"festival entry {number}")
         entry_x = 18 + column * column_width
         entry_y = 86 - row * 8
-        pdf.setFont("Helvetica-Bold", marker_size)
+        pdf.setFont(PDF_FONT_BOLD, marker_size)
         pdf.drawString(entry_x, entry_y + 2.0, marker)
-        pdf.setFont("Helvetica", entry_size)
+        pdf.setFont(PDF_FONT, entry_size)
         pdf.drawString(entry_x + marker_width + marker_gap, entry_y, entry)
 
     pdf.setFillColor(MUTED)
-    eclipse_size = fitted_font_size(pdf, eclipse_line, "Helvetica", 5.4, 4.6, landscape(A4)[0] - 36, "eclipse footer")
-    pdf.setFont("Helvetica", eclipse_size)
+    eclipse_size = fitted_font_size(pdf, eclipse_line, PDF_FONT, 5.4, 4.6, landscape(A4)[0] - 36, "eclipse footer")
+    pdf.setFont(PDF_FONT, eclipse_size)
     pdf.drawString(18, 44, eclipse_line)
-    pdf.setFont("Helvetica", 5.4)
+    pdf.setFont(PDF_FONT, 5.4)
     pdf.drawString(
         18, 36, "T: 01-15; Sukla = upright bold, Krsna = bold italic. N = nakshatra; Y = yoga. "
         "Tiny red numbers refer to the festival key. Sundays have a red right "
@@ -780,20 +824,21 @@ def draw_page_footer(pdf, festival_entries, eclipse_line="Eclipses: None"):
     masa_line = masa_key_line()
     nakshatra_line = nakshatra_key_line()
     yoga_line = yoga_key_line()
-    masa_size = fitted_font_size(pdf, masa_line, "Helvetica", 5.3, 4.4, page_width - 36, "masa key")
+    masa_size = fitted_font_size(pdf, masa_line, PDF_FONT, 5.3, 4.4, page_width - 36, "masa key")
     nakshatra_size = fitted_font_size(
-        pdf, nakshatra_line, "Helvetica", 5.3, 4.4, page_width - 36, "nakshatra key")
-    yoga_size = fitted_font_size(pdf, yoga_line, "Helvetica", 5.3, 4.4, page_width - 36, "yoga key")
-    pdf.setFont("Helvetica", masa_size)
+        pdf, nakshatra_line, PDF_FONT, 5.3, 4.4, page_width - 36, "nakshatra key")
+    yoga_size = fitted_font_size(pdf, yoga_line, PDF_FONT, 5.3, 4.4, page_width - 36, "yoga key")
+    pdf.setFont(PDF_FONT, masa_size)
     pdf.drawString(18, 28, masa_line)
-    pdf.setFont("Helvetica", nakshatra_size)
+    pdf.setFont(PDF_FONT, nakshatra_size)
     pdf.drawString(18, 20, nakshatra_line)
-    pdf.setFont("Helvetica", yoga_size)
+    pdf.setFont(PDF_FONT, yoga_size)
     pdf.drawString(18, 12, yoga_line)
 
 
 def build_pdf(location, start_year, start_month, output_path, *, festivals_path=None, month_system="amanta",
               ayanamsa="citra"):
+    ensure_pdf_fonts()
     amanta = parse_month_system(month_system)
     ayanamsa_key = parse_ayanamsa(ayanamsa)
     panchanga.set_chosen_ayanamsa(ayanamsa_key)
@@ -846,7 +891,9 @@ def build_pdf(location, start_year, start_month, output_path, *, festivals_path=
 
     page_width, page_height = landscape(A4)
     output_path = Path(output_path)
-    pdf = canvas.Canvas(str(output_path), pagesize=(page_width, page_height))
+    # ReportLab defaults the canvas to Helvetica; pin IndUni-H so it never appears.
+    pdf = canvas.Canvas(
+        str(output_path), pagesize=(page_width, page_height), initialFontName=PDF_FONT)
     masa_label = "amanta" if amanta else "purnimanta"
     ayan_label = ayanamsa_label(ayanamsa_key)
     embed_pdf_metadata(

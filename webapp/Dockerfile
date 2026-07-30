@@ -4,7 +4,8 @@
 FROM python:3.12-slim-bookworm
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends git ca-certificates build-essential \
+    && apt-get install -y --no-install-recommends \
+         git ca-certificates build-essential \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -16,6 +17,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Core calendar library + web package (see root .dockerignore).
 COPY generate_panchanga_calendar.py festival_rules.py panchanga.py \
      cities.json festivals.cfg sanskrit_names.json ./
+COPY fonts ./fonts
 COPY webapp ./webapp
 COPY webapp/docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh

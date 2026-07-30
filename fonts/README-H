@@ -1,0 +1,77 @@
+The fonts in this archive are designed to allow the representation
+of Indian-language (and similar) material in Roman script using the
+Unicode character set. They are based on fonts designed by
+
+  URW++ Design and Development Incorporated
+  Poppenbuetteler Bogen 29A
+  D-22399 Hamburg
+  Germany
+
+and made available under the terms of the GNU General Public License,
+a copy of which is included in this archive in the file COPYING. The
+chief provision of the GPL is that software licensed under it may be
+freely redistributed provided the author's copyright is properly
+acknowledged. As permitted under Section 2 of the GPL, I have modified
+the fonts to implement the accented characters needed by Indologists
+and other such scholars, using mkt1font, a program I wrote to create
+arbitrarily accented Type 1 PostScript fonts. The fonts output by
+mkt1font were converted to OpenType using Adobe's program MakeOTF
+(part of their OpenType Font Development Kit). In developing them I
+have also made substantial use of George Williams's excellent program
+FontForge. The modified fonts, like the originals, are distributed
+under the GPL. However, the copyright remains with URW++ Design and
+Development Incorporated. The modified fonts were first created on
+April 7, 2009.
+
+This is the fourth major release of the IndUni fonts. As well as a
+comprehensive set of "Indian" characters, all the letter forms
+required for Avestan and for the Pinyin representation of Chinese, a
+set of Cyrillic characters, a basic set of Greek letters and various
+other items, the fonts implement almost the whole of the Multilingual
+European Subset 1 of Unicode.* All accented characters can be accessed
+in "composed" or "decomposed" form -- e.g., a-macron is accessible
+both as U+0101 (a-macron) and as U+0061 + U+0304 ("a" + macron). This
+is a considerable advantage, given the different possible ways in
+which Unicode can be, and is, used.
+
+The fonts work well under Windows XP, provided that Service Pack 2 has
+been installed and "complex scripts" enabled. They work well with
+later releases of Windows, and with Word 2003 and later. I have used
+them myself under Linux and under Mac OS X Tiger and subsequent
+releases.
+
+To enable complex scripts in XP, open the Start menu and choose
+"Control panel", then "Date, time, language, and regional options",
+then "Add other languages". Now check the box marked "Install files
+for complex script and right-to-left languages", and then click "OK".
+
+The particular fonts in this archive are based on the typeface
+NimbusSanL, which is URW++'s name for their Helvetica-lookalike. The
+Greek letters are derived from Greek Arial, a set of freeware fonts
+available from http://graphis.hellug.gr/el/download.html.
+
+The file IndUni.def contains a list of the special characters
+contained in the fonts, other than those created with FontForge or
+imported from other sources.
+
+Please email any problems to jds10@cam.ac.uk.
+
+John D. Smith
+http://bombay.indology.info/index.html
+
+* For those who are interested, MES-1 is defined as follows:
+
+  Plane 00
+
+  Rows Positions (Cells)
+  00   207E A0FF
+  01   0013 162B 2E4D 507E
+  02   C7 D8DB DD
+  20   15 1819 1C1D AC
+  21   22 26 5B5E 9093
+  26   6A
+
+  The characters still missing are uni2015 (horizontal bar/quotation
+  dash), U+215B-U+215E (one, three, five and seven eighths),
+  U+2191-U+2193 (leftwards, upwards, rightwards and downwards arrows)
+  and U+266A (eighth note/quaver).
