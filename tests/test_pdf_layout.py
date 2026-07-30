@@ -124,9 +124,16 @@ class PdfLayoutTests(unittest.TestCase):
 
     def test_footer_key_lines_use_iast_names(self):
         from generate_panchanga_calendar import (
-            masa_key_line, nakshatra_key_line, yoga_key_line,
+            masa_key_line, nakshatra_key_line, sankranti_key_line, tithi_key_line,
+            yoga_key_line,
         )
+        self.assertTrue(tithi_key_line().startswith("T:"))
+        self.assertTrue(nakshatra_key_line().startswith("N:"))
+        self.assertTrue(yoga_key_line().startswith("Y:"))
         self.assertIn("Vaiśākha", masa_key_line())
+        self.assertIn("Meṣa", sankranti_key_line())
+        self.assertIn("1 Meṣa", sankranti_key_line())
+        self.assertIn("10 Makara", sankranti_key_line())
         self.assertIn("Aśvinī", nakshatra_key_line())
         self.assertIn("Viṣkumbha", yoga_key_line())
         self.assertEqual(PDF_FONT_TTC.name, "IndUni-H.ttc")

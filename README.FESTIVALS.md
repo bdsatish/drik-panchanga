@@ -72,7 +72,9 @@ These have dedicated selectors (dispatch by catalog name):
   `None`.
 * **Mesha Sankranti** / **Makara Sankranti** -- first civil sunrise after the
   Sun enters Mesha (raasi 1) or Makara (raasi 10) respectively. Both use the
-  shared sankranti helper.
+  shared sankranti helper. The PDF also paints all twelve saṅkrāntis the same
+  way (green T-cell, rāśi number 1–12 lower-left); only Mesha and Makara remain
+  named festival-key entries when enabled in ``festivals.cfg``.
 
 Location dependence
 -------------------

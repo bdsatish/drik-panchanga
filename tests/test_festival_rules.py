@@ -31,6 +31,7 @@ from festival_rules import (
     select_vaikuntha_ekadashi_dates,
     select_varamahalakshmi_dates,
     select_yajur_upakarma_dates,
+    sankranti_raasi_by_date,
 )
 from generate_panchanga_calendar import (
     DEFAULT_FESTIVALS_PATH,
@@ -793,6 +794,48 @@ class MeshaSankrantiTests(unittest.TestCase):
         ]
         with mock.patch("festival_rules.panchanga.raasi", return_value=1):
             self.assertEqual(select_mesha_sankranti_dates(records), [])
+
+
+class AllSankrantiTests(unittest.TestCase):
+
+    def test_maps_each_raasi_transition(self):
+        records = [
+            (date(2030, 1, 13), "S10", 1, "10", False, 10.0),
+            (date(2030, 1, 14), "S11", 1, "10", False, 20.0),
+            (date(2030, 2, 12), "S10", 1, "11", False, 30.0),
+            (date(2030, 2, 13), "S11", 1, "11", False, 40.0),
+            (date(2030, 4, 13), "S10", 1, "1", False, 50.0),
+            (date(2030, 4, 14), "S11", 1, "1", False, 60.0),
+        ]
+
+        def raasi_for(jd):
+            if jd < 20.0:
+                return 9
+            if jd < 40.0:
+                return 10
+            if jd < 60.0:
+                return 12
+            return 1
+
+        with mock.patch("festival_rules.panchanga.raasi", side_effect=raasi_for):
+            self.assertEqual(
+                sankranti_raasi_by_date(records),
+                {
+                    date(2030, 1, 14): 10,
+                    date(2030, 2, 13): 12,
+                    date(2030, 4, 14): 1,
+                },
+            )
+            self.assertEqual(select_makara_sankranti_dates(records), [date(2030, 1, 14)])
+            self.assertEqual(select_mesha_sankranti_dates(records), [date(2030, 4, 14)])
+
+    def test_ignores_opening_raasi_without_prior_day(self):
+        records = [
+            (date(2030, 1, 14), "S11", 1, "10", False, 20.0),
+            (date(2030, 1, 15), "S12", 1, "10", False, 30.0),
+        ]
+        with mock.patch("festival_rules.panchanga.raasi", return_value=10):
+            self.assertEqual(sankranti_raasi_by_date(records), {})
 
 
 class ResolveEkadashiTests(unittest.TestCase):

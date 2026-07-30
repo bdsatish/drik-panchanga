@@ -394,17 +394,30 @@ def select_vaikuntha_ekadashi_dates(records):
     return selected
 
 
-def select_sankranti_dates(records, target_raasi):
-    """First civil sunrise after each transition into ``target_raasi``."""
-    selected = []
+def sankranti_raasi_by_date(records):
+    """Map civil date → rāśi (1–12) for each first sunrise into a new solar sign.
+
+    Uses the same rule as Mesha/Makara festival selectors: the civil day of the
+    first local sunrise at which the Sun is already in the new rāśi.
+    """
+    selected = {}
     previous_raasi = None
     for civil_date, _, _, _, _, sunrise_jd in sorted(records):
-        raasi = panchanga.raasi(sunrise_jd)
-        if raasi == target_raasi and previous_raasi != target_raasi:
-            if previous_raasi is not None:
-                selected.append(civil_date)
+        raasi = int(panchanga.raasi(sunrise_jd))
+        if previous_raasi is not None and raasi != previous_raasi:
+            selected[civil_date] = raasi
         previous_raasi = raasi
     return selected
+
+
+def select_sankranti_dates(records, target_raasi):
+    """First civil sunrise after each transition into ``target_raasi``."""
+    target = int(target_raasi)
+    return [
+        civil_date
+        for civil_date, raasi in sankranti_raasi_by_date(records).items()
+        if raasi == target
+    ]
 
 
 def select_mesha_sankranti_dates(records):

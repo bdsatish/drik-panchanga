@@ -112,15 +112,15 @@ covering 14 consecutive Gregorian months. Each day shows:
 * `T`: tithi number at local sunrise (01-15); blue ink is Sukla, dark ink in italics is Krsna
 * `N`: nakshatra number (01-27)
 * `Y`: yoga number (01-27)
-* the amanta lunar month at its first sunrise-visible tithi
+* the lunar month (amanta or purnimanta) at its first sunrise-visible tithi
 
-Calculations use Swiss Ephemeris. The default ayanamsa is True Citra; the web UI
-and CLI also offer True Revati, Krishnamurti, and Raman. Adhika months
-have a gold cell and Sundays have a red right edge. The teal underline marks
-Ekadashi upavasa (S11 / K11 in the ruleset) under the same sunrise rule as
-festivals.  The `T` column shows only 01-15; Sukla is upright bold and Krsna is
-bold italic, so black-and-white prints still distinguish them. A brown X in the
-lower-left corner marks days with a locally visible eclipse.  Numbered red
+Calculations use Swiss Ephemeris. Ayanamsa options include Citra-pakṣa,
+Revatī-pakṣa, Krishnamurti and Raman. Adhika months have a gold cell and Sundays
+have a red right edge. The teal underline marks Ekadashi upavasa under the same
+sunrise rule as festivals.  The `T` column shows only 01-15; Sukla is upright
+bold and Krsna is bold italic. Solar months are shown as a green T-cell on the
+lower-left; lunar months uses a peach T-cell. A brown X in the T-cell
+lower-right marks days with a locally visible eclipse.  Numbered red
 superscripts refer to the festival key below the calendar. The footer also lists
 locally visible partial, total, and annular eclipses for the printed Gregorian
 range, each with its local maximum time and that date's sunrise (`None` when
