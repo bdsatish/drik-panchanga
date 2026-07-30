@@ -100,7 +100,11 @@ class FormatEclipseLineTests(unittest.TestCase):
 
         maximum = julian_day_from_datetime(datetime(2026, 3, 3, 10, 0, tzinfo=ist))
         line = format_eclipse_line([("Lunar", "Partial", maximum)], "Asia/Kolkata")
-        self.assertEqual(line, "Eclipses: Lunar Mar 03 (Partial) max 10:00")
+        self.assertEqual(
+            line,
+            "Eclipses: Lunar Mar 03 (Partial) maximum phase at 10:00. "
+            "Eclipses have a brown X in the T-cell lower-right.",
+        )
         self.assertEqual(jd_to_local_civil_date(maximum, "Asia/Kolkata").isoformat(), "2026-03-03")
 
     def test_includes_sunrise_when_provided(self):
@@ -113,7 +117,11 @@ class FormatEclipseLineTests(unittest.TestCase):
         sunrise = julian_day_from_datetime(datetime(2026, 3, 3, 6, 45, tzinfo=ist))
         line = format_eclipse_line([("Lunar", "Partial", maximum)], "Asia/Kolkata",
                                    sunrise_by_date={date(2026, 3, 3): sunrise})
-        self.assertEqual(line, "Eclipses: Lunar Mar 03 (Partial) max 10:00, sunrise 06:45")
+        self.assertEqual(
+            line,
+            "Eclipses: Lunar Mar 03 (Partial) maximum phase at 10:00, sunrise 06:45. "
+            "Eclipses have a brown X in the T-cell lower-right.",
+        )
 
 
 class EclipseCivilDatesTests(unittest.TestCase):
