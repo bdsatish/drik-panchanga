@@ -39,16 +39,16 @@ class SunriseSetTests(PanchangaTestCase):
     """Sunrise, sunset, moonrise, moonset, vaara, karana."""
 
     def test_moonrise(self):
-        self.assertEqual(moonrise(date2, bangalore), [11, 32, 3])
+        self.assertEqual(moonrise(date2, bangalore), [11, 35, 6])
 
     def test_moonset(self):
-        self.assertEqual(moonset(date2, bangalore), [24, 8, 47])
+        self.assertEqual(moonset(date2, bangalore), [24, 14, 11])
 
     def test_sunrise(self):
-        self.assertEqual(sunrise(date2, bangalore)[1], [6, 49, 47])
+        self.assertEqual(sunrise(date2, bangalore)[1], [6, 49, 46])
 
     def test_sunset(self):
-        self.assertEqual(sunset(date2, bangalore)[1], [18, 10, 24])
+        self.assertEqual(sunset(date2, bangalore)[1], [18, 10, 25])
 
     def test_vaara(self):
         self.assertEqual(vaara(date2), 5)

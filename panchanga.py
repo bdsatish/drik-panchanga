@@ -65,9 +65,11 @@ Place = struct('Place', ['latitude', 'longitude', 'timezone'])
 
 sidereal_year = 365.256360417   # From WolframAlpha
 
-# Hindu sunrise/sunset is calculated w.r.t middle of the sun's disk
-# They are geometric, i.e. "true sunrise/set", so refraction is not considered
-_rise_flags = swe.BIT_DISC_CENTER + swe.BIT_NO_REFRACTION
+# Classical Hindu udaya/asta: geometric centre of the disc on the horizon,
+# ignoring atmospheric refraction (civil almanacs or online panchangs always
+# include refraction). Swiss Ephemeris packs that as
+# BIT_HINDU_RISING = DISC_CENTER | NO_REFRACTION | GEOCTR_NO_ECL_LAT
+_rise_flags = swe.BIT_HINDU_RISING
 
 # namah suryaya chandraya mangalaya ... rahuve ketuve namah
 swe.RAHU = swe.MEAN_NODE # Rahu = either MEAN_NODE or swe.TRUE_NODE
