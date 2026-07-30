@@ -178,7 +178,7 @@ class FestivalSelectionTests(unittest.TestCase):
         enabled = load_festival_selection(DEFAULT_FESTIVALS_PATH)
         self.assertEqual(enabled, frozenset(all_festival_names()) - {
             "Surya Shashthi / Chhath", "Gita Jayanti", "Vasavi Jayanti", "Vasavi Atmarpana",
-            "Karwa Chauth", "VSN Jayanti"
+            "Karwa Chauth", "VSN Jayanti", "Mesha Sankranti", "Makara Sankranti",
         })
 
     def test_disable_one_festival_uses_dense_markers(self):

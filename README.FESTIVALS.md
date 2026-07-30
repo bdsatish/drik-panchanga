@@ -18,10 +18,11 @@ catalog names in `festival_rules.py` exactly; every catalog name must appear
 with `yes`/`no` (also `true`/`false`, `1`/`0`, `on`/`off`). Unknown or missing
 names are rejected at load time.
 
-The shipped defaults are a regional compromise (for example Onam and Mesha
-Sankranti on; Karwa Chauth, Gita Jayanti, and Chhath off). Edit the cfg for your
-locality. The footer holds at most 30 enabled festivals (6 columns ﾗ 5 rows);
-enabling more fails loudly when drawing the page.
+The shipped defaults are a regional compromise (for example Onam on; Mesha and
+Makara Sankranti off because the PDF already marks all twelve saṅkrāntis;
+Karwa Chauth, Gita Jayanti, and Chhath off). Edit the cfg for your locality.
+The footer holds at most 30 enabled festivals (6 columns × 5 rows); enabling
+more fails loudly when drawing the page.
 
 Common sunrise rule (udaya-vyāpinī)
 -----------------------------------
@@ -72,9 +73,9 @@ These have dedicated selectors (dispatch by catalog name):
   `None`.
 * **Mesha Sankranti** / **Makara Sankranti** -- first civil sunrise after the
   Sun enters Mesha (raasi 1) or Makara (raasi 10) respectively. Both use the
-  shared sankranti helper. The PDF also paints all twelve saṅkrāntis the same
-  way (green T-cell, rāśi number 1–12 lower-left); only Mesha and Makara remain
-  named festival-key entries when enabled in ``festivals.cfg``.
+  shared sankranti helper. Default off in ``festivals.cfg`` because the PDF
+  already paints all twelve saṅkrāntis (green T-cell, rāśi number 1–12
+  lower-left); enable either name to also list it in the festival key.
 
 Location dependence
 -------------------
