@@ -15,7 +15,8 @@ from panchanga import (Date, Place, gregorian_to_jd, from_dms,
     nakshatra_end_point, yoga, karana, vaara, masa, varjyam, ascendant, navamsa,
     navamsa_from_long, planetary_positions, day_duration, gauri_chogadiya,
     trikalam, rahu_kalam, yamaganda_kalam, gulika_kalam, durmuhurtam,
-    abhijit_muhurta, elapsed_year, samvatsara, ritu, drik_ritu, raasi, lunar_phase,
+    abhijit_muhurta, elapsed_year, samvatsara, ritu, drik_ritu, drik_ritu_at, lunar_masa,
+    raasi, lunar_phase,
     new_moon, full_moon, local_time_to_jdut1, sweph_version,
     default_se_ephe_path, get_planet_name, to_dms, to_dms_prec, unwrap_angles,
     lon_relative_to_base, inverse_lagrange, bisection_search,
@@ -383,21 +384,100 @@ class HelperMathTests(PanchangaTestCase):
         self.assertEqual(ritu(2), 0)
         self.assertEqual(ritu(12), 5)
 
-    def test_drik_ritu(self):
-        # Vasanta = Phālguna, Chaitra
+    def test_lunar_masa_matches_amanta_masa(self):
+        jd = gregorian_to_jd(Date(2023, 7, 25))
+        ti, last_nm, masa_num, is_adhika = lunar_masa(jd, bangalore)
+        self.assertEqual(ti, tithi(jd, bangalore)[0])
+        self.assertEqual([masa_num, is_adhika], masa(jd, bangalore, True))
+        self.assertLess(last_nm, sunrise(jd, bangalore)[0])
+
+        # Optional tithi_number avoids recomputing tithi.
+        again = lunar_masa(jd, bangalore, tithi_number=ti)
+        self.assertEqual(again[2:], (masa_num, is_adhika))
+
+    def test_drik_ritu_ordinary_pairing(self):
+        """Away from adhika, Drik ṛtu follows Phālguna–Chaitra, … pairing."""
+        # 2022 has no NM-adhika; sample each pair.
+        cases = [
+            (Date(2022, 3, 10), 0),   # Phālguna/Chaitra → Vasanta
+            (Date(2022, 5, 10), 1),   # Vaiśākha/Jyeṣṭha → Grīṣma
+            (Date(2022, 7, 10), 2),   # Āṣāḍha/Śrāvaṇa → Varṣā
+            (Date(2022, 9, 10), 3),   # Bhādrapada/Āśvina → Śarad
+            (Date(2022, 11, 10), 4),  # Kārtika/Mārgaśīrṣa → Hemanta
+            (Date(2022, 1, 20), 5),   # Pauṣa/Māgha → Śiśira
+        ]
+        for civil, expect in cases:
+            jd = gregorian_to_jd(civil)
+            self.assertEqual(drik_ritu_at(jd, bangalore), expect, msg=str(civil))
+
+    def test_drik_ritu_immune_to_purnimanta_label(self):
+        """Ordinary kṛṣṇa: pūrṇimānta renames māsa, but Drik ṛtu stays put."""
+        feb10 = gregorian_to_jd(Date(2023, 2, 10))  # amānta Māgha-kṛṣṇa
+        self.assertEqual(masa(feb10, bangalore, True), [11, False])
+        self.assertEqual(masa(feb10, bangalore, False), [12, False])
+        # Śiśira = 10, 11 — not Vasanta from pūrṇimānta Phālguna.
+        self.assertEqual(drik_ritu_at(feb10, bangalore), 5)
+        self.assertEqual(ritu(masa(feb10, bangalore, True)[0]), 5)
+
+    def test_drik_ritu_splits_nija_when_adhika_is_pair_second(self):
+        """2023 Adhika Śrāvaṇa: first 15 nija tithis stay; next 15 → next ṛtu."""
+        jul25 = gregorian_to_jd(Date(2023, 7, 25))  # adhika, tithis 1–15
+        self.assertEqual(masa(jul25, bangalore, True), [5, True])
+        self.assertEqual(drik_ritu_at(jul25, bangalore), 2)
+
+        aug20 = gregorian_to_jd(Date(2023, 8, 20))  # nija, first 15
+        self.assertEqual(masa(aug20, bangalore, True), [5, False])
+        self.assertEqual(drik_ritu_at(aug20, bangalore), 2)
+
+        sep1 = gregorian_to_jd(Date(2023, 9, 1))  # nija, next 15
+        self.assertEqual(masa(sep1, bangalore, True), [5, False])
+        self.assertGreaterEqual(tithi(sep1, bangalore)[0], 16)
+        self.assertEqual(drik_ritu_at(sep1, bangalore), 3)
+
+    def test_drik_ritu_splits_adhika_when_adhika_is_pair_first(self):
+        """2012 Adhika Bhādrapada: first 15 adhika → prev; next 15 → current."""
+        aug20 = gregorian_to_jd(Date(2012, 8, 20))  # adhika, first 15
+        self.assertEqual(masa(aug20, bangalore, True), [6, True])
+        self.assertLessEqual(tithi(aug20, bangalore)[0], 15)
+        self.assertEqual(drik_ritu_at(aug20, bangalore), 2)
+
+        sep1 = gregorian_to_jd(Date(2012, 9, 1))  # adhika, next 15
+        self.assertEqual(masa(sep1, bangalore, True), [6, True])
+        self.assertGreaterEqual(tithi(sep1, bangalore)[0], 16)
+        self.assertEqual(drik_ritu_at(sep1, bangalore), 3)
+
+        sep17 = gregorian_to_jd(Date(2012, 9, 17))  # nija — stays
+        self.assertEqual(masa(sep17, bangalore, True), [6, False])
+        self.assertEqual(drik_ritu_at(sep17, bangalore), 3)
+
+        oct20 = gregorian_to_jd(Date(2012, 10, 20))
+        self.assertEqual(masa(oct20, bangalore, True), [7, False])
+        self.assertEqual(drik_ritu_at(oct20, bangalore), 3)
+        oct30 = gregorian_to_jd(Date(2012, 10, 30))
+        self.assertEqual(masa(oct30, bangalore, True), [7, False])
+        self.assertEqual(drik_ritu_at(oct30, bangalore), 3)
+
+    def test_drik_ritu_pure_from_masa_args(self):
+        """Pure form: same rules without jd/place."""
+        # Base pairs, including Phālguna wrap.
         self.assertEqual(drik_ritu(12), 0)
         self.assertEqual(drik_ritu(1), 0)
-        # Grīṣma … Śiśira
-        self.assertEqual(drik_ritu(2), 1)
-        self.assertEqual(drik_ritu(3), 1)
-        self.assertEqual(drik_ritu(4), 2)
-        self.assertEqual(drik_ritu(5), 2)
-        self.assertEqual(drik_ritu(6), 3)
-        self.assertEqual(drik_ritu(7), 3)
-        self.assertEqual(drik_ritu(8), 4)
-        self.assertEqual(drik_ritu(9), 4)
-        self.assertEqual(drik_ritu(10), 5)
         self.assertEqual(drik_ritu(11), 5)
+
+        # Adhika second of pair: entire adhika stays in current ṛtu.
+        self.assertEqual(drik_ritu(5, True, 10), 2)
+        self.assertEqual(drik_ritu(5, True, 20), 2)
+
+        # Nija after that adhika.
+        self.assertEqual(drik_ritu(5, False, 10, True), 2)  # first 15
+        self.assertEqual(drik_ritu(5, False, 20, True), 3)  # next 15
+        self.assertEqual(drik_ritu(5, False, 20, False), 2)  # ordinary: no shift
+
+        # Adhika first of pair.
+        self.assertEqual(drik_ritu(6, True, 10), 2)   # first 15 → prev
+        self.assertEqual(drik_ritu(6, True, 20), 3)   # next 15 → current
+        self.assertEqual(drik_ritu(12, True, 5), 5)   # Phālguna adhika first 15 → Śiśira
+        self.assertEqual(drik_ritu(12, True, 20), 0)  # next 15 → Vasanta
 
 
 class PathAndModeTests(PanchangaTestCase):

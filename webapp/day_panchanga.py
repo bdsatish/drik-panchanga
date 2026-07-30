@@ -152,9 +152,9 @@ def compute_day_panchanga(city: str, date_text: str, month_system: str | None = 
                           ayanamsa: str | None = "citra") -> dict:
     """Return named panchanga fields for ``city`` on ``date_text`` (DD/MM/YYYY).
 
-    ``month_system`` is ``amanta`` (default) or ``purnimanta``; it affects māsa,
-    ṛtu (Vedic and Drik pairings), samvatsara, and Kali/Śaka year counters
-    derived from the lunar month.
+    ``month_system`` is ``amanta`` (default) or ``purnimanta``; it affects the
+    displayed māsa name (and samvatsara / year counters derived from that name).
+    Vedic and Drik ṛtu always use the shared new-moon–bounded māsa identity.
 
     ``ayanamsa`` is ``citra`` (default), ``revati``, ``krishnamurti``, or ``raman``.
     """
@@ -190,9 +190,20 @@ def compute_day_panchanga(city: str, date_text: str, month_system: str | None = 
     nak = panchanga.nakshatra(jd, place)
     yog = panchanga.yoga(jd, place)
     kar = panchanga.karana(jd, place)
-    masa_num, is_adhika = panchanga.masa(jd, place, amanta=amanta)
-    rtu_num = panchanga.ritu(masa_num)
-    drik_rtu_num = panchanga.drik_ritu(masa_num)
+    ti_num, last_nm, lunar_num, is_adhika = panchanga.lunar_masa(
+        jd, place, tithi_number=ti[0])
+    # Display māsa follows amānta/pūrṇimānta; ṛtus use lunar_num only.
+    masa_num = lunar_num
+    if not amanta and not is_adhika and ti_num >= 16:
+        masa_num = masa_num % 12 + 1
+    rtu_num = panchanga.ritu(lunar_num)
+    prev_was_adhika = False
+    if not is_adhika:
+        prev_nm = panchanga.new_moon(last_nm - 1, 29, -1)
+        prev_was_adhika = (
+            panchanga.raasi(prev_nm) == panchanga.raasi(last_nm))
+    drik_rtu_num = panchanga.drik_ritu(
+        lunar_num, is_adhika, ti_num, prev_was_adhika)
     samvat_num = panchanga.samvatsara(jd, masa_num)
     vara_num = panchanga.vaara(jd)
     kali_year, saka_year = panchanga.elapsed_year(jd, masa_num)

@@ -517,6 +517,29 @@ def vaara(jd):
   """Weekday for given Julian day. 0 = Sunday, 1 = Monday,..., 6 = Saturday"""
   return int(ceil(jd + 1) % 7)
 
+def lunar_masa(jd, place, tithi_number=None):
+  """New-moon–bounded māsa at sunrise: (tithi, last_new_moon, masa_num, is_adhika).
+
+  ``masa_num`` is 1 = Chaitra … 12 = Phālguna from the solar rāśi of the
+  preceding new moon. Adhika when consecutive new moons share a rāśi.
+
+  This māsa identity (including adhika) is the same under amānta and
+  pūrṇimānta labeling; only the civil name of ordinary kṛṣṇa differs.
+  Optional ``tithi_number`` skips a second ``tithi()`` call.
+  """
+  ti = tithi(jd, place)[0] if tithi_number is None else tithi_number
+  critical = sunrise(jd, place)[0]
+  last_new_moon = new_moon(critical, ti, -1)
+  next_new_moon = new_moon(critical, ti, +1)
+  this_solar_month = raasi(last_new_moon)
+  next_solar_month = raasi(next_new_moon)
+  is_adhika = this_solar_month == next_solar_month
+  masa_num = this_solar_month + 1
+  if masa_num > 12:
+    masa_num = masa_num % 12
+  return ti, last_new_moon, int(masa_num), is_adhika
+
+
 def masa(jd, place, amanta = True):
   """Returns lunar month and if it is adhika or not.
      Set amanta = False for Purnimanta month.
@@ -532,19 +555,10 @@ def masa(jd, place, amanta = True):
      the next month (amānta Māgha-kṛṣṇa = pūrṇimānta Phālguna-kṛṣṇa).
 
   """
-  ti = tithi(jd, place)[0]
-  critical = sunrise(jd, place)[0]
-  last_new_moon = new_moon(critical, ti, -1)
-  next_new_moon = new_moon(critical, ti, +1)
-  this_solar_month = raasi(last_new_moon)
-  next_solar_month = raasi(next_new_moon)
-  is_leap_month = (this_solar_month == next_solar_month)
-  maasa = this_solar_month + 1
-  if maasa > 12:
-    maasa = maasa % 12
+  ti, _, maasa, is_leap_month = lunar_masa(jd, place)
 
   if not amanta and not is_leap_month and ti >= 16:
-    # Ordinary kṛṣṇa: next month. During adhika, keep the amānta adhika name.
+    # Ordinary kṛṣṇa: next month. During adhika, keep the shared adhika name.
     maasa = maasa % 12 + 1
 
   return [int(maasa), is_leap_month]
@@ -622,18 +636,54 @@ def ritu(masa_num):
   """0 = Vasanta,...,5 = Shishira
 
   Solar-month pairing: Chaitra–Vaiśākha, ..., Māgha–Phālguna
-  (masa 1–2, 3–4, …, 11–12).
+  (masa 1–2, 3–4, …, 11–12). Use ``lunar_masa`` numbers, not pūrṇimānta
+  kṛṣṇa relabeling, so the ṛtu is independent of month-system convention.
   """
   return (masa_num - 1) // 2
 
-def drik_ritu(masa_num):
-  """0 = Vasanta,...,5 = Shishira from lunar months (Drik / civil pairing).
+def drik_ritu(masa_num, is_adhika=False, tithi_num=1, prev_was_adhika=False):
+  """0 = Vasanta,...,5 = Shishira from lunar māsa numbers (Drik pairing).
 
-  Vasanta = Phālguna–Chaitra (12, 1), Grīṣma = Vaiśākha–Jyeṣṭha (2, 3),
-  Varṣā = Āṣāḍha–Śrāvaṇa (4, 5), Śarad = Bhādrapada–Āśvina (6, 7),
-  Hemanta = Kārtika–Mārgaśīrṣa (8, 9), Śiśira = Pauṣa–Māgha (10, 11).
+  Independent of amānta/pūrṇimānta naming. ``masa_num`` / ``is_adhika`` are
+  the shared new-moon–bounded identity (see ``lunar_masa``). ``tithi_num`` is
+  the tithi counted from the start of that māsa (1..30).
+
+  Normal pairs (~60 tithis):
+    Vasanta = 12, 1;  Grīṣma = 2, 3;  Varṣā = 4, 5;
+    Śarad = 6, 7;  Hemanta = 8, 9;  Śiśira = 10, 11.
+
+  With Adhika-X (always before Nija-X), rebalance to ~75 tithis per adjacent ṛtu:
+
+  * X first of its pair (even): first 15 tithis of adhika → previous ṛtu;
+    next 15 tithis of adhika → current ṛtu (nija and the following māsa stay).
+  * X second of its pair (odd): first 15 tithis of nija stay in current ṛtu;
+    next 15 tithis of nija → next ṛtu (all of adhika stays in current).
+
+  ``prev_was_adhika`` is True when the current māsa is Nija-X after Adhika-X.
   """
-  return (masa_num % 12) // 2
+  base = (masa_num % 12) // 2
+
+  if is_adhika:
+    # X even = first of pair: first 15 tithis → previous ṛtu.
+    if masa_num % 2 == 0 and tithi_num <= 15:
+      return (base - 1) % 6
+    return base
+
+  # Nija-X, X second of pair: next 15 tithis → next ṛtu.
+  if prev_was_adhika and masa_num % 2 == 1 and tithi_num >= 16:
+    return (base + 1) % 6
+
+  return base
+
+
+def drik_ritu_at(jd, place, tithi_number=None):
+  """Drik ṛtu at sunrise; see ``drik_ritu`` for the convention-free rules."""
+  ti, last_nm, masa_num, is_adhika = lunar_masa(jd, place, tithi_number)
+  prev_was_adhika = False
+  if not is_adhika:
+    prev_nm = new_moon(last_nm - 1, 29, -1)
+    prev_was_adhika = raasi(prev_nm) == raasi(last_nm)
+  return drik_ritu(masa_num, is_adhika, ti, prev_was_adhika)
 
 def day_duration(jd, place):
   srise = sunrise(jd, place)[0]  # julian day num
