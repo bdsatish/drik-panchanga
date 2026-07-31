@@ -39,7 +39,8 @@ RUN mkdir -p /app/ephe \
 ENV PORT=8080
 EXPOSE 8080
 
-# One worker: PDF generation is CPU-heavy; long timeout for calendar builds.
+# One worker: Swiss Ephemeris is process-global. Timeout stays generous for
+# cold starts and high-latitude edge cases even though a typical PDF is ~0.4s.
 # Entrypoint expands $PORT and disables gunicorn's control socket (fails on
 # read-only / missing $HOME layouts used by some hosts).
 ENTRYPOINT ["/docker-entrypoint.sh"]

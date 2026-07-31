@@ -120,7 +120,7 @@ def city_locations() -> dict:
     return locations
 
 
-def _numbered_iast_names(mapping: dict, *, width: int | None = None) -> list[str]:
+def _numbered_iast_names(mapping: dict, *, width=None) -> list[str]:
     items = sorted(mapping.items(), key=lambda item: int(item[0]))
     if width is None:
         return [f"{key} {name}" for key, name in items]
