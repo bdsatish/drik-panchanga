@@ -131,6 +131,7 @@ class PdfLayoutTests(unittest.TestCase):
         self.assertTrue(nakshatra_key_line().startswith("N:"))
         self.assertTrue(yoga_key_line().startswith("Y:"))
         self.assertIn("Vaiśākha", masa_key_line())
+        self.assertIn("amānta or pūrṇimānta", masa_key_line())
         self.assertIn("Meṣa", sankranti_key_line())
         self.assertIn("1 Meṣa", sankranti_key_line())
         self.assertIn("10 Makara", sankranti_key_line())

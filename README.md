@@ -28,9 +28,15 @@ Included in the CLI version (not yet in GUI):
 * Rahu Kala, Yamaganda Kala, Gulika Kala
 * Abhijit muhurta and Durmuhurtams
 
+Lunar months can be named in either reckoning:
 
-By default, the month type is Amavasyanta (new moon to new moon) which
-is most prominent type of calendar used in South India.
+* **Amānta** (amāvāsyānta) — new moon to new moon (common in much of South India)
+* **Pūrṇimānta** — full moon to full moon (common in much of North India)
+
+The PDF calendar and day Web UI expose both via `--month` / the month-system
+control. Festival *catalog* entries are still keyed by amānta month numbers
+(see [README.FESTIVALS.md](README.FESTIVALS.md)); only the printed māsa badge
+and day-API māsa label follow the selected system.
 
 NOTE:
 All timings are end timings. Timings displayed higher than 24:00 denote
@@ -112,21 +118,21 @@ covering 14 consecutive Gregorian months. Each day shows:
 * `T`: tithi number at local sunrise (01-15); blue ink is Sukla, dark ink in italics is Krsna
 * `N`: nakshatra number (01-27)
 * `Y`: yoga number (01-27)
-* the lunar month (amanta or purnimanta) at its first sunrise-visible tithi
+* lunar-month start: peach T-cell with an upper-left māsa badge (amānta or
+  pūrṇimānta, per `--month`)
+* solar-month start (saṅkrānti): green T-cell with rāśi number 1–12 lower-left
 
 Calculations use Swiss Ephemeris. Ayanamsa options include Citra-pakṣa,
 Revatī-pakṣa, Krishnamurti and Raman. Adhika months have a gold cell and Sundays
 have a red right edge. The teal underline marks Ekadashi upavasa under the same
-sunrise rule as festivals.  The `T` column shows only 01-15; Sukla is upright
-bold and Krsna is bold italic. Solar months are shown as a green T-cell on the
-lower-left; lunar months uses a peach T-cell. A brown X in the T-cell
-lower-right marks days with a locally visible eclipse.  Numbered red
-superscripts refer to the festival key below the calendar. The footer also lists
-locally visible partial, total, and annular eclipses for the printed Gregorian
-range, each with its local maximum time and that date's sunrise (`None` when
-none qualify). Ruleset and layout versions are printed at the top right and
-embedded in the PDF metadata so a generated calendar can be reproduced or
-compared after rule changes.
+sunrise rule as festivals. The `T` column shows only 01-15; Sukla is upright
+bold and Krsna is bold italic. A brown X in the T-cell lower-right marks days
+with a locally visible eclipse. Numbered red superscripts refer to the festival
+key below the calendar. The footer also lists locally visible partial, total,
+and annular eclipses for the printed month range, each with its local
+maximum time and that date's sunrise (`None` when none qualify). Ruleset and
+layout versions are printed at the top right and embedded in the PDF metadata
+so a generated calendar can be reproduced or compared after rule changes.
 
 ### Setup
 
@@ -156,10 +162,14 @@ SE_EPHE_PATH=/path/to/ephemeris/files ./setup_venv.sh
 source .venv/bin/activate
 ```
 
-Select a city and the first month of the 14-month range:
+Select a city and the first month of the 14-month range. Choose lunar-month
+reckoning with `--month amanta` (default) or `--month purnimanta`, and ayanamsa
+with `--ayanamsa citra` (default) (`revati`, `krishnamurti`, `raman`):
 
 ```
 python generate_panchanga_calendar.py --city Bengaluru --start 2026-06
+python generate_panchanga_calendar.py --city Bengaluru --start 2026-06 \
+  --month purnimanta --ayanamsa revati
 ```
 
 Cities are stored in `cities.json` as ``AsciiName, ISO``, e.g. `Bengaluru, IN`
@@ -177,13 +187,16 @@ python generate_panchanga_calendar.py --city "Ujjain,IN" --start 2026-03 \
 ### Festivals (how to)
 
 Which festivals appear in the PDF is controlled by `festivals.cfg` next to the
-generator. Every catalog name must be listed as `yes` or `no`. Override the
-path with `--festivals FILE.cfg` if needed. The shipped defaults are a regional
+generator. Every catalog name must be listed as `yes` or `no`. Override the path
+with `--festivals FILE.cfg` if needed. The shipped defaults are a regional
 compromise; edit the cfg to match your locality. At most 30 festivals can be
 enabled (the footer is a fixed 6×5 grid).
 
 Date-selection rules (sunrise, vriddhi/kshaya, non-tithi festivals, and so on)
-are documented in [README.FESTIVALS.md](README.FESTIVALS.md).
+are documented in [README.FESTIVALS.md](README.FESTIVALS.md). Festival dates
+themselves do not flip with `--month`: the catalog uses fixed amānta month
+numbers so a named observance stays on the same civil day in both display
+modes.
 
 #### Example: Ujjain, March 2026 through March 2027
 
@@ -221,8 +234,10 @@ Then open [http://127.0.0.1:8765/](http://127.0.0.1:8765/). Enter a city
 ambiguous ones need ``Name, ISO`` (e.g. `Sydney, AU`). Then either:
 
 * look up a single day’s panchanga with a `DD/MM/YYYY` date (negative years
-  allowed as proleptic Gregorian), or
-* pick the first month of the 14-month PDF calendar range and download the PDF.
+  allowed as proleptic Gregorian), choosing amānta or pūrṇimānta for the māsa
+  label and an ayanamsa, or
+* pick the first month of the 14-month PDF calendar range (same month-system
+  and ayanamsa controls) and download the PDF.
 
 Override the port with `--port 9000` or `PORT` / `PANCHANGA_PORT`.
 

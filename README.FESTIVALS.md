@@ -2,8 +2,10 @@ Festival dates and conventions
 ==============================
 
 How to choose which festivals appear on the PDF is in [README.md](README.md)
-(see **Festivals (how to)** and the Ujjain example).  This file documents how
-those dates are computed.
+(see **Festivals (how to)** and the Ujjain example). This file documents how
+those dates are computed. Lunar-month *display* may be amānta or pūrṇimānta;
+the festival catalog itself is keyed by amānta month numbers so civil dates
+stay stable across display modes.
 
 Festival and Ekadashi dates are resolved for the selected location in
 `festival_rules.py` (ruleset `Udaya-Vyapini-1.1`). The older multi-policy
@@ -38,10 +40,12 @@ Adhika (intercalary) masas are skipped for ordinary festivals. Ugadi is the
 exception: when both adhika and nija Chaitra `S1` occur, only the adhika date is
 marked.
 
-Most numbered festivals are plain amanta masa + tithi pairs under that rule (for
-example Rama Navami = Chaitra `S9`, Deepavali = Ashvina `K15`). Ekadashi
-underlines use the same rule for every `S11` and `K11`; they are not the
-*Dharma-sindhu* four-ghati Arunodaya / Mahadvadashi machinery.
+Most numbered festivals are plain lunar-masa + tithi pairs under that rule (for
+example Rama Navami = Chaitra `S9`, Deepavali = Ashvina `K15`). The catalog
+stores those masa numbers in the amānta convention so a festival’s civil date
+is stable whether the PDF/WebUI *displays* amānta or pūrṇimānta māsa names.
+Ekadashi underlines use the same sunrise rule for every `S11` and `K11`; they
+are not the *Dharma-sindhu* four-ghati Arunodaya / Mahadvadashi machinery.
 
 Non-tithi festivals
 -------------------
@@ -73,9 +77,9 @@ These have dedicated selectors (dispatch by catalog name):
   `None`.
 * **Mesha Sankranti** / **Makara Sankranti** -- first civil sunrise after the
   Sun enters Mesha (raasi 1) or Makara (raasi 10) respectively. Both use the
-  shared sankranti helper. Default off in ``festivals.cfg`` because the PDF
-  already paints all twelve saṅkrāntis (green T-cell, rāśi number 1–12
-  lower-left); enable either name to also list it in the festival key.
+  shared sankranti helper (same rule as the twelve solar-month markers on the
+  PDF). Default off in ``festivals.cfg`` because the grid already paints every
+  saṅkrānti; enable either name to also list it in the festival key.
 
 Location dependence
 -------------------

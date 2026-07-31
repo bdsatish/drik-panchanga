@@ -28,6 +28,7 @@ place = panchanga.Place(12.972, 77.594, +5.5)  # lat, lon, timezone hours
 jd = panchanga.gregorian_to_jd(panchanga.Date(2026, 1, 15))
 print(panchanga.tithi(jd, place))
 print(panchanga.nakshatra(jd, place))
+print(panchanga.masa(jd, place, amanta=True))   # or amanta=False for pūrṇimānta
 ```
 
 Full source, GUI, festival rules, and PDF calendar live in the

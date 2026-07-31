@@ -127,7 +127,8 @@ def masa_key_line() -> str:
     names = ", ".join(_numbered_iast_names(sanskrit_names()["masas"]))
     return (
         "Māsa: peach T-cell with upper-left badge marks its first visible tithi; "
-        f"gold fill denotes adhika. {names}. Festival dates use amānta rules."
+        f"gold fill denotes adhika. {names}. "
+        "Display māsa follows amānta or pūrṇimānta; festival dates internally use amānta rules."
     )
 
 
@@ -240,8 +241,9 @@ def parse_start_month(value):
 def parse_month_system(text):
     """Return ``True`` for amānta, ``False`` for pūrṇimānta.
 
-    Accepts ``amanta`` / ``purnimanta`` (default amānta). Also ``true``/``false``
-    and ``1``/``0`` for the amānta flag.
+    Accepts ``amanta`` / ``purnimanta``. Also ``true``/``false`` and ``1``/``0``
+    for the amānta flag. Both systems are first-class for display; omit or pass
+    ``amanta`` when unspecified.
     """
     value = (text or "amanta").strip().casefold()
     if value in {"amanta", "āmānta", "amaanta", "true", "1", "yes", "on"}:
@@ -891,7 +893,8 @@ def build_pdf(location, start_year, start_month, output_path, *, festivals_path=
     else:
         context_start = (start_year, start_month - 1)
     context_months = list(month_range(*context_start, count=MONTH_COUNT + 2))
-    # Display masa badges use the selected system; festival catalog stays amānta.
+    # Display māsa badges follow the selected system; festival catalog stays
+    # amānta-keyed so civil festival dates do not flip with --month.
     context_data = {
         (year, month): daily_values(year, month, location, amanta=amanta)
         for year, month in context_months
@@ -998,10 +1001,10 @@ def argument_parser():
     parser.add_argument("-o", "--output", type=Path, help="output PDF path (default: generated from city and range)")
     parser.add_argument(
         "--month", default="amanta", metavar="SYSTEM",
-        help="lunar month reckoning: amanta (default) or purnimanta")
+        help=("lunar month reckoning for display: amanta (default) or purnimanta "))
     parser.add_argument(
         "--ayanamsa", default="citra", metavar="NAME",
-        help=("ayanamsa: citra (default), revati, krishnamurti, or raman"))
+        help=("ayanamsa: citra (default), revati, krishnamurti or raman"))
     parser.add_argument(
         "--festivals", type=Path, default=DEFAULT_FESTIVALS_PATH,
         help=(f"INI file selecting which festivals to include "
