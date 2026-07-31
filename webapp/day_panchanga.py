@@ -156,7 +156,8 @@ def compute_day_panchanga(city: str, date_text: str, month_system: str | None = 
     displayed māsa name (and samvatsara / year counters derived from that name).
     Vedic and Drik ṛtu always use the shared new-moon–bounded māsa identity.
 
-    ``ayanamsa`` is ``citra`` (default), ``revati``, ``krishnamurti``, or ``raman``.
+    ``ayanamsa`` is a key from ``AYANAMSA_OPTIONS`` (default ``citra``):
+    citra, revati, rohini, pushya, mula, krishnamurti, or raman.
     """
     city = (city or "").strip()
     if not city:

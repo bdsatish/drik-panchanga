@@ -122,17 +122,18 @@ covering 14 consecutive Gregorian months. Each day shows:
   pūrṇimānta, per `--month`)
 * solar-month start (saṅkrānti): green T-cell with rāśi number 1–12 lower-left
 
-Calculations use Swiss Ephemeris. Ayanamsa options include Citra-pakṣa,
-Revatī-pakṣa, Krishnamurti and Raman. Adhika months have a gold cell and Sundays
-have a red right edge. The teal underline marks Ekadashi upavasa under the same
-sunrise rule as festivals. The `T` column shows only 01-15; Sukla is upright
-bold and Krsna is bold italic. A brown X in the T-cell lower-right marks days
-with a locally visible eclipse. Numbered red superscripts refer to the festival
-key below the calendar. The footer also lists locally visible partial, total,
-and annular eclipses for the printed month range, each with its local
-maximum time and that date's sunrise (`None` when none qualify). Ruleset and
-layout versions are printed at the top right and embedded in the PDF metadata
-so a generated calendar can be reproduced or compared after rule changes.
+Calculations use Swiss Ephemeris. Ayanamsa options include True Citra, True
+Revati, True Rohini, True Pushya, True Mula, Krishnamurti and Raman. Adhika months
+have a gold cell and Sundays have a red right edge. The teal underline marks
+Ekadashi upavasa under the same sunrise rule as festivals. The `T` column shows
+only 01-15; Sukla is upright bold and Krsna is bold italic. A brown X in the
+T-cell lower-right marks days with a locally visible eclipse. Numbered red
+superscripts refer to the festival key below the calendar. The footer also lists
+locally visible partial, total, and annular eclipses for the printed month range,
+each with its local maximum time and that date's sunrise (`None` when none
+qualify). Ruleset and layout versions are printed at the top right and embedded
+in the PDF metadata so a generated calendar can be reproduced or compared after
+rule changes.
 
 ### Setup
 
@@ -164,7 +165,8 @@ source .venv/bin/activate
 
 Select a city and the first month of the 14-month range. Choose lunar-month
 reckoning with `--month amanta` (default) or `--month purnimanta`, and ayanamsa
-with `--ayanamsa citra` (default) (`revati`, `krishnamurti`, `raman`):
+with `--ayanamsa citra` (default) (`revati`, `rohini`, `pushya`, `mula`,
+`krishnamurti`, `raman`):
 
 ```
 python generate_panchanga_calendar.py --city Bengaluru --start 2026-06

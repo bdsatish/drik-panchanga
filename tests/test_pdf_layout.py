@@ -88,6 +88,17 @@ class PdfLayoutTests(unittest.TestCase):
             ["--city", "Helsinki", "--start", "2026-03", "--ayanamsa", "revati"])
         self.assertEqual(arguments.ayanamsa, "revati")
 
+    def test_parse_ayanamsa_accepts_star_based_modes(self):
+        from generate_panchanga_calendar import parse_ayanamsa, ayanamsa_label
+        self.assertEqual(parse_ayanamsa("rohini"), "rohini")
+        self.assertEqual(parse_ayanamsa("rohini-paksha"), "rohini")
+        self.assertEqual(parse_ayanamsa("pushya"), "pushya")
+        self.assertEqual(parse_ayanamsa("true_mula"), "mula")
+        self.assertEqual(ayanamsa_label("mula"), "True Mula")
+        self.assertEqual(ayanamsa_label("rohini"), "True Rohini")
+        with self.assertRaisesRegex(ValueError, "Ayanamsa must be one of"):
+            parse_ayanamsa("lahiri")
+
     def test_purnimanta_header_is_embedded(self):
         with TemporaryDirectory() as directory:
             output = Path(directory) / "calendar.pdf"

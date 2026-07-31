@@ -261,21 +261,43 @@ def month_system_label(amanta):
 AYANAMSA_OPTIONS = {
     "citra": "True Citra",
     "revati": "True Revati",
+    "rohini": "True Rohini",
+    "pushya": "True Pushya",
+    "mula": "True Mula",
     "krishnamurti": "Krishnamurti",
     "raman": "Raman",
 }
 
 
 def parse_ayanamsa(text):
-    """Return ayanāṃśa key (``citra``, ``revati``, ``krishnamurti``, ``raman``)."""
+    """Return ayanāṃśa key from ``AYANAMSA_OPTIONS`` (default ``citra``)."""
     value = (text or "citra").strip().casefold().replace(" ", "_").replace("-", "_")
     aliases = {
         "citra": "citra",
+        "citra_paksha": "citra",
+        "citrapaksha": "citra",
+        "chitra_paksha": "citra",
+        "chitrapaksha": "citra",
         "true_citra": "citra",
         "truecitra": "citra",
         "revati": "revati",
+        "revati_paksha": "revati",
+        "revatipaksha": "revati",
         "true_revati": "revati",
         "truerevati": "revati",
+        "rohini": "rohini",
+        "true_rohini": "rohini",
+        "truerohini": "rohini",
+        "rohini_paksha": "rohini",
+        "rohinipaksha": "rohini",
+        "pushya": "pushya",
+        "pushya_paksha": "pushya",
+        "pushyapaksha": "pushya",
+        "true_pushya": "pushya",
+        "truepushya": "pushya",
+        "mula": "mula",
+        "true_mula": "mula",
+        "truemula": "mula",
         "krishnamurti": "krishnamurti",
         "kp": "krishnamurti",
         "raman": "raman",
@@ -1004,7 +1026,8 @@ def argument_parser():
         help=("lunar month reckoning for display: amanta (default) or purnimanta "))
     parser.add_argument(
         "--ayanamsa", default="citra", metavar="NAME",
-        help=("ayanamsa: citra (default), revati, krishnamurti or raman"))
+        help=("ayanamsa: citra (default), revati, rohini, pushya, mula, "
+              "krishnamurti or raman"))
     parser.add_argument(
         "--festivals", type=Path, default=DEFAULT_FESTIVALS_PATH,
         help=(f"INI file selecting which festivals to include "
