@@ -29,6 +29,7 @@ Use Swiss ephemeris to calculate tithi, nakshatra, etc.
 from __future__ import division
 from math import ceil
 from collections import namedtuple as struct
+from functools import lru_cache
 import os
 import sys
 import swisseph as swe
@@ -312,16 +313,29 @@ def nakshatra_pada_unequal_system(longitude):
   # nak is 1..27 and pada is 1..4
   return [nak, pada]
 
-def planet_longitude(jd, planet):
-  """Computes nirayana (sidereal) or sayana (tropical) longitude of given planet on jd"""
+# Memoized swe calls. Sizes comfortably exceed one 14-month PDF build (tens of
+# thousands of unique longitudes, a few hundred rises) while bounding memory
+# for long-running web servers that serve many distinct (city, date) queries.
+@lru_cache(maxsize=65536)
+def _planet_longitude_cached(ayanamsa, coord_flag, jd, planet):
+  """Nirayana/sayana longitude of ``planet`` at ``jd`` for one coordinate mode.
+
+  ``ayanamsa`` and ``coord_flag`` are part of the key so cached values stay
+  valid when ``set_chosen_ayanamsa`` / ``set_coordinate_mode`` are called.
+  """
   set_ayanamsa_mode()
-  longi = swe.calc_ut(jd, planet, flags = swe.FLG_SWIEPH | coordinate_flag)
+  longi = swe.calc_ut(jd, planet, flags = swe.FLG_SWIEPH | coord_flag)
   reset_ayanamsa_mode()
   return norm360(longi[0][0]) # degrees
+
+def planet_longitude(jd, planet):
+  """Computes nirayana (sidereal) or sayana (tropical) longitude of given planet on jd"""
+  return _planet_longitude_cached(chosen_ayanamsa, coordinate_flag, jd, planet)
 
 solar_longitude = lambda jd: planet_longitude(jd, swe.SUN)
 lunar_longitude = lambda jd: planet_longitude(jd, swe.MOON)
 
+@lru_cache(maxsize=4096)
 def sunrise(jd, place):
   """Sunrise when centre of disc is at horizon for given date and place"""
   lat, lon, tz = place
@@ -330,6 +344,7 @@ def sunrise(jd, place):
   # Convert to local time
   return [rise + tz/24., to_dms((rise - jd) * 24 + tz)]
 
+@lru_cache(maxsize=4096)
 def sunset(jd, place):
   """Sunset when centre of disc is at horizon for given date and place"""
   lat, lon, tz = place
@@ -343,6 +358,7 @@ def moonrise(jd, place):
   rise = moonrise_jd(jd, place)
   return to_dms((rise - jd) * 24)
 
+@lru_cache(maxsize=4096)
 def moonrise_jd(jd, place):
   """Local Julian day of the first moonrise after local midnight."""
   lat, lon, tz = place
@@ -540,7 +556,7 @@ def lunar_masa(jd, place, tithi_number=None):
   return ti, last_new_moon, int(masa_num), is_adhika
 
 
-def masa(jd, place, amanta = True):
+def masa(jd, place, amanta = True, tithi_number = None):
   """Returns lunar month and if it is adhika or not.
      Set amanta = False for Purnimanta month.
      1 = Chaitra, 2 = Vaisakha, ..., 12 = Phalguna
@@ -554,8 +570,9 @@ def masa(jd, place, amanta = True):
      adhika month name. Away from adhika, śukla matches amānta and kṛṣṇa takes
      the next month (amānta Māgha-kṛṣṇa = pūrṇimānta Phālguna-kṛṣṇa).
 
+     Optional ``tithi_number`` skips a second ``tithi()`` call.
   """
-  ti, _, maasa, is_leap_month = lunar_masa(jd, place)
+  ti, _, maasa, is_leap_month = lunar_masa(jd, place, tithi_number = tithi_number)
 
   if not amanta and not is_leap_month and ti >= 16:
     # Ordinary kṛṣṇa: next month. During adhika, keep the shared adhika name.
@@ -582,12 +599,20 @@ def new_moon(jd, tithi_, opt = -1):
   """
   if opt == -1:  start = jd - tithi_         # previous new moon
   if opt == +1:  start = jd + (30 - tithi_)  # next new moon
-  # Search within a span of (start +- 2) days
+  # Bucket by whole civil day: consecutive days re-derive nearly the same
+  # ``start`` while searching for the same event, and the interpolated event
+  # time is essentially independent of which day asks for it. Memoizing per
+  # bucket turns ~15 identical bisections per event into one.
+  return _new_moon_cached(round(start), opt)
+
+@lru_cache(maxsize=4096)
+def _new_moon_cached(day, opt):
+  # Search within a span of (day +- 2) days
   x = [ -2 + offset/4 for offset in range(17) ]
-  y = [lunar_phase(start + i) for i in x]
+  y = [lunar_phase(day + i) for i in x]
   y = unwrap_angles(y)
   y0 = inverse_lagrange(x, y, 360)
-  return start + y0
+  return day + y0
 
 # assumes "tithi" 1..30 are from new moon to new moon
 # so tithi = 15 is full moon day
@@ -604,19 +629,22 @@ def full_moon(jd, tithi_, opt = -1):
     start = jd - (tithi_ - 15) if tithi_ > 15 else jd - (tithi_ + 15)
   if opt == +1:   # next full moon (including today when tithi_ == 15)
     start = jd + (15 - tithi_) if tithi_ <= 15 else jd - tithi_ + 45
-  # Search within a span of (start +- 2) days
+  # Bucket by whole civil day for the same reason as new_moon().
+  return _full_moon_cached(round(start), opt)
+
+@lru_cache(maxsize=4096)
+def _full_moon_cached(day, opt):
+  # Search within a span of (day +- 2) days
   x = [ -2 + offset/4 for offset in range(17) ]
-  y = [lunar_phase(start + i) for i in x]
+  y = [lunar_phase(day + i) for i in x]
   y = unwrap_angles(y)
   y0 = inverse_lagrange(x, y, 180)
-  return start + y0
+  return day + y0
 
 def raasi(jd):
   """Zodiac of given jd. 1 = Mesha, ... 12 = Meena"""
-  s = solar_longitude(jd)
-  solar_nirayana = solar_longitude(jd)
   # 12 rasis occupy 360 degrees, so each one is 30 degrees
-  return ceil(solar_nirayana / 30.)
+  return ceil(solar_longitude(jd) / 30.)
 
 def lunar_phase(jd):
   solar_long = solar_longitude(jd)

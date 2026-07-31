@@ -592,7 +592,7 @@ def daily_values(year, month, location, *, amanta=True):
             tithi_number = panchanga.tithi(jd, place)[0]
             nakshatra_number = panchanga.nakshatra(jd, place)[0]
             yoga_number = panchanga.yoga(jd, place)[0]
-            masa_number, is_adhika = panchanga.masa(jd, place, amanta=amanta)
+            masa_number, is_adhika = panchanga.masa(jd, place, amanta=amanta, tithi_number=tithi_number)
         except RuntimeError:
             raise
         except Exception as error:
