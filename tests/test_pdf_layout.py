@@ -174,5 +174,25 @@ class TithiDisplayTests(unittest.TestCase):
         self.assertEqual(tithi_font(False), PDF_FONT_BOLD_ITALIC)
 
 
+class DailyValuesCacheHookTests(unittest.TestCase):
+    """``daily_values`` must forward sunrise tithi into ``masa``."""
+
+    def test_passes_tithi_number_to_masa(self):
+        import generate_panchanga_calendar as calendar_module
+        import panchanga
+
+        location = load_location("Bengaluru")
+        panchanga.set_chosen_ayanamsa("citra")
+        with mock.patch.object(
+                calendar_module.panchanga, "masa", return_value=[1, False]) as masa_mock:
+            calendar_module.daily_values(2026, 1, location, amanta=True)
+        self.assertTrue(masa_mock.called)
+        for _args, kwargs in masa_mock.call_args_list:
+            self.assertIn("tithi_number", kwargs)
+            self.assertIsInstance(kwargs["tithi_number"], int)
+            self.assertGreaterEqual(kwargs["tithi_number"], 1)
+            self.assertLessEqual(kwargs["tithi_number"], 30)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -107,6 +107,19 @@ def sanskrit_names() -> dict:
     return _load_json_with_comments(DEFAULT_NAMES_PATH)
 
 
+@lru_cache(maxsize=1)
+def city_locations() -> dict:
+    """Parsed ``cities.json``; cached so web/CLI requests do not re-read 1.3 MB."""
+    path = DEFAULT_CITIES_PATH
+    if not path.exists():
+        raise ValueError(f"Cities file does not exist: {path}")
+    with path.open(encoding="utf-8") as source:
+        locations = json.load(source)
+    if not isinstance(locations, dict):
+        raise ValueError("cities.json must contain an object keyed by city")
+    return locations
+
+
 def _numbered_iast_names(mapping: dict, *, width: int | None = None) -> list[str]:
     items = sorted(mapping.items(), key=lambda item: int(item[0]))
     if width is None:
@@ -462,14 +475,7 @@ def resolve_city_key(city: str, locations: dict) -> str:
 
 
 def load_location(city):
-    path = DEFAULT_CITIES_PATH
-    if not path.exists():
-        raise ValueError(f"Cities file does not exist: {path}")
-    with path.open(encoding="utf-8") as source:
-        locations = json.load(source)
-    if not isinstance(locations, dict):
-        raise ValueError("cities.json must contain an object keyed by city")
-
+    locations = city_locations()
     name = resolve_city_key(city, locations)
     return location_from_mapping(name, locations[name])
 

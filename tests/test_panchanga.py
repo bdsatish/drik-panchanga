@@ -22,7 +22,7 @@ from panchanga import (Date, Place, gregorian_to_jd, from_dms,
     lon_relative_to_base, inverse_lagrange, bisection_search,
     sidereal_saptarshi_nakshatra, saptarshi_nakshatra_traditional,
     set_nakshatra_system, set_chosen_ayanamsa, set_ayanamsa_mode,
-    set_coordinate_mode, reset_ayanamsa_mode)
+    set_coordinate_mode, reset_ayanamsa_mode, solar_longitude)
 
 
 bangalore = Place(12.972, 77.594, +5.5)
@@ -395,6 +395,16 @@ class HelperMathTests(PanchangaTestCase):
         again = lunar_masa(jd, bangalore, tithi_number=ti)
         self.assertEqual(again[2:], (masa_num, is_adhika))
 
+    def test_masa_with_tithi_number_matches_full_call(self):
+        jd = gregorian_to_jd(Date(2023, 7, 25))
+        ti = tithi(jd, bangalore)[0]
+        self.assertEqual(
+            masa(jd, bangalore, True),
+            masa(jd, bangalore, True, tithi_number=ti))
+        self.assertEqual(
+            masa(jd, bangalore, False),
+            masa(jd, bangalore, False, tithi_number=ti))
+
     def test_drik_ritu_ordinary_pairing(self):
         """Away from adhika, Drik ṛtu follows Phālguna–Chaitra, … pairing."""
         # 2022 has no NM-adhika; sample each pair.
@@ -574,6 +584,80 @@ class CalendarUtilityTests(PanchangaTestCase):
         set_nakshatra_system("unequal")
         self.addCleanup(set_nakshatra_system, "equal")
         self.assertAlmostEqual(nakshatra_end_point(1), 13 + 20 / 60)
+
+
+class EphemerisCacheTests(PanchangaTestCase):
+    """LRU memoization on longitudes, rise/set, and day-bucketed syzygies."""
+
+    def setUp(self):
+        super().setUp()
+        panchanga._planet_longitude_cached.cache_clear()
+        panchanga._new_moon_cached.cache_clear()
+        panchanga._full_moon_cached.cache_clear()
+        sunrise.cache_clear()
+        sunset.cache_clear()
+        moonrise_jd.cache_clear()
+
+    def test_planet_longitude_cache_is_ayanamsa_aware(self):
+        jd = gregorian_to_jd(Date(2023, 7, 25))
+        set_chosen_ayanamsa("citra")
+        citra = solar_longitude(jd)
+        set_chosen_ayanamsa("lahiri")
+        lahiri = solar_longitude(jd)
+        set_chosen_ayanamsa("citra")
+        self.assertNotEqual(citra, lahiri)
+        self.assertEqual(citra, solar_longitude(jd))
+
+    def test_sunrise_and_sunset_cache_hit_on_repeat(self):
+        first_rise = sunrise(date2, bangalore)
+        first_set = sunset(date2, bangalore)
+        rise_hits = sunrise.cache_info().hits
+        set_hits = sunset.cache_info().hits
+        self.assertEqual(sunrise(date2, bangalore), first_rise)
+        self.assertEqual(sunset(date2, bangalore), first_set)
+        self.assertEqual(sunrise.cache_info().hits, rise_hits + 1)
+        self.assertEqual(sunset.cache_info().hits, set_hits + 1)
+
+    def test_moonrise_jd_cache_hit_on_repeat(self):
+        first = moonrise_jd(date2, bangalore)
+        hits = moonrise_jd.cache_info().hits
+        self.assertEqual(moonrise_jd(date2, bangalore), first)
+        self.assertEqual(moonrise_jd.cache_info().hits, hits + 1)
+
+    def test_new_moon_day_bucket_shared_across_adjacent_days(self):
+        """Nearest-day search centres must collide within one synodic span."""
+        jd_a = gregorian_to_jd(Date(2026, 1, 10))
+        jd_b = gregorian_to_jd(Date(2026, 1, 11))
+        crit_a = sunrise(jd_a, bangalore)[0]
+        crit_b = sunrise(jd_b, bangalore)[0]
+        ti_a = tithi(jd_a, bangalore)[0]
+        ti_b = tithi(jd_b, bangalore)[0]
+        panchanga._new_moon_cached.cache_clear()
+        last_a = new_moon(crit_a, ti_a, -1)
+        next_a = new_moon(crit_a, ti_a, +1)
+        misses_after_first_day = panchanga._new_moon_cached.cache_info().misses
+        last_b = new_moon(crit_b, ti_b, -1)
+        next_b = new_moon(crit_b, ti_b, +1)
+        self.assertEqual(last_a, last_b)
+        self.assertEqual(next_a, next_b)
+        # Second civil day should reuse both day-buckets (prev + next).
+        self.assertEqual(panchanga._new_moon_cached.cache_info().misses, misses_after_first_day)
+        self.assertGreaterEqual(panchanga._new_moon_cached.cache_info().hits, 2)
+
+    def test_full_moon_day_bucket_shared_across_adjacent_days(self):
+        jd_a = gregorian_to_jd(Date(2026, 1, 10))
+        jd_b = gregorian_to_jd(Date(2026, 1, 11))
+        crit_a = sunrise(jd_a, bangalore)[0]
+        crit_b = sunrise(jd_b, bangalore)[0]
+        ti_a = tithi(jd_a, bangalore)[0]
+        ti_b = tithi(jd_b, bangalore)[0]
+        panchanga._full_moon_cached.cache_clear()
+        prev_a = full_moon(crit_a, ti_a, -1)
+        next_a = full_moon(crit_a, ti_a, +1)
+        misses = panchanga._full_moon_cached.cache_info().misses
+        self.assertEqual(prev_a, full_moon(crit_b, ti_b, -1))
+        self.assertEqual(next_a, full_moon(crit_b, ti_b, +1))
+        self.assertEqual(panchanga._full_moon_cached.cache_info().misses, misses)
 
 
 class MuhurtaTests(PanchangaTestCase):

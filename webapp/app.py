@@ -28,7 +28,8 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from generate_panchanga_calendar import (  # noqa: E402
-    DEFAULT_CITIES_PATH, DEFAULT_FESTIVALS_PATH, build_pdf, default_output_path, load_location, parse_start_month,
+    DEFAULT_FESTIVALS_PATH, build_pdf, city_locations, default_output_path,
+    load_location, parse_start_month,
 )
 from panchanga import sweph_version
 from webapp.day_panchanga import compute_day_panchanga  # noqa: E402
@@ -41,13 +42,9 @@ def inject_sweph_version():
     return {"sweph_version": sweph_version()}
 
 
-@lru_cache(maxsize=1)
 def city_records() -> dict:
-    with DEFAULT_CITIES_PATH.open(encoding="utf-8") as source:
-        data = json.load(source)
-    if not isinstance(data, dict):
-        raise RuntimeError("cities.json must contain an object keyed by city")
-    return data
+    # Same underlying parse as CLI ``load_location``; keep this name for search APIs.
+    return city_locations()
 
 
 @lru_cache(maxsize=1)
