@@ -652,24 +652,61 @@ def lunar_phase(jd):
   moon_phase = (lunar_long - solar_long) % 360
   return moon_phase
 
+def _barhaspatya_ss(kali):
+  """Sūrya-Siddhānta Bārhaspatya samvatsara index (Sewell Art. 59a).
+
+  Remainder mod 60 with Prabhava = 1; remainder 0 is Akṣaya (#60).
+  The integer term rises by 1 every 18000/211 ≈ 85.31 solar years (mean
+  kṣaya spacing); −108 is only a phase offset and does not change that rate.
+  """
+  return (kali + 27 + int((kali * 211 - 108) / 18000)) % 60
+
+# Modern mean Jupiter: excess Jovian-rāśi years per tropical solar year is
+# 12/P - 1 ≈ 0.011614 (P_♃ = 4332.589 d, year = 365.24219 d). SS encodes that
+# excess as 211/18000; the nearest integer match with the same −108 and /18000
+# scaffold is 209/18000 (kṣaya every 18000/209 ≈ 86.12 y vs SS ≈ 85.31 y).
+#
+# SS vs modern do not split permanently: the rates differ by 2/18000 per year, so
+# the integer terms usually match, then SS runs one name ahead for a while, then
+# they lock again. First differ at Kali 86 (~3015 BCE). Recent CE windows
+# (Kali from ~Apr 21; SS = modern + 1 while "DIFF"):
+#   …–1932 same | 1933–1980 DIFF | 1981–2017 same | 2018–2066 DIFF | 2067–… same
+def _barhaspatya_modern(kali):
+  """Bārhaspatya index with modern Jupiter rate (integer SS scaffold).
+
+  Same Sewell layout as ``_barhaspatya_ss`` (+27, −108, /18000, mod 60), but
+  replaces SS's 211 with 209 so mean kṣaya spacing matches observed P_♃.
+  """
+  return (kali + 27 + int((kali * 209 - 108) / 18000)) % 60
+
 def samvatsara(jd, maasa_num):
   kali = elapsed_year(jd, maasa_num)[0]
   # South Indian tradition (expunging of Kṣaya samvatsara ceased in Śaka 905).
   # See the function "get_Jovian_Year_name_south" in pancanga.pl
   if kali >= 4009:    kali = (kali - 14) % 60
-  samvat = (kali + 27 + int((kali * 211 - 108) / 18000)) % 60
-  return samvat
+  return _barhaspatya_ss(kali)
 
 def samvatsara_north(jd, maasa_num):
-  """North Indian samvatsara (Bṛhaspati year), indexed by the Vikrama era.
+  """North Indian Bārhaspatya samvatsara (Sūrya-Siddhānta, continued kṣaya).
 
-  The North Indian convention counts the 60-year cycle from the Vikrama
-  Samvat year: name = (vikrama + 10) % 60, Prabhava = index 1.
-  Calibrated against the Calendar Reform Committee anchors
-  (śaka 1876 = Plavaṅga North / Jaya South).
+  Applies Sewell Art. 59a / CRC Appendix 5-E to the full expired Kali year.
+  Unlike ``samvatsara`` (South), does not stop expunging after Śaka 905
+  (Kali 4009). Civil Vikrama from ``elapsed_year`` is unchanged and is not
+  used for the name index.
   """
-  vikrama = elapsed_year(jd, maasa_num)[2]
-  return (vikrama + 10) % 60
+  kali = elapsed_year(jd, maasa_num)[0]
+  return _barhaspatya_ss(kali)
+
+def samvatsara_north_modern(jd, maasa_num):
+  """North Bārhaspatya with modern Jupiter rate (continued kṣaya).
+
+  Like ``samvatsara_north``, but SS's 211 is replaced by 209 (nearest integer
+  to 18000×(12/P_♃ − 1) with the same −108 and /18000). Mean kṣaya spacing is
+  18000/209 ≈ 86.12 y rather than SS 18000/211 ≈ 85.31 y. Not the CRC/Sewell
+  civil standard.
+  """
+  kali = elapsed_year(jd, maasa_num)[0]
+  return _barhaspatya_modern(kali)
 
 def ritu(masa_num):
   """0 = Vasanta,...,5 = Shishira

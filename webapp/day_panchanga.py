@@ -206,7 +206,7 @@ def compute_day_panchanga(city: str, date_text: str, month_system: str | None = 
     drik_rtu_num = panchanga.drik_ritu(
         lunar_num, is_adhika, ti_num, prev_was_adhika)
     samvat_num = panchanga.samvatsara(jd, masa_num)
-    samvat_north_num = panchanga.samvatsara_north(jd, masa_num)
+    samvat_north_num = panchanga.samvatsara_north_modern(jd, masa_num)
     vara_num = panchanga.vaara(jd)
     kali_year, saka_year, vikrama_year = panchanga.elapsed_year(jd, masa_num)
     kali_day = int(panchanga.ahargana(jd))
