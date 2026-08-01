@@ -112,8 +112,10 @@ Third, click 'Compute'.  Now the fields like tithi, etc. are computed and shown 
 One-page calendar PDF
 ---------------------
 
-`generate_panchanga_calendar.py` creates a single-page A4 landscape calendar
-covering 14 consecutive Gregorian months. Each day shows:
+`generate_panchanga_calendar.py` creates a single-page A4 calendar for 14
+consecutive months. It is a compact yet comprehensive panchanga that lists both
+_sauramāna_ (solar) and _cāndramāna_ (lunar) elements: tithi, nakshatra, yoga,
+vaara, solar date, festivals and eclipses too! Each day shows:
 
 * `T`: tithi number at local sunrise (01-15); blue ink is Sukla, dark ink in italics is Krsna
 * `N`: nakshatra number (01-27)
@@ -124,18 +126,18 @@ covering 14 consecutive Gregorian months. Each day shows:
   following N-cells mark solar days 7, 14, 21, and 28, with the count resetting
   at each saṅkrānti
 
-Calculations use Swiss Ephemeris. Ayanamsa options include True Citra, True
-Revati, True Rohini, True Pushya, True Mula, Krishnamurti and Raman. Adhika months
-have a gold cell and Sundays have a red right edge. The teal underline marks
-Ekadashi upavasa under the same sunrise rule as festivals. The `T` column shows
-only 01-15; Sukla is upright bold and Krsna is bold italic. A brown X in the
-T-cell lower-right marks days with a locally visible eclipse. Numbered red
-superscripts refer to the festival key below the calendar. The footer also lists
-locally visible partial, total, and annular eclipses for the printed month range,
-each with its local maximum time and that date's sunrise (`None` when none
-qualify). Ruleset and layout versions are printed at the top right and embedded
-in the PDF metadata so a generated calendar can be reproduced or compared after
-rule changes.
+Calculations use Swiss Ephemeris. Ayanamsa options include Citra-paksha,
+Revati-paksha, Rohini-paksha, Pushya-paksha (PVRN Rao), Mula-paksha
+(Usha-Shashi), Krishnamurti (KP) and Raman. Adhika months have a gold cell and
+Sundays have a red right edge. The teal underline marks Ekadashi upavasa under
+the same sunrise rule as festivals. The `T` column shows only 01-15; Sukla is
+upright bold and Krsna is bold italic. A brown X in the T-cell lower-right marks
+days with a locally visible eclipse. Numbered red superscripts refer to the
+festival key below the calendar. The footer also lists locally visible partial,
+total, and annular eclipses for the printed month range, each with its local
+maximum time and that date's sunrise (`None` when none qualify). Ruleset and
+layout versions are printed at the top right and embedded in the PDF metadata so
+a generated calendar can be reproduced or compared after rule changes.
 
 ### Setup
 
@@ -147,48 +149,32 @@ environment and install `pyswisseph`, ReportLab, and their dependencies:
 source .venv/bin/activate
 ```
 
-Swiss Ephemeris needs the `.se1` data files. By default `setup_venv.sh`
-and `panchanga.py` use a per-user data directory:
+Swiss Ephemeris needs the `.se1` data files. By default:
 
 - Linux / macOS: `~/.local/share/swisseph` (or `$XDG_DATA_HOME/swisseph`)
 - Windows: `%LOCALAPPDATA%\swisseph`
 
-If that directory has no `.se1` files, setup asks before sparse-cloning
-~100 MB from
-[aloistr/swisseph](https://github.com/aloistr/swisseph/tree/master/ephe).
-Declining is fine — setup still finishes — but planetary calculations will
-fail or use the coarser Moshier fallback until the files are present. The
-venv exports `SE_EPHE_PATH` on activate. To use an existing copy:
+If that directory has no `.se1` files, setup makes an optional download (~100 MB
+from [aloistr/swisseph](https://github.com/aloistr/swisseph/tree/master/ephe)).
+The less-accurate Moshier fallback is used until the files are present. To use
+your own copy of ephemeris files:
 
 ```
 SE_EPHE_PATH=/path/to/ephemeris/files ./setup_venv.sh
 source .venv/bin/activate
 ```
 
-Select a city and the first month of the 14-month range. Choose lunar-month
-reckoning with `--month amanta` (default) or `--month purnimanta`, and ayanamsa
-with `--ayanamsa citra` (default) (`revati`, `rohini`, `pushya`, `mula`,
-`krishnamurti`, `raman`):
+Cities are stored in `cities.json` as ``AsciiName, CC`` (case-insensitive),
+e.g. `Bengaluru, IN` (2-letter ISO country code). Pass the country code when the
+city name alone is insufficient for disambiguation.
 
 ```
-python generate_panchanga_calendar.py --city Bengaluru --start 2026-06
-python generate_panchanga_calendar.py --city Bengaluru --start 2026-06 \
-  --month purnimanta --ayanamsa revati
+python generate_panchanga_calendar.py --city Ujjain --start 2026-06
+python generate_panchanga_calendar.py --city "Berlin,US" --start 2026-03 \
+       --month purnimanta --ayanamsa revati  --output berlin_not_germany.pdf
 ```
 
-Cities are stored in `cities.json` as ``AsciiName, ISO``, e.g. `Bengaluru, IN`
-(2-letter ISO country code). For ``--city``, a bare name is enough when it's
-unique. If several countries share the city name, pass the country code
-(`Sydney, AU` vs `Sydney, CA`). Matching is case-insensitive; the space after
-the comma is optional (`ujjain,in` works). Use `--output FILE.pdf` to choose the
-output path:
-
-```
-python generate_panchanga_calendar.py --city "Ujjain,IN" --start 2026-03 \
-  --output ujjain_panchanga_mar2026_apr2027.pdf
-```
-
-### Festivals (how to)
+### Festivals
 
 Which festivals appear in the PDF is controlled by `festivals.cfg` next to the
 generator. Every catalog name must be listed as `yes` or `no`. Override the path
@@ -221,13 +207,13 @@ To leave the virtual environment when finished, run:
 deactivate
 ```
 
-Web UI
-------
+Web UI (Offline and Online)
+---------------------------
 
-Publicly accessible: https://panchanga.up.railway.app/
+Online, publicly-hosted: https://panchanga.up.railway.app/
 
-All web code lives under `webapp/`. With the venv activated, from the
-repository root:
+For offline use, all web code lives under `webapp/`. With the venv activated,
+from the repository root:
 
 ```
 python -m webapp.app
