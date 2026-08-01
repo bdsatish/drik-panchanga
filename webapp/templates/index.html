@@ -562,6 +562,7 @@
         const riseSet = (rise, set) => `${rise} – ${set}`;
         const samvatLine = (
           `${escapeHtml(data.samvatsara)} ${escapeHtml(String(data.saka_year))}`
+          + `, Vikrama ${escapeHtml(String(data.vikrama_year))}`
           + `, Kali (elapsed) ${escapeHtml(String(data.kali_year))}`
         );
         const rows = [

@@ -207,7 +207,7 @@ def compute_day_panchanga(city: str, date_text: str, month_system: str | None = 
         lunar_num, is_adhika, ti_num, prev_was_adhika)
     samvat_num = panchanga.samvatsara(jd, masa_num)
     vara_num = panchanga.vaara(jd)
-    kali_year, saka_year = panchanga.elapsed_year(jd, masa_num)
+    kali_year, saka_year, vikrama_year = panchanga.elapsed_year(jd, masa_num)
     kali_day = int(panchanga.ahargana(jd))
     sunrise_jd_ut = sunrise[0] - place.timezone / 24.0
     panchanga.set_ayanamsa_mode()
@@ -250,6 +250,7 @@ def compute_day_panchanga(city: str, date_text: str, month_system: str | None = 
         "kali_day": kali_day,
         "saka_year": int(saka_year),
         "kali_year": int(kali_year),
+        "vikrama_year": int(vikrama_year),
         "sunrise": format_time(sunrise[1]),
         "sunset": format_time(sunset[1]),
         "moonrise": moonrise,

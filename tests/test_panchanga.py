@@ -541,9 +541,10 @@ class CalendarUtilityTests(PanchangaTestCase):
     """Elapsed year, samvatsara, moon phases, and local-time conversion."""
 
     def test_elapsed_year_and_samvatsara(self):
-        kali, saka = elapsed_year(date2, 10)
+        kali, saka, vikrama = elapsed_year(date2, 10)
         self.assertIsInstance(kali, int)
         self.assertEqual(saka, kali - 3179)
+        self.assertEqual(vikrama, saka + 135)
         self.assertGreater(kali, 5000)
         year_index = samvatsara(date2, 10)
         self.assertGreaterEqual(year_index, 0)

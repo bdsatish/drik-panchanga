@@ -42,7 +42,7 @@ import json, sys
 data = json.loads(sys.argv[1])
 for key in (
     "city", "date", "samvatsara", "ayana", "masa", "rtu", "vaara",
-    "kali_day", "saka_year", "kali_year",
+    "kali_day", "saka_year", "kali_year", "vikrama_year",
     "jd", "sunrise_jd", "ayanamsa_degrees",
     "sunrise", "sunset", "day_duration",
     "rahu_kala", "durmuhurta",

@@ -589,7 +589,7 @@ def elapsed_year(jd, maasa_num):
   kali = int((ahar + (4 - maasa_num) * 30) / sidereal_year)
   saka = kali - 3179
   vikrama = saka + 135
-  return kali, saka
+  return kali, saka, vikrama
 
 # New moon day: sun and moon have same longitude (0 degrees = 360 degrees difference)
 def new_moon(jd, tithi_, opt = -1):
