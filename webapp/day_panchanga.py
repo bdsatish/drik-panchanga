@@ -148,6 +148,13 @@ def ayana_label(raasi_num: int) -> str:
     return "Dakṣiṇāyana"
 
 
+def drik_ayana_label(ritu_num: int) -> str:
+    """Ayana from Drik ṛtu: Śiśira–Vasanta–Grīṣma = Uttara; Varṣā–Śarad–Hemanta = Dakṣiṇa."""
+    if ritu_num in (0, 1, 5):  # Vasanta, Grīṣma, Śiśira
+        return "Uttarāyaṇa"
+    return "Dakṣiṇāyana"
+
+
 def compute_day_panchanga(city: str, date_text: str, month_system: str | None = "amanta",
                           ayanamsa: str | None = "citra") -> dict:
     """Return named panchanga fields for ``city`` on ``date_text`` (DD/MM/YYYY).
@@ -205,6 +212,7 @@ def compute_day_panchanga(city: str, date_text: str, month_system: str | None = 
             panchanga.raasi(prev_nm) == panchanga.raasi(last_nm))
     drik_rtu_num = panchanga.drik_ritu(
         lunar_num, is_adhika, ti_num, prev_was_adhika)
+    drik_ayana = drik_ayana_label(drik_rtu_num)
     samvat_num = panchanga.samvatsara(jd, masa_num)
     samvat_north_num = panchanga.samvatsara_north_modern(jd, masa_num)
     vara_num = panchanga.vaara(jd)
@@ -243,6 +251,7 @@ def compute_day_panchanga(city: str, date_text: str, month_system: str | None = 
         "samvatsara": names["samvats"][str(samvat_num)],
         "samvatsara_north": names["samvats"][str(samvat_north_num)],
         "ayana": ayana,
+        "drik_ayana": drik_ayana,
         "masa": masa_label,
         "masa_number": masa_num,
         "is_adhika": bool(is_adhika),

@@ -41,6 +41,8 @@ class DayPanchangaMasaRituTests(unittest.TestCase):
         self.assertIn("Śrāvaṇa", amanta["masa"])
         self.assertEqual(amanta["drik_rtu"], purni["drik_rtu"])
         self.assertIn("Varṣā", amanta["drik_rtu"])
+        self.assertEqual(amanta["drik_ayana"], "Dakṣiṇāyana")
+        self.assertEqual(amanta["drik_ayana"], purni["drik_ayana"])
 
     def test_vedic_and_drik_rtu_both_present(self):
         data = compute_day_panchanga("Bengaluru", "21/04/2023")
@@ -49,3 +51,12 @@ class DayPanchangaMasaRituTests(unittest.TestCase):
         # Vaiśākha: Vedic Vasanta (1–2), Drik Grīṣma (2–3).
         self.assertIn("Vasanta", data["rtu"])
         self.assertIn("Grīṣma", data["drik_rtu"])
+        self.assertEqual(data["drik_ayana"], "Uttarāyaṇa")
+
+    def test_drik_ayana_from_ritu(self):
+        from webapp.day_panchanga import drik_ayana_label
+        # Śiśira, Vasanta, Grīṣma → Uttara; Varṣā, Śarad, Hemanta → Dakṣiṇa.
+        for ritu_num in (5, 0, 1):
+            self.assertEqual(drik_ayana_label(ritu_num), "Uttarāyaṇa")
+        for ritu_num in (2, 3, 4):
+            self.assertEqual(drik_ayana_label(ritu_num), "Dakṣiṇāyana")

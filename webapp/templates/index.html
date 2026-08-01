@@ -579,10 +579,13 @@
         );
         const rows = [
           ["Samvatsara", samvatLine],
-          ["Ayana", escapeHtml(data.ayana || "—")],
+          ["Ayana", (
+            `${escapeHtml(data.drik_ayana || "—")} (drik)`
+            + ` · ${escapeHtml(data.ayana || "—")} (siddhantic)`
+          )],
           ["Ṛtu", (
-            `Vedic ${escapeHtml(data.rtu || "—")}`
-            + ` · Drik ${escapeHtml(data.drik_rtu || "—")}`
+            `${escapeHtml(data.drik_rtu || "—")} (drik)`
+            + ` · ${escapeHtml(data.rtu || "—")} (siddhantic)`
           )],
           ["Māsa", escapeHtml(data.masa)],
           ["Tithi", segmentsHtml(data.tithi)],
