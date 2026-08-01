@@ -1,4 +1,3 @@
-import swisseph as swe
 from nakshatra_table import print_nakshatra_table
 
 candidates = [

@@ -1,6 +1,6 @@
 """Tests for Ekadashi resolution engines."""
 
-from datetime import date, timedelta
+from datetime import date
 import unittest
 from unittest.mock import patch
 

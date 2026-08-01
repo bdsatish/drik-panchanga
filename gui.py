@@ -28,7 +28,7 @@ import json
 import re
 
 from time import strptime
-from pytz import timezone, utc
+from pytz import timezone
 from datetime import datetime
 from panchanga import *
 import difflib

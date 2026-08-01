@@ -27,7 +27,6 @@ Calculates Vimshottari (=120) Dasha-bhukti-antara-sukshma-prana
 """
 
 from __future__ import division
-from math import ceil
 import swisseph as swe
 from collections import OrderedDict as Dict
 from panchanga import planet_longitude, sidereal_year, get_planet_name
