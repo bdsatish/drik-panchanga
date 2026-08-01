@@ -175,7 +175,7 @@ configure_se_ephe_path
 source "$VENV_DIR/bin/activate"
 
 python -m pip install --upgrade pip
-python -m pip install -r "$ROOT/requirements.txt"
+python -m pip install -r "$ROOT/requirements.txt" # --force-reinstall --no-cache-dir
 
 cat <<EOF
 

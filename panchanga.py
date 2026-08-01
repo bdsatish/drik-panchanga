@@ -654,11 +654,22 @@ def lunar_phase(jd):
 
 def samvatsara(jd, maasa_num):
   kali = elapsed_year(jd, maasa_num)[0]
-  # Change 14 to 0 for North Indian tradition
+  # South Indian tradition (expunging of Kṣaya samvatsara ceased in Śaka 905).
   # See the function "get_Jovian_Year_name_south" in pancanga.pl
   if kali >= 4009:    kali = (kali - 14) % 60
   samvat = (kali + 27 + int((kali * 211 - 108) / 18000)) % 60
   return samvat
+
+def samvatsara_north(jd, maasa_num):
+  """North Indian samvatsara (Bṛhaspati year), indexed by the Vikrama era.
+
+  The North Indian convention counts the 60-year cycle from the Vikrama
+  Samvat year: name = (vikrama + 10) % 60, Prabhava = index 1.
+  Calibrated against the Calendar Reform Committee anchors
+  (śaka 1876 = Plavaṅga North / Jaya South).
+  """
+  vikrama = elapsed_year(jd, maasa_num)[2]
+  return (vikrama + 10) % 60
 
 def ritu(masa_num):
   """0 = Vasanta,...,5 = Shishira

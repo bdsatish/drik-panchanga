@@ -15,7 +15,7 @@ from panchanga import (Date, Place, gregorian_to_jd, from_dms,
     nakshatra_end_point, yoga, karana, vaara, masa, varjyam, ascendant, navamsa,
     navamsa_from_long, planetary_positions, day_duration, gauri_chogadiya,
     trikalam, rahu_kalam, yamaganda_kalam, gulika_kalam, durmuhurtam,
-    abhijit_muhurta, elapsed_year, samvatsara, ritu, drik_ritu, drik_ritu_at, lunar_masa,
+    abhijit_muhurta, elapsed_year, samvatsara, samvatsara_north, ritu, drik_ritu, drik_ritu_at, lunar_masa,
     raasi, lunar_phase,
     new_moon, full_moon, local_time_to_jdut1, sweph_version,
     default_se_ephe_path, get_planet_name, to_dms, to_dms_prec, unwrap_angles,
@@ -549,6 +549,24 @@ class CalendarUtilityTests(PanchangaTestCase):
         year_index = samvatsara(date2, 10)
         self.assertGreaterEqual(year_index, 0)
         self.assertLess(year_index, 60)
+
+    def test_samvatsara_north_anchors(self):
+        # Calendar Reform Committee: śaka 1876 (1954-55) = North Plavaṅga,
+        # South Jaya. Online: Vikram 2083 (2026) = Siddhārthī (North),
+        # Parābhava (South). Indices follow the webapp's amānta māsa numbering.
+        for civil, month, south, north in (
+            (Date(1954, 4, 21), 4, 28, 41),   # Plavaṅga North / Jaya South
+            (Date(2026, 8, 1), 4, 40, 53),    # Siddhārthī North / Parābhava South
+        ):
+            jd = gregorian_to_jd(civil)
+            self.assertEqual(samvatsara(jd, month), south)
+            self.assertEqual(samvatsara_north(jd, month), north)
+
+        kali, saka, vikrama = elapsed_year(date2, 10)
+        self.assertEqual(samvatsara_north(date2, 10), (vikrama + 10) % 60)
+        self.assertGreaterEqual(samvatsara_north(date2, 10), 0)
+        self.assertLess(samvatsara_north(date2, 10), 60)
+        self.assertNotEqual(samvatsara(date2, 10), samvatsara_north(date2, 10))
 
     def test_raasi_and_lunar_phase(self):
         sign = raasi(date2)

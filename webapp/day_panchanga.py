@@ -206,6 +206,7 @@ def compute_day_panchanga(city: str, date_text: str, month_system: str | None = 
     drik_rtu_num = panchanga.drik_ritu(
         lunar_num, is_adhika, ti_num, prev_was_adhika)
     samvat_num = panchanga.samvatsara(jd, masa_num)
+    samvat_north_num = panchanga.samvatsara_north(jd, masa_num)
     vara_num = panchanga.vaara(jd)
     kali_year, saka_year, vikrama_year = panchanga.elapsed_year(jd, masa_num)
     kali_day = int(panchanga.ahargana(jd))
@@ -240,6 +241,7 @@ def compute_day_panchanga(city: str, date_text: str, month_system: str | None = 
         "month_system": "amanta" if amanta else "purnimanta",
         "month_system_label": month_label,
         "samvatsara": names["samvats"][str(samvat_num)],
+        "samvatsara_north": names["samvats"][str(samvat_north_num)],
         "ayana": ayana,
         "masa": masa_label,
         "masa_number": masa_num,
