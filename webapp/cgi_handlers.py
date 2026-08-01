@@ -21,7 +21,7 @@ from generate_panchanga_calendar import (  # noqa: E402
     DEFAULT_FESTIVALS_PATH, build_pdf, default_output_path, load_location, parse_start_month,
 )
 from webapp.app import (  # noqa: E402
-    city_names, safe_download_name, search_cities,
+    city_names, safe_download_name, search_cities, suggest_city_for_ip,
 )
 from webapp.day_panchanga import compute_day_panchanga  # noqa: E402
 
@@ -101,6 +101,16 @@ def handle_cities() -> None:
         city_names()  # fail fast if cities.json is missing
         write_json({"cities": search_cities(query, limit=limit)})
     except Exception as error:  # noqa: BLE001 — surface to the browser for CGI
+        write_error(str(error) or traceback.format_exc(), status="500 Internal Server Error", as_json=True)
+
+
+def handle_suggest_city() -> None:
+    """GET suggest_city.py → JSON ``{\"city\": ...}`` from client IP."""
+    try:
+        xff = os.environ.get("HTTP_X_FORWARDED_FOR", "")
+        ip = (xff.split(",")[0] if xff else os.environ.get("REMOTE_ADDR") or "").strip()
+        write_json({"city": suggest_city_for_ip(ip)})
+    except Exception as error:  # noqa: BLE001
         write_error(str(error) or traceback.format_exc(), status="500 Internal Server Error", as_json=True)
 
 

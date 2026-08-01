@@ -32,6 +32,17 @@ assert any(c.casefold() == "bengaluru, in" for c in cities), cities
 print("cities ok:", cities[:5])
 PY
 
+echo "smoke: GET /api/suggest-city"
+suggest_json="$(curl -fsS --max-time 10 "${BASE_URL}/api/suggest-city")"
+python3 - "${suggest_json}" <<'PY'
+import json, sys
+data = json.loads(sys.argv[1])
+assert "city" in data, data
+# Local / private client IP → null; public IP → catalog string or null on GeoIP fail.
+assert data["city"] is None or isinstance(data["city"], str), data
+print("suggest-city ok:", data["city"])
+PY
+
 echo "smoke: GET /api/panchanga"
 panchanga_json="$(curl -fsS --max-time 30 \
   --get "${BASE_URL}/api/panchanga" \

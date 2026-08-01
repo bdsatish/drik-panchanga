@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import io
+import ipaddress
 import json
 import re
 import shutil
@@ -11,6 +12,8 @@ import sys
 import tempfile
 from functools import lru_cache
 from pathlib import Path
+from urllib.parse import quote
+from urllib.request import urlopen
 
 from flask import (
     Flask,
@@ -80,6 +83,22 @@ def safe_download_name(path: Path) -> str:
     return cleaned or "panchanga.pdf"
 
 
+def suggest_city_for_ip(ip: str | None) -> str | None:
+    """Public IP → ip-api.com city → cities.json key, or None."""
+    try:
+        if not ip or not ipaddress.ip_address(ip.strip()).is_global:
+            return None
+        url = ("http://ip-api.com/json/" + quote(ip.strip())
+               + "?fields=status,city,countryCode")
+        with urlopen(url, timeout=1.5) as resp:
+            data = json.loads(resp.read().decode())
+        if data.get("status") != "success":
+            return None
+        return load_location(f"{data['city']}, {data['countryCode']}").name
+    except (ValueError, KeyError, TypeError, OSError, TimeoutError, json.JSONDecodeError):
+        return None
+
+
 @app.get("/")
 def index():
     return render_template("index.html")
@@ -93,6 +112,13 @@ def api_cities():
     except ValueError:
         limit = 20
     return jsonify({"cities": search_cities(query, limit=limit)})
+
+
+@app.get("/api/suggest-city")
+def api_suggest_city():
+    xff = request.headers.get("X-Forwarded-For", "")
+    ip = (xff.split(",")[0] if xff else request.remote_addr or "").strip()
+    return jsonify({"city": suggest_city_for_ip(ip)})
 
 
 @app.get("/api/panchanga")

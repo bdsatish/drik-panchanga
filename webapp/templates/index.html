@@ -450,6 +450,17 @@
         dateInput.value = `${d}/${m}/${now.getFullYear()}`;
       }
 
+      // IP → ip-api.com city → cities.json key; never overwrite a typed value.
+      if (!cityInput.value.trim()) {
+        fetch("/api/suggest-city")
+          .then((response) => (response.ok ? response.json() : null))
+          .then((data) => {
+            if (!data || !data.city || cityInput.value.trim()) return;
+            cityInput.value = data.city;
+          })
+          .catch(() => { /* leave City blank */ });
+      }
+
       let debounceTimer = null;
       let activeIndex = -1;
       let currentItems = [];
