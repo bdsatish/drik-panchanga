@@ -118,9 +118,11 @@ covering 14 consecutive Gregorian months. Each day shows:
 * `T`: tithi number at local sunrise (01-15); blue ink is Sukla, dark ink in italics is Krsna
 * `N`: nakshatra number (01-27)
 * `Y`: yoga number (01-27)
-* lunar-month start: peach T-cell with an upper-left māsa badge (amānta or
+* lunar-month start: green T-cell with an upper-left māsa badge (amānta or
   pūrṇimānta, per `--month`)
-* solar-month start (saṅkrānti): green T-cell with rāśi number 1–12 lower-left
+* solar-month start (saṅkrānti): peach N-cell with rāśi number 1–12 bottom-right;
+  following N-cells mark solar days 7, 14, 21, and 28, with the count resetting
+  at each saṅkrānti
 
 Calculations use Swiss Ephemeris. Ayanamsa options include True Citra, True
 Revati, True Rohini, True Pushya, True Mula, Krishnamurti and Raman. Adhika months

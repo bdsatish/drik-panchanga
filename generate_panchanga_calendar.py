@@ -40,7 +40,7 @@ FOOTER_KEY_FONT_MIN = 3.8
 FOOTER_KEY_LINE_HEIGHT = 6.5 # line spacing
 FOOTER_KEY_TOP = 44.0  # baseline of first muted key line below festivals
 RULESET_VERSION = "Udaya-Vyapini-1.1"
-LAYOUT_VERSION = "A4-1.12"
+LAYOUT_VERSION = "A4-1.13"
 PDF_AUTHOR = "Satish BD"
 PDF_AUTHOR_EMAIL = "bdsatish@gmail.com"
 PDF_COPYRIGHT = ("Copyright © Satish BD. Licensed under the GNU Affero GPL "
@@ -62,8 +62,8 @@ MONTH_HEADER_HEIGHT = 20
 COLUMN_HEADER_HEIGHT = 15
 ROW_HEIGHT = 13.7
 TITHI_COLUMN_RATIO = 0.44
-NAKSHATRA_COLUMN_RATIO = 0.28
-YOGA_COLUMN_RATIO = 0.28
+NAKSHATRA_COLUMN_RATIO = 0.30
+YOGA_COLUMN_RATIO = 0.26
 EKADASHI_UNDERLINE_RATIO = 0.55
 
 
@@ -86,10 +86,10 @@ SUNDAY_MARK = HexColor("#C94B40")
 MISSING_ROW = HexColor("#ECEFF3")
 ADHIKA_ROW = HexColor("#FFF0C7")
 ADHIKA_INK = HexColor("#875A00")
-MASA_START_ROW = HexColor("#FDE8D4")
-MASA_START_INK = HexColor("#9A4E12")
-SANKRANTI_ROW = HexColor("#E4F1E7")
-SANKRANTI_INK = HexColor("#356846")
+MASA_START_ROW = HexColor("#C7E8CF")
+MASA_START_INK = HexColor("#185C2A")
+SANKRANTI_ROW = HexColor("#FDE8D4")
+SANKRANTI_INK = HexColor("#9A4E12")
 FESTIVAL_INK = HexColor("#9A3154")
 EKADASHI_MARK = HexColor("#168078")
 ECLIPSE_MARK = HexColor("#8B4518")
@@ -139,7 +139,7 @@ def tithi_key_line() -> str:
 def masa_key_line() -> str:
     names = ", ".join(_numbered_iast_names(sanskrit_names()["masas"]))
     return (
-        "Māsa: peach T-cell with upper-left badge marks its first visible tithi; "
+        "Māsa: green T-cell with upper-left badge marks its first visible tithi; "
         f"gold fill denotes adhika. {names}. "
         "Display māsa follows amānta or pūrṇimānta; festival dates internally use amānta rules."
     )
@@ -152,8 +152,10 @@ def sankranti_key_line() -> str:
         f"{index} {zodiac[str(index - 1)].capitalize()}" for index in range(1, 13)
     )
     return (
-        "Saṅkrānti: green T-cell with lower-left rāśi number is the first "
-        f"sunrise in that solar sign. {names}."
+        "Saṅkrānti: peach N-cell bottom-right number is the new solar rāśi; "
+        "the rolling solar-day count resets at each saṅkrānti, with N-cell "
+        "markers at 7, 14, 21, and 28. "
+        f"{names}."
     )
 
 
@@ -526,7 +528,7 @@ def draw_eclipse_mark(pdf, x, row_y, tithi_column_width):
     """Small X in the T-cell's bottom-right corner for a locally visible eclipse."""
     pdf.setStrokeColor(ECLIPSE_MARK)
     pdf.setLineWidth(0.75)
-    inset = 1.5
+    inset = 1.0
     size = 3.4
     left = x + tithi_column_width - inset - size
     bottom = row_y + inset
@@ -534,11 +536,32 @@ def draw_eclipse_mark(pdf, x, row_y, tithi_column_width):
     pdf.line(left, bottom + size, left + size, bottom)
 
 
-def draw_sankranti_mark(pdf, x, row_y, raasi):
-    """Rāśi number 1–12 in the T-cell's bottom-left corner."""
+def draw_sankranti_mark(pdf, x, row_y, raasi, cell_width):
+    """Solar rāśi number in a cell's bottom-right corner."""
     pdf.setFillColor(SANKRANTI_INK)
     pdf.setFont(PDF_FONT_BOLD, 5.0)
-    pdf.drawString(x + 1.8, row_y + 1.4, str(int(raasi)))
+    pdf.drawRightString(x + cell_width - 1.0, row_y + 1.4, str(int(raasi)))
+
+
+def draw_solar_day_mark(pdf, x, row_y, solar_day, cell_width):
+    """Solar week-boundary day in a cell's bottom-right corner."""
+    pdf.setFillColor(MUTED)
+    pdf.setFont(PDF_FONT_BOLD, 4.6)
+    pdf.drawRightString(x + cell_width - 1.0, row_y + 1.4, str(int(solar_day)))
+
+
+def solar_dates_by_date(records):
+    """Map civil date → (solar rāśi, solar day, is-saṅkrānti)."""
+    result = {}
+    previous_raasi = None
+    solar_day = 0
+    for civil_date, _, _, _, _, sunrise_jd in sorted(records):
+        raasi = int(panchanga.raasi(sunrise_jd))
+        is_sankranti = previous_raasi is not None and raasi != previous_raasi
+        solar_day = 1 if is_sankranti else solar_day + 1
+        result[civil_date] = (raasi, solar_day, is_sankranti)
+        previous_raasi = raasi
+    return result
 
 
 def local_range_jds(start_year, start_month, end_year, end_month, timezone_name):
@@ -687,7 +710,7 @@ def draw_day_column(pdf, x, top, width):
 
 
 def draw_month(pdf, year, month, values, festivals_by_date, ekadashi_dates, eclipse_dates,
-               sankranti_by_date, x, top, width):
+               sankranti_by_date, solar_by_date, x, top, width):
     tithi_column_width = width * TITHI_COLUMN_RATIO
     nakshatra_column_width = width * NAKSHATRA_COLUMN_RATIO
     yoga_column_width = width * YOGA_COLUMN_RATIO
@@ -758,20 +781,21 @@ def draw_month(pdf, year, month, values, festivals_by_date, ekadashi_dates, ecli
         tithi_display, is_sukla = tithi_display_parts(tithi)
         civil_date = CivilDate(year, month, day)
         sankranti_raasi = sankranti_by_date.get(civil_date)
+        solar_info = solar_by_date.get(civil_date)
+        solar_day = solar_info[1] if solar_info is not None else None
         if is_masa_start:
             pdf.setFillColor(ADHIKA_ROW if is_adhika else MASA_START_ROW)
             pdf.rect(x, row_y, tithi_column_width, ROW_HEIGHT, stroke=0, fill=1)
             pdf.setFillColor(ADHIKA_INK if is_adhika else MASA_START_INK)
             pdf.setFont(PDF_FONT_BOLD, 5.2)
-            pdf.drawString(x + 2.4, row_y + 8.2, masa_badge.removeprefix("A"))
+            pdf.drawString(x + 1.0, row_y + 8.2, masa_badge.removeprefix("A"))
         if sankranti_raasi is not None:
-            # Saṅkrānti fill overrides māsa-start fill; redraw māsa badge after.
+            # Solar markers use the N-cell so the T-cell stays clear for lunar marks.
             pdf.setFillColor(SANKRANTI_ROW)
-            pdf.rect(x, row_y, tithi_column_width, ROW_HEIGHT, stroke=0, fill=1)
-            if is_masa_start:
-                pdf.setFillColor(ADHIKA_INK if is_adhika else MASA_START_INK)
-                pdf.setFont(PDF_FONT_BOLD, 5.2)
-                pdf.drawString(x + 2.4, row_y + 8.2, masa_badge.removeprefix("A"))
+            pdf.rect(
+                x + tithi_column_width, row_y,
+                nakshatra_column_width, ROW_HEIGHT,
+                stroke=0, fill=1)
         if is_sunday:
             pdf.setFillColor(SUNDAY_MARK)
             pdf.rect(x + width - 1.6, row_y, 1.6, ROW_HEIGHT, stroke=0, fill=1)
@@ -780,14 +804,23 @@ def draw_month(pdf, year, month, values, festivals_by_date, ekadashi_dates, ecli
             ekadashi_width = tithi_column_width * EKADASHI_UNDERLINE_RATIO
             pdf.rect(x + (tithi_column_width - ekadashi_width) / 2, row_y + 0.6, ekadashi_width, 1.2, stroke=0, fill=1)
         if sankranti_raasi is not None:
-            draw_sankranti_mark(pdf, x, row_y, sankranti_raasi)
+            draw_sankranti_mark(
+                pdf, x + tithi_column_width, row_y,
+                sankranti_raasi, nakshatra_column_width)
+        if solar_day is not None:
+            if sankranti_raasi is None and solar_day % 7 == 0:
+                draw_solar_day_mark(
+                    pdf, x + tithi_column_width, row_y,
+                    solar_day, nakshatra_column_width)
         if civil_date in eclipse_dates:
             draw_eclipse_mark(pdf, x, row_y, tithi_column_width)
         festival_numbers = festivals_by_date.get(civil_date, ())
         baseline = row_y + (3.0 if festival_numbers else 4.1)
         draw_centered(pdf, tithi_display, centers[0], baseline, tithi_font(is_sukla), 7.4,
                       tithi_ink(is_sukla, is_masa_start, is_adhika))
-        draw_centered(pdf, f"{nakshatra:02d}", centers[1], baseline, PDF_FONT, 7.3, INK)
+        pdf.setFont(PDF_FONT, 7.3)
+        pdf.setFillColor(INK)
+        pdf.drawString(x + tithi_column_width + 2.0, baseline, f"{nakshatra:02d}")
         draw_centered(pdf, f"{yoga:02d}", centers[2], baseline, PDF_FONT, 7.3, INK)
         if festival_numbers:
             pdf.setFillColor(FESTIVAL_INK)
@@ -796,7 +829,7 @@ def draw_month(pdf, year, month, values, festivals_by_date, ekadashi_dates, ecli
             marker_top = row_y + (8.8 if len(festival_numbers) <= 2 else 9.5)
             pdf.setFont(PDF_FONT_BOLD, marker_size)
             for marker_index, number in enumerate(festival_numbers):
-                pdf.drawRightString(x + tithi_column_width - 1.6, marker_top - marker_index * marker_spacing,
+                pdf.drawRightString(x + tithi_column_width - 1.0, marker_top - marker_index * marker_spacing,
                                     str(number))
 
     bottom = rows_top - 31 * ROW_HEIGHT
@@ -959,7 +992,9 @@ def build_pdf(location, start_year, start_month, output_path, *, festivals_path=
     # Saṅkrānti markers use the same sunrise-in-new-rāśi rule as Mesha/Makara
     # festivals; scan context months so a transition at the print-range start
     # is not missed.
-    sankranti_by_date = sankranti_raasi_by_date(collect_records(context_months, context_data))
+    solar_records = collect_records(context_months, context_data)
+    sankranti_by_date = sankranti_raasi_by_date(solar_records)
+    solar_by_date = solar_dates_by_date(solar_records)
     ekadashi_dates = {
         value
         for value in resolve_ekadashi_dates(context_months, festival_context_data)
@@ -994,7 +1029,7 @@ def build_pdf(location, start_year, start_month, output_path, *, festivals_path=
         x = margin + day_column_width + index * month_width
         draw_month(
             pdf, year, month, month_data[(year, month)], festivals_by_date, ekadashi_dates,
-            eclipse_dates, sankranti_by_date, x, top, month_width)
+            eclipse_dates, sankranti_by_date, solar_by_date, x, top, month_width)
 
     draw_page_footer(pdf, festival_entries, eclipse_line=eclipse_line)
     pdf.showPage()

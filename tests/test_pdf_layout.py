@@ -25,9 +25,14 @@ from generate_panchanga_calendar import (
     build_pdf,
     default_output_path,
     draw_page_footer,
+    draw_eclipse_mark,
+    draw_sankranti_mark,
+    draw_solar_day_mark,
     ensure_pdf_fonts,
     fitted_font_size,
     load_location,
+    sankranti_key_line,
+    solar_dates_by_date,
     tithi_display_parts,
     tithi_font,
     tithi_ink,
@@ -146,6 +151,8 @@ class PdfLayoutTests(unittest.TestCase):
         self.assertIn("Meṣa", sankranti_key_line())
         self.assertIn("1 Meṣa", sankranti_key_line())
         self.assertIn("10 Makara", sankranti_key_line())
+        self.assertIn("rolling solar-day count resets", sankranti_key_line())
+        self.assertIn("7, 14, 21, and 28", sankranti_key_line())
         self.assertIn("Aśvinī", nakshatra_key_line())
         self.assertIn("Viṣkumbha", yoga_key_line())
         self.assertEqual(PDF_FONT_TTC.name, "IndUni-H.ttc")
@@ -172,6 +179,51 @@ class TithiDisplayTests(unittest.TestCase):
         ensure_pdf_fonts()
         self.assertEqual(tithi_font(True), PDF_FONT_BOLD)
         self.assertEqual(tithi_font(False), PDF_FONT_BOLD_ITALIC)
+
+
+class SolarDateTests(unittest.TestCase):
+
+    def test_solar_day_resets_at_sankranti(self):
+        from datetime import date
+
+        records = [
+            (date(2026, 1, 13), "S1", 1, "10", False, 1.0),
+            (date(2026, 1, 14), "S2", 1, "10", False, 2.0),
+            (date(2026, 1, 15), "S3", 1, "10", False, 3.0),
+        ]
+        with mock.patch(
+            "generate_panchanga_calendar.panchanga.raasi",
+            side_effect=[10, 10, 11],
+        ):
+            self.assertEqual(
+                solar_dates_by_date(records),
+                {
+                    date(2026, 1, 13): (10, 1, False),
+                    date(2026, 1, 14): (10, 2, False),
+                    date(2026, 1, 15): (11, 1, True),
+                },
+            )
+
+
+class SolarMarkerTests(unittest.TestCase):
+
+    def test_solar_markers_are_right_aligned(self):
+        pdf = mock.Mock()
+        draw_sankranti_mark(pdf, 20.0, 100.0, 10, 30.0)
+        draw_solar_day_mark(pdf, 20.0, 100.0, 14, 30.0)
+        self.assertEqual(
+            pdf.drawRightString.call_args_list,
+            [
+                mock.call(49.0, 101.4, "10"),
+                mock.call(49.0, 101.4, "14"),
+            ],
+        )
+
+    def test_eclipse_marker_is_two_line_x(self):
+        pdf = mock.Mock()
+        draw_eclipse_mark(pdf, 20.0, 100.0, 30.0)
+        self.assertEqual(pdf.line.call_count, 2)
+        pdf.beginPath.assert_not_called()
 
 
 class DailyValuesCacheHookTests(unittest.TestCase):
