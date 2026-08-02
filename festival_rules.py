@@ -44,6 +44,7 @@ FESTIVAL_RULES = (
     ("Varamahalakshmi Vrata", None, None),
     ("Rig Upakarma", None, None),
     ("Yajur Upakarma", None, None),
+    ("Raksha Bandhan", 5, "S15"),
     ("Onam", None, None),
     ("Janmashtami", 5, "K8"),
     ("Swarna Gowri Vrata", 6, "S3"),
