@@ -875,12 +875,29 @@ def month_span_label(months):
             f"{calendar.month_name[end_month]} {end_year}")
 
 
+def calendar_year_label(year, month, values):
+    """Return era and samvatsara labels for a representative calendar month."""
+    representative = values[len(values) // 2]
+    day = representative[0]
+    masa_num = int(representative[4].lstrip("A"))
+    jd = panchanga.gregorian_to_jd(panchanga.Date(year, month, day))
+    kali_year, saka_year, vikrama_year = panchanga.elapsed_year(jd, masa_num)
+    names = sanskrit_names()["samvats"]
+    saka_name = names[str(panchanga.samvatsara(jd, masa_num))]
+    vikrama_name = names[str(panchanga.samvatsara_north_modern(jd, masa_num))]
+    return (f"{saka_year} {saka_name} | "
+            f"{vikrama_year} {vikrama_name} | "
+            f"{kali_year} Kali (elapsed)")
+
+
 def coordinate_label(value, positive, negative):
     direction = positive if value >= 0 else negative
     return f"{abs(value):.5f} {direction}"
 
 
-def draw_page_header(pdf, location, months, ruleset_version, *, amanta=True, ayanamsa="citra"):
+def draw_page_header(
+        pdf, location, months, ruleset_version, *, amanta=True, ayanamsa="citra",
+        calendar_years=None):
     page_width, page_height = landscape(A4)
     title = f"{location.name} Panchanga: {month_span_label(months)}"
     pdf.setFillColor(INK)
@@ -888,16 +905,24 @@ def draw_page_header(pdf, location, months, ruleset_version, *, amanta=True, aya
     pdf.setFont(PDF_FONT_BOLD, title_size)
     pdf.drawString(18, page_height - 20, title)
     pdf.setFillColor(MUTED)
-    pdf.setFont(PDF_FONT, 7.5)
+    subtitle_parts = ["At local sunrise"]
+    if calendar_years:
+        subtitle_parts.append(calendar_years)
     masa_label = "Amanta" if amanta else "Purnimanta"
     ayan_label = ayanamsa_label(ayanamsa)
-    pdf.drawString(
-        18, page_height - 31, "At local sunrise | "
-        f"{ayan_label} ayanamsa | Equal nakshatras | "
-        f"{masa_label} masa | "
+    subtitle_parts.extend((
+        f"{ayan_label} ayanamsa",
+        "Equal nakshatras",
+        f"{masa_label} masa",
         f"{coordinate_label(location.latitude, 'N', 'S')}, "
-        f"{coordinate_label(location.longitude, 'E', 'W')} | "
-        f"{location.timezone_name} civil time")
+        f"{coordinate_label(location.longitude, 'E', 'W')}",
+        f"{location.timezone_name} civil time",
+    ))
+    subtitle = " | ".join(subtitle_parts)
+    subtitle_size = fitted_font_size(
+        pdf, subtitle, PDF_FONT, 7.5, 5.0, page_width - 36, "page subtitle")
+    pdf.setFont(PDF_FONT, subtitle_size)
+    pdf.drawString(18, page_height - 31, subtitle)
     pdf.setFont(PDF_FONT, 4.7)
     pdf.drawRightString(page_width - 18, page_height - 19,
                         f"SwEph {sweph_version()} | Ruleset: {ruleset_version} | Layout: {LAYOUT_VERSION}")
@@ -1021,6 +1046,9 @@ def build_pdf(location, start_year, start_month, output_path, *, festivals_path=
         for value in resolve_ekadashi_dates(context_months, festival_context_data)
         if range_start <= value <= range_end
     }
+    header_year, header_month = months[len(months) // 2]
+    calendar_years = calendar_year_label(
+        header_year, header_month, month_data[(header_year, header_month)])
     mark_masa_starts(months, month_data)
 
     page_width, page_height = landscape(A4)
@@ -1037,7 +1065,8 @@ def build_pdf(location, start_year, start_month, output_path, *, festivals_path=
         ruleset_version=RULESET_VERSION, ayanamsa=ayanamsa_key)
 
     draw_page_header(
-        pdf, location, months, RULESET_VERSION, amanta=amanta, ayanamsa=ayanamsa_key)
+        pdf, location, months, RULESET_VERSION, amanta=amanta, ayanamsa=ayanamsa_key,
+        calendar_years=calendar_years)
 
     margin = 18
     day_column_width = 24

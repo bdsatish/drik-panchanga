@@ -23,6 +23,7 @@ from generate_panchanga_calendar import (
     RULESET_VERSION,
     argument_parser,
     build_pdf,
+    calendar_year_label,
     default_output_path,
     draw_page_footer,
     draw_eclipse_mark,
@@ -114,6 +115,12 @@ class PdfLayoutTests(unittest.TestCase):
         # Subject is uncompressed in the Info dict; page content streams are flate-encoded.
         self.assertIn(b"purnimanta masa", document)
         self.assertNotIn(b"and amanta masa", document)
+
+    def test_calendar_year_label_uses_both_samvatsara_conventions(self):
+        values = [(15, "S1", 1, 1, "A4", False, 0.0)]
+        self.assertEqual(
+            calendar_year_label(2026, 8, values),
+            "1948 Parābhava | 2083 Siddhārthī | 5127 Kali (elapsed)")
 
     def test_long_labels_are_fitted_without_overflow(self):
         ensure_pdf_fonts()
