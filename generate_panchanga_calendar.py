@@ -274,13 +274,13 @@ def month_system_label(amanta):
     return "Amānta" if amanta else "Pūrṇimānta"
 
 
-# Web/CLI ayanāṃśa choices → panchanga.set_chosen_ayanamsa() keys and labels.
+# Web/CLI ayanāṃśa choices → panchanga.set_chosen_ayanamsa() keys and display labels.
 AYANAMSA_OPTIONS = {
-    "citra": "True Citra",
-    "revati": "True Revati",
-    "rohini": "True Rohini",
-    "pushya": "True Pushya",
-    "mula": "True Mula",
+    "citra": "Chitra-paksha",
+    "revati": "Revati-paksha",
+    "rohini": "Rohini-paksha",
+    "pushya": "Pushya-paksha",
+    "mula": "Mula-paksha",
     "krishnamurti": "Krishnamurti",
     "raman": "Raman",
 }
@@ -892,6 +892,17 @@ def month_span_label(months):
             f"{calendar.month_name[end_month]} {end_year}")
 
 
+def kali_ahargana_range(months):
+    """Return Kali Ahargana values for the first and last printed civil dates."""
+    start_year, start_month = months[0]
+    end_year, end_month = months[-1]
+    start_jd = panchanga.gregorian_to_jd(panchanga.Date(start_year, start_month, 1))
+    end_day = calendar.monthrange(end_year, end_month)[1]
+    end_jd = panchanga.gregorian_to_jd(
+        panchanga.Date(end_year, end_month, end_day))
+    return int(panchanga.ahargana(start_jd)), int(panchanga.ahargana(end_jd))
+
+
 def calendar_year_label(year, month, values):
     """Return era and samvatsara labels for a representative calendar month."""
     representative = values[len(values) // 2]
@@ -914,7 +925,7 @@ def coordinate_label(value, positive, negative):
 
 def draw_page_header(
         pdf, location, months, ruleset_version, *, amanta=True, ayanamsa="citra",
-        calendar_years=None):
+        calendar_years=None, kali_ahargana=None):
     page_width, page_height = landscape(A4)
     title = f"{location.name} Panchanga: {month_span_label(months)}"
     pdf.setFillColor(INK)
@@ -929,12 +940,14 @@ def draw_page_header(
     ayan_label = ayanamsa_label(ayanamsa)
     subtitle_parts.extend((
         f"{ayan_label} ayanamsa",
-        "Equal nakshatras",
         f"{masa_label} masa",
         f"{coordinate_label(location.latitude, 'N', 'S')}, "
         f"{coordinate_label(location.longitude, 'E', 'W')}",
         f"{location.timezone_name} civil time",
     ))
+    if kali_ahargana is not None:
+        start_ahargana, end_ahargana = kali_ahargana
+        subtitle_parts.append(f"Kali Ahargana: {start_ahargana} - {end_ahargana}")
     subtitle = " | ".join(subtitle_parts)
     subtitle_size = fitted_font_size(
         pdf, subtitle, PDF_FONT, 7.5, 5.0, page_width - 36, "page subtitle")
@@ -1066,6 +1079,7 @@ def build_pdf(location, start_year, start_month, output_path, *, festivals_path=
     header_year, header_month = months[len(months) // 2]
     calendar_years = calendar_year_label(
         header_year, header_month, month_data[(header_year, header_month)])
+    kali_ahargana = kali_ahargana_range(months)
     mark_masa_starts(months, month_data)
 
     page_width, page_height = landscape(A4)
@@ -1083,7 +1097,7 @@ def build_pdf(location, start_year, start_month, output_path, *, festivals_path=
 
     draw_page_header(
         pdf, location, months, RULESET_VERSION, amanta=amanta, ayanamsa=ayanamsa_key,
-        calendar_years=calendar_years)
+        calendar_years=calendar_years, kali_ahargana=kali_ahargana)
 
     margin = 18
     day_column_width = 24

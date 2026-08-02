@@ -63,7 +63,7 @@ for key in (
 assert data["city"] == "Bengaluru, IN", data["city"]
 assert data["date"] == "15/01/2026", data["date"]
 assert data.get("month_system", "amanta") == "amanta", data.get("month_system")
-assert data.get("ayanamsa") == "True Citra", data.get("ayanamsa")
+assert data.get("ayanamsa") == "Chitra-paksha", data.get("ayanamsa")
 assert data.get("ayanamsa_key", "citra") == "citra", data.get("ayanamsa_key")
 assert isinstance(data["tithi"], list) and data["tithi"], data["tithi"]
 assert data["rahu_kala"].get("start") and data["rahu_kala"].get("end"), data["rahu_kala"]

@@ -126,7 +126,7 @@ vaara, solar date, festivals and eclipses too! Each day shows:
   following N-cells mark solar days 7, 14, 21, and 28, with the count resetting
   at each saṅkrānti
 
-Calculations use Swiss Ephemeris. Ayanamsa options include Citra-paksha,
+Calculations use Swiss Ephemeris. Ayanamsa options include Chitra-paksha,
 Revati-paksha, Rohini-paksha, Pushya-paksha (PVRN Rao), Mula-paksha
 (Usha-Shashi), Krishnamurti (KP) and Raman. Adhika months have a gold cell and
 Sundays have a red right edge. The teal underline marks Ekadashi upavasa under

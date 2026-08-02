@@ -28,13 +28,16 @@ from generate_panchanga_calendar import (
     calendar_year_label,
     default_output_path,
     draw_page_footer,
+    draw_page_header,
     draw_eclipse_mark,
     draw_sankranti_mark,
     draw_solar_day_mark,
     draw_tithi_underline,
     ensure_pdf_fonts,
     fitted_font_size,
+    kali_ahargana_range,
     load_location,
+    month_range,
     sankranti_key_line,
     solar_dates_by_date,
     tithi_display_parts,
@@ -103,8 +106,11 @@ class PdfLayoutTests(unittest.TestCase):
         self.assertEqual(parse_ayanamsa("rohini-paksha"), "rohini")
         self.assertEqual(parse_ayanamsa("pushya"), "pushya")
         self.assertEqual(parse_ayanamsa("true_mula"), "mula")
-        self.assertEqual(ayanamsa_label("mula"), "True Mula")
-        self.assertEqual(ayanamsa_label("rohini"), "True Rohini")
+        self.assertEqual(ayanamsa_label("citra"), "Chitra-paksha")
+        self.assertEqual(ayanamsa_label("revati"), "Revati-paksha")
+        self.assertEqual(ayanamsa_label("rohini"), "Rohini-paksha")
+        self.assertEqual(ayanamsa_label("pushya"), "Pushya-paksha")
+        self.assertEqual(ayanamsa_label("mula"), "Mula-paksha")
         with self.assertRaisesRegex(ValueError, "Ayanamsa must be one of"):
             parse_ayanamsa("lahiri")
 
@@ -124,6 +130,20 @@ class PdfLayoutTests(unittest.TestCase):
         self.assertEqual(
             calendar_year_label(2026, 8, values),
             "1948 Parābhava | 2083 Siddhārthī | 5127 Kali (elapsed)")
+
+    def test_pdf_subtitle_has_kali_ahargana_range(self):
+        months = list(month_range(2026, 6))
+        self.assertEqual(kali_ahargana_range(months), (1872727, 1873152))
+
+        pdf = mock.Mock()
+        with mock.patch("generate_panchanga_calendar.fitted_font_size", return_value=7.5):
+            draw_page_header(
+                pdf, load_location("Helsinki"), months, RULESET_VERSION,
+                kali_ahargana=kali_ahargana_range(months))
+
+        subtitle = pdf.drawString.call_args_list[1].args[2]
+        self.assertNotIn("Equal nakshatras", subtitle)
+        self.assertTrue(subtitle.endswith("Kali Ahargana: 1872727 - 1873152"))
 
     def test_long_labels_are_fitted_without_overflow(self):
         ensure_pdf_fonts()
