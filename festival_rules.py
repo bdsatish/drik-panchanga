@@ -39,6 +39,7 @@ FESTIVAL_RULES = (
     ("Akshaya Tritiya", 2, "S3"),
     ("Vasavi Jayanti", 2, "S10"),
     ("Narasimha Jayanti", 2, "S14"),
+    ("Vata Savitri Purnima", 3, "S15"),
     ("Guru Purnima", 4, "S15"),
     ("Naga Panchami", 5, "S5"),
     ("Varamahalakshmi Vrata", None, None),

@@ -148,7 +148,7 @@ def dates_for_marker(by_date, marker):
 class FestivalCatalogTests(unittest.TestCase):
 
     def test_catalog_is_seasonal_and_complete(self):
-        self.assertEqual(len(FESTIVAL_RULES), 39)
+        self.assertEqual(len(FESTIVAL_RULES), 40)
         self.assertEqual(FESTIVAL_RULES[0], ("Ugadi", 1, "S1"))
         self.assertEqual(FESTIVAL_RULES[-1], ("Kama Dahana (Holi)", 12, "S15"))
         self.assertIn(("Ananta Chaturdashi", 6, "S14"), FESTIVAL_RULES)
@@ -156,6 +156,7 @@ class FestivalCatalogTests(unittest.TestCase):
         self.assertIn(("Gita Jayanti", 9, "S11"), FESTIVAL_RULES)
         self.assertIn(("Hanuman Jayanti", 1, "S15"), FESTIVAL_RULES)
         self.assertIn(("Karwa Chauth", 7, "K4"), FESTIVAL_RULES)
+        self.assertIn(("Vata Savitri Purnima", 3, "S15"), FESTIVAL_RULES)
         self.assertIn(("Sama Upakarma", None, None), FESTIVAL_RULES)
         self.assertIn(("Raksha Bandhan", 5, "S15"), FESTIVAL_RULES)
         self.assertIn(("Rishi Panchami", 6, "S5"), FESTIVAL_RULES)
@@ -165,6 +166,10 @@ class FestivalCatalogTests(unittest.TestCase):
                          ("Hanuman Jayanti", 1, "S15"))
         self.assertEqual(FESTIVAL_RULES[FESTIVAL_RULES.index(("Hanuman Jayanti", 1, "S15")) + 1],
                          ("Mesha Sankranti", None, None))
+        self.assertEqual(FESTIVAL_RULES[FESTIVAL_RULES.index(("Narasimha Jayanti", 2, "S14")) + 1],
+                         ("Vata Savitri Purnima", 3, "S15"))
+        self.assertEqual(FESTIVAL_RULES[FESTIVAL_RULES.index(("Vata Savitri Purnima", 3, "S15")) + 1],
+                         ("Guru Purnima", 4, "S15"))
         self.assertEqual(FESTIVAL_RULES[FESTIVAL_RULES.index(("Yajur Upakarma", None, None)) + 1],
                          ("Raksha Bandhan", 5, "S15"))
         self.assertEqual(FESTIVAL_RULES[FESTIVAL_RULES.index(("Raksha Bandhan", 5, "S15")) + 1],
@@ -192,7 +197,7 @@ class FestivalSelectionTests(unittest.TestCase):
         self.assertEqual(enabled, frozenset(all_festival_names()) - {
             "Surya Shashthi / Chhath", "Gita Jayanti", "Vasavi Jayanti", "Vasavi Atmarpana",
             "Karwa Chauth", "VSN Jayanti", "Mesha Sankranti", "Makara Sankranti",
-            "Raksha Bandhan", "Sama Upakarma", "Rishi Panchami",
+            "Raksha Bandhan", "Sama Upakarma", "Rishi Panchami", "Vata Savitri Purnima",
         })
 
     def test_disable_one_festival_uses_dense_markers(self):
