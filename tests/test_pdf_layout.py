@@ -13,6 +13,7 @@ from generate_panchanga_calendar import (
     ACCENT,
     ADHIKA_INK,
     DEFAULT_FESTIVALS_PATH,
+    EKADASHI_MARK,
     FOOTER_FESTIVAL_SLOTS,
     KRSNA_INK,
     LAYOUT_VERSION,
@@ -21,6 +22,7 @@ from generate_panchanga_calendar import (
     PDF_FONT_BOLD_ITALIC,
     PDF_FONT_TTC,
     RULESET_VERSION,
+    SANKRANTI_INK,
     argument_parser,
     build_pdf,
     calendar_year_label,
@@ -29,6 +31,7 @@ from generate_panchanga_calendar import (
     draw_eclipse_mark,
     draw_sankranti_mark,
     draw_solar_day_mark,
+    draw_tithi_underline,
     ensure_pdf_fonts,
     fitted_font_size,
     load_location,
@@ -225,15 +228,44 @@ class SolarMarkerTests(unittest.TestCase):
                 mock.call(49.0, 108.2, "14"),
             ],
         )
+        self.assertEqual(
+            pdf.setFont.call_args_list,
+            [
+                mock.call(PDF_FONT_BOLD, 5.0),
+                mock.call(PDF_FONT_BOLD, 5.0),
+            ],
+        )
+        self.assertEqual(
+            pdf.setFillColor.call_args_list,
+            [
+                mock.call(SANKRANTI_INK),
+                mock.call(ACCENT),
+            ],
+        )
 
     def test_eclipse_marker_is_half_width_wave(self):
         pdf = mock.Mock()
         draw_eclipse_mark(pdf, 20.0, 100.0, 30.0)
         self.assertEqual(pdf.beginPath.call_count, 1)
+        pdf.beginPath.return_value.moveTo.assert_called_once_with(23.0, 101.7)
         self.assertEqual(pdf.beginPath.return_value.curveTo.call_count, 6)
+        self.assertAlmostEqual(
+            pdf.beginPath.return_value.curveTo.call_args.args[4], 38.0)
         pdf.drawPath.assert_called_once_with(
             pdf.beginPath.return_value, stroke=1, fill=0)
         pdf.line.assert_not_called()
+
+    def test_ekadashi_and_eclipse_underlines_share_geometry(self):
+        pdf = mock.Mock()
+        draw_tithi_underline(pdf, 20.0, 100.0, 30.0, EKADASHI_MARK)
+        pdf.rect.assert_called_once_with(
+            23.0, 100.6, 15.0, 1.2, stroke=0, fill=1)
+
+        pdf.reset_mock()
+        draw_eclipse_mark(pdf, 20.0, 100.0, 30.0)
+        pdf.beginPath.return_value.moveTo.assert_called_once_with(23.0, 101.7)
+        self.assertAlmostEqual(
+            pdf.beginPath.return_value.curveTo.call_args.args[4], 38.0)
 
 
 class DailyValuesCacheHookTests(unittest.TestCase):

@@ -64,7 +64,9 @@ ROW_HEIGHT = 13.7
 TITHI_COLUMN_RATIO = 0.34
 NAKSHATRA_COLUMN_RATIO = 0.34
 YOGA_COLUMN_RATIO = 0.32
-EKADASHI_UNDERLINE_RATIO = 0.50
+TITHI_UNDERLINE_RATIO = 0.50
+TITHI_UNDERLINE_LEFT_PADDING = 3.0
+EKADASHI_UNDERLINE_RATIO = TITHI_UNDERLINE_RATIO  # Backward-compatible alias.
 
 
 @dataclass(frozen=True)
@@ -524,15 +526,25 @@ def eclipse_civil_dates(eclipses, timezone_name):
     return {jd_to_local_civil_date(maximum_jd, timezone_name) for _kind, _phase, maximum_jd in eclipses}
 
 
-def draw_eclipse_mark(pdf, x, row_y, tithi_column_width):
-    """Half-width wavy underline below Tithi for a locally visible eclipse."""
-    pdf.setStrokeColor(ECLIPSE_MARK)
+def tithi_underline_bounds(x, tithi_column_width):
+    """Return the shared left edge and width for T-cell underlines."""
+    width = tithi_column_width * TITHI_UNDERLINE_RATIO
+    return x + TITHI_UNDERLINE_LEFT_PADDING, width
+
+
+def draw_tithi_underline(pdf, x, row_y, tithi_column_width, color, *, wavy=False):
+    """Draw a shared-geometry solid or wavy T-cell underline."""
+    left, underline_width = tithi_underline_bounds(x, tithi_column_width)
+    if not wavy:
+        pdf.setFillColor(color)
+        pdf.rect(left, row_y + 0.6, underline_width, 1.2, stroke=0, fill=1)
+        return
+
+    pdf.setStrokeColor(color)
     pdf.setLineWidth(0.65)
-    wave_width = tithi_column_width * 0.5
-    left = x + (tithi_column_width - wave_width) / 2
-    right = left + wave_width
+    right = left + underline_width
     baseline = row_y + 1.7
-    step = (right - left) / 6
+    step = underline_width / 6
     amplitude = 0.8
     path = pdf.beginPath()
     path.moveTo(left, baseline)
@@ -547,6 +559,12 @@ def draw_eclipse_mark(pdf, x, row_y, tithi_column_width):
     pdf.drawPath(path, stroke=1, fill=0)
 
 
+def draw_eclipse_mark(pdf, x, row_y, tithi_column_width):
+    """Half-width wavy underline below Tithi for a locally visible eclipse."""
+    draw_tithi_underline(
+        pdf, x, row_y, tithi_column_width, ECLIPSE_MARK, wavy=True)
+
+
 def draw_sankranti_mark(pdf, x, row_y, raasi, cell_width):
     """Solar rāśi number in a cell's top-right corner."""
     pdf.setFillColor(SANKRANTI_INK)
@@ -556,8 +574,8 @@ def draw_sankranti_mark(pdf, x, row_y, raasi, cell_width):
 
 def draw_solar_day_mark(pdf, x, row_y, solar_day, cell_width):
     """Solar week-boundary day in a cell's top-right corner."""
-    pdf.setFillColor(MUTED)
-    pdf.setFont(PDF_FONT_BOLD, 4.6)
+    pdf.setFillColor(ACCENT)
+    pdf.setFont(PDF_FONT_BOLD, 5.0)
     pdf.drawRightString(x + cell_width - 1.0, row_y + 8.2, str(int(solar_day)))
 
 
@@ -815,9 +833,8 @@ def draw_month(pdf, year, month, values, festivals_by_date, ekadashi_dates, ecli
             pdf.setFillColor(SUNDAY_MARK)
             pdf.rect(x + width - 1.6, row_y, 1.6, ROW_HEIGHT, stroke=0, fill=1)
         if civil_date in ekadashi_dates:
-            pdf.setFillColor(EKADASHI_MARK)
-            ekadashi_width = tithi_column_width * EKADASHI_UNDERLINE_RATIO
-            pdf.rect(x + 3.0, row_y + 0.6, ekadashi_width, 1.2, stroke=0, fill=1)
+            draw_tithi_underline(
+                pdf, x, row_y, tithi_column_width, EKADASHI_MARK)
         if sankranti_raasi is not None:
             draw_sankranti_mark(
                 pdf, x + tithi_column_width, row_y,
