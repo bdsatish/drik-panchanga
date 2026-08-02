@@ -148,7 +148,7 @@ def dates_for_marker(by_date, marker):
 class FestivalCatalogTests(unittest.TestCase):
 
     def test_catalog_is_seasonal_and_complete(self):
-        self.assertEqual(len(FESTIVAL_RULES), 38)
+        self.assertEqual(len(FESTIVAL_RULES), 39)
         self.assertEqual(FESTIVAL_RULES[0], ("Ugadi", 1, "S1"))
         self.assertEqual(FESTIVAL_RULES[-1], ("Kama Dahana (Holi)", 12, "S15"))
         self.assertIn(("Ananta Chaturdashi", 6, "S14"), FESTIVAL_RULES)
@@ -158,6 +158,7 @@ class FestivalCatalogTests(unittest.TestCase):
         self.assertIn(("Karwa Chauth", 7, "K4"), FESTIVAL_RULES)
         self.assertIn(("Sama Upakarma", None, None), FESTIVAL_RULES)
         self.assertIn(("Raksha Bandhan", 5, "S15"), FESTIVAL_RULES)
+        self.assertIn(("Rishi Panchami", 6, "S5"), FESTIVAL_RULES)
         self.assertIn(("Onam", None, None), FESTIVAL_RULES)
         self.assertIn(("Mesha Sankranti", None, None), FESTIVAL_RULES)
         self.assertEqual(FESTIVAL_RULES[FESTIVAL_RULES.index(("Rama Navami", 1, "S9")) + 1],
@@ -175,6 +176,8 @@ class FestivalCatalogTests(unittest.TestCase):
         self.assertEqual(FESTIVAL_RULES[FESTIVAL_RULES.index(("Surya Shashthi / Chhath", 8, "S6")) + 1],
                          ("Gita Jayanti", 9, "S11"))
         self.assertEqual(FESTIVAL_RULES[FESTIVAL_RULES.index(("Ganesha Chaturthi", 6, "S4")) + 1],
+                         ("Rishi Panchami", 6, "S5"))
+        self.assertEqual(FESTIVAL_RULES[FESTIVAL_RULES.index(("Rishi Panchami", 6, "S5")) + 1],
                          ("Ananta Chaturdashi", 6, "S14"))
         names = [name for name, _masa, _tithi in FESTIVAL_RULES]
         self.assertEqual(len(names), len(set(names)))
@@ -189,7 +192,7 @@ class FestivalSelectionTests(unittest.TestCase):
         self.assertEqual(enabled, frozenset(all_festival_names()) - {
             "Surya Shashthi / Chhath", "Gita Jayanti", "Vasavi Jayanti", "Vasavi Atmarpana",
             "Karwa Chauth", "VSN Jayanti", "Mesha Sankranti", "Makara Sankranti",
-            "Raksha Bandhan", "Sama Upakarma",
+            "Raksha Bandhan", "Sama Upakarma", "Rishi Panchami",
         })
 
     def test_disable_one_festival_uses_dense_markers(self):

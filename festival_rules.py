@@ -50,6 +50,7 @@ FESTIVAL_RULES = (
     ("Janmashtami", 5, "K8"),
     ("Swarna Gowri Vrata", 6, "S3"),
     ("Ganesha Chaturthi", 6, "S4"),
+    ("Rishi Panchami", 6, "S5"),
     ("Ananta Chaturdashi", 6, "S14"),
     ("Mahalaya Amavasya", 6, "K15"),
     ("Durga Ashtami", 7, "S8"),
