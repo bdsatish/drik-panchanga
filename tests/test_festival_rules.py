@@ -28,6 +28,7 @@ from festival_rules import (
     select_onam_dates,
     select_plain_tithi_dates,
     select_rig_upakarma_dates,
+    select_sama_upakarma_dates,
     select_vaikuntha_ekadashi_dates,
     select_varamahalakshmi_dates,
     select_yajur_upakarma_dates,
@@ -68,7 +69,10 @@ def festival_record(civil_date, tithi, masa="1", is_adhika=False, nakshatra=1, s
 
 
 def append_solar_coverage_rows(rows):
-    """Append synthetic rows for Onam, Vaikuntha, Makara, and Mesha coverage."""
+    """Append synthetic rows for Upakarma, solar, and Vaikuntha coverage."""
+    # Bhadrapada Hasta primary and Sravana Hasta eclipse fallback for Sama.
+    rows.append(day_row(len(rows) + 1, "K2", "5", nakshatra=13, sunrise_jd=600.0))
+    rows.append(day_row(len(rows) + 1, "K3", "6", nakshatra=13, sunrise_jd=650.0))
     # Sravana nakshatra while Sun is in Simha (jd 700 → raasi 5 in tests).
     # Neutral lunar masa/tithi so Rig/Bali/etc. do not also match this row.
     rows.append(day_row(len(rows) + 1, "K1", "3", nakshatra=22, sunrise_jd=700.0))
@@ -144,7 +148,7 @@ def dates_for_marker(by_date, marker):
 class FestivalCatalogTests(unittest.TestCase):
 
     def test_catalog_is_seasonal_and_complete(self):
-        self.assertEqual(len(FESTIVAL_RULES), 37)
+        self.assertEqual(len(FESTIVAL_RULES), 38)
         self.assertEqual(FESTIVAL_RULES[0], ("Ugadi", 1, "S1"))
         self.assertEqual(FESTIVAL_RULES[-1], ("Kama Dahana (Holi)", 12, "S15"))
         self.assertIn(("Ananta Chaturdashi", 6, "S14"), FESTIVAL_RULES)
@@ -152,6 +156,7 @@ class FestivalCatalogTests(unittest.TestCase):
         self.assertIn(("Gita Jayanti", 9, "S11"), FESTIVAL_RULES)
         self.assertIn(("Hanuman Jayanti", 1, "S15"), FESTIVAL_RULES)
         self.assertIn(("Karwa Chauth", 7, "K4"), FESTIVAL_RULES)
+        self.assertIn(("Sama Upakarma", None, None), FESTIVAL_RULES)
         self.assertIn(("Raksha Bandhan", 5, "S15"), FESTIVAL_RULES)
         self.assertIn(("Onam", None, None), FESTIVAL_RULES)
         self.assertIn(("Mesha Sankranti", None, None), FESTIVAL_RULES)
@@ -162,6 +167,8 @@ class FestivalCatalogTests(unittest.TestCase):
         self.assertEqual(FESTIVAL_RULES[FESTIVAL_RULES.index(("Yajur Upakarma", None, None)) + 1],
                          ("Raksha Bandhan", 5, "S15"))
         self.assertEqual(FESTIVAL_RULES[FESTIVAL_RULES.index(("Raksha Bandhan", 5, "S15")) + 1],
+                         ("Sama Upakarma", None, None))
+        self.assertEqual(FESTIVAL_RULES[FESTIVAL_RULES.index(("Sama Upakarma", None, None)) + 1],
                          ("Onam", None, None))
         self.assertEqual(FESTIVAL_RULES[FESTIVAL_RULES.index(("Vijayadashami", 7, "S10")) + 1],
                          ("Karwa Chauth", 7, "K4"))
@@ -172,7 +179,7 @@ class FestivalCatalogTests(unittest.TestCase):
         names = [name for name, _masa, _tithi in FESTIVAL_RULES]
         self.assertEqual(len(names), len(set(names)))
         self.assertEqual(all_festival_names(), tuple(names))
-        self.assertEqual(sum(1 for _name, masa, _tithi in FESTIVAL_RULES if masa is None), 7)
+        self.assertEqual(sum(1 for _name, masa, _tithi in FESTIVAL_RULES if masa is None), 8)
 
 
 class FestivalSelectionTests(unittest.TestCase):
@@ -182,7 +189,7 @@ class FestivalSelectionTests(unittest.TestCase):
         self.assertEqual(enabled, frozenset(all_festival_names()) - {
             "Surya Shashthi / Chhath", "Gita Jayanti", "Vasavi Jayanti", "Vasavi Atmarpana",
             "Karwa Chauth", "VSN Jayanti", "Mesha Sankranti", "Makara Sankranti",
-            "Raksha Bandhan",
+            "Raksha Bandhan", "Sama Upakarma",
         })
 
     def test_disable_one_festival_uses_dense_markers(self):
@@ -379,6 +386,8 @@ class ResolveFestivalsTests(unittest.TestCase):
         self.assertLess(by_name["Yajur Upakarma"][0], by_name["Onam"][0])
         self.assertLess(by_name["Yajur Upakarma"][0], by_name["Raksha Bandhan"][0])
         self.assertLess(by_name["Raksha Bandhan"][0], by_name["Onam"][0])
+        self.assertLess(by_name["Raksha Bandhan"][0], by_name["Sama Upakarma"][0])
+        self.assertLess(by_name["Sama Upakarma"][0], by_name["Onam"][0])
         self.assertLess(by_name["Onam"][0], by_name["Janmashtami"][0])
         self.assertLess(by_name["Vijayadashami"][0], by_name["Karwa Chauth"][0])
         self.assertLess(by_name["Vaikuntha Ekadashi"][0], by_name["Makara Sankranti"][0])
@@ -617,6 +626,49 @@ class RigUpakarmaTests(unittest.TestCase):
                         side_effect=lambda civil_date, geopos, timezone_name: civil_date == date(2030, 8, 10)):
             self.assertEqual(select_rig_upakarma_dates(records, geopos=geopos, timezone_name="Asia/Kolkata"),
                              [date(2030, 9, 8)])
+
+
+class SamaUpakarmaTests(unittest.TestCase):
+
+    def test_selects_bhadrapada_hasta(self):
+        records = [
+            (date(2030, 9, 8), "S12", 13, "6", False, 0.0),
+            (date(2030, 9, 9), "S13", 14, "6", False, 0.0),
+        ]
+        self.assertEqual(select_sama_upakarma_dates(records), [date(2030, 9, 8)])
+
+    def test_prefers_bhadrapada_hasta_over_sravana(self):
+        records = [
+            (date(2030, 8, 10), "S12", 13, "5", False, 0.0),
+            (date(2030, 9, 8), "S11", 13, "6", False, 0.0),
+        ]
+        self.assertEqual(select_sama_upakarma_dates(records), [date(2030, 9, 8)])
+
+    def test_eclipse_on_bhadrapada_hasta_postpones_to_sravana_hasta(self):
+        records = [
+            (date(2030, 8, 9), "S11", 12, "5", False, 10.0),
+            (date(2030, 8, 10), "S12", 13, "5", False, 11.0),
+            (date(2030, 8, 11), "S13", 14, "5", False, 12.0),
+            (date(2030, 9, 7), "S10", 12, "6", False, 40.0),
+            (date(2030, 9, 8), "S11", 13, "6", False, 41.0),
+            (date(2030, 9, 9), "S12", 14, "6", False, 42.0),
+        ]
+        geopos = (79.42, 13.65, 0.0)
+        with mock.patch(
+                "festival_rules.civil_day_has_eclipse",
+                side_effect=lambda civil_date, geopos, timezone_name: civil_date == date(2030, 9, 8)):
+            self.assertEqual(
+                select_sama_upakarma_dates(
+                    records, geopos=geopos, timezone_name="Asia/Kolkata"),
+                [date(2030, 8, 10)])
+
+    def test_dispatcher_routes_by_name(self):
+        records = [
+            (date(2030, 9, 8), "S12", 13, "6", False, 0.0),
+        ]
+        self.assertEqual(
+            select_non_tithi_dates(records, "Sama Upakarma"),
+            [date(2030, 9, 8)])
 
 
 class OnamTests(unittest.TestCase):

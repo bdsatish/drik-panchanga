@@ -45,6 +45,7 @@ FESTIVAL_RULES = (
     ("Rig Upakarma", None, None),
     ("Yajur Upakarma", None, None),
     ("Raksha Bandhan", 5, "S15"),
+    ("Sama Upakarma", None, None),
     ("Onam", None, None),
     ("Janmashtami", 5, "K8"),
     ("Swarna Gowri Vrata", 6, "S3"),
@@ -77,6 +78,7 @@ CIVIL_DATE, TITHI, NAKSHATRA, MASA, IS_ADHIKA, SUNRISE_JD = range(6)
 
 _TRUTHY = frozenset({"yes", "true", "1", "on"})
 _FALSY = frozenset({"no", "false", "0", "off"})
+HASTA_NAKSHATRA = 13
 SRAVANA_NAKSHATRA = 22
 
 
@@ -358,6 +360,19 @@ def select_rig_upakarma_dates(records, geopos=None, timezone_name=None):
     return postpone_upakarma_if_eclipse(primary, fallback, geopos, timezone_name)
 
 
+def select_sama_upakarma_dates(records, geopos=None, timezone_name=None):
+    """Nija Bhadrapada Hasta, postponed to Sravana Hasta on kshaya / local lunar eclipse."""
+    primary = resolve_vriddhi_dates([
+        civil_date for civil_date, _, nakshatra, day_masa, is_adhika, _ in records
+        if day_masa == "6" and not is_adhika and nakshatra == HASTA_NAKSHATRA
+    ])
+    fallback = resolve_vriddhi_dates([
+        civil_date for civil_date, _, nakshatra, day_masa, is_adhika, _ in records
+        if day_masa == "5" and not is_adhika and nakshatra == HASTA_NAKSHATRA
+    ])
+    return postpone_upakarma_if_eclipse(primary, fallback, geopos, timezone_name)
+
+
 def select_onam_dates(records):
     """Sravana-nakshatra sunrise in Simha; if none, try Kanya. Vriddhi keeps former.
 
@@ -437,6 +452,8 @@ def select_non_tithi_dates(records, name, geopos=None, timezone_name=None):
         return select_varamahalakshmi_dates(records)
     if name == "Rig Upakarma":
         return select_rig_upakarma_dates(records, geopos=geopos, timezone_name=timezone_name)
+    if name == "Sama Upakarma":
+        return select_sama_upakarma_dates(records, geopos=geopos, timezone_name=timezone_name)
     if name == "Yajur Upakarma":
         return select_yajur_upakarma_dates(records, geopos=geopos, timezone_name=timezone_name)
     if name == "Onam":
