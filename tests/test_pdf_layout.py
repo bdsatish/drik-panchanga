@@ -214,16 +214,19 @@ class SolarMarkerTests(unittest.TestCase):
         self.assertEqual(
             pdf.drawRightString.call_args_list,
             [
-                mock.call(49.0, 101.4, "10"),
-                mock.call(49.0, 101.4, "14"),
+                mock.call(49.0, 108.2, "10"),
+                mock.call(49.0, 108.2, "14"),
             ],
         )
 
-    def test_eclipse_marker_is_two_line_x(self):
+    def test_eclipse_marker_is_half_width_wave(self):
         pdf = mock.Mock()
         draw_eclipse_mark(pdf, 20.0, 100.0, 30.0)
-        self.assertEqual(pdf.line.call_count, 2)
-        pdf.beginPath.assert_not_called()
+        self.assertEqual(pdf.beginPath.call_count, 1)
+        self.assertEqual(pdf.beginPath.return_value.curveTo.call_count, 6)
+        pdf.drawPath.assert_called_once_with(
+            pdf.beginPath.return_value, stroke=1, fill=0)
+        pdf.line.assert_not_called()
 
 
 class DailyValuesCacheHookTests(unittest.TestCase):

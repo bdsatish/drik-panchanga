@@ -40,7 +40,7 @@ FOOTER_KEY_FONT_MIN = 3.8
 FOOTER_KEY_LINE_HEIGHT = 6.5 # line spacing
 FOOTER_KEY_TOP = 44.0  # baseline of first muted key line below festivals
 RULESET_VERSION = "Udaya-Vyapini-1.1"
-LAYOUT_VERSION = "A4-1.13"
+LAYOUT_VERSION = "A4-1.20"
 PDF_AUTHOR = "Satish BD"
 PDF_AUTHOR_EMAIL = "bdsatish@gmail.com"
 PDF_COPYRIGHT = ("Copyright © Satish BD. Licensed under the GNU Affero GPL "
@@ -61,10 +61,10 @@ _pdf_fonts_registered = False
 MONTH_HEADER_HEIGHT = 20
 COLUMN_HEADER_HEIGHT = 15
 ROW_HEIGHT = 13.7
-TITHI_COLUMN_RATIO = 0.44
-NAKSHATRA_COLUMN_RATIO = 0.30
-YOGA_COLUMN_RATIO = 0.26
-EKADASHI_UNDERLINE_RATIO = 0.55
+TITHI_COLUMN_RATIO = 0.34
+NAKSHATRA_COLUMN_RATIO = 0.34
+YOGA_COLUMN_RATIO = 0.32
+EKADASHI_UNDERLINE_RATIO = 0.50
 
 
 @dataclass(frozen=True)
@@ -152,7 +152,7 @@ def sankranti_key_line() -> str:
         f"{index} {zodiac[str(index - 1)].capitalize()}" for index in range(1, 13)
     )
     return (
-        "Saṅkrānti: peach N-cell bottom-right number is the new solar rāśi; "
+        "Saṅkrānti: peach N-cell top-right number is the new solar rāśi; "
         "the rolling solar-day count resets at each saṅkrānti, with N-cell "
         "markers at 7, 14, 21, and 28. "
         f"{names}."
@@ -507,7 +507,7 @@ def format_eclipse_line(eclipses, timezone_name, sunrise_by_date=None):
         if sunrise_jd is not None:
             part += f", sunrise {format_local_hm(sunrise_jd, timezone_name)}"
         parts.append(part)
-    return "Eclipses: " + "; ".join(parts) + ". Eclipses have a brown X in the T-cell lower-right."
+    return "Eclipses: " + "; ".join(parts) + ". Eclipses have a brown wavy underline below Tithi."
 
 
 def sunrise_jd_by_civil_date(months, month_data):
@@ -525,29 +525,40 @@ def eclipse_civil_dates(eclipses, timezone_name):
 
 
 def draw_eclipse_mark(pdf, x, row_y, tithi_column_width):
-    """Small X in the T-cell's bottom-right corner for a locally visible eclipse."""
+    """Half-width wavy underline below Tithi for a locally visible eclipse."""
     pdf.setStrokeColor(ECLIPSE_MARK)
-    pdf.setLineWidth(0.75)
-    inset = 1.0
-    size = 3.4
-    left = x + tithi_column_width - inset - size
-    bottom = row_y + inset
-    pdf.line(left, bottom, left + size, bottom + size)
-    pdf.line(left, bottom + size, left + size, bottom)
+    pdf.setLineWidth(0.65)
+    wave_width = tithi_column_width * 0.5
+    left = x + (tithi_column_width - wave_width) / 2
+    right = left + wave_width
+    baseline = row_y + 1.7
+    step = (right - left) / 6
+    amplitude = 0.8
+    path = pdf.beginPath()
+    path.moveTo(left, baseline)
+    for index in range(6):
+        x0 = left + index * step
+        direction = amplitude if index % 2 == 0 else -amplitude
+        path.curveTo(
+            x0 + step / 3, baseline + direction,
+            x0 + 2 * step / 3, baseline + direction,
+            x0 + step, baseline,
+        )
+    pdf.drawPath(path, stroke=1, fill=0)
 
 
 def draw_sankranti_mark(pdf, x, row_y, raasi, cell_width):
-    """Solar rāśi number in a cell's bottom-right corner."""
+    """Solar rāśi number in a cell's top-right corner."""
     pdf.setFillColor(SANKRANTI_INK)
     pdf.setFont(PDF_FONT_BOLD, 5.0)
-    pdf.drawRightString(x + cell_width - 1.0, row_y + 1.4, str(int(raasi)))
+    pdf.drawRightString(x + cell_width - 1.0, row_y + 8.2, str(int(raasi)))
 
 
 def draw_solar_day_mark(pdf, x, row_y, solar_day, cell_width):
-    """Solar week-boundary day in a cell's bottom-right corner."""
+    """Solar week-boundary day in a cell's top-right corner."""
     pdf.setFillColor(MUTED)
     pdf.setFont(PDF_FONT_BOLD, 4.6)
-    pdf.drawRightString(x + cell_width - 1.0, row_y + 1.4, str(int(solar_day)))
+    pdf.drawRightString(x + cell_width - 1.0, row_y + 8.2, str(int(solar_day)))
 
 
 def solar_dates_by_date(records):
@@ -788,7 +799,11 @@ def draw_month(pdf, year, month, values, festivals_by_date, ekadashi_dates, ecli
             pdf.rect(x, row_y, tithi_column_width, ROW_HEIGHT, stroke=0, fill=1)
             pdf.setFillColor(ADHIKA_INK if is_adhika else MASA_START_INK)
             pdf.setFont(PDF_FONT_BOLD, 5.2)
-            pdf.drawString(x + 1.0, row_y + 8.2, masa_badge.removeprefix("A"))
+            pdf.drawRightString(
+                x + tithi_column_width - 1.0,
+                row_y + 8.2,
+                masa_badge.removeprefix("A"),
+            )
         if sankranti_raasi is not None:
             # Solar markers use the N-cell so the T-cell stays clear for lunar marks.
             pdf.setFillColor(SANKRANTI_ROW)
@@ -802,7 +817,7 @@ def draw_month(pdf, year, month, values, festivals_by_date, ekadashi_dates, ecli
         if civil_date in ekadashi_dates:
             pdf.setFillColor(EKADASHI_MARK)
             ekadashi_width = tithi_column_width * EKADASHI_UNDERLINE_RATIO
-            pdf.rect(x + (tithi_column_width - ekadashi_width) / 2, row_y + 0.6, ekadashi_width, 1.2, stroke=0, fill=1)
+            pdf.rect(x + 3.0, row_y + 0.6, ekadashi_width, 1.2, stroke=0, fill=1)
         if sankranti_raasi is not None:
             draw_sankranti_mark(
                 pdf, x + tithi_column_width, row_y,
@@ -816,20 +831,26 @@ def draw_month(pdf, year, month, values, festivals_by_date, ekadashi_dates, ecli
             draw_eclipse_mark(pdf, x, row_y, tithi_column_width)
         festival_numbers = festivals_by_date.get(civil_date, ())
         baseline = row_y + (3.0 if festival_numbers else 4.1)
-        draw_centered(pdf, tithi_display, centers[0], baseline, tithi_font(is_sukla), 7.4,
-                      tithi_ink(is_sukla, is_masa_start, is_adhika))
+        pdf.setFont(tithi_font(is_sukla), 7.4)
+        pdf.setFillColor(tithi_ink(is_sukla, is_masa_start, is_adhika))
+        pdf.drawString(x + 3.0, baseline, tithi_display)
         pdf.setFont(PDF_FONT, 7.3)
         pdf.setFillColor(INK)
-        pdf.drawString(x + tithi_column_width + 2.0, baseline, f"{nakshatra:02d}")
-        draw_centered(pdf, f"{yoga:02d}", centers[2], baseline, PDF_FONT, 7.3, INK)
+        pdf.drawString(x + tithi_column_width + 3.0, baseline, f"{nakshatra:02d}")
+        pdf.drawString(
+            x + tithi_column_width + nakshatra_column_width + 3.0,
+            baseline,
+            f"{yoga:02d}",
+        )
         if festival_numbers:
             pdf.setFillColor(FESTIVAL_INK)
             marker_size = 5.0 if len(festival_numbers) <= 2 else 4.0
             marker_spacing = 4.8 if len(festival_numbers) <= 2 else 3.5
-            marker_top = row_y + (8.8 if len(festival_numbers) <= 2 else 9.5)
+            marker_bottom = row_y + 1.8
             pdf.setFont(PDF_FONT_BOLD, marker_size)
             for marker_index, number in enumerate(festival_numbers):
-                pdf.drawRightString(x + tithi_column_width - 1.0, marker_top - marker_index * marker_spacing,
+                pdf.drawRightString(x + tithi_column_width - 1.0,
+                                    marker_bottom + marker_index * marker_spacing,
                                     str(number))
 
     bottom = rows_top - 31 * ROW_HEIGHT

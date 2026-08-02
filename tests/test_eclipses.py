@@ -103,7 +103,7 @@ class FormatEclipseLineTests(unittest.TestCase):
         self.assertEqual(
             line,
             "Eclipses: Lunar Mar 03 (Partial) maximum phase at 10:00. "
-            "Eclipses have a brown X in the T-cell lower-right.",
+            "Eclipses have a brown wavy underline below Tithi.",
         )
         self.assertEqual(jd_to_local_civil_date(maximum, "Asia/Kolkata").isoformat(), "2026-03-03")
 
@@ -120,7 +120,7 @@ class FormatEclipseLineTests(unittest.TestCase):
         self.assertEqual(
             line,
             "Eclipses: Lunar Mar 03 (Partial) maximum phase at 10:00, sunrise 06:45. "
-            "Eclipses have a brown X in the T-cell lower-right.",
+            "Eclipses have a brown wavy underline below Tithi.",
         )
 
 
