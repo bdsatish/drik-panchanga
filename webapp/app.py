@@ -117,8 +117,9 @@ def api_panchanga():
     date = (request.args.get("date") or "").strip()
     month = (request.args.get("month") or "amanta").strip()
     ayanamsa = (request.args.get("ayanamsa") or "citra").strip()
+    tropical = (request.args.get("tropical") or "0").strip()
     try:
-        return jsonify(compute_day_panchanga(city, date, month_system=month, ayanamsa=ayanamsa))
+        return jsonify(compute_day_panchanga(city, date, month_system=month, ayanamsa=ayanamsa, tropical=tropical))
     except ValueError as error:
         abort(400, description=str(error))
 

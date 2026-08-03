@@ -31,6 +31,17 @@ print(panchanga.nakshatra(jd, place))
 print(panchanga.masa(jd, place, amanta=True))   # or amanta=False for pūrṇimānta
 ```
 
+For tropical (sāyana) values instead of sidereal, call
+`set_coordinate_mode("tropical")` before computing; reset with
+`set_coordinate_mode("sidereal")`:
+
+```python
+panchanga.set_coordinate_mode("tropical")
+print(panchanga.tithi(jd, place))          # tithi from tropical longitudes
+print(panchanga.masa(jd, place, amanta=True))
+panchanga.set_coordinate_mode("sidereal")
+```
+
 Full source, GUI, festival rules, and PDF calendar live in the
 [GitHub repository](https://github.com/bdsatish/drik-panchanga).
 

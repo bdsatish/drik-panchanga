@@ -92,6 +92,16 @@ class PdfLayoutTests(unittest.TestCase):
             load_location("Helsinki"), 2026, 3, ayanamsa="raman")
         self.assertEqual(path.name, "helsinki-fi_panchanga_2026-03_to_2027-04_raman.pdf")
 
+    def test_tropical_filename_suffix(self):
+        path = default_output_path(
+            load_location("Helsinki"), 2026, 3, tropical="1")
+        self.assertEqual(path.name, "helsinki-fi_panchanga_2026-03_to_2027-04_tropical.pdf")
+
+    def test_tropical_filename_ignores_ayanamsa(self):
+        path = default_output_path(
+            load_location("Helsinki"), 2026, 3, ayanamsa="raman", tropical="1")
+        self.assertEqual(path.name, "helsinki-fi_panchanga_2026-03_to_2027-04_tropical.pdf")
+
     def test_cli_accepts_month_system(self):
         parser = argument_parser()
         arguments = parser.parse_args(
@@ -103,6 +113,14 @@ class PdfLayoutTests(unittest.TestCase):
         arguments = parser.parse_args(
             ["--city", "Helsinki", "--start", "2026-03", "--ayanamsa", "revati"])
         self.assertEqual(arguments.ayanamsa, "revati")
+
+    def test_cli_accepts_tropical(self):
+        parser = argument_parser()
+        arguments = parser.parse_args(
+            ["--city", "Helsinki", "--start", "2026-03", "--tropical"])
+        self.assertTrue(arguments.tropical)
+        plain = parser.parse_args(["--city", "Helsinki", "--start", "2026-03"])
+        self.assertFalse(plain.tropical)
 
     def test_parse_ayanamsa_accepts_star_based_modes(self):
         from generate_panchanga_calendar import parse_ayanamsa, ayanamsa_label

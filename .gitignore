@@ -38,5 +38,6 @@ venv/
 .project
 .pydevproject
 .aider*
+.opencode/
 
 *.pdf

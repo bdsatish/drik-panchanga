@@ -25,10 +25,12 @@ def generate_pdf(fields: Mapping[str, str]) -> tuple[bytes, str]:
     start_year, start_month = parse_start_month(start)
     month_system = (fields.get("month") or "amanta").strip()
     ayanamsa = (fields.get("ayanamsa") or "citra").strip()
+    tropical = (fields.get("tropical") or "0").strip()
     location = load_location(city)
     filename = default_output_path(
         location, start_year, start_month,
         month_system=month_system, ayanamsa=ayanamsa,
+        tropical=tropical,
     ).name
     with TemporaryDirectory(prefix="panchanga-web-") as directory:
         output_path = Path(directory) / filename
@@ -40,5 +42,6 @@ def generate_pdf(fields: Mapping[str, str]) -> tuple[bytes, str]:
             festivals_path=DEFAULT_FESTIVALS_PATH,
             month_system=month_system,
             ayanamsa=ayanamsa,
+            tropical=tropical,
         )
         return generated.read_bytes(), filename
