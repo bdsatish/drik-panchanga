@@ -22,7 +22,6 @@ from festival_rules import (
     select_kshaya_dates,
     select_makara_sankranti_dates,
     select_mesha_sankranti_dates,
-    select_non_tithi_dates,
     select_onam_dates,
     select_plain_tithi_dates,
     select_dakshinayana_dates,
@@ -101,14 +100,16 @@ def append_solar_coverage_rows(rows):
 def covering_tithi_rows():
     """Synthetic day rows for every plain-tithi festival, plus Sravana Purnima."""
     rows = []
-    for name, masa, tithi in FESTIVAL_RULES:
-        if masa is None:
+    for rule in FESTIVAL_RULES:
+        if rule.masa is None:
             continue
-        nakshatra = 22 if name == "Naga Panchami" else 1
+        nakshatra = 22 if rule.name == "Naga Panchami" else 1
         # Keep Gita Jayanti out of Dhanur so Vaikuntha coverage stays on its own row.
-        sunrise_jd = 400.0 if name == "Gita Jayanti" else 0.0
-        rows.append(day_row(len(rows) + 1, tithi, str(masa), nakshatra=nakshatra, sunrise_jd=sunrise_jd))
-        if name == "Naga Panchami":
+        sunrise_jd = 400.0 if rule.name == "Gita Jayanti" else 0.0
+        rows.append(day_row(
+            len(rows) + 1, rule.tithi, str(rule.masa),
+            nakshatra=nakshatra, sunrise_jd=sunrise_jd))
+        if rule.name == "Naga Panchami":
             rows.append(day_row(len(rows) + 1, "S15", "5"))
     return rows
 
@@ -163,54 +164,71 @@ def dates_for_marker(by_date, marker):
 class FestivalCatalogTests(unittest.TestCase):
 
     def test_catalog_is_seasonal_and_complete(self):
-        self.assertEqual(len(FESTIVAL_RULES), 42)
-        self.assertEqual(FESTIVAL_RULES[0], ("Ugadi", 1, "S1"))
-        self.assertEqual(FESTIVAL_RULES[-1], ("Kama Dahana (Holi)", 12, "S15"))
-        self.assertIn(("Ananta Chaturdashi", 6, "S14"), FESTIVAL_RULES)
-        self.assertIn(("Surya Shashthi / Chhath", 8, "S6"), FESTIVAL_RULES)
-        self.assertIn(("Gita Jayanti", 9, "S11"), FESTIVAL_RULES)
-        self.assertIn(("Hanuman Jayanti", 1, "S15"), FESTIVAL_RULES)
-        self.assertIn(("Karwa Chauth", 7, "K4"), FESTIVAL_RULES)
-        self.assertIn(("Vata Savitri Purnima", 3, "S15"), FESTIVAL_RULES)
-        self.assertIn(("Sama Upakarma", None, None), FESTIVAL_RULES)
-        self.assertIn(("Raksha Bandhan", 5, "S15"), FESTIVAL_RULES)
-        self.assertIn(("Rishi Panchami", 6, "S5"), FESTIVAL_RULES)
-        self.assertIn(("Onam", None, None), FESTIVAL_RULES)
-        self.assertIn(("Mesha Sankranti", None, None), FESTIVAL_RULES)
-        self.assertIn(("Dakshinayana", None, None), FESTIVAL_RULES)
-        self.assertIn(("Uttarayana", None, None), FESTIVAL_RULES)
-        self.assertEqual(FESTIVAL_RULES[FESTIVAL_RULES.index(("Rama Navami", 1, "S9")) + 1],
-                         ("Hanuman Jayanti", 1, "S15"))
-        self.assertEqual(FESTIVAL_RULES[FESTIVAL_RULES.index(("Hanuman Jayanti", 1, "S15")) + 1],
-                         ("Mesha Sankranti", None, None))
-        self.assertEqual(FESTIVAL_RULES[FESTIVAL_RULES.index(("Narasimha Jayanti", 2, "S14")) + 1],
-                         ("Vata Savitri Purnima", 3, "S15"))
-        self.assertEqual(FESTIVAL_RULES[FESTIVAL_RULES.index(("Vata Savitri Purnima", 3, "S15")) + 1],
-                         ("Dakshinayana", None, None))
-        self.assertEqual(FESTIVAL_RULES[FESTIVAL_RULES.index(("Dakshinayana", None, None)) + 1],
-                         ("Guru Purnima", 4, "S15"))
-        self.assertEqual(FESTIVAL_RULES[FESTIVAL_RULES.index(("Yajur Upakarma", None, None)) + 1],
-                         ("Raksha Bandhan", 5, "S15"))
-        self.assertEqual(FESTIVAL_RULES[FESTIVAL_RULES.index(("Raksha Bandhan", 5, "S15")) + 1],
-                         ("Sama Upakarma", None, None))
-        self.assertEqual(FESTIVAL_RULES[FESTIVAL_RULES.index(("Sama Upakarma", None, None)) + 1],
-                         ("Onam", None, None))
-        self.assertEqual(FESTIVAL_RULES[FESTIVAL_RULES.index(("Vijayadashami", 7, "S10")) + 1],
-                         ("Karwa Chauth", 7, "K4"))
-        self.assertEqual(FESTIVAL_RULES[FESTIVAL_RULES.index(("Surya Shashthi / Chhath", 8, "S6")) + 1],
-                         ("Gita Jayanti", 9, "S11"))
-        self.assertEqual(FESTIVAL_RULES[FESTIVAL_RULES.index(("Gita Jayanti", 9, "S11")) + 1],
-                         ("Uttarayana", None, None))
-        self.assertEqual(FESTIVAL_RULES[FESTIVAL_RULES.index(("Uttarayana", None, None)) + 1],
-                         ("Vaikuntha Ekadashi", None, None))
-        self.assertEqual(FESTIVAL_RULES[FESTIVAL_RULES.index(("Ganesha Chaturthi", 6, "S4")) + 1],
-                         ("Rishi Panchami", 6, "S5"))
-        self.assertEqual(FESTIVAL_RULES[FESTIVAL_RULES.index(("Rishi Panchami", 6, "S5")) + 1],
-                         ("Ananta Chaturdashi", 6, "S14"))
-        names = [name for name, _masa, _tithi in FESTIVAL_RULES]
+        names = [rule.name for rule in FESTIVAL_RULES]
+        self.assertEqual(names, [
+            "Ugadi", "Rama Navami", "Hanuman Jayanti", "Mesha Sankranti",
+            "Akshaya Tritiya", "Vasavi Jayanti", "Narasimha Jayanti",
+            "Vata Savitri Purnima", "Dakshinayana", "Guru Purnima",
+            "Naga Panchami", "Varamahalakshmi Vrata", "Rig Upakarma",
+            "Yajur Upakarma", "Raksha Bandhan", "Sama Upakarma", "Onam",
+            "Janmashtami", "Swarna Gowri Vrata", "Ganesha Chaturthi",
+            "Rishi Panchami", "Ananta Chaturdashi", "Mahalaya Amavasya",
+            "Durga Ashtami", "Ayudha Puja", "Vijayadashami", "Karwa Chauth",
+            "Dhana Trayodashi", "Naraka Chaturdashi", "Deepavali",
+            "Bali Padyami", "Surya Shashthi / Chhath", "Gita Jayanti",
+            "Uttarayana", "Vaikuntha Ekadashi", "Makara Sankranti",
+            "Vasavi Atmarpana", "Vasanta Panchami", "Ratha Saptami",
+            "VSN Jayanti", "Maha Shivaratri", "Kama Dahana (Holi)",
+        ])
         self.assertEqual(len(names), len(set(names)))
         self.assertEqual(all_festival_names(), tuple(names))
-        self.assertEqual(sum(1 for _name, masa, _tithi in FESTIVAL_RULES if masa is None), 10)
+        self.assertEqual(
+            sum(1 for rule in FESTIVAL_RULES
+                if rule.masa is None), 10)
+
+        by_name = {rule.name: rule for rule in FESTIVAL_RULES}
+        expected_tithi_rules = {
+            "Ugadi": (1, "S1"),
+            "Hanuman Jayanti": (1, "S15"),
+            "Vata Savitri Purnima": (3, "S15"),
+            "Raksha Bandhan": (5, "S15"),
+            "Rishi Panchami": (6, "S5"),
+            "Ananta Chaturdashi": (6, "S14"),
+            "Karwa Chauth": (7, "K4"),
+            "Surya Shashthi / Chhath": (8, "S6"),
+            "Gita Jayanti": (9, "S11"),
+            "Kama Dahana (Holi)": (12, "S15"),
+        }
+        for name, expected in expected_tithi_rules.items():
+            rule = by_name[name]
+            self.assertEqual((rule.masa, rule.tithi), expected)
+
+        custom_rules = [
+            rule for rule in FESTIVAL_RULES
+            if rule.masa is None and rule.tithi is None
+        ]
+        self.assertTrue(
+            all(callable(rule.selector) for rule in custom_rules))
+        self.assertEqual(
+            {rule.name for rule in FESTIVAL_RULES
+             if rule.location_aware},
+            {
+                "Rig Upakarma", "Sama Upakarma", "Yajur Upakarma",
+                "Uttarayana", "Dakshinayana",
+            })
+        self.assertEqual(
+            {rule.name for rule in FESTIVAL_RULES
+             if rule.allow_adhika},
+            {"Ugadi"})
+        self.assertTrue(by_name["Vaikuntha Ekadashi"].allow_empty)
+
+    def test_ugadi_catalog_metadata_allows_adhika_chaitra(self):
+        rule = next(
+            rule for rule in FESTIVAL_RULES if rule.name == "Ugadi")
+        self.assertEqual(
+            (rule.masa, rule.tithi, rule.allow_adhika),
+            (1, "S1", True))
+        self.assertIsNone(rule.selector)
 
 
 class FestivalSelectionTests(unittest.TestCase):
@@ -462,15 +480,17 @@ class ResolveFestivalsTests(unittest.TestCase):
 
     def test_ugadi_marks_adhika_chaitra_s1(self):
         rows = []
-        for name, masa, tithi in FESTIVAL_RULES:
-            if masa is None:
+        for rule in FESTIVAL_RULES:
+            if rule.masa is None:
                 continue
-            nakshatra = 22 if name == "Naga Panchami" else 1
-            if name == "Ugadi":
+            nakshatra = 22 if rule.name == "Naga Panchami" else 1
+            if rule.name == "Ugadi":
                 rows.append(day_row(len(rows) + 1, "S1", "A1", is_adhika=True, nakshatra=nakshatra))
             else:
-                rows.append(day_row(len(rows) + 1, tithi, str(masa), nakshatra=nakshatra))
-            if name == "Naga Panchami":
+                rows.append(day_row(
+                    len(rows) + 1, rule.tithi, str(rule.masa),
+                    nakshatra=nakshatra))
+            if rule.name == "Naga Panchami":
                 rows.append(day_row(len(rows) + 1, "S15", "5"))
         append_solar_coverage_rows(rows)
         months, month_data = sequential_month_data(rows, year=2030, start_month=3)
@@ -534,17 +554,18 @@ class ResolveFestivalsTests(unittest.TestCase):
     def test_vriddhi_marks_only_the_former_date(self):
         rows = []
         day = 1
-        for name, masa, tithi in FESTIVAL_RULES:
-            if masa is None:
+        for rule in FESTIVAL_RULES:
+            if rule.masa is None:
                 continue
-            nakshatra = 22 if name == "Naga Panchami" else 1
-            rows.append(day_row(day, tithi, str(masa), nakshatra=nakshatra))
-            if name == "Naga Panchami":
+            nakshatra = 22 if rule.name == "Naga Panchami" else 1
+            rows.append(day_row(
+                day, rule.tithi, str(rule.masa), nakshatra=nakshatra))
+            if rule.name == "Naga Panchami":
                 day += 1
                 rows.append(day_row(day, "S15", "5"))
-            if name == "Janmashtami":
+            if rule.name == "Janmashtami":
                 day += 1
-                rows.append(day_row(day, tithi, str(masa)))
+                rows.append(day_row(day, rule.tithi, str(rule.masa)))
             day += 1
         append_solar_coverage_rows(rows)
         months, month_data = sequential_month_data(rows)
@@ -563,17 +584,19 @@ class ResolveFestivalsTests(unittest.TestCase):
     def test_kshaya_marks_later_date_in_calendar(self):
         rows = []
         day = 1
-        for name, masa, tithi in FESTIVAL_RULES:
-            if masa is None:
+        for rule in FESTIVAL_RULES:
+            if rule.masa is None:
                 continue
-            nakshatra = 22 if name == "Naga Panchami" else 1
-            if name == "Akshaya Tritiya":
+            nakshatra = 22 if rule.name == "Naga Panchami" else 1
+            if rule.name == "Akshaya Tritiya":
                 rows.append(day_row(day, "S2", "2"))
                 day += 1
                 rows.append(day_row(day, "S4", "2"))
             else:
-                rows.append(day_row(day, tithi, str(masa), nakshatra=nakshatra))
-            if name == "Naga Panchami":
+                rows.append(day_row(
+                    day, rule.tithi, str(rule.masa),
+                    nakshatra=nakshatra))
+            if rule.name == "Naga Panchami":
                 day += 1
                 rows.append(day_row(day, "S15", "5"))
             day += 1
@@ -629,18 +652,6 @@ class VaramahalakshmiTests(unittest.TestCase):
             festival_record(date(2030, 8, 11), "K1", masa="A5", is_adhika=True, nakshatra=1, sunrise_jd=0.0),
         ]
         self.assertEqual(select_varamahalakshmi_dates(records), [])
-
-    def test_dispatcher_routes_by_name(self):
-        records = [
-            festival_record(date(2030, 8, 9), "S14", masa="5", is_adhika=False, nakshatra=1, sunrise_jd=0.0),
-            festival_record(date(2030, 8, 10), "S15", masa="5", is_adhika=False, nakshatra=1, sunrise_jd=0.0),
-        ]
-        self.assertEqual(select_non_tithi_dates(records, "Varamahalakshmi Vrata"), [date(2030, 8, 9)])
-
-    def test_dispatcher_rejects_unknown_festival(self):
-        with self.assertRaisesRegex(ValueError, "No selector"):
-            select_non_tithi_dates([], "Unknown Vrata")
-
 
 class RigUpakarmaTests(unittest.TestCase):
 
@@ -731,15 +742,6 @@ class SamaUpakarmaTests(unittest.TestCase):
                     records, geopos=geopos, timezone_name="Asia/Kolkata"),
                 [date(2030, 8, 10)])
 
-    def test_dispatcher_routes_by_name(self):
-        records = [
-            festival_record(date(2030, 9, 8), "S12", masa="6", is_adhika=False, nakshatra=13, sunrise_jd=0.0),
-        ]
-        self.assertEqual(
-            select_non_tithi_dates(records, "Sama Upakarma"),
-            [date(2030, 9, 8)])
-
-
 class OnamTests(unittest.TestCase):
 
     def test_selects_sravana_nakshatra_in_simha(self):
@@ -776,14 +778,6 @@ class OnamTests(unittest.TestCase):
         with mock.patch("festival_rules.panchanga.raasi",
                         side_effect=lambda jd: 5 if jd < 20.0 else 6):
             self.assertEqual(select_onam_dates(records), [date(2030, 8, 20)])
-
-    def test_dispatcher_routes_by_name(self):
-        records = [
-            festival_record(date(2030, 8, 20), "S5", masa="5", is_adhika=False, nakshatra=22, sunrise_jd=10.0),
-        ]
-        with mock.patch("festival_rules.panchanga.raasi", return_value=5):
-            self.assertEqual(select_non_tithi_dates(records, "Onam"), [date(2030, 8, 20)])
-
 
 class YajurUpakarmaTests(unittest.TestCase):
 
@@ -957,10 +951,6 @@ class SolsticeTests(unittest.TestCase):
             self.assertEqual(
                 select_dakshinayana_dates(records, geopos=south, timezone_name="UTC"),
                 [date(2030, 12, 22)])
-            self.assertEqual(
-                select_non_tithi_dates(
-                    records, "Uttarayana", geopos=north, timezone_name="UTC"),
-                [date(2030, 12, 22)])
 
 
 class AllSankrantiTests(unittest.TestCase):
@@ -1082,16 +1072,22 @@ class GenericUdayaParityTests(unittest.TestCase):
             festival_record(date(2030, 4, 11), "S9", masa="1"),
         ]
         self.assertEqual(select_plain_tithi_dates(records, 1, "S9"), [date(2030, 4, 11)])
-        self.assertEqual(next(rule for rule in FESTIVAL_RULES if rule[0] == "Rama Navami"), ("Rama Navami", 1, "S9"))
+        rule = next(
+            rule for rule in FESTIVAL_RULES
+            if rule.name == "Rama Navami")
+        self.assertEqual((rule.name, rule.masa, rule.tithi),
+                         ("Rama Navami", 1, "S9"))
 
     def test_raksha_bandhan_uses_plain_sravana_purnima(self):
         records = [
             festival_record(date(2030, 8, 15), "S15", masa="5"),
         ]
         self.assertEqual(select_plain_tithi_dates(records, 5, "S15"), [date(2030, 8, 15)])
-        self.assertEqual(
-            next(rule for rule in FESTIVAL_RULES if rule[0] == "Raksha Bandhan"),
-            ("Raksha Bandhan", 5, "S15"))
+        rule = next(
+            rule for rule in FESTIVAL_RULES
+            if rule.name == "Raksha Bandhan")
+        self.assertEqual((rule.name, rule.masa, rule.tithi),
+                         ("Raksha Bandhan", 5, "S15"))
 
     def test_normal_single_ekadashi_at_sunrise(self):
         months = [(2030, 3)]

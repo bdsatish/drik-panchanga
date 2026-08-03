@@ -2,10 +2,10 @@
 
 import calendar
 import configparser
+from collections import namedtuple
 from datetime import date as CivilDate
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import NamedTuple
 from zoneinfo import ZoneInfo
 
 import panchanga
@@ -30,63 +30,17 @@ def jd_to_local_civil_date(jd, timezone_name):
     return jd_to_local_datetime(jd, timezone_name).date()
 
 
-# Seasonal catalog for PDF markers. ``(name, masa, tithi)``; ``masa``/``tithi``
-# are ``None`` for non-tithi festivals (selector dispatch is by name).
-FESTIVAL_RULES = (
-    ("Ugadi", 1, "S1"),
-    ("Rama Navami", 1, "S9"),
-    ("Hanuman Jayanti", 1, "S15"),
-    ("Mesha Sankranti", None, None),
-    ("Akshaya Tritiya", 2, "S3"),
-    ("Vasavi Jayanti", 2, "S10"),
-    ("Narasimha Jayanti", 2, "S14"),
-    ("Vata Savitri Purnima", 3, "S15"),
-    ("Dakshinayana", None, None),
-    ("Guru Purnima", 4, "S15"),
-    ("Naga Panchami", 5, "S5"),
-    ("Varamahalakshmi Vrata", None, None),
-    ("Rig Upakarma", None, None),
-    ("Yajur Upakarma", None, None),
-    ("Raksha Bandhan", 5, "S15"),
-    ("Sama Upakarma", None, None),
-    ("Onam", None, None),
-    ("Janmashtami", 5, "K8"),
-    ("Swarna Gowri Vrata", 6, "S3"),
-    ("Ganesha Chaturthi", 6, "S4"),
-    ("Rishi Panchami", 6, "S5"),
-    ("Ananta Chaturdashi", 6, "S14"),
-    ("Mahalaya Amavasya", 6, "K15"),
-    ("Durga Ashtami", 7, "S8"),
-    ("Ayudha Puja", 7, "S9"),
-    ("Vijayadashami", 7, "S10"),
-    ("Karwa Chauth", 7, "K4"),
-    ("Dhana Trayodashi", 7, "K13"),
-    ("Naraka Chaturdashi", 7, "K14"),
-    ("Deepavali", 7, "K15"),
-    ("Bali Padyami", 8, "S1"),
-    ("Surya Shashthi / Chhath", 8, "S6"),
-    ("Gita Jayanti", 9, "S11"),
-    ("Uttarayana", None, None),
-    ("Vaikuntha Ekadashi", None, None),
-    ("Makara Sankranti", None, None),
-    ("Vasavi Atmarpana", 11, "S2"),
-    ("Vasanta Panchami", 11, "S5"),
-    ("Ratha Saptami", 11, "S7"),
-    ("VSN Jayanti", 11, "S11"),
-    ("Maha Shivaratri", 11, "K14"),
-    ("Kama Dahana (Holi)", 12, "S15"),
+DayRecord = namedtuple(
+    "DayRecord",
+    "civil_date tithi nakshatra yoga masa is_adhika sunrise_jd",
 )
 
-class DayRecord(NamedTuple):
-    """Canonical amānta sunrise data shared by festivals and PDF rendering."""
+FestivalRule = namedtuple(
+    "FestivalRule",
+    "name masa tithi selector allow_adhika allow_empty location_aware",
+    defaults=(None, None, None, False, False, False),
+)
 
-    civil_date: CivilDate
-    tithi: str
-    nakshatra: int
-    yoga: int
-    masa: str
-    is_adhika: bool
-    sunrise_jd: float
 
 _TRUTHY = frozenset({"yes", "true", "1", "on"})
 _FALSY = frozenset({"no", "false", "0", "off"})
@@ -96,7 +50,7 @@ SRAVANA_NAKSHATRA = 22
 
 def all_festival_names():
     """Catalog festival names in fixed seasonal order."""
-    return tuple(name for name, _masa, _tithi in FESTIVAL_RULES)
+    return tuple(rule.name for rule in FESTIVAL_RULES)
 
 
 def _parse_bool(raw, *, key):
@@ -495,29 +449,64 @@ def select_dakshinayana_dates(records, geopos=None, timezone_name=None):
     return select_solstice_dates(records, longitude, timezone_name=timezone_name)
 
 
-def select_non_tithi_dates(records, name, geopos=None, timezone_name=None):
-    """Dispatch a non-tithi festival to its selector by catalog name."""
-    if name == "Varamahalakshmi Vrata":
-        return select_varamahalakshmi_dates(records)
-    if name == "Rig Upakarma":
-        return select_rig_upakarma_dates(records, geopos=geopos, timezone_name=timezone_name)
-    if name == "Sama Upakarma":
-        return select_sama_upakarma_dates(records, geopos=geopos, timezone_name=timezone_name)
-    if name == "Yajur Upakarma":
-        return select_yajur_upakarma_dates(records, geopos=geopos, timezone_name=timezone_name)
-    if name == "Onam":
-        return select_onam_dates(records)
-    if name == "Vaikuntha Ekadashi":
-        return select_vaikuntha_ekadashi_dates(records)
-    if name == "Uttarayana":
-        return select_uttarayana_dates(records, geopos=geopos, timezone_name=timezone_name)
-    if name == "Dakshinayana":
-        return select_dakshinayana_dates(records, geopos=geopos, timezone_name=timezone_name)
-    if name == "Mesha Sankranti":
-        return select_mesha_sankranti_dates(records)
-    if name == "Makara Sankranti":
-        return select_makara_sankranti_dates(records)
-    raise ValueError(f"No selector for non-tithi festival {name!r}")
+# Seasonal catalog and each entry's complete resolution policy.
+FESTIVAL_RULES = [
+    FestivalRule("Ugadi", masa=1, tithi="S1", allow_adhika=True),
+    FestivalRule("Rama Navami", masa=1, tithi="S9"),
+    FestivalRule("Hanuman Jayanti", masa=1, tithi="S15"),
+    FestivalRule("Mesha Sankranti", selector=select_mesha_sankranti_dates),
+    FestivalRule("Akshaya Tritiya", masa=2, tithi="S3"),
+    FestivalRule("Vasavi Jayanti", masa=2, tithi="S10"),
+    FestivalRule("Narasimha Jayanti", masa=2, tithi="S14"),
+    FestivalRule("Vata Savitri Purnima", masa=3, tithi="S15"),
+    FestivalRule(
+        "Dakshinayana", selector=select_dakshinayana_dates,
+        location_aware=True),
+    FestivalRule("Guru Purnima", masa=4, tithi="S15"),
+    FestivalRule("Naga Panchami", masa=5, tithi="S5"),
+    FestivalRule(
+        "Varamahalakshmi Vrata", selector=select_varamahalakshmi_dates),
+    FestivalRule(
+        "Rig Upakarma", selector=select_rig_upakarma_dates,
+        location_aware=True),
+    FestivalRule(
+        "Yajur Upakarma", selector=select_yajur_upakarma_dates,
+        location_aware=True),
+    FestivalRule("Raksha Bandhan", masa=5, tithi="S15"),
+    FestivalRule(
+        "Sama Upakarma", selector=select_sama_upakarma_dates,
+        location_aware=True),
+    FestivalRule("Onam", selector=select_onam_dates),
+    FestivalRule("Janmashtami", masa=5, tithi="K8"),
+    FestivalRule("Swarna Gowri Vrata", masa=6, tithi="S3"),
+    FestivalRule("Ganesha Chaturthi", masa=6, tithi="S4"),
+    FestivalRule("Rishi Panchami", masa=6, tithi="S5"),
+    FestivalRule("Ananta Chaturdashi", masa=6, tithi="S14"),
+    FestivalRule("Mahalaya Amavasya", masa=6, tithi="K15"),
+    FestivalRule("Durga Ashtami", masa=7, tithi="S8"),
+    FestivalRule("Ayudha Puja", masa=7, tithi="S9"),
+    FestivalRule("Vijayadashami", masa=7, tithi="S10"),
+    FestivalRule("Karwa Chauth", masa=7, tithi="K4"),
+    FestivalRule("Dhana Trayodashi", masa=7, tithi="K13"),
+    FestivalRule("Naraka Chaturdashi", masa=7, tithi="K14"),
+    FestivalRule("Deepavali", masa=7, tithi="K15"),
+    FestivalRule("Bali Padyami", masa=8, tithi="S1"),
+    FestivalRule("Surya Shashthi / Chhath", masa=8, tithi="S6"),
+    FestivalRule("Gita Jayanti", masa=9, tithi="S11"),
+    FestivalRule(
+        "Uttarayana", selector=select_uttarayana_dates,
+        location_aware=True),
+    FestivalRule(
+        "Vaikuntha Ekadashi", selector=select_vaikuntha_ekadashi_dates,
+        allow_empty=True),
+    FestivalRule("Makara Sankranti", selector=select_makara_sankranti_dates),
+    FestivalRule("Vasavi Atmarpana", masa=11, tithi="S2"),
+    FestivalRule("Vasanta Panchami", masa=11, tithi="S5"),
+    FestivalRule("Ratha Saptami", masa=11, tithi="S7"),
+    FestivalRule("VSN Jayanti", masa=11, tithi="S11"),
+    FestivalRule("Maha Shivaratri", masa=11, tithi="K14"),
+    FestivalRule("Kama Dahana (Holi)", masa=12, tithi="S15"),
+]
 
 
 def resolve_festivals(records, target_dates, *, geopos=None, timezone_name=None, enabled_names=None):
@@ -528,37 +517,32 @@ def resolve_festivals(records, target_dates, *, geopos=None, timezone_name=None,
     ``(marker, date_text, name)``.
     """
     target_dates = set(target_dates)
-
-    dates_by_name = {}
-
-    def store(name, candidates, *, allow_empty=False):
-        matches = [civil_date for civil_date in candidates if civil_date in target_dates]
-        if not matches and not allow_empty:
-            raise RuntimeError(f"No calendar date found for {name}")
-        dates_by_name[name] = matches
-
-    for name, masa, tithi in FESTIVAL_RULES:
-        if enabled_names is not None and name not in enabled_names:
-            continue
-        if masa is None:
-            # Vaikuntha Ekadashi may be absent when no Margasira/Pausha S11 falls
-            # while the Sun is in Dhanur; e.g. year 2086.
-            store(name, select_non_tithi_dates(records, name, geopos=geopos, timezone_name=timezone_name),
-                  allow_empty=(name == "Vaikuntha Ekadashi"))
-        else:
-            store(name, select_plain_tithi_dates(records, masa, tithi, allow_adhika=(name == "Ugadi")))
-
     markers_by_date = {}
     entries = []
-    marker = 0
-    for name, _masa, _tithi in FESTIVAL_RULES:
-        if name not in dates_by_name:
+    for rule in FESTIVAL_RULES:
+        if enabled_names is not None and rule.name not in enabled_names:
             continue
-        marker += 1
-        dates = dates_by_name[name]
+        if rule.selector:
+            if rule.location_aware:
+                candidates = rule.selector(
+                    records, geopos=geopos, timezone_name=timezone_name)
+            else:
+                candidates = rule.selector(records)
+        else:
+            candidates = select_plain_tithi_dates(
+                records, rule.masa, rule.tithi,
+                allow_adhika=rule.allow_adhika)
+        dates = [
+            civil_date
+            for civil_date in candidates
+            if civil_date in target_dates
+        ]
+        if not dates and not rule.allow_empty:
+            raise RuntimeError(f"No calendar date found for {rule.name}")
+        marker = len(entries) + 1
         for civil_date in dates:
             markers_by_date.setdefault(civil_date, []).append(marker)
-        entries.append((marker, format_festival_dates(dates), name))
+        entries.append((marker, format_festival_dates(dates), rule.name))
     return markers_by_date, entries
 
 
