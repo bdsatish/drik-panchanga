@@ -234,7 +234,9 @@ ambiguous ones need ``Name, ISO`` (e.g. `Sydney, AU`). Then either:
   allowed as proleptic Gregorian), choosing amānta or pūrṇimānta for the māsa
   label, an ayanamsa, and optionally *Tropical (Sāyana)* mode, or
 * pick the first month of the 14-month PDF calendar range (same month-system,
-  ayanamsa, and tropical controls) and download the PDF.
+  ayanamsa, and tropical controls) and download the PDF, or
+* export the same 14-month span as an iCal (.ics) file for import into
+  Google Calendar, Apple Calendar, etc.
 
 Override the port with `--port 9000` or `PORT` / `PANCHANGA_PORT`.
 

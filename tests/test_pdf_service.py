@@ -9,7 +9,9 @@ from unittest import mock
 
 from webapp import cgi_handlers
 from webapp.app import app
+from webapp.ics_service import generate_ics
 from webapp.pdf_service import generate_pdf
+from generate_panchanga_calendar import load_location
 
 
 class PdfServiceTests(unittest.TestCase):
@@ -81,6 +83,49 @@ class CgiGenerationTests(unittest.TestCase):
         self.assertIn(b'filename="calendar.pdf"', output)
         self.assertTrue(output.endswith(b"%PDF-cgi"))
         self.assertEqual(generate.call_args.args[0]["city"], "Helsinki")
+
+
+class IcsServiceTests(unittest.TestCase):
+
+    def test_generates_valid_ics_structure(self):
+        ics = generate_ics(load_location("Helsinki"), 2026, 1)
+        self.assertTrue(ics.startswith("BEGIN:VCALENDAR\r\n"))
+        self.assertIn("VERSION:2.0", ics)
+        self.assertIn("CALSCALE:GREGORIAN", ics)
+        self.assertIn("PRODID:-//Drik Panchanga//EN", ics)
+        self.assertIn("X-WR-CALNAME:Panchanga", ics)
+        self.assertIn("BEGIN:VEVENT", ics)
+        self.assertIn("DTSTART;VALUE=DATE:", ics)
+        self.assertIn("DTEND;VALUE=DATE:", ics)
+        self.assertIn("SUMMARY:", ics)
+        self.assertIn("DESCRIPTION:", ics)
+        self.assertIn("UID:panchanga-", ics)
+        self.assertTrue(ics.endswith("END:VCALENDAR\r\n"))
+
+    def test_ics_respects_tropical_mode(self):
+        loc = load_location("Tirupati")
+        sid = generate_ics(loc, 2026, 1, tropical="0")
+        trop = generate_ics(loc, 2026, 1, tropical="1")
+        self.assertEqual(sid.count("BEGIN:VEVENT"), trop.count("BEGIN:VEVENT"))
+        self.assertEqual(sid.count("BEGIN:VEVENT"), 424)
+
+    def test_ics_event_count_matches_month_span(self):
+        ics = generate_ics(load_location("Tirupati"), 2026, 6)
+        self.assertGreater(ics.count("BEGIN:VEVENT"), 400)
+        self.assertLessEqual(ics.count("BEGIN:VEVENT"), 435)
+
+    def test_ics_flask_endpoint_returns_calendar(self):
+        response = app.test_client().get(
+            "/api/panchanga.ics?city=Helsinki&start=2026-03")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.mimetype, "text/calendar")
+        self.assertIn(b"BEGIN:VCALENDAR", response.data)
+        self.assertIn(b"BEGIN:VEVENT", response.data)
+
+    def test_ics_flask_endpoint_rejects_bad_city(self):
+        response = app.test_client().get(
+            "/api/panchanga.ics?city=NoSuchPlace&start=2026-03")
+        self.assertEqual(response.status_code, 400)
 
 
 if __name__ == "__main__":

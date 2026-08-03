@@ -626,6 +626,7 @@
           ["Day duration", timeOrDash(data.day_duration)],
           ["Rāhukāla", intervalHtml(data.rahu_kala)],
           ["Durmuhūrta", intervalsHtml(data.durmuhurta)],
+          ["Varjyam", intervalsHtml(data.varjyam)],
           ["Kali Day", String(data.kali_day)],
           ["Julian day", data.jd != null ? Number(data.jd).toFixed(1) : "—"],
           ["Sunrise JD (UT)", data.sunrise_jd != null
@@ -733,11 +734,15 @@
       const icsBtn = document.getElementById("ics-btn");
       icsBtn.addEventListener("click", () => {
         const city = cityInput.value.trim();
+        const start = startInput.value || "";
         if (!city) {
           status.textContent = "Enter a city.";
           return;
         }
-        const start = startInput.value || "";
+        if (!start) {
+          status.textContent = "Pick a first month.";
+          return;
+        }
         const url = "/api/panchanga.ics?"
           + `city=${encodeURIComponent(city)}`
           + `&start=${encodeURIComponent(start)}`

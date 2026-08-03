@@ -141,6 +141,13 @@ def _durmuhurta_intervals(jd, place) -> list[dict]:
     return intervals
 
 
+def _varjyam_intervals(jd, place) -> list[dict]:
+    return [
+        _interval_from_hms(start, end)
+        for start, end in panchanga.varjyam(jd, place)
+    ]
+
+
 def ayana_label(raasi_num: int) -> str:
     """Uttarāyaṇa from Makara–Mithuna (10–12, 1–3); else Dakṣiṇāyana."""
     if raasi_num >= 10 or raasi_num <= 3:
@@ -277,6 +284,7 @@ def compute_day_panchanga(city: str, date_text: str, month_system: str | None = 
         "day_duration": format_time(day_dur[1]),
         "rahu_kala": _rahu_kala(jd, place),
         "durmuhurta": _durmuhurta_intervals(jd, place),
+        "varjyam": _varjyam_intervals(jd, place),
         "tithi": _named_segments(ti, names["tithis"]),
         "nakshatra": _named_segments(nak, names["nakshatras"]),
         "yoga": _named_segments(yog, names["yogas"]),
