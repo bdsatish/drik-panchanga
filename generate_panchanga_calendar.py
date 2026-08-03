@@ -17,13 +17,13 @@ from reportlab.lib.pagesizes import A4, landscape
 from reportlab.pdfgen import canvas
 
 from festival_rules import (
-    collect_records,
+    DayRecord,
+    ekadashi_dates_from_records,
     find_local_eclipses,
     jd_to_local_civil_date,
     jd_to_local_datetime,
     julian_day_from_datetime,
     load_festival_selection,
-    resolve_ekadashi_dates,
     resolve_festivals,
     sankranti_raasi_by_date,
 )
@@ -512,15 +512,6 @@ def format_eclipse_line(eclipses, timezone_name, sunrise_by_date=None):
     return "Eclipses: " + "; ".join(parts) + ". Eclipses have a brown wavy underline below Tithi."
 
 
-def sunrise_jd_by_civil_date(months, month_data):
-    """Map each printed civil date to its local sunrise Julian day."""
-    result = {}
-    for year, month in months:
-        for day, _tithi, _nakshatra, _yoga, _masa, _is_adhika, sunrise_jd in month_data[(year, month)]:
-            result[CivilDate(year, month, day)] = sunrise_jd
-    return result
-
-
 def eclipse_civil_dates(eclipses, timezone_name):
     """Local civil date of each eclipse maximum."""
     return {jd_to_local_civil_date(maximum_jd, timezone_name) for _kind, _phase, maximum_jd in eclipses}
@@ -584,11 +575,11 @@ def solar_dates_by_date(records):
     result = {}
     previous_raasi = None
     solar_day = 0
-    for civil_date, _, _, _, _, sunrise_jd in sorted(records):
-        raasi = int(panchanga.raasi(sunrise_jd))
+    for record in sorted(records, key=lambda record: record.civil_date):
+        raasi = int(panchanga.raasi(record.sunrise_jd))
         is_sankranti = previous_raasi is not None and raasi != previous_raasi
         solar_day = 1 if is_sankranti else solar_day + 1
-        result[civil_date] = (raasi, solar_day, is_sankranti)
+        result[record.civil_date] = (raasi, solar_day, is_sankranti)
         previous_raasi = raasi
     return result
 
@@ -637,64 +628,62 @@ def tithi_font(is_sukla):
     return PDF_FONT_BOLD if is_sukla else PDF_FONT_BOLD_ITALIC
 
 
-def daily_values(year, month, location, *, amanta=True):
+def daily_records(months, location):
+    """Canonical amānta sunrise records for ordered Gregorian ``months``."""
     result = []
     timezone = ZoneInfo(location.timezone_name)
-    days = calendar.monthrange(year, month)[1]
-    for day in range(1, days + 1):
-        date = panchanga.Date(year, month, day)
-        place = panchanga.Place(location.latitude, location.longitude, timezone_hours(timezone, year, month, day))
-        jd = panchanga.gregorian_to_jd(date)
-        try:
-            sunrise_jd = require_local_sunrise(jd, place, location.name, year, month, day)[0]
-            tithi_number = panchanga.tithi(jd, place)[0]
-            nakshatra_number = panchanga.nakshatra(jd, place)[0]
-            yoga_number = panchanga.yoga(jd, place)[0]
-            masa_number, is_adhika = panchanga.masa(jd, place, amanta=amanta, tithi_number=tithi_number)
-        except RuntimeError:
-            raise
-        except Exception as error:
-            raise RuntimeError(
-                format_sunrise_unavailable_message(location.name, year, month, day, place)
-                + f" ({error})") from error
-        result.append((
-            day,
-            tithi_code(tithi_number),
-            nakshatra_number,
-            yoga_number,
-            masa_code(masa_number, is_adhika),
-            is_adhika,
-            sunrise_jd - place.timezone / 24,
-        ))
+    for year, month in months:
+        for day in range(1, calendar.monthrange(year, month)[1] + 1):
+            date = panchanga.Date(year, month, day)
+            place = panchanga.Place(
+                location.latitude, location.longitude,
+                timezone_hours(timezone, year, month, day))
+            jd = panchanga.gregorian_to_jd(date)
+            try:
+                sunrise_jd = require_local_sunrise(
+                    jd, place, location.name, year, month, day)[0]
+                tithi_number = panchanga.tithi(jd, place)[0]
+                nakshatra_number = panchanga.nakshatra(jd, place)[0]
+                yoga_number = panchanga.yoga(jd, place)[0]
+                masa_number, is_adhika = panchanga.masa(
+                    jd, place, amanta=True, tithi_number=tithi_number)
+            except RuntimeError:
+                raise
+            except Exception as error:
+                raise RuntimeError(
+                    format_sunrise_unavailable_message(
+                        location.name, year, month, day, place)
+                    + f" ({error})") from error
+            result.append(DayRecord(
+                CivilDate(year, month, day),
+                tithi_code(tithi_number),
+                nakshatra_number,
+                yoga_number,
+                masa_code(masa_number, is_adhika),
+                is_adhika,
+                sunrise_jd - place.timezone / 24,
+            ))
     return result
 
 
-def mark_masa_starts(months, month_data):
-    """Attach masa badges where a new masa first appears at sunrise."""
+def display_masa(record, *, amanta=True):
+    """Māsa code displayed for a canonical amānta record."""
+    masa_number = int(record.masa.lstrip("A"))
+    if not amanta and not record.is_adhika and record.tithi.startswith("K"):
+        masa_number = masa_number % 12 + 1
+    return masa_code(masa_number, record.is_adhika)
+
+
+def masa_badges_by_date(records, *, amanta=True):
+    """Map each first visible date of a display māsa to its badge code."""
+    badges = {}
     previous_masa = None
-    for year, month in months:
-        marked_values = []
-        for (
-                day,
-                tithi,
-                nakshatra,
-                yoga,
-                masa,
-                is_adhika,
-                _sunrise_jd,
-        ) in month_data[(year, month)]:
-            is_masa_start = masa != previous_masa
-            marked_values.append((
-                day,
-                tithi,
-                nakshatra,
-                yoga,
-                is_masa_start,
-                is_adhika,
-                masa if is_masa_start else None,
-            ))
-            previous_masa = masa
-        month_data[(year, month)] = marked_values
+    for record in records:
+        masa = display_masa(record, amanta=amanta)
+        if masa != previous_masa:
+            badges[record.civil_date] = masa
+        previous_masa = masa
+    return badges
 
 
 def draw_centered(pdf, text, center_x, baseline_y, font, size, color=INK):
@@ -738,8 +727,9 @@ def draw_day_column(pdf, x, top, width):
         pdf.line(x, y, x + width, y)
 
 
-def draw_month(pdf, year, month, values, festivals_by_date, ekadashi_dates, eclipse_dates,
-               sankranti_by_date, solar_by_date, x, top, width):
+def draw_month(pdf, year, month, records_by_date, masa_badges, festivals_by_date,
+               ekadashi_dates, eclipse_dates, sankranti_by_date, solar_by_date,
+               x, top, width):
     tithi_column_width = width * TITHI_COLUMN_RATIO
     nakshatra_column_width = width * NAKSHATRA_COLUMN_RATIO
     yoga_column_width = width * YOGA_COLUMN_RATIO
@@ -762,30 +752,16 @@ def draw_month(pdf, year, month, values, festivals_by_date, ekadashi_dates, ecli
         draw_centered(pdf, label, center, header_top - 10.5, PDF_FONT_BOLD, 7.0, MUTED)
 
     rows_top = header_top - COLUMN_HEADER_HEIGHT
-    values_by_day = {
-        day: (
-            tithi,
-            nakshatra,
-            yoga,
-            is_masa_start,
-            is_adhika,
-            masa_badge,
-        )
-        for (
-            day,
-            tithi,
-            nakshatra,
-            yoga,
-            is_masa_start,
-            is_adhika,
-            masa_badge,
-        ) in values
-    }
     for index in range(31):
         day = index + 1
+        civil_date = (
+            CivilDate(year, month, day)
+            if day <= calendar.monthrange(year, month)[1] else None
+        )
+        record = records_by_date.get(civil_date)
         row_y = rows_top - (index + 1) * ROW_HEIGHT
         is_sunday = False
-        if day not in values_by_day:
+        if record is None:
             pdf.setFillColor(MISSING_ROW)
         else:
             weekday = datetime(year, month, day).weekday()
@@ -796,19 +772,16 @@ def draw_month(pdf, year, month, values, festivals_by_date, ekadashi_dates, ecli
                 pdf.setFillColor(white)
         pdf.rect(x, row_y, width, ROW_HEIGHT, stroke=0, fill=1)
 
-        if day not in values_by_day:
+        if record is None:
             continue
 
-        (
-            tithi,
-            nakshatra,
-            yoga,
-            is_masa_start,
-            is_adhika,
-            masa_badge,
-        ) = values_by_day[day]
+        tithi = record.tithi
+        nakshatra = record.nakshatra
+        yoga = record.yoga
+        masa_badge = masa_badges.get(civil_date)
+        is_masa_start = masa_badge is not None
+        is_adhika = record.is_adhika
         tithi_display, is_sukla = tithi_display_parts(tithi)
-        civil_date = CivilDate(year, month, day)
         sankranti_raasi = sankranti_by_date.get(civil_date)
         solar_info = solar_by_date.get(civil_date)
         solar_day = solar_info[1] if solar_info is not None else None
@@ -903,12 +876,13 @@ def kali_ahargana_range(months):
     return int(panchanga.ahargana(start_jd)), int(panchanga.ahargana(end_jd))
 
 
-def calendar_year_label(year, month, values):
+def calendar_year_label(records, *, amanta=True):
     """Return era and samvatsara labels for a representative calendar month."""
-    representative = values[len(values) // 2]
-    day = representative[0]
-    masa_num = int(representative[4].lstrip("A"))
-    jd = panchanga.gregorian_to_jd(panchanga.Date(year, month, day))
+    representative = records[len(records) // 2]
+    civil = representative.civil_date
+    masa_num = int(display_masa(representative, amanta=amanta).lstrip("A"))
+    jd = panchanga.gregorian_to_jd(
+        panchanga.Date(civil.year, civil.month, civil.day))
     kali_year, saka_year, vikrama_year = panchanga.elapsed_year(jd, masa_num)
     names = sanskrit_names()["samvats"]
     saka_name = names[str(panchanga.samvatsara(jd, masa_num))]
@@ -1030,57 +1004,51 @@ def build_pdf(location, start_year, start_month, output_path, *, festivals_path=
     else:
         context_start = (start_year, start_month - 1)
     context_months = list(month_range(*context_start, count=MONTH_COUNT + 2))
-    # Display māsa badges follow the selected system; festival catalog stays
-    # amānta-keyed so civil festival dates do not flip with --month.
-    context_data = {
-        (year, month): daily_values(year, month, location, amanta=amanta)
-        for year, month in context_months
-    }
-    month_data = {(year, month): context_data[(year, month)] for year, month in months}
-    if amanta:
-        festival_context_data = context_data
-        festival_month_data = month_data
-    else:
-        festival_context_data = {
-            (year, month): daily_values(year, month, location, amanta=True)
-            for year, month in context_months
-        }
-        festival_month_data = {
-            (year, month): festival_context_data[(year, month)]
-            for year, month in months
-        }
+    context_records = daily_records(context_months, location)
+    records_by_date = {record.civil_date: record for record in context_records}
+    range_start = CivilDate(start_year, start_month, 1)
+    end_year, end_month = months[-1]
+    range_end = CivilDate(
+        end_year, end_month, calendar.monthrange(end_year, end_month)[1])
+    target_records = [
+        record for record in context_records
+        if range_start <= record.civil_date <= range_end
+    ]
+    target_dates = {record.civil_date for record in target_records}
     festivals_path = Path(festivals_path) if festivals_path is not None else DEFAULT_FESTIVALS_PATH
     enabled_names = load_festival_selection(festivals_path)
     geopos = (location.longitude, location.latitude, 0.0)
     festivals_by_date, festival_entries = resolve_festivals(
-        months, festival_month_data, context_months=context_months, context_data=festival_context_data,
+        context_records, target_dates,
         geopos=geopos, timezone_name=location.timezone_name, enabled_names=enabled_names)
 
-    range_start = CivilDate(start_year, start_month, 1)
-    end_year, end_month = months[-1]
-    range_end = CivilDate(end_year, end_month, calendar.monthrange(end_year, end_month)[1])
     eclipse_start_jd, eclipse_end_jd = local_range_jds(start_year, start_month, end_year, end_month,
                                                        location.timezone_name)
     eclipses = find_local_eclipses(eclipse_start_jd, eclipse_end_jd, geopos)
-    sunrise_by_date = sunrise_jd_by_civil_date(months, month_data)
+    sunrise_by_date = {
+        record.civil_date: record.sunrise_jd for record in target_records
+    }
     eclipse_line = format_eclipse_line(eclipses, location.timezone_name, sunrise_by_date=sunrise_by_date)
     eclipse_dates = eclipse_civil_dates(eclipses, location.timezone_name)
     # Saṅkrānti markers use the same sunrise-in-new-rāśi rule as Mesha/Makara
     # festivals; scan context months so a transition at the print-range start
     # is not missed.
-    solar_records = collect_records(context_months, context_data)
-    sankranti_by_date = sankranti_raasi_by_date(solar_records)
-    solar_by_date = solar_dates_by_date(solar_records)
+    sankranti_by_date = sankranti_raasi_by_date(context_records)
+    solar_by_date = solar_dates_by_date(context_records)
     ekadashi_dates = {
         value
-        for value in resolve_ekadashi_dates(context_months, festival_context_data)
+        for value in ekadashi_dates_from_records(context_records)
         if range_start <= value <= range_end
     }
     header_year, header_month = months[len(months) // 2]
-    calendar_years = calendar_year_label(
-        header_year, header_month, month_data[(header_year, header_month)])
+    header_records = [
+        record for record in target_records
+        if (record.civil_date.year, record.civil_date.month)
+        == (header_year, header_month)
+    ]
+    calendar_years = calendar_year_label(header_records, amanta=amanta)
     kali_ahargana = kali_ahargana_range(months)
-    mark_masa_starts(months, month_data)
+    masa_badges = masa_badges_by_date(target_records, amanta=amanta)
 
     page_width, page_height = landscape(A4)
     output_path = Path(output_path)
@@ -1109,8 +1077,9 @@ def build_pdf(location, start_year, start_month, output_path, *, festivals_path=
     for index, (year, month) in enumerate(months):
         x = margin + day_column_width + index * month_width
         draw_month(
-            pdf, year, month, month_data[(year, month)], festivals_by_date, ekadashi_dates,
-            eclipse_dates, sankranti_by_date, solar_by_date, x, top, month_width)
+            pdf, year, month, records_by_date, masa_badges, festivals_by_date,
+            ekadashi_dates, eclipse_dates, sankranti_by_date, solar_by_date,
+            x, top, month_width)
 
     draw_page_footer(pdf, festival_entries, eclipse_line=eclipse_line)
     pdf.showPage()

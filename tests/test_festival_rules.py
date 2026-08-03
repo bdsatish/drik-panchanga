@@ -10,15 +10,13 @@ from unittest import mock
 import panchanga
 
 from festival_rules import (
-    CIVIL_DATE,
+    DayRecord,
     FESTIVAL_RULES,
-    SUNRISE_JD,
     all_festival_names,
-    collect_records,
+    ekadashi_dates_from_records,
     format_festival_dates,
     load_festival_selection,
     plain_tithi_number,
-    resolve_ekadashi_dates,
     resolve_festivals,
     resolve_vriddhi_dates,
     select_kshaya_dates,
@@ -39,14 +37,14 @@ from festival_rules import (
 from generate_panchanga_calendar import (
     DEFAULT_FESTIVALS_PATH,
     MONTH_COUNT,
-    daily_values,
+    daily_records,
     load_location,
     month_range,
 )
 
 
 def day_row(day, tithi, masa, is_adhika=False, sunrise_jd=0.0, nakshatra=1, yoga=1):
-    """One ``daily_values`` row: day, tithi, nakshatra, yoga, masa, is_adhika, sunrise_jd."""
+    """Synthetic row: day, tithi, nakshatra, yoga, masa, is_adhika, sunrise_jd."""
     return (day, tithi, nakshatra, yoga, masa, is_adhika, sunrise_jd)
 
 
@@ -65,9 +63,24 @@ def fake_raasi(jd):
     return 9
 
 
-def festival_record(civil_date, tithi, masa="1", is_adhika=False, nakshatra=1, sunrise_jd=0.0):
-    """One festival record: civil_date, tithi, nakshatra, masa, is_adhika, sunrise_jd."""
-    return (civil_date, tithi, nakshatra, masa, is_adhika, sunrise_jd)
+def festival_record(
+        civil_date, tithi, masa="1", is_adhika=False, nakshatra=1,
+        yoga=1, sunrise_jd=0.0):
+    """Construct one canonical festival record."""
+    return DayRecord(
+        civil_date, tithi, nakshatra, yoga, masa, is_adhika, sunrise_jd)
+
+
+def canonical_records(months, month_data):
+    """Convert synthetic ``day_row`` fixtures to canonical records."""
+    return [
+        DayRecord(
+            date(year, month, day), tithi, nakshatra, yoga, masa,
+            is_adhika, sunrise_jd)
+        for year, month in months
+        for day, tithi, nakshatra, yoga, masa, is_adhika, sunrise_jd
+        in month_data[(year, month)]
+    ]
 
 
 def append_solar_coverage_rows(rows):
@@ -221,10 +234,13 @@ class FestivalSelectionTests(unittest.TestCase):
             enabled = load_festival_selection(path)
 
         months, month_data = covering_months_and_data()
+        records = canonical_records(months, month_data)
         with mock.patch("festival_rules.panchanga.raasi", side_effect=fake_raasi), \
                 mock.patch("festival_rules.panchanga.swe.solcross_ut", return_value=-1.0), \
                 mock.patch("festival_rules.jd_to_local_civil_date", return_value=date(2030, 1, 1)):
-            by_date, entries = resolve_festivals(months, month_data, enabled_names=enabled)
+            by_date, entries = resolve_festivals(
+                records, {record.civil_date for record in records},
+                enabled_names=enabled)
         self.assertNotIn("Ugadi", [name for _marker, _dates, name in entries])
         self.assertEqual(entries[0], (1, "Jan 02", "Rama Navami"))
         self.assertEqual([marker for marker, _dates, _name in entries], list(range(1, len(entries) + 1)))
@@ -258,14 +274,16 @@ class FestivalSelectionTests(unittest.TestCase):
                 load_festival_selection(path)
 
 
-class CollectRecordsTests(unittest.TestCase):
+class CanonicalRecordsTests(unittest.TestCase):
 
-    def test_keeps_sunrise_identity_fields(self):
+    def test_converts_synthetic_rows_to_day_records(self):
         months = [(2026, 6)]
         month_data = {
             (2026, 6): [day_row(1, "S1", "3", nakshatra=5)],
         }
-        self.assertEqual(collect_records(months, month_data), [(date(2026, 6, 1), "S1", 5, "3", False, 0.0)])
+        self.assertEqual(
+            canonical_records(months, month_data),
+            [DayRecord(date(2026, 6, 1), "S1", 5, 1, "3", False, 0.0)])
 
 
 class ResolveVriddhiTests(unittest.TestCase):
@@ -289,11 +307,11 @@ class SelectPlainTithiTests(unittest.TestCase):
 
     def setUp(self):
         self.records = [
-            (date(2030, 3, 10), "S1", 1, "A1", True, 0.0),
-            (date(2030, 3, 18), "S9", 1, "1", False, 0.0),
-            (date(2030, 4, 9), "S1", 1, "1", False, 0.0),
-            (date(2030, 5, 1), "S3", 1, "A2", True, 0.0),
-            (date(2030, 5, 2), "S3", 1, "2", False, 0.0),
+            festival_record(date(2030, 3, 10), "S1", masa="A1", is_adhika=True, nakshatra=1, sunrise_jd=0.0),
+            festival_record(date(2030, 3, 18), "S9", masa="1", is_adhika=False, nakshatra=1, sunrise_jd=0.0),
+            festival_record(date(2030, 4, 9), "S1", masa="1", is_adhika=False, nakshatra=1, sunrise_jd=0.0),
+            festival_record(date(2030, 5, 1), "S3", masa="A2", is_adhika=True, nakshatra=1, sunrise_jd=0.0),
+            festival_record(date(2030, 5, 2), "S3", masa="2", is_adhika=False, nakshatra=1, sunrise_jd=0.0),
         ]
 
     def test_matches_non_adhika_masa_and_tithi(self):
@@ -314,30 +332,30 @@ class SelectPlainTithiTests(unittest.TestCase):
 
     def test_vriddhi_keeps_former_of_consecutive_matches(self):
         records = [
-            (date(2030, 8, 14), "K8", 1, "5", False, 0.0),
-            (date(2030, 8, 15), "K8", 1, "5", False, 0.0),
-            (date(2030, 8, 16), "K9", 1, "5", False, 0.0),
+            festival_record(date(2030, 8, 14), "K8", masa="5", is_adhika=False, nakshatra=1, sunrise_jd=0.0),
+            festival_record(date(2030, 8, 15), "K8", masa="5", is_adhika=False, nakshatra=1, sunrise_jd=0.0),
+            festival_record(date(2030, 8, 16), "K9", masa="5", is_adhika=False, nakshatra=1, sunrise_jd=0.0),
         ]
         self.assertEqual(select_plain_tithi_dates(records, 5, "K8"), [date(2030, 8, 14)])
 
     def test_kshaya_marks_later_civil_date(self):
         records = [
-            (date(2030, 5, 4), "S2", 1, "2", False, 0.0),
-            (date(2030, 5, 5), "S4", 1, "2", False, 0.0),
+            festival_record(date(2030, 5, 4), "S2", masa="2", is_adhika=False, nakshatra=1, sunrise_jd=0.0),
+            festival_record(date(2030, 5, 5), "S4", masa="2", is_adhika=False, nakshatra=1, sunrise_jd=0.0),
         ]
         self.assertEqual(select_plain_tithi_dates(records, 2, "S3"), [date(2030, 5, 5)])
 
     def test_kshaya_ugadi_across_masa_boundary(self):
         records = [
-            (date(2030, 3, 25), "K15", 1, "12", False, 0.0),
-            (date(2030, 3, 26), "S2", 1, "1", False, 0.0),
+            festival_record(date(2030, 3, 25), "K15", masa="12", is_adhika=False, nakshatra=1, sunrise_jd=0.0),
+            festival_record(date(2030, 3, 26), "S2", masa="1", is_adhika=False, nakshatra=1, sunrise_jd=0.0),
         ]
         self.assertEqual(select_plain_tithi_dates(records, 1, "S1", allow_adhika=True), [date(2030, 3, 26)])
 
     def test_kshaya_krishna_across_masa_boundary(self):
         records = [
-            (date(2030, 10, 20), "K14", 1, "7", False, 0.0),
-            (date(2030, 10, 21), "S1", 1, "8", False, 0.0),
+            festival_record(date(2030, 10, 20), "K14", masa="7", is_adhika=False, nakshatra=1, sunrise_jd=0.0),
+            festival_record(date(2030, 10, 21), "S1", masa="8", is_adhika=False, nakshatra=1, sunrise_jd=0.0),
         ]
         self.assertEqual(select_plain_tithi_dates(records, 7, "K15"), [date(2030, 10, 21)])
         self.assertEqual(select_plain_tithi_dates(records, 8, "K15"), [])
@@ -357,23 +375,23 @@ class SelectKshayaTests(unittest.TestCase):
 
     def test_detects_skipped_tithi_between_consecutive_sunrises(self):
         records = [
-            (date(2030, 5, 4), "S2", 1, "2", False, 0.0),
-            (date(2030, 5, 5), "S4", 1, "2", False, 0.0),
-            (date(2030, 5, 6), "S5", 1, "2", False, 0.0),
+            festival_record(date(2030, 5, 4), "S2", masa="2", is_adhika=False, nakshatra=1, sunrise_jd=0.0),
+            festival_record(date(2030, 5, 5), "S4", masa="2", is_adhika=False, nakshatra=1, sunrise_jd=0.0),
+            festival_record(date(2030, 5, 6), "S5", masa="2", is_adhika=False, nakshatra=1, sunrise_jd=0.0),
         ]
         self.assertEqual(select_kshaya_dates(records, "S3", masa=2), [date(2030, 5, 5)])
 
     def test_ugadi_between_phalguna_amavasya_and_caitra_dvitiya(self):
         records = [
-            (date(2030, 3, 25), "K15", 1, "12", False, 0.0),
-            (date(2030, 3, 26), "S2", 1, "1", False, 0.0),
+            festival_record(date(2030, 3, 25), "K15", masa="12", is_adhika=False, nakshatra=1, sunrise_jd=0.0),
+            festival_record(date(2030, 3, 26), "S2", masa="1", is_adhika=False, nakshatra=1, sunrise_jd=0.0),
         ]
         self.assertEqual(select_kshaya_dates(records, "S1", masa=1, allow_adhika=True), [date(2030, 3, 26)])
 
     def test_ignores_non_consecutive_civil_days(self):
         records = [
-            (date(2030, 5, 4), "S2", 1, "2", False, 0.0),
-            (date(2030, 5, 6), "S4", 1, "2", False, 0.0),
+            festival_record(date(2030, 5, 4), "S2", masa="2", is_adhika=False, nakshatra=1, sunrise_jd=0.0),
+            festival_record(date(2030, 5, 6), "S4", masa="2", is_adhika=False, nakshatra=1, sunrise_jd=0.0),
         ]
         self.assertEqual(select_kshaya_dates(records, "S3", masa=2), [])
 
@@ -408,7 +426,9 @@ class ResolveFestivalsTests(unittest.TestCase):
 
     def test_resolves_markers_and_footer_entries(self):
         months, month_data = covering_months_and_data()
-        by_date, entries = resolve_festivals(months, month_data)
+        records = canonical_records(months, month_data)
+        by_date, entries = resolve_festivals(
+            records, {record.civil_date for record in records})
         by_name = entries_by_name(entries)
 
         self.assertEqual([name for _marker, _dates, name in entries], list(all_festival_names()))
@@ -454,9 +474,11 @@ class ResolveFestivalsTests(unittest.TestCase):
                 rows.append(day_row(len(rows) + 1, "S15", "5"))
         append_solar_coverage_rows(rows)
         months, month_data = sequential_month_data(rows, year=2030, start_month=3)
+        records = canonical_records(months, month_data)
 
         by_date, entries = resolve_festivals(
-            months, month_data, enabled_names=self.enabled_without_solstice_festivals())
+            records, {record.civil_date for record in records},
+            enabled_names=self.enabled_without_solstice_festivals())
         ugadi_marker, ugadi_dates = entries_by_name(entries)["Ugadi"]
         self.assertEqual(ugadi_marker, 1)
         self.assertEqual(ugadi_dates, "Mar 01")
@@ -464,7 +486,7 @@ class ResolveFestivalsTests(unittest.TestCase):
 
     def test_non_ugadi_festivals_skip_adhika_masa(self):
         months, month_data = covering_months_and_data()
-        records = collect_records(months, month_data)
+        records = canonical_records(months, month_data)
         akshaya_dates = select_plain_tithi_dates(records, 2, "S3")
         self.assertEqual(len(akshaya_dates), 1)
         civil = akshaya_dates[0]
@@ -472,8 +494,10 @@ class ResolveFestivalsTests(unittest.TestCase):
         rows[civil.day - 1] = day_row(civil.day, "S3", "A2", is_adhika=True)
 
         with self.assertRaisesRegex(RuntimeError, "Akshaya Tritiya"):
+            records = canonical_records(months, month_data)
             resolve_festivals(
-                months, month_data, enabled_names=self.enabled_without_solstice_festivals())
+                records, {record.civil_date for record in records},
+                enabled_names=self.enabled_without_solstice_festivals())
 
     def test_context_matches_are_clipped_to_target_months(self):
         target_months, target_data = covering_months_and_data(2030, 3)
@@ -485,23 +509,27 @@ class ResolveFestivalsTests(unittest.TestCase):
         target_data[(2030, 3)][0] = day_row(1, "S1", "1")
 
         enabled_names = self.enabled_without_solstice_festivals()
-        by_date, entries = resolve_festivals(target_months, target_data, context_months=context_months,
-                                             context_data=context_data, enabled_names=enabled_names)
+        records = canonical_records(context_months, context_data)
+        target_month_set = set(target_months)
+        target_dates = {
+            record.civil_date for record in records
+            if (record.civil_date.year, record.civil_date.month) in target_month_set
+        }
+        by_date, entries = resolve_festivals(
+            records, target_dates, enabled_names=enabled_names)
         ugadi_marker, ugadi_dates = entries_by_name(entries)["Ugadi"]
         self.assertEqual((ugadi_marker, ugadi_dates), (1, "Mar 01"))
         self.assertNotIn(date(2030, 2, 1), by_date)
 
-    def test_context_arguments_must_be_paired(self):
-        with self.assertRaisesRegex(ValueError, "context_months"):
-            resolve_festivals([(2030, 1)], covering_month_data(), context_months=[])
-
     def test_raises_when_a_festival_has_no_date(self):
         months, month_data = covering_months_and_data()
         month_data[(2030, 1)][0] = day_row(1, "S2", "1")
+        records = canonical_records(months, month_data)
 
         with self.assertRaisesRegex(RuntimeError, "Ugadi"):
             resolve_festivals(
-                months, month_data, enabled_names=self.enabled_without_solstice_festivals())
+                records, {record.civil_date for record in records},
+                enabled_names=self.enabled_without_solstice_festivals())
 
     def test_vriddhi_marks_only_the_former_date(self):
         rows = []
@@ -520,9 +548,11 @@ class ResolveFestivalsTests(unittest.TestCase):
             day += 1
         append_solar_coverage_rows(rows)
         months, month_data = sequential_month_data(rows)
+        records = canonical_records(months, month_data)
 
         by_date, entries = resolve_festivals(
-            months, month_data, enabled_names=self.enabled_without_solstice_festivals())
+            records, {record.civil_date for record in records},
+            enabled_names=self.enabled_without_solstice_festivals())
         marker, _date_text = entries_by_name(entries)["Janmashtami"]
         marked = dates_for_marker(by_date, marker)
         self.assertEqual(len(marked), 1)
@@ -549,16 +579,17 @@ class ResolveFestivalsTests(unittest.TestCase):
             day += 1
         append_solar_coverage_rows(rows)
         months, month_data = sequential_month_data(rows)
+        records = canonical_records(months, month_data)
 
         by_date, entries = resolve_festivals(
-            months, month_data, enabled_names=self.enabled_without_solstice_festivals())
+            records, {record.civil_date for record in records},
+            enabled_names=self.enabled_without_solstice_festivals())
         marker, _date_text = entries_by_name(entries)["Akshaya Tritiya"]
         marked = dates_for_marker(by_date, marker)
         self.assertEqual(len(marked), 1)
         # Kshaya S2→S4 keeps the later civil day (the S4 sunrise).
-        records = collect_records(months, month_data)
         self.assertEqual(
-            next(tithi for civil, tithi, *_ in records if civil == marked[0]),
+            next(record.tithi for record in records if record.civil_date == marked[0]),
             "S4")
 
 
@@ -567,18 +598,18 @@ class VaramahalakshmiTests(unittest.TestCase):
     def test_uses_friday_immediately_before_sravana_purnima(self):
         # 2030-08-10 is Saturday, so preceding Friday is 08-09.
         records = [
-            (date(2030, 8, 9), "S14", 1, "5", False, 0.0),
-            (date(2030, 8, 10), "S15", 1, "5", False, 0.0),
-            (date(2030, 8, 11), "K1", 1, "5", False, 0.0),
+            festival_record(date(2030, 8, 9), "S14", masa="5", is_adhika=False, nakshatra=1, sunrise_jd=0.0),
+            festival_record(date(2030, 8, 10), "S15", masa="5", is_adhika=False, nakshatra=1, sunrise_jd=0.0),
+            festival_record(date(2030, 8, 11), "K1", masa="5", is_adhika=False, nakshatra=1, sunrise_jd=0.0),
         ]
         self.assertEqual(select_varamahalakshmi_dates(records), [date(2030, 8, 9)])
 
     def test_friday_purnima_uses_previous_week_friday(self):
         # 2030-08-16 is Friday; rule still chooses the prior Friday.
         records = [
-            (date(2030, 8, 15), "S14", 1, "5", False, 0.0),
-            (date(2030, 8, 16), "S15", 1, "5", False, 0.0),
-            (date(2030, 8, 17), "K1", 1, "5", False, 0.0),
+            festival_record(date(2030, 8, 15), "S14", masa="5", is_adhika=False, nakshatra=1, sunrise_jd=0.0),
+            festival_record(date(2030, 8, 16), "S15", masa="5", is_adhika=False, nakshatra=1, sunrise_jd=0.0),
+            festival_record(date(2030, 8, 17), "K1", masa="5", is_adhika=False, nakshatra=1, sunrise_jd=0.0),
         ]
         self.assertEqual(select_varamahalakshmi_dates(records), [date(2030, 8, 9)])
 
@@ -586,23 +617,23 @@ class VaramahalakshmiTests(unittest.TestCase):
         # 2030-08-09 is Friday; former S15 sunrise is 08-09, so prior Friday
         # is 08-02.
         records = [
-            (date(2030, 8, 8), "S14", 1, "5", False, 0.0),
-            (date(2030, 8, 9), "S15", 1, "5", False, 0.0),
-            (date(2030, 8, 10), "S15", 1, "5", False, 0.0),
+            festival_record(date(2030, 8, 8), "S14", masa="5", is_adhika=False, nakshatra=1, sunrise_jd=0.0),
+            festival_record(date(2030, 8, 9), "S15", masa="5", is_adhika=False, nakshatra=1, sunrise_jd=0.0),
+            festival_record(date(2030, 8, 10), "S15", masa="5", is_adhika=False, nakshatra=1, sunrise_jd=0.0),
         ]
         self.assertEqual(select_varamahalakshmi_dates(records), [date(2030, 8, 2)])
 
     def test_skips_adhika_sravana_purnima(self):
         records = [
-            (date(2030, 8, 10), "S15", 1, "A5", True, 0.0),
-            (date(2030, 8, 11), "K1", 1, "A5", True, 0.0),
+            festival_record(date(2030, 8, 10), "S15", masa="A5", is_adhika=True, nakshatra=1, sunrise_jd=0.0),
+            festival_record(date(2030, 8, 11), "K1", masa="A5", is_adhika=True, nakshatra=1, sunrise_jd=0.0),
         ]
         self.assertEqual(select_varamahalakshmi_dates(records), [])
 
     def test_dispatcher_routes_by_name(self):
         records = [
-            (date(2030, 8, 9), "S14", 1, "5", False, 0.0),
-            (date(2030, 8, 10), "S15", 1, "5", False, 0.0),
+            festival_record(date(2030, 8, 9), "S14", masa="5", is_adhika=False, nakshatra=1, sunrise_jd=0.0),
+            festival_record(date(2030, 8, 10), "S15", masa="5", is_adhika=False, nakshatra=1, sunrise_jd=0.0),
         ]
         self.assertEqual(select_non_tithi_dates(records, "Varamahalakshmi Vrata"), [date(2030, 8, 9)])
 
@@ -615,49 +646,49 @@ class RigUpakarmaTests(unittest.TestCase):
 
     def test_selects_nija_sravana_with_sravana_nakshatra(self):
         records = [
-            (date(2030, 8, 10), "S12", 22, "5", False, 0.0),
-            (date(2030, 8, 11), "S13", 23, "5", False, 0.0),
+            festival_record(date(2030, 8, 10), "S12", masa="5", is_adhika=False, nakshatra=22, sunrise_jd=0.0),
+            festival_record(date(2030, 8, 11), "S13", masa="5", is_adhika=False, nakshatra=23, sunrise_jd=0.0),
         ]
         self.assertEqual(select_rig_upakarma_dates(records), [date(2030, 8, 10)])
 
     def test_skips_adhika_sravana(self):
         records = [
-            (date(2030, 8, 10), "S12", 22, "A5", True, 0.0),
+            festival_record(date(2030, 8, 10), "S12", masa="A5", is_adhika=True, nakshatra=22, sunrise_jd=0.0),
         ]
         self.assertEqual(select_rig_upakarma_dates(records), [])
 
     def test_vriddhi_keeps_former_sunrise(self):
         records = [
-            (date(2030, 8, 10), "S12", 22, "5", False, 0.0),
-            (date(2030, 8, 11), "S13", 22, "5", False, 0.0),
+            festival_record(date(2030, 8, 10), "S12", masa="5", is_adhika=False, nakshatra=22, sunrise_jd=0.0),
+            festival_record(date(2030, 8, 11), "S13", masa="5", is_adhika=False, nakshatra=22, sunrise_jd=0.0),
         ]
         self.assertEqual(select_rig_upakarma_dates(records), [date(2030, 8, 10)])
 
     def test_kshaya_sravana_postpones_to_bhadrapada(self):
         # Sravana masa skips nakshatra 22 between sunrises (21 -> 23).
         records = [
-            (date(2022, 8, 11), "S14", 21, "5", False, 0.0),
-            (date(2022, 8, 12), "S15", 23, "5", False, 0.0),
-            (date(2022, 9, 8), "S11", 22, "6", False, 0.0),
-            (date(2022, 9, 9), "S12", 23, "6", False, 0.0),
+            festival_record(date(2022, 8, 11), "S14", masa="5", is_adhika=False, nakshatra=21, sunrise_jd=0.0),
+            festival_record(date(2022, 8, 12), "S15", masa="5", is_adhika=False, nakshatra=23, sunrise_jd=0.0),
+            festival_record(date(2022, 9, 8), "S11", masa="6", is_adhika=False, nakshatra=22, sunrise_jd=0.0),
+            festival_record(date(2022, 9, 9), "S12", masa="6", is_adhika=False, nakshatra=23, sunrise_jd=0.0),
         ]
         self.assertEqual(select_rig_upakarma_dates(records), [date(2022, 9, 8)])
 
     def test_prefers_sravana_masa_over_bhadrapada(self):
         records = [
-            (date(2030, 8, 10), "S12", 22, "5", False, 0.0),
-            (date(2030, 9, 8), "S11", 22, "6", False, 0.0),
+            festival_record(date(2030, 8, 10), "S12", masa="5", is_adhika=False, nakshatra=22, sunrise_jd=0.0),
+            festival_record(date(2030, 9, 8), "S11", masa="6", is_adhika=False, nakshatra=22, sunrise_jd=0.0),
         ]
         self.assertEqual(select_rig_upakarma_dates(records), [date(2030, 8, 10)])
 
     def test_eclipse_on_sravana_day_postpones_to_bhadrapada(self):
         records = [
-            (date(2030, 8, 9), "S11", 21, "5", False, 10.0),
-            (date(2030, 8, 10), "S12", 22, "5", False, 11.0),
-            (date(2030, 8, 11), "S13", 23, "5", False, 12.0),
-            (date(2030, 9, 7), "S10", 21, "6", False, 40.0),
-            (date(2030, 9, 8), "S11", 22, "6", False, 41.0),
-            (date(2030, 9, 9), "S12", 23, "6", False, 42.0),
+            festival_record(date(2030, 8, 9), "S11", masa="5", is_adhika=False, nakshatra=21, sunrise_jd=10.0),
+            festival_record(date(2030, 8, 10), "S12", masa="5", is_adhika=False, nakshatra=22, sunrise_jd=11.0),
+            festival_record(date(2030, 8, 11), "S13", masa="5", is_adhika=False, nakshatra=23, sunrise_jd=12.0),
+            festival_record(date(2030, 9, 7), "S10", masa="6", is_adhika=False, nakshatra=21, sunrise_jd=40.0),
+            festival_record(date(2030, 9, 8), "S11", masa="6", is_adhika=False, nakshatra=22, sunrise_jd=41.0),
+            festival_record(date(2030, 9, 9), "S12", masa="6", is_adhika=False, nakshatra=23, sunrise_jd=42.0),
         ]
         geopos = (79.42, 13.65, 0.0)
         with mock.patch("festival_rules.civil_day_has_eclipse",
@@ -670,26 +701,26 @@ class SamaUpakarmaTests(unittest.TestCase):
 
     def test_selects_bhadrapada_hasta(self):
         records = [
-            (date(2030, 9, 8), "S12", 13, "6", False, 0.0),
-            (date(2030, 9, 9), "S13", 14, "6", False, 0.0),
+            festival_record(date(2030, 9, 8), "S12", masa="6", is_adhika=False, nakshatra=13, sunrise_jd=0.0),
+            festival_record(date(2030, 9, 9), "S13", masa="6", is_adhika=False, nakshatra=14, sunrise_jd=0.0),
         ]
         self.assertEqual(select_sama_upakarma_dates(records), [date(2030, 9, 8)])
 
     def test_prefers_bhadrapada_hasta_over_sravana(self):
         records = [
-            (date(2030, 8, 10), "S12", 13, "5", False, 0.0),
-            (date(2030, 9, 8), "S11", 13, "6", False, 0.0),
+            festival_record(date(2030, 8, 10), "S12", masa="5", is_adhika=False, nakshatra=13, sunrise_jd=0.0),
+            festival_record(date(2030, 9, 8), "S11", masa="6", is_adhika=False, nakshatra=13, sunrise_jd=0.0),
         ]
         self.assertEqual(select_sama_upakarma_dates(records), [date(2030, 9, 8)])
 
     def test_eclipse_on_bhadrapada_hasta_postpones_to_sravana_hasta(self):
         records = [
-            (date(2030, 8, 9), "S11", 12, "5", False, 10.0),
-            (date(2030, 8, 10), "S12", 13, "5", False, 11.0),
-            (date(2030, 8, 11), "S13", 14, "5", False, 12.0),
-            (date(2030, 9, 7), "S10", 12, "6", False, 40.0),
-            (date(2030, 9, 8), "S11", 13, "6", False, 41.0),
-            (date(2030, 9, 9), "S12", 14, "6", False, 42.0),
+            festival_record(date(2030, 8, 9), "S11", masa="5", is_adhika=False, nakshatra=12, sunrise_jd=10.0),
+            festival_record(date(2030, 8, 10), "S12", masa="5", is_adhika=False, nakshatra=13, sunrise_jd=11.0),
+            festival_record(date(2030, 8, 11), "S13", masa="5", is_adhika=False, nakshatra=14, sunrise_jd=12.0),
+            festival_record(date(2030, 9, 7), "S10", masa="6", is_adhika=False, nakshatra=12, sunrise_jd=40.0),
+            festival_record(date(2030, 9, 8), "S11", masa="6", is_adhika=False, nakshatra=13, sunrise_jd=41.0),
+            festival_record(date(2030, 9, 9), "S12", masa="6", is_adhika=False, nakshatra=14, sunrise_jd=42.0),
         ]
         geopos = (79.42, 13.65, 0.0)
         with mock.patch(
@@ -702,7 +733,7 @@ class SamaUpakarmaTests(unittest.TestCase):
 
     def test_dispatcher_routes_by_name(self):
         records = [
-            (date(2030, 9, 8), "S12", 13, "6", False, 0.0),
+            festival_record(date(2030, 9, 8), "S12", masa="6", is_adhika=False, nakshatra=13, sunrise_jd=0.0),
         ]
         self.assertEqual(
             select_non_tithi_dates(records, "Sama Upakarma"),
@@ -713,25 +744,25 @@ class OnamTests(unittest.TestCase):
 
     def test_selects_sravana_nakshatra_in_simha(self):
         records = [
-            (date(2030, 8, 20), "S5", 22, "5", False, 10.0),
-            (date(2030, 8, 21), "S6", 23, "5", False, 11.0),
+            festival_record(date(2030, 8, 20), "S5", masa="5", is_adhika=False, nakshatra=22, sunrise_jd=10.0),
+            festival_record(date(2030, 8, 21), "S6", masa="5", is_adhika=False, nakshatra=23, sunrise_jd=11.0),
         ]
         with mock.patch("festival_rules.panchanga.raasi", side_effect=lambda jd: 5 if jd >= 10.0 else 4):
             self.assertEqual(select_onam_dates(records), [date(2030, 8, 20)])
 
     def test_vriddhi_keeps_former_sunrise(self):
         records = [
-            (date(2030, 8, 20), "S5", 22, "5", False, 10.0),
-            (date(2030, 8, 21), "S6", 22, "5", False, 11.0),
+            festival_record(date(2030, 8, 20), "S5", masa="5", is_adhika=False, nakshatra=22, sunrise_jd=10.0),
+            festival_record(date(2030, 8, 21), "S6", masa="5", is_adhika=False, nakshatra=22, sunrise_jd=11.0),
         ]
         with mock.patch("festival_rules.panchanga.raasi", return_value=5):
             self.assertEqual(select_onam_dates(records), [date(2030, 8, 20)])
 
     def test_missing_simha_falls_back_to_kanya(self):
         records = [
-            (date(2030, 8, 20), "S5", 21, "5", False, 10.0),
-            (date(2030, 8, 21), "S6", 23, "5", False, 11.0),
-            (date(2030, 9, 16), "S10", 22, "6", False, 20.0),
+            festival_record(date(2030, 8, 20), "S5", masa="5", is_adhika=False, nakshatra=21, sunrise_jd=10.0),
+            festival_record(date(2030, 8, 21), "S6", masa="5", is_adhika=False, nakshatra=23, sunrise_jd=11.0),
+            festival_record(date(2030, 9, 16), "S10", masa="6", is_adhika=False, nakshatra=22, sunrise_jd=20.0),
         ]
         with mock.patch("festival_rules.panchanga.raasi",
                         side_effect=lambda jd: 5 if jd < 20.0 else 6):
@@ -739,8 +770,8 @@ class OnamTests(unittest.TestCase):
 
     def test_prefers_simha_over_kanya(self):
         records = [
-            (date(2030, 8, 20), "S5", 22, "5", False, 10.0),
-            (date(2030, 9, 16), "S10", 22, "6", False, 20.0),
+            festival_record(date(2030, 8, 20), "S5", masa="5", is_adhika=False, nakshatra=22, sunrise_jd=10.0),
+            festival_record(date(2030, 9, 16), "S10", masa="6", is_adhika=False, nakshatra=22, sunrise_jd=20.0),
         ]
         with mock.patch("festival_rules.panchanga.raasi",
                         side_effect=lambda jd: 5 if jd < 20.0 else 6):
@@ -748,7 +779,7 @@ class OnamTests(unittest.TestCase):
 
     def test_dispatcher_routes_by_name(self):
         records = [
-            (date(2030, 8, 20), "S5", 22, "5", False, 10.0),
+            festival_record(date(2030, 8, 20), "S5", masa="5", is_adhika=False, nakshatra=22, sunrise_jd=10.0),
         ]
         with mock.patch("festival_rules.panchanga.raasi", return_value=5):
             self.assertEqual(select_non_tithi_dates(records, "Onam"), [date(2030, 8, 20)])
@@ -758,20 +789,20 @@ class YajurUpakarmaTests(unittest.TestCase):
 
     def test_selects_sravana_purnima(self):
         records = [
-            (date(2030, 8, 14), "S14", 1, "5", False, 0.0),
-            (date(2030, 8, 15), "S15", 1, "5", False, 0.0),
-            (date(2030, 8, 16), "K1", 1, "5", False, 0.0),
+            festival_record(date(2030, 8, 14), "S14", masa="5", is_adhika=False, nakshatra=1, sunrise_jd=0.0),
+            festival_record(date(2030, 8, 15), "S15", masa="5", is_adhika=False, nakshatra=1, sunrise_jd=0.0),
+            festival_record(date(2030, 8, 16), "K1", masa="5", is_adhika=False, nakshatra=1, sunrise_jd=0.0),
         ]
         self.assertEqual(select_yajur_upakarma_dates(records), [date(2030, 8, 15)])
 
     def test_eclipse_on_sravana_purnima_postpones_to_bhadrapada(self):
         records = [
-            (date(2030, 8, 14), "S14", 1, "5", False, 10.0),
-            (date(2030, 8, 15), "S15", 1, "5", False, 11.0),
-            (date(2030, 8, 16), "K1", 1, "5", False, 12.0),
-            (date(2030, 9, 13), "S14", 1, "6", False, 40.0),
-            (date(2030, 9, 14), "S15", 1, "6", False, 41.0),
-            (date(2030, 9, 15), "K1", 1, "6", False, 42.0),
+            festival_record(date(2030, 8, 14), "S14", masa="5", is_adhika=False, nakshatra=1, sunrise_jd=10.0),
+            festival_record(date(2030, 8, 15), "S15", masa="5", is_adhika=False, nakshatra=1, sunrise_jd=11.0),
+            festival_record(date(2030, 8, 16), "K1", masa="5", is_adhika=False, nakshatra=1, sunrise_jd=12.0),
+            festival_record(date(2030, 9, 13), "S14", masa="6", is_adhika=False, nakshatra=1, sunrise_jd=40.0),
+            festival_record(date(2030, 9, 14), "S15", masa="6", is_adhika=False, nakshatra=1, sunrise_jd=41.0),
+            festival_record(date(2030, 9, 15), "K1", masa="6", is_adhika=False, nakshatra=1, sunrise_jd=42.0),
         ]
         geopos = (79.42, 13.65, 0.0)
         with mock.patch("festival_rules.civil_day_has_eclipse",
@@ -783,8 +814,7 @@ class YajurUpakarmaTests(unittest.TestCase):
         location = load_location("Helsinki")
         panchanga.set_chosen_ayanamsa("citra")
         months = list(month_range(2026, 5, count=6))
-        month_data = {(year, month): daily_values(year, month, location) for year, month in months}
-        records = collect_records(months, month_data)
+        records = daily_records(months, location)
         geopos = (location.longitude, location.latitude, 0.0)
 
         self.assertEqual(select_yajur_upakarma_dates(records, geopos=geopos, timezone_name=location.timezone_name),
@@ -795,23 +825,23 @@ class VaikunthaEkadashiTests(unittest.TestCase):
 
     def test_keeps_margasira_s11_in_dhanur(self):
         records = [
-            (date(2030, 12, 5), "S11", 1, "9", False, 10.0),
-            (date(2030, 12, 20), "S11", 1, "10", False, 20.0),
+            festival_record(date(2030, 12, 5), "S11", masa="9", is_adhika=False, nakshatra=1, sunrise_jd=10.0),
+            festival_record(date(2030, 12, 20), "S11", masa="10", is_adhika=False, nakshatra=1, sunrise_jd=20.0),
         ]
         with mock.patch("festival_rules.panchanga.raasi", side_effect=lambda jd: 9 if jd == 10.0 else 10):
             self.assertEqual(select_vaikuntha_ekadashi_dates(records), [date(2030, 12, 5)])
 
     def test_keeps_pausha_s11_in_dhanur(self):
         records = [
-            (date(2030, 12, 5), "S11", 1, "9", False, 10.0),
-            (date(2030, 12, 20), "S11", 1, "10", False, 20.0),
+            festival_record(date(2030, 12, 5), "S11", masa="9", is_adhika=False, nakshatra=1, sunrise_jd=10.0),
+            festival_record(date(2030, 12, 20), "S11", masa="10", is_adhika=False, nakshatra=1, sunrise_jd=20.0),
         ]
         with mock.patch("festival_rules.panchanga.raasi", side_effect=lambda jd: 9 if jd == 20.0 else 8):
             self.assertEqual(select_vaikuntha_ekadashi_dates(records), [date(2030, 12, 20)])
 
     def test_rejects_non_dhanur_candidates(self):
         records = [
-            (date(2030, 12, 5), "S11", 1, "9", False, 10.0),
+            festival_record(date(2030, 12, 5), "S11", masa="9", is_adhika=False, nakshatra=1, sunrise_jd=10.0),
         ]
         with mock.patch("festival_rules.panchanga.raasi", return_value=8):
             self.assertEqual(select_vaikuntha_ekadashi_dates(records), [])
@@ -819,9 +849,9 @@ class VaikunthaEkadashiTests(unittest.TestCase):
     def test_uses_shared_ekadashi_kshaya_day(self):
         # S11 skipped between sunrises; upavasa is the following (S12) day.
         records = [
-            (date(2030, 12, 4), "S10", 1, "9", False, 10.0),
-            (date(2030, 12, 5), "S12", 1, "9", False, 11.0),
-            (date(2030, 12, 6), "S13", 1, "9", False, 12.0),
+            festival_record(date(2030, 12, 4), "S10", masa="9", is_adhika=False, nakshatra=1, sunrise_jd=10.0),
+            festival_record(date(2030, 12, 5), "S12", masa="9", is_adhika=False, nakshatra=1, sunrise_jd=11.0),
+            festival_record(date(2030, 12, 6), "S13", masa="9", is_adhika=False, nakshatra=1, sunrise_jd=12.0),
         ]
         with mock.patch("festival_rules.panchanga.raasi", return_value=9):
             self.assertEqual(select_vaikuntha_ekadashi_dates(records), [date(2030, 12, 5)])
@@ -832,41 +862,43 @@ class VaikunthaEkadashiTests(unittest.TestCase):
         panchanga.set_chosen_ayanamsa("citra")
         months = list(month_range(2086, 3))
         context_months = list(month_range(2086, 2, count=MONTH_COUNT + 2))
-        context_data = {(year, month): daily_values(year, month, location) for year, month in context_months}
-        month_data = {(year, month): context_data[(year, month)] for year, month in months}
+        records = daily_records(context_months, location)
+        target_month_set = set(months)
+        target_dates = {
+            record.civil_date for record in records
+            if (record.civil_date.year, record.civil_date.month) in target_month_set
+        }
 
-        by_date, entries = resolve_festivals(months, month_data, context_months=context_months,
-                                             context_data=context_data)
+        by_date, entries = resolve_festivals(records, target_dates)
 
         vaikuntha_marker, vaikuntha_dates = entries_by_name(entries)["Vaikuntha Ekadashi"]
         self.assertEqual(vaikuntha_dates, "None")
         self.assertNotIn(vaikuntha_marker, [n for nums in by_date.values() for n in nums])
-        records = collect_records(context_months, context_data)
         self.assertEqual(select_vaikuntha_ekadashi_dates(records), [])
         margasira = select_plain_tithi_dates(records, 9, "S11")
         pausha = select_plain_tithi_dates(records, 10, "S11")
         self.assertEqual(margasira, [date(2086, 12, 16)])
         self.assertEqual(pausha, [date(2087, 1, 15)])
-        records_by_date = {record[CIVIL_DATE]: record for record in records}
-        self.assertEqual(panchanga.raasi(records_by_date[margasira[0]][SUNRISE_JD]), 8)
-        self.assertEqual(panchanga.raasi(records_by_date[pausha[0]][SUNRISE_JD]), 10)
+        records_by_date = {record.civil_date: record for record in records}
+        self.assertEqual(panchanga.raasi(records_by_date[margasira[0]].sunrise_jd), 8)
+        self.assertEqual(panchanga.raasi(records_by_date[pausha[0]].sunrise_jd), 10)
 
 
 class MakaraSankrantiTests(unittest.TestCase):
 
     def test_marks_first_sunrise_in_makara(self):
         records = [
-            (date(2030, 1, 13), "S10", 1, "10", False, 10.0),
-            (date(2030, 1, 14), "S11", 1, "10", False, 20.0),
-            (date(2030, 1, 15), "S12", 1, "10", False, 30.0),
+            festival_record(date(2030, 1, 13), "S10", masa="10", is_adhika=False, nakshatra=1, sunrise_jd=10.0),
+            festival_record(date(2030, 1, 14), "S11", masa="10", is_adhika=False, nakshatra=1, sunrise_jd=20.0),
+            festival_record(date(2030, 1, 15), "S12", masa="10", is_adhika=False, nakshatra=1, sunrise_jd=30.0),
         ]
         with mock.patch("festival_rules.panchanga.raasi", side_effect=lambda jd: 10 if jd >= 20.0 else 9):
             self.assertEqual(select_makara_sankranti_dates(records), [date(2030, 1, 14)])
 
     def test_ignores_range_that_opens_already_in_makara(self):
         records = [
-            (date(2030, 1, 14), "S11", 1, "10", False, 20.0),
-            (date(2030, 1, 15), "S12", 1, "10", False, 30.0),
+            festival_record(date(2030, 1, 14), "S11", masa="10", is_adhika=False, nakshatra=1, sunrise_jd=20.0),
+            festival_record(date(2030, 1, 15), "S12", masa="10", is_adhika=False, nakshatra=1, sunrise_jd=30.0),
         ]
         with mock.patch("festival_rules.panchanga.raasi", return_value=10):
             self.assertEqual(select_makara_sankranti_dates(records), [])
@@ -876,17 +908,17 @@ class MeshaSankrantiTests(unittest.TestCase):
 
     def test_marks_first_sunrise_in_mesha(self):
         records = [
-            (date(2030, 4, 13), "S10", 1, "1", False, 10.0),
-            (date(2030, 4, 14), "S11", 1, "1", False, 20.0),
-            (date(2030, 4, 15), "S12", 1, "1", False, 30.0),
+            festival_record(date(2030, 4, 13), "S10", masa="1", is_adhika=False, nakshatra=1, sunrise_jd=10.0),
+            festival_record(date(2030, 4, 14), "S11", masa="1", is_adhika=False, nakshatra=1, sunrise_jd=20.0),
+            festival_record(date(2030, 4, 15), "S12", masa="1", is_adhika=False, nakshatra=1, sunrise_jd=30.0),
         ]
         with mock.patch("festival_rules.panchanga.raasi", side_effect=lambda jd: 1 if jd >= 20.0 else 12):
             self.assertEqual(select_mesha_sankranti_dates(records), [date(2030, 4, 14)])
 
     def test_ignores_range_that_opens_already_in_mesha(self):
         records = [
-            (date(2030, 4, 14), "S11", 1, "1", False, 20.0),
-            (date(2030, 4, 15), "S12", 1, "1", False, 30.0),
+            festival_record(date(2030, 4, 14), "S11", masa="1", is_adhika=False, nakshatra=1, sunrise_jd=20.0),
+            festival_record(date(2030, 4, 15), "S12", masa="1", is_adhika=False, nakshatra=1, sunrise_jd=30.0),
         ]
         with mock.patch("festival_rules.panchanga.raasi", return_value=1):
             self.assertEqual(select_mesha_sankranti_dates(records), [])
@@ -899,12 +931,12 @@ class SolsticeTests(unittest.TestCase):
         june_solstice = june_midnight + 0.5
         december_solstice = december_midnight + 0.5
         records = [
-            (date(2030, 6, 20), "S1", 1, "1", False, june_midnight - 0.75),
-            (date(2030, 6, 21), "S2", 1, "1", False, june_solstice),
-            (date(2030, 6, 22), "S3", 1, "1", False, june_solstice + 0.25),
-            (date(2030, 12, 20), "S1", 1, "9", False, december_midnight - 0.75),
-            (date(2030, 12, 21), "S2", 1, "9", False, december_solstice),
-            (date(2030, 12, 22), "S3", 1, "9", False, december_solstice + 0.25),
+            festival_record(date(2030, 6, 20), "S1", masa="1", is_adhika=False, nakshatra=1, sunrise_jd=june_midnight - 0.75),
+            festival_record(date(2030, 6, 21), "S2", masa="1", is_adhika=False, nakshatra=1, sunrise_jd=june_solstice),
+            festival_record(date(2030, 6, 22), "S3", masa="1", is_adhika=False, nakshatra=1, sunrise_jd=june_solstice + 0.25),
+            festival_record(date(2030, 12, 20), "S1", masa="9", is_adhika=False, nakshatra=1, sunrise_jd=december_midnight - 0.75),
+            festival_record(date(2030, 12, 21), "S2", masa="9", is_adhika=False, nakshatra=1, sunrise_jd=december_solstice),
+            festival_record(date(2030, 12, 22), "S3", masa="9", is_adhika=False, nakshatra=1, sunrise_jd=december_solstice + 0.25),
         ]
 
         def solcross(longitude, _start_jd, _flags):
@@ -935,12 +967,12 @@ class AllSankrantiTests(unittest.TestCase):
 
     def test_maps_each_raasi_transition(self):
         records = [
-            (date(2030, 1, 13), "S10", 1, "10", False, 10.0),
-            (date(2030, 1, 14), "S11", 1, "10", False, 20.0),
-            (date(2030, 2, 12), "S10", 1, "11", False, 30.0),
-            (date(2030, 2, 13), "S11", 1, "11", False, 40.0),
-            (date(2030, 4, 13), "S10", 1, "1", False, 50.0),
-            (date(2030, 4, 14), "S11", 1, "1", False, 60.0),
+            festival_record(date(2030, 1, 13), "S10", masa="10", is_adhika=False, nakshatra=1, sunrise_jd=10.0),
+            festival_record(date(2030, 1, 14), "S11", masa="10", is_adhika=False, nakshatra=1, sunrise_jd=20.0),
+            festival_record(date(2030, 2, 12), "S10", masa="11", is_adhika=False, nakshatra=1, sunrise_jd=30.0),
+            festival_record(date(2030, 2, 13), "S11", masa="11", is_adhika=False, nakshatra=1, sunrise_jd=40.0),
+            festival_record(date(2030, 4, 13), "S10", masa="1", is_adhika=False, nakshatra=1, sunrise_jd=50.0),
+            festival_record(date(2030, 4, 14), "S11", masa="1", is_adhika=False, nakshatra=1, sunrise_jd=60.0),
         ]
 
         def raasi_for(jd):
@@ -966,17 +998,17 @@ class AllSankrantiTests(unittest.TestCase):
 
     def test_ignores_opening_raasi_without_prior_day(self):
         records = [
-            (date(2030, 1, 14), "S11", 1, "10", False, 20.0),
-            (date(2030, 1, 15), "S12", 1, "10", False, 30.0),
+            festival_record(date(2030, 1, 14), "S11", masa="10", is_adhika=False, nakshatra=1, sunrise_jd=20.0),
+            festival_record(date(2030, 1, 15), "S12", masa="10", is_adhika=False, nakshatra=1, sunrise_jd=30.0),
         ]
         with mock.patch("festival_rules.panchanga.raasi", return_value=10):
             self.assertEqual(sankranti_raasi_by_date(records), {})
 
 
-class ResolveEkadashiTests(unittest.TestCase):
+class EkadashiDatesFromRecordsTests(unittest.TestCase):
 
     def test_empty_input_returns_no_dates(self):
-        self.assertEqual(resolve_ekadashi_dates([], {}), [])
+        self.assertEqual(ekadashi_dates_from_records([]), [])
 
     def test_sunrise_vriddhi_and_kshaya_for_both_pakshas(self):
         months = [(2030, 6)]
@@ -992,7 +1024,8 @@ class ResolveEkadashiTests(unittest.TestCase):
                 day_row(21, "S12", "4"),  # sukla kshaya -> day 21
             ]
         }
-        self.assertEqual(resolve_ekadashi_dates(months, month_data), [
+        self.assertEqual(ekadashi_dates_from_records(
+            canonical_records(months, month_data)), [
             date(2030, 6, 2),
             date(2030, 6, 10),
             date(2030, 6, 21),
@@ -1069,7 +1102,9 @@ class GenericUdayaParityTests(unittest.TestCase):
                 day_row(22, "S13", "1"),
             ]
         }
-        self.assertEqual(resolve_ekadashi_dates(months, month_data), [date(2030, 3, 20)])
+        self.assertEqual(
+            ekadashi_dates_from_records(canonical_records(months, month_data)),
+            [date(2030, 3, 20)])
 
     def test_vriddhi_ekadashi_uses_first_day(self):
         months = [(2030, 3)]
@@ -1080,7 +1115,9 @@ class GenericUdayaParityTests(unittest.TestCase):
                 day_row(22, "S12", "1"),
             ]
         }
-        self.assertEqual(resolve_ekadashi_dates(months, month_data), [date(2030, 3, 20)])
+        self.assertEqual(
+            ekadashi_dates_from_records(canonical_records(months, month_data)),
+            [date(2030, 3, 20)])
 
     def test_kshaya_ekadashi_uses_next_day(self):
         months = [(2030, 8)]
@@ -1090,7 +1127,9 @@ class GenericUdayaParityTests(unittest.TestCase):
                 day_row(5, "S12", "5"),
             ]
         }
-        self.assertEqual(resolve_ekadashi_dates(months, month_data), [date(2030, 8, 5)])
+        self.assertEqual(
+            ekadashi_dates_from_records(canonical_records(months, month_data)),
+            [date(2030, 8, 5)])
 
     def test_both_pakshas_are_resolved(self):
         months = [(2030, 3)]
@@ -1100,7 +1139,9 @@ class GenericUdayaParityTests(unittest.TestCase):
                 day_row(20, "K11", "1"),
             ]
         }
-        self.assertEqual(resolve_ekadashi_dates(months, month_data), [date(2030, 3, 6), date(2030, 3, 20)])
+        self.assertEqual(
+            ekadashi_dates_from_records(canonical_records(months, month_data)),
+            [date(2030, 3, 6), date(2030, 3, 20)])
 
 
 if __name__ == "__main__":

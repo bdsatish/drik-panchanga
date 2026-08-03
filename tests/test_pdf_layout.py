@@ -1,5 +1,6 @@
 """Regression tests for the generated one-page calendar layout."""
 
+from datetime import date
 from io import BytesIO
 from pathlib import Path
 import re
@@ -9,6 +10,7 @@ from unittest import mock
 
 from reportlab.pdfgen.canvas import Canvas
 
+from festival_rules import DayRecord
 from generate_panchanga_calendar import (
     ACCENT,
     ADHIKA_INK,
@@ -26,7 +28,9 @@ from generate_panchanga_calendar import (
     argument_parser,
     build_pdf,
     calendar_year_label,
+    daily_records,
     default_output_path,
+    display_masa,
     draw_page_footer,
     draw_page_header,
     draw_eclipse_mark,
@@ -114,21 +118,29 @@ class PdfLayoutTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Ayanamsa must be one of"):
             parse_ayanamsa("lahiri")
 
-    def test_purnimanta_header_is_embedded(self):
+    def test_purnimanta_header_uses_single_daily_records_pass(self):
+        import generate_panchanga_calendar as calendar_module
+
         with TemporaryDirectory() as directory:
             output = Path(directory) / "calendar.pdf"
-            with mock.patch("generate_panchanga_calendar.find_local_eclipses", return_value=[]):
+            with mock.patch("generate_panchanga_calendar.find_local_eclipses", return_value=[]), \
+                    mock.patch(
+                        "generate_panchanga_calendar.daily_records",
+                        wraps=calendar_module.daily_records) as records_mock:
                 build_pdf(
                     load_location("Bengaluru"), 2023, 3, output, month_system="purnimanta")
             document = output.read_bytes()
+        self.assertEqual(records_mock.call_count, 1)
         # Subject is uncompressed in the Info dict; page content streams are flate-encoded.
         self.assertIn(b"purnimanta masa", document)
         self.assertNotIn(b"and amanta masa", document)
 
     def test_calendar_year_label_uses_both_samvatsara_conventions(self):
-        values = [(15, "S1", 1, 1, "A4", False, 0.0)]
+        records = [
+            DayRecord(date(2026, 8, 15), "S1", 1, 1, "A4", True, 0.0),
+        ]
         self.assertEqual(
-            calendar_year_label(2026, 8, values),
+            calendar_year_label(records),
             "1948 Parābhava | 2083 Siddhārthī | 5127 Kali (elapsed)")
 
     def test_pdf_subtitle_has_kali_ahargana_range(self):
@@ -211,15 +223,36 @@ class TithiDisplayTests(unittest.TestCase):
         self.assertEqual(tithi_font(False), PDF_FONT_BOLD_ITALIC)
 
 
+class DisplayMasaTests(unittest.TestCase):
+
+    def test_amanta_is_unchanged(self):
+        record = DayRecord(date(2030, 1, 1), "K1", 1, 1, "5", False, 0.0)
+        self.assertEqual(display_masa(record, amanta=True), "5")
+
+    def test_purnimanta_advances_ordinary_krishna(self):
+        record = DayRecord(date(2030, 1, 1), "K1", 1, 1, "5", False, 0.0)
+        self.assertEqual(display_masa(record, amanta=False), "6")
+
+    def test_purnimanta_leaves_sukla_unchanged(self):
+        record = DayRecord(date(2030, 1, 1), "S1", 1, 1, "5", False, 0.0)
+        self.assertEqual(display_masa(record, amanta=False), "5")
+
+    def test_purnimanta_leaves_adhika_krishna_unchanged(self):
+        record = DayRecord(date(2030, 1, 1), "K1", 1, 1, "A5", True, 0.0)
+        self.assertEqual(display_masa(record, amanta=False), "A5")
+
+    def test_purnimanta_wraps_phalguna_krishna_to_chaitra(self):
+        record = DayRecord(date(2030, 1, 1), "K1", 1, 1, "12", False, 0.0)
+        self.assertEqual(display_masa(record, amanta=False), "1")
+
+
 class SolarDateTests(unittest.TestCase):
 
     def test_solar_day_resets_at_sankranti(self):
-        from datetime import date
-
         records = [
-            (date(2026, 1, 13), "S1", 1, "10", False, 1.0),
-            (date(2026, 1, 14), "S2", 1, "10", False, 2.0),
-            (date(2026, 1, 15), "S3", 1, "10", False, 3.0),
+            DayRecord(date(2026, 1, 13), "S1", 1, 1, "10", False, 1.0),
+            DayRecord(date(2026, 1, 14), "S2", 1, 1, "10", False, 2.0),
+            DayRecord(date(2026, 1, 15), "S3", 1, 1, "10", False, 3.0),
         ]
         with mock.patch(
             "generate_panchanga_calendar.panchanga.raasi",
@@ -288,8 +321,8 @@ class SolarMarkerTests(unittest.TestCase):
             pdf.beginPath.return_value.curveTo.call_args.args[4], 38.0)
 
 
-class DailyValuesCacheHookTests(unittest.TestCase):
-    """``daily_values`` must forward sunrise tithi into ``masa``."""
+class DailyRecordsCacheHookTests(unittest.TestCase):
+    """``daily_records`` must forward sunrise tithi into ``masa``."""
 
     def test_passes_tithi_number_to_masa(self):
         import generate_panchanga_calendar as calendar_module
@@ -299,7 +332,7 @@ class DailyValuesCacheHookTests(unittest.TestCase):
         panchanga.set_chosen_ayanamsa("citra")
         with mock.patch.object(
                 calendar_module.panchanga, "masa", return_value=[1, False]) as masa_mock:
-            calendar_module.daily_values(2026, 1, location, amanta=True)
+            daily_records([(2026, 1)], location)
         self.assertTrue(masa_mock.called)
         for _args, kwargs in masa_mock.call_args_list:
             self.assertIn("tithi_number", kwargs)
