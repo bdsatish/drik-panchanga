@@ -25,7 +25,7 @@ from festival_rules import (
     julian_day_from_datetime,
     load_festival_selection,
     resolve_festivals,
-    sankranti_raasi_by_date,
+    sankranti_raasi_by_date
 )
 import panchanga
 from panchanga import sweph_version
@@ -190,7 +190,7 @@ def ensure_pdf_fonts() -> None:
         normal=PDF_FONT,
         bold=PDF_FONT_BOLD,
         italic=PDF_FONT_ITALIC,
-        boldItalic=PDF_FONT_BOLD_ITALIC,
+        boldItalic=PDF_FONT_BOLD_ITALIC
     )
     _pdf_fonts_registered = True
 
@@ -201,7 +201,7 @@ def embed_pdf_metadata(pdf, *, title, subject, ruleset_version, ayanamsa="citra"
         PDFDate,
         PDFDictionary,
         PDFName,
-        PDFString,
+        PDFString
     )
 
     ayan_label = ayanamsa_label(ayanamsa)
@@ -231,7 +231,7 @@ def embed_pdf_metadata(pdf, *, title, subject, ruleset_version, ayanamsa="citra"
         "Creator": PDFString(self.creator),
         "Subject": PDFString(self.subject),
         "Keywords": PDFString(self.keywords),
-        "Trapped": PDFName(self.trapped),
+        "Trapped": PDFName(self.trapped)
     }).format(document)
 
 
@@ -282,7 +282,7 @@ AYANAMSA_OPTIONS = {
     "pushya": "Pushya-paksha",
     "mula": "Mula-paksha",
     "krishnamurti": "Krishnamurti",
-    "raman": "Raman",
+    "raman": "Raman"
 }
 
 
@@ -317,7 +317,7 @@ def parse_ayanamsa(text):
         "truemula": "mula",
         "krishnamurti": "krishnamurti",
         "kp": "krishnamurti",
-        "raman": "raman",
+        "raman": "raman"
     }
     key = aliases.get(value)
     if key is None:
@@ -469,7 +469,7 @@ def resolve_city_key(city: str, locations: dict) -> str:
             expanded.extend(
                 sorted(
                     (name for name in locations if city_base_name(name).casefold() == base.casefold()),
-                    key=str.casefold,
+                    key=str.casefold
                 ))
         suggestions = expanded[:8]
     message = f"City {city!r} was not found in {DEFAULT_CITIES_PATH.name}"
@@ -545,7 +545,7 @@ def draw_tithi_underline(pdf, x, row_y, tithi_column_width, color, *, wavy=False
         path.curveTo(
             x0 + step / 3, baseline + direction,
             x0 + 2 * step / 3, baseline + direction,
-            x0 + step, baseline,
+            x0 + step, baseline
         )
     pdf.drawPath(path, stroke=1, fill=0)
 
@@ -661,7 +661,7 @@ def daily_records(months, location):
                 yoga_number,
                 masa_code(masa_number, is_adhika),
                 is_adhika,
-                sunrise_jd - place.timezone / 24,
+                sunrise_jd - place.timezone / 24
             ))
     return result
 
@@ -746,7 +746,7 @@ def draw_month(pdf, year, month, records_by_date, masa_badges, festivals_by_date
     centers = (
         x + tithi_column_width / 2,
         x + tithi_column_width + nakshatra_column_width / 2,
-        x + tithi_column_width + nakshatra_column_width + yoga_column_width / 2,
+        x + tithi_column_width + nakshatra_column_width + yoga_column_width / 2
     )
     for label, center in zip(("T", "N", "Y"), centers):
         draw_centered(pdf, label, center, header_top - 10.5, PDF_FONT_BOLD, 7.0, MUTED)
@@ -793,7 +793,7 @@ def draw_month(pdf, year, month, records_by_date, masa_badges, festivals_by_date
             pdf.drawRightString(
                 x + tithi_column_width - 1.0,
                 row_y + 8.2,
-                masa_badge.removeprefix("A"),
+                masa_badge.removeprefix("A")
             )
         if sankranti_raasi is not None:
             # Solar markers use the N-cell so the T-cell stays clear for lunar marks.
@@ -830,7 +830,7 @@ def draw_month(pdf, year, month, records_by_date, masa_badges, festivals_by_date
         pdf.drawString(
             x + tithi_column_width + nakshatra_column_width + 3.0,
             baseline,
-            f"{yoga:02d}",
+            f"{yoga:02d}"
         )
         if festival_numbers:
             pdf.setFillColor(FESTIVAL_INK)
@@ -917,7 +917,7 @@ def draw_page_header(
         f"{masa_label} masa",
         f"{coordinate_label(location.latitude, 'N', 'S')}, "
         f"{coordinate_label(location.longitude, 'E', 'W')}",
-        f"{location.timezone_name} civil time",
+        f"{location.timezone_name} civil time"
     ))
     if kali_ahargana is not None:
         start_ahargana, end_ahargana = kali_ahargana
@@ -969,7 +969,7 @@ def draw_page_footer(pdf, festival_entries, eclipse_line="Eclipses: None"):
         nakshatra_key_line(),
         yoga_key_line(),
         masa_key_line(),
-        sankranti_key_line(),
+        sankranti_key_line()
     )
     page_width = landscape(A4)[0]
     available_width = page_width - 36
