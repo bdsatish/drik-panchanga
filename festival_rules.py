@@ -32,13 +32,13 @@ def jd_to_local_civil_date(jd, timezone_name):
 
 DayRecord = namedtuple(
     "DayRecord",
-    "civil_date tithi nakshatra yoga masa is_adhika sunrise_jd",
+    "civil_date tithi nakshatra yoga masa is_adhika sunrise_jd"
 )
 
 FestivalRule = namedtuple(
     "FestivalRule",
     "name masa tithi selector allow_adhika allow_empty location_aware",
-    defaults=(None, None, None, False, False, False),
+    defaults=(None, None, None, False, False, False)
 )
 
 
@@ -234,7 +234,7 @@ def find_local_eclipses(start_jd, end_jd, geopos):
 
     searches = (
         ("Lunar", panchanga.swe.lun_eclipse_when_loc),
-        ("Solar", panchanga.swe.sol_eclipse_when_loc),
+        ("Solar", panchanga.swe.sol_eclipse_when_loc)
     )
     found = []
     for kind, finder in searches:
@@ -505,33 +505,40 @@ FESTIVAL_RULES = [
     FestivalRule("Ratha Saptami", masa=11, tithi="S7"),
     FestivalRule("VSN Jayanti", masa=11, tithi="S11"),
     FestivalRule("Maha Shivaratri", masa=11, tithi="K14"),
-    FestivalRule("Kama Dahana (Holi)", masa=12, tithi="S15"),
+    FestivalRule("Kama Dahana (Holi)", masa=12, tithi="S15")
 ]
 
 
-def resolve_festivals(records, target_dates, *, geopos=None, timezone_name=None, enabled_names=None):
-    """Resolve festivals for the PDF calendar.
+def select_dates_for_rule(rule, records, geopos=None, timezone_name=None):
+    """Run a custom selector or the standard māsa+tithi selector."""
+    if not rule.selector:
+        return select_plain_tithi_dates(
+            records, rule.masa, rule.tithi,
+            allow_adhika=rule.allow_adhika)
+    if rule.location_aware:
+        return rule.selector(
+            records, geopos=geopos, timezone_name=timezone_name)
+    return rule.selector(records)
 
-    Returns ``(markers_by_date, entries)`` where markers are dense ``1..N`` in
-    ``FESTIVAL_RULES`` order among enabled festivals, and each entry is
-    ``(marker, date_text, name)``.
+
+def resolve_festivals(records, target_dates, *, geopos=None, timezone_name=None, enabled_names=None):
+    """Return PDF day markers and footer entries for enabled festivals.
+
+    ``markers_by_date`` looks like ``{date: [1, 3]}``; ``entries`` looks like
+    ``[(1, "Mar 19", "Ugadi")]``. Selectors may inspect boundary records, but
+    only dates in ``target_dates`` are printed.
     """
     target_dates = set(target_dates)
     markers_by_date = {}
     entries = []
-    for rule in FESTIVAL_RULES:
-        if enabled_names is not None and rule.name not in enabled_names:
-            continue
-        if rule.selector:
-            if rule.location_aware:
-                candidates = rule.selector(
-                    records, geopos=geopos, timezone_name=timezone_name)
-            else:
-                candidates = rule.selector(records)
-        else:
-            candidates = select_plain_tithi_dates(
-                records, rule.masa, rule.tithi,
-                allow_adhika=rule.allow_adhika)
+    enabled_rules = [
+        rule for rule in FESTIVAL_RULES
+        if enabled_names is None or rule.name in enabled_names
+    ]
+
+    for marker, rule in enumerate(enabled_rules, start=1):
+        candidates = select_dates_for_rule(
+            rule, records, geopos, timezone_name)
         dates = [
             civil_date
             for civil_date in candidates
@@ -539,7 +546,6 @@ def resolve_festivals(records, target_dates, *, geopos=None, timezone_name=None,
         ]
         if not dates and not rule.allow_empty:
             raise RuntimeError(f"No calendar date found for {rule.name}")
-        marker = len(entries) + 1
         for civil_date in dates:
             markers_by_date.setdefault(civil_date, []).append(marker)
         entries.append((marker, format_festival_dates(dates), rule.name))
