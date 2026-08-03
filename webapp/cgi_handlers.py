@@ -5,9 +5,7 @@ from __future__ import annotations
 import html
 import json
 import os
-import shutil
 import sys
-import tempfile
 import traceback
 from pathlib import Path
 from urllib.parse import parse_qs
@@ -17,13 +15,11 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from generate_panchanga_calendar import (  # noqa: E402
-    DEFAULT_FESTIVALS_PATH, build_pdf, default_output_path, load_location, parse_start_month,
-)
 from webapp.app import (  # noqa: E402
-    city_names, safe_download_name, search_cities, suggest_city_for_ip,
+    city_names, search_cities, suggest_city_for_ip,
 )
 from webapp.day_panchanga import compute_day_panchanga  # noqa: E402
+from webapp.pdf_service import generate_pdf  # noqa: E402
 
 PROJECT_ROOT = _REPO_ROOT
 
@@ -138,35 +134,11 @@ def handle_generate() -> None:
 
     try:
         form = _parse_urlencoded_post()
-        city = (form.get("city") or "").strip()
-        start = (form.get("start") or "").strip()
-        month = (form.get("month") or "amanta").strip()
-        ayanamsa = (form.get("ayanamsa") or "citra").strip()
-        if not city:
-            write_error("City is required.")
-            return
-        if not start:
-            write_error("Start month is required (YYYY-MM).")
-            return
-
-        start_year, start_month = parse_start_month(start)
-        location = load_location(city)
-        output_name = default_output_path(
-            location, start_year, start_month, month_system=month, ayanamsa=ayanamsa).name
-        tmp_dir = Path(tempfile.mkdtemp(prefix="panchanga-cgi-"))
-        output_path = tmp_dir / output_name
-        try:
-            generated = build_pdf(
-                location, start_year, start_month, output_path, festivals_path=DEFAULT_FESTIVALS_PATH,
-                month_system=month, ayanamsa=ayanamsa)
-            pdf_bytes = generated.read_bytes()
-            download_name = safe_download_name(generated)
-        finally:
-            shutil.rmtree(tmp_dir, ignore_errors=True)
+        pdf_bytes, filename = generate_pdf(form)
 
         write_headers([
             ("Content-Type", "application/pdf"),
-            ("Content-Disposition", f'attachment; filename="{download_name}"'),
+            ("Content-Disposition", f'attachment; filename="{filename}"'),
             ("Content-Length", str(len(pdf_bytes))),
             ("Cache-Control", "no-store"),
         ])
