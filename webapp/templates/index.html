@@ -405,6 +405,7 @@
           <p class="hint">Fourteen consecutive Gregorian months from this month.</p>
         </div>
         <button type="submit" id="submit-btn">Generate PDF</button>
+        <button type="button" id="ics-btn">Export iCal (.ics)</button>
         <p class="status" id="status" aria-live="polite"></p>
       </form>
 
@@ -727,6 +728,23 @@
           submitBtn.disabled = false;
           status.textContent = "";
         }, 8000);
+      });
+
+      const icsBtn = document.getElementById("ics-btn");
+      icsBtn.addEventListener("click", () => {
+        const city = cityInput.value.trim();
+        if (!city) {
+          status.textContent = "Enter a city.";
+          return;
+        }
+        const start = startInput.value || "";
+        const url = "/api/panchanga.ics?"
+          + `city=${encodeURIComponent(city)}`
+          + `&start=${encodeURIComponent(start)}`
+          + `&month=${encodeURIComponent(selectedMonthSystem())}`
+          + `&ayanamsa=${encodeURIComponent(selectedAyanamsa())}`
+          + `&tropical=${encodeURIComponent(selectedTropical())}`;
+        window.location.href = url;
       });
     })();
   </script>

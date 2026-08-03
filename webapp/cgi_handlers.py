@@ -20,6 +20,8 @@ from webapp.app import (  # noqa: E402
 )
 from webapp.day_panchanga import compute_day_panchanga  # noqa: E402
 from webapp.pdf_service import generate_pdf  # noqa: E402
+from webapp.ics_service import generate_ics  # noqa: E402
+from generate_panchanga_calendar import load_location, parse_start_month  # noqa: E402
 
 PROJECT_ROOT = _REPO_ROOT
 
@@ -149,6 +151,38 @@ def handle_generate() -> None:
         write_error(str(error))
     except Exception as error:  # noqa: BLE001
         write_error(f"Internal error: {error}", status="500 Internal Server Error")
+
+
+def handle_ics() -> None:
+    """GET ics.py?city=...&start=...&month=...&ayanamsa=...&tropical=... → ICS download."""
+    try:
+        params = _query_params()
+        city = (params.get("city") or [""])[0]
+        start = (params.get("start") or [""])[0]
+        month = (params.get("month") or ["amanta"])[0]
+        ayanamsa = (params.get("ayanamsa") or ["citra"])[0]
+        tropical = (params.get("tropical") or ["0"])[0]
+        location = load_location(city)
+        start_year, start_month = parse_start_month(start)
+        ics_text = generate_ics(
+            location, start_year, start_month,
+            month_system=month, ayanamsa=ayanamsa, tropical=tropical)
+    except ValueError as error:
+        write_error(str(error))
+        return
+    except Exception as error:  # noqa: BLE001
+        write_error(str(error) or traceback.format_exc(), status="500 Internal Server Error")
+        return
+    city_slug = city.replace(" ", "-").casefold()
+    filename = f"panchanga-{city_slug}-{start_year:04d}-{start_month:02d}.ics"
+    raw = ics_text.encode("utf-8")
+    write_headers([
+        ("Content-Type", "text/calendar; charset=utf-8"),
+        ("Content-Disposition", f'attachment; filename="{filename}"'),
+        ("Content-Length", str(len(raw))),
+        ("Cache-Control", "no-store"),
+    ])
+    sys.stdout.buffer.write(raw)
 
 
 def handle_status() -> None:

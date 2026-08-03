@@ -33,6 +33,7 @@ from generate_panchanga_calendar import (  # noqa: E402
 from panchanga import sweph_version
 from webapp.day_panchanga import compute_day_panchanga  # noqa: E402
 from webapp.pdf_service import generate_pdf  # noqa: E402
+from webapp.ics_service import generate_ics  # noqa: E402
 
 app = Flask(__name__)
 
@@ -131,6 +132,35 @@ def generate():
     except (OSError, ValueError, RuntimeError) as error:
         abort(400, description=str(error))
     return send_file(io.BytesIO(pdf_bytes), mimetype="application/pdf",
+                     as_attachment=True, download_name=filename,
+                     max_age=0)
+
+
+@app.get("/api/panchanga.ics")
+def ics_calendar():
+    city = (request.args.get("city") or "").strip()
+    start = (request.args.get("start") or "").strip()
+    month = (request.args.get("month") or "amanta").strip()
+    ayanamsa = (request.args.get("ayanamsa") or "citra").strip()
+    tropical = (request.args.get("tropical") or "0").strip()
+    try:
+        from generate_panchanga_calendar import load_location, parse_start_month
+        location = load_location(city)
+        start_year, start_month = parse_start_month(start)
+    except ValueError as error:
+        abort(400, description=str(error))
+
+    try:
+        ics_text = generate_ics(
+            location, start_year, start_month,
+            month_system=month, ayanamsa=ayanamsa, tropical=tropical)
+    except (OSError, ValueError, RuntimeError) as error:
+        abort(400, description=str(error))
+
+    city_slug = city.replace(" ", "-").casefold()
+    filename = f"panchanga-{city_slug}-{start_year:04d}-{start_month:02d}.ics"
+    raw_bytes = ics_text.encode("utf-8")
+    return send_file(io.BytesIO(raw_bytes), mimetype="text/calendar; charset=utf-8",
                      as_attachment=True, download_name=filename,
                      max_age=0)
 
