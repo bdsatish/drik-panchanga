@@ -21,8 +21,8 @@ with `yes`/`no` (also `true`/`false`, `1`/`0`, `on`/`off`). Unknown or missing
 names are rejected at load time.
 
 The shipped defaults are a regional compromise (for example Onam on; Mesha and
-Makara Sankranti off because the PDF already marks all twelve saṅkrāntis;
-Karwa Chauth, Gita Jayanti, and Chhath off). Edit the cfg for your locality.
+Makara Sankranti off because the PDF already marks all twelve saṅkrāntis; Karwa
+Chauth, Gita Jayanti, and Chhath are also off). Edit the cfg for your locality.
 The footer holds at most 30 enabled festivals (6 columns × 5 rows); enabling
 more fails loudly when drawing the page.
 
@@ -80,6 +80,12 @@ These have dedicated selectors (dispatch by catalog name):
   shared sankranti helper (same rule as the twelve solar-month markers on the
   PDF). Default off in ``festivals.cfg`` because the grid already paints every
   saṅkrānti; enable either name to also list it in the festival key.
+* **Uttarayana** / **Dakshinayana** -- first civil sunrise after the tropical
+  winter / summer solstice moment, respectively. At or north of the equator,
+  Uttarayana uses the December solstice and Dakshinayana the June solstice;
+  these assignments switch south of the equator. The event moment is compared
+  with the local sunrise JD, so a solstice after sunrise is printed on the next
+  civil day. Both are on by default in ``festivals.cfg``.
 
 Location dependence
 -------------------

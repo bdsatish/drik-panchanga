@@ -40,6 +40,7 @@ FESTIVAL_RULES = (
     ("Vasavi Jayanti", 2, "S10"),
     ("Narasimha Jayanti", 2, "S14"),
     ("Vata Savitri Purnima", 3, "S15"),
+    ("Dakshinayana", None, None),
     ("Guru Purnima", 4, "S15"),
     ("Naga Panchami", 5, "S5"),
     ("Varamahalakshmi Vrata", None, None),
@@ -64,6 +65,7 @@ FESTIVAL_RULES = (
     ("Bali Padyami", 8, "S1"),
     ("Surya Shashthi / Chhath", 8, "S6"),
     ("Gita Jayanti", 9, "S11"),
+    ("Uttarayana", None, None),
     ("Vaikuntha Ekadashi", None, None),
     ("Makara Sankranti", None, None),
     ("Vasavi Atmarpana", 11, "S2"),
@@ -448,6 +450,59 @@ def select_makara_sankranti_dates(records):
     return select_sankranti_dates(records, 10)
 
 
+def select_solstice_dates(records, solstice_longitude, timezone_name=None):
+    """First civil sunrise after each tropical solstice moment.
+
+    Swiss Ephemeris finds the tropical Sun longitude crossing at 90° (June
+    solstice) or 270° (December solstice). The search is limited to a narrow
+    local-date window around the event; sunrise JDs are UT, so comparing them
+    directly with the UT event moment preserves the local sunrise rule.
+    """
+    records_by_date = {record[CIVIL_DATE]: record for record in records}
+    years = sorted({civil_date.year for civil_date in records_by_date})
+    local_timezone = timezone_name or "UTC"
+    selected = []
+    for year in years:
+        start_jd = panchanga.gregorian_to_jd(panchanga.Date(year, 1, 1))
+        flags = panchanga.swe.FLG_SWIEPH | panchanga.swe.FLG_TROPICAL
+        solstice_jd = panchanga.swe.solcross_ut(
+            float(solstice_longitude), start_jd, flags)
+        solstice_date = jd_to_local_civil_date(solstice_jd, local_timezone)
+        for offset in range(-2, 2):
+            # Timezones can shift the displayed solstice date; the exact UT
+            # comparison below determines which nearby sunrise qualifies.
+            civil_date = solstice_date + timedelta(days=offset)
+            record = records_by_date.get(civil_date)
+            if record is not None and record[SUNRISE_JD] > solstice_jd:
+                selected.append(civil_date)
+                break
+    return sorted(set(selected))
+
+
+def _is_southern_hemisphere(geopos):
+    return geopos is not None and float(geopos[1]) < 0.0
+
+
+def select_uttarayana_dates(records, geopos=None, timezone_name=None):
+    """First sunrise after the local winter solstice.
+
+    The local winter solstice is the June solstice south of the equator and
+    the December solstice at or north of the equator.
+    """
+    longitude = 90.0 if _is_southern_hemisphere(geopos) else 270.0
+    return select_solstice_dates(records, longitude, timezone_name=timezone_name)
+
+
+def select_dakshinayana_dates(records, geopos=None, timezone_name=None):
+    """First sunrise after the local summer solstice.
+
+    The local summer solstice is the December solstice south of the equator
+    and the June solstice at or north of the equator.
+    """
+    longitude = 270.0 if _is_southern_hemisphere(geopos) else 90.0
+    return select_solstice_dates(records, longitude, timezone_name=timezone_name)
+
+
 def select_non_tithi_dates(records, name, geopos=None, timezone_name=None):
     """Dispatch a non-tithi festival to its selector by catalog name."""
     if name == "Varamahalakshmi Vrata":
@@ -462,6 +517,10 @@ def select_non_tithi_dates(records, name, geopos=None, timezone_name=None):
         return select_onam_dates(records)
     if name == "Vaikuntha Ekadashi":
         return select_vaikuntha_ekadashi_dates(records)
+    if name == "Uttarayana":
+        return select_uttarayana_dates(records, geopos=geopos, timezone_name=timezone_name)
+    if name == "Dakshinayana":
+        return select_dakshinayana_dates(records, geopos=geopos, timezone_name=timezone_name)
     if name == "Mesha Sankranti":
         return select_mesha_sankranti_dates(records)
     if name == "Makara Sankranti":
