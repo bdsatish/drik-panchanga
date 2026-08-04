@@ -93,5 +93,5 @@ jobs:
             -p 8080:8080 \
             -e PORT=8080 \
             "${IMAGE}"
-          trap 'docker stop panchanga-ci >/dev/null 2>&1 || true' EXIT
+          trap 'docker logs panchanga-ci || true; docker stop panchanga-ci >/dev/null 2>&1 || true' EXIT
           ./scripts/ci_smoke_http.sh http://127.0.0.1:8080
