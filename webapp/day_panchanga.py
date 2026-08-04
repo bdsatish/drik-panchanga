@@ -180,10 +180,7 @@ def compute_day_panchanga(city: str, date_text: str, month_system: str | None = 
     amanta = parse_month_system(month_system)
     coordinate_selection = parse_coordinate_selection(ayanamsa)
     use_tropical = coordinate_selection == "tropical"
-    if use_tropical:
-        panchanga.set_coordinate_mode("tropical")
-    else:
-        panchanga.set_chosen_ayanamsa(coordinate_selection)
+    panchanga.set_coordinate_selection(coordinate_selection)
     civil = parse_civil_date(date_text)
     location = load_location(city)
     place = place_for_date(location, civil)

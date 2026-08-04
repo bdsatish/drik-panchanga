@@ -60,10 +60,7 @@ def generate_ics(location, start_year, start_month, *, month_system="amanta",
     amanta = parse_month_system(month_system)
     coordinate_selection = parse_coordinate_selection(ayanamsa)
     tropical = coordinate_selection == "tropical"
-    if tropical:
-        panchanga.set_coordinate_mode("tropical")
-    else:
-        panchanga.set_chosen_ayanamsa(coordinate_selection)
+    panchanga.set_coordinate_selection(coordinate_selection)
 
     names = sanskrit_names()
     zone = ZoneInfo(location.timezone_name)

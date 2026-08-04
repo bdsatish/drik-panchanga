@@ -23,7 +23,8 @@ from panchanga import (Date, Place, gregorian_to_jd, from_dms,
     lon_relative_to_base, inverse_lagrange, bisection_search,
     sidereal_saptarshi_nakshatra, saptarshi_nakshatra_traditional,
     set_nakshatra_system, set_chosen_ayanamsa, set_ayanamsa_mode,
-    set_coordinate_mode, reset_ayanamsa_mode, solar_longitude)
+    set_coordinate_mode, set_coordinate_selection, reset_ayanamsa_mode,
+    solar_longitude)
 
 
 bangalore = Place(12.972, 77.594, +5.5)
@@ -525,6 +526,18 @@ class PathAndModeTests(PanchangaTestCase):
         with mock.patch("builtins.print"):
             set_coordinate_mode("bogus")
         self.assertEqual(panchanga.coordinate_flag, swe.FLG_SIDEREAL)
+
+    def test_set_coordinate_selection_restores_sidereal_mode(self):
+        self.addCleanup(set_coordinate_selection, "citra")
+        set_coordinate_selection("tropical")
+        self.assertEqual(panchanga.coordinate_flag, swe.FLG_TROPICAL)
+        set_coordinate_selection("raman")
+        self.assertEqual(panchanga.coordinate_flag, swe.FLG_SIDEREAL)
+        self.assertEqual(panchanga.chosen_ayanamsa, "raman")
+
+    def test_set_coordinate_selection_rejects_unknown_selection(self):
+        with self.assertRaisesRegex(ValueError, "Unknown coordinate selection"):
+            set_coordinate_selection("not-a-coordinate")
 
     def test_set_nakshatra_system_unknown(self):
         with mock.patch("builtins.print"):

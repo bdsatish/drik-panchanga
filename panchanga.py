@@ -123,6 +123,16 @@ _AYANAMSA_MODES = {
   'galc_cent_mid_mula': (swe.SIDM_USER, 1922011.128853056, 0),
 }
 
+def set_coordinate_selection(selection):
+  """Apply one canonical sidereal ayanamsa key or ``tropical`` selection."""
+  if selection == 'tropical':
+    set_coordinate_mode('tropical')
+    return
+  if selection not in _AYANAMSA_MODES:
+    raise ValueError('Unknown coordinate selection: {}'.format(selection))
+  set_chosen_ayanamsa(selection)
+  set_coordinate_mode('sidereal')
+
 def set_ayanamsa_mode():
   args = _AYANAMSA_MODES.get(chosen_ayanamsa.lower())
   if args is None:
