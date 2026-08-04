@@ -117,9 +117,14 @@ def city_locations():
 
 def _numbered_iast_names(mapping, width=None):
   items = sorted(mapping.items(), key=lambda item: int(item[0]))
-  if width is None:
-    return [f"{key} {name}" for key, name in items]
-  return [f"{int(key):0{width}d} {name}" for key, name in items]
+  parts = []
+  for key, name in items:
+    if width is None:
+      label = str(key)
+    else:
+      label = str(int(key)).zfill(width)
+    parts.append(label + " " + name)
+  return parts
 
 
 def tithi_key_line():
@@ -139,11 +144,13 @@ def masa_key_line():
 def sankranti_key_line():
   """Footer key for solar saṅkrānti markers (rāśi 1–12)."""
   zodiac = sanskrit_names()["zodiac"]
-  names = ", ".join(f"{index} {zodiac[str(index - 1)].capitalize()}" for index in range(1, 13))
+  name_parts = []
+  for index in range(1, 13):
+    name_parts.append(str(index) + " " + zodiac[str(index - 1)].capitalize())
+  names = ", ".join(name_parts)
   return ("Saṅkrānti: peach N-cell top-right number is the new solar rāśi; "
           "the rolling solar-day count resets at each saṅkrānti, with N-cell "
-          "markers at 7, 14, 21, and 28. "
-          f"{names}.")
+          "markers at 7, 14, 21, and 28. " + names + ".")
 
 
 def nakshatra_key_line():
@@ -480,11 +487,13 @@ def format_eclipse_line(eclipses, timezone_name, sunrise_by_date=None):
   parts = []
   for kind, phase, maximum_jd in eclipses:
     civil = jd_to_local_civil_date(maximum_jd, timezone_name)
-    part = (f"{kind} {calendar.month_abbr[civil.month]} {civil.day:02d} "
-            f"({phase}) maximum phase at {format_local_hm(maximum_jd, timezone_name)}")
+    month_name = calendar.month_abbr[civil.month]
+    day = f"{civil.day:02d}"
+    maximum_hm = format_local_hm(maximum_jd, timezone_name)
+    part = kind + " " + month_name + " " + day + " (" + phase + ") maximum phase at " + maximum_hm
     sunrise_jd = sunrise_by_date.get(civil)
     if sunrise_jd is not None:
-      part += f", sunrise {format_local_hm(sunrise_jd, timezone_name)}"
+      part = part + ", sunrise " + format_local_hm(sunrise_jd, timezone_name)
     parts.append(part)
   return "Eclipses: " + "; ".join(parts) + ". Eclipses have a brown wavy underline below Tithi."
 
@@ -844,12 +853,15 @@ def draw_page_header(pdf, location, months, ruleset_version, amanta=True, coordi
     subtitle_parts.append("Tropical (Sāyana)")
   else:
     ayan_label = ayanamsa_label(coordinate_selection)
-    subtitle_parts.append(f"{ayan_label} ayanamsa")
-  subtitle_parts.extend((f"{masa_label} masa", f"{coordinate_label(location.latitude, 'N', 'S')}, "
-                         f"{coordinate_label(location.longitude, 'E', 'W')}", f"{location.timezone_name} civil time"))
+    subtitle_parts.append(ayan_label + " ayanamsa")
+  subtitle_parts.append(masa_label + " masa")
+  lat_label = coordinate_label(location.latitude, "N", "S")
+  lon_label = coordinate_label(location.longitude, "E", "W")
+  subtitle_parts.append(lat_label + ", " + lon_label)
+  subtitle_parts.append(location.timezone_name + " civil time")
   if kali_ahargana is not None:
     start_ahargana, end_ahargana = kali_ahargana
-    subtitle_parts.append(f"Kali Ahargana: {start_ahargana} - {end_ahargana}")
+    subtitle_parts.append("Kali Ahargana: " + str(start_ahargana) + " - " + str(end_ahargana))
   subtitle = " | ".join(subtitle_parts)
   subtitle_size = fitted_font_size(pdf, subtitle, PDF_FONT, 7.5, 5.0, page_width - 36, "page subtitle")
   pdf.setFont(PDF_FONT, subtitle_size)

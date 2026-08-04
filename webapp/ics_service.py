@@ -122,14 +122,16 @@ def _generate_ics_unlocked(location, start_year, start_month, month_system="aman
   month_key = "amanta" if amanta else "purnimanta"
   dtstamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
   location_slug = _location_slug(location.name)
+  cal_name = _escape_text("Panchanga · " + location.name)
+  cal_desc = _escape_text(coordinate_selection_label(coordinate_selection) + " · " + month_system_label(amanta))
   out = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
     "PRODID:-//Drik Panchanga//EN",
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
-    f"X-WR-CALNAME:{_escape_text(f'Panchanga · {location.name}')}",
-    f"X-WR-CALDESC:{_escape_text(coordinate_selection_label(coordinate_selection) + ' · ' + month_system_label(amanta))}",
+    "X-WR-CALNAME:" + cal_name,
+    "X-WR-CALDESC:" + cal_desc,
   ]
   for civil in _civil_dates(month_range(start_year, start_month)):
     d = _ics_date(civil)
@@ -169,49 +171,54 @@ def _generate_ics_unlocked(location, start_year, start_month, month_system="aman
     yoga_name = names["yogas"][str(yog[0])]
     masa_name = names["masas"][str(masa_num)]
     if is_adhika:
-      masa_name = f"Adhika {masa_name}"
-    masa_label = f"{masa_name} māsa"
+      masa_name = "Adhika " + masa_name
+    masa_label = masa_name + " māsa"
     vara_name = names["varas"][str(vara_num)]
-    rtu_label = f"{names['ritus'][str(rtu_num)]} ṛtu"
-    drik_rtu_label = f"{names['ritus'][str(drik_rtu_num)]} ṛtu"
+    rtu_label = names["ritus"][str(rtu_num)] + " ṛtu"
+    drik_rtu_label = names["ritus"][str(drik_rtu_num)] + " ṛtu"
     ayana = ayana_label(sun_raasi)
     drik_ayana = drik_ayana_label(drik_rtu_num)
 
-    moon_line = f"Moon*: {moonrise or '—'} – {moonset or '—'}"
+    moon_rise_text = moonrise if moonrise else "—"
+    moon_set_text = moonset if moonset else "—"
+    moon_line = "Moon*: " + moon_rise_text + " – " + moon_set_text
     if mr_status != "ok" or ms_status != "ok":
-      moon_line += f" ({mr_status} / {ms_status})"
+      moon_line = moon_line + " (" + mr_status + " / " + ms_status + ")"
 
-    summary = _escape_text(f"{tithi_name} · {nak_name} · {masa_name}")
-    description = _escape_text("\n".join((
-      f"Samvatsara: {names['samvats'][str(samvat_num)]} {saka_year}, "
-      f"{names['samvats'][str(samvat_north_num)]} {vikrama_year}, "
-      f"Kali (elapsed) {kali_year}",
-      f"Ayana: {drik_ayana} (drik) · {ayana} (siddhantic)",
-      f"Ṛtu: {drik_rtu_label} (drik) · {rtu_label} (siddhantic)",
-      f"Māsa: {masa_label}",
-      f"Tithi: {tithi_name} (ends {format_time(ti[1])})",
-      f"Nakṣatra: {nak_name} (ends {format_time(nak[1])})",
-      f"Vāra: {vara_name}",
-      f"Yoga: {yoga_name} (ends {format_time(yog[1])})",
-      f"Karaṇa: {_karana_text(kar, names)}",
-      f"Sun*: {format_time(sunrise[1])} – {format_time(sunset[1])}",
-      moon_line,
-      f"Day duration: {format_time(day_dur[1])}",
-      f"Rāhukāla: {_rahu_kala_text(rahu_kala)}",
-      f"Durmuhūrta: {_durmuhurta_text(durmuhurta)}",
-      f"Kali Day: {kali_day}",
-      f"Julian day: {jd:.1f}",
-      f"Sunrise JD (UT): {sunrise_jd_ut:.6f}",
-    )))
-    out += [
-      "BEGIN:VEVENT",
-      f"DTSTART;VALUE=DATE:{d}",
-      f"DTEND;VALUE=DATE:{nxt}",
-      f"DTSTAMP:{dtstamp}",
-      f"SUMMARY:{summary}",
-      f"DESCRIPTION:{description}",
-      f"UID:panchanga-{coordinate_selection}-{month_key}-{d}@{location_slug}",
-      "END:VEVENT",
-    ]
+    summary = _escape_text(tithi_name + " · " + nak_name + " · " + masa_name)
+
+    desc_lines = []
+    desc_lines.append("Samvatsara: " + names["samvats"][str(samvat_num)] + " " + str(saka_year) + ", " +
+                      names["samvats"][str(samvat_north_num)] + " " + str(vikrama_year) + ", " + "Kali (elapsed) " +
+                      str(kali_year))
+    desc_lines.append("Ayana: " + drik_ayana + " (drik) · " + ayana + " (siddhantic)")
+    desc_lines.append("Ṛtu: " + drik_rtu_label + " (drik) · " + rtu_label + " (siddhantic)")
+    desc_lines.append("Māsa: " + masa_label)
+    desc_lines.append("Tithi: " + tithi_name + " (ends " + format_time(ti[1]) + ")")
+    desc_lines.append("Nakṣatra: " + nak_name + " (ends " + format_time(nak[1]) + ")")
+    desc_lines.append("Vāra: " + vara_name)
+    desc_lines.append("Yoga: " + yoga_name + " (ends " + format_time(yog[1]) + ")")
+    desc_lines.append("Karaṇa: " + _karana_text(kar, names))
+    desc_lines.append("Sun*: " + format_time(sunrise[1]) + " – " + format_time(sunset[1]))
+    desc_lines.append(moon_line)
+    desc_lines.append("Day duration: " + format_time(day_dur[1]))
+    desc_lines.append("Rāhukāla: " + _rahu_kala_text(rahu_kala))
+    desc_lines.append("Durmuhūrta: " + _durmuhurta_text(durmuhurta))
+    desc_lines.append("Kali Day: " + str(kali_day))
+    desc_lines.append("Julian day: " + f"{jd:.1f}")
+    desc_lines.append("Sunrise JD (UT): " + f"{sunrise_jd_ut:.6f}")
+    description = _escape_text("\n".join(desc_lines))
+
+    out.append("BEGIN:VEVENT")
+    out.append("DTSTART;VALUE=DATE:" + d)
+    out.append("DTEND;VALUE=DATE:" + nxt)
+    out.append("DTSTAMP:" + dtstamp)
+    out.append("SUMMARY:" + summary)
+    out.append("DESCRIPTION:" + description)
+    out.append("UID:panchanga-" + coordinate_selection + "-" + month_key + "-" + d + "@" + location_slug)
+    out.append("END:VEVENT")
   out.append("END:VCALENDAR")
-  return "\r\n".join(_fold(line) for line in out) + "\r\n"
+  folded = []
+  for line in out:
+    folded.append(_fold(line))
+  return "\r\n".join(folded) + "\r\n"

@@ -69,9 +69,16 @@ def format_festival_dates(dates):
   same_month = all(value.year == dates[0].year and value.month == dates[0].month for value in dates)
   consecutive = all(dates[i] == dates[i - 1] + timedelta(days=1) for i in range(1, len(dates)))
   if len(dates) > 1 and same_month and consecutive:
-    return (f"{calendar.month_abbr[dates[0].month]} "
-            f"{dates[0].day:02d}-{dates[-1].day:02d}")
-  return ",".join(f"{calendar.month_abbr[value.month]} {value.day:02d}" for value in dates)
+    month_name = calendar.month_abbr[dates[0].month]
+    first_day = f"{dates[0].day:02d}"
+    last_day = f"{dates[-1].day:02d}"
+    return month_name + " " + first_day + "-" + last_day
+  parts = []
+  for value in dates:
+    month_name = calendar.month_abbr[value.month]
+    day = f"{value.day:02d}"
+    parts.append(month_name + " " + day)
+  return ",".join(parts)
 
 
 def plain_tithi_number(tithi):
