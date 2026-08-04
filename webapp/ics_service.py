@@ -1,14 +1,13 @@
 """ICS export: daily all-day events for a 14-month panchanga span."""
 
 from datetime import date, timedelta
-from zoneinfo import ZoneInfo
 
 from generate_panchanga_calendar import (
-    daily_records, display_masa, month_range, parse_month_system,
-    timezone_hours,
+    daily_records, month_range, parse_month_system,
 )
 from webapp.day_panchanga import (
-    ayana_label, drik_ayana_label, format_time, probe_moon_event, sanskrit_names,
+    ayana_label, compute_day_details, drik_ayana_label, format_time,
+    sanskrit_names,
 )
 import panchanga
 
@@ -22,11 +21,6 @@ def _fold(line: str) -> str:
     while cut > 1 and (data[cut] & 0xC0) == 0x80:
         cut -= 1
     return data[:cut].decode("utf-8") + "\r\n " + _fold(data[cut:].decode("utf-8"))
-
-
-def _tithi_index(code: str) -> int:
-    n = int(code[1:])
-    return n if code[0] == "S" else n + 15
 
 
 def _fmt_interval(start_hms, end_hms) -> str:
@@ -48,8 +42,7 @@ def _durmuhurta_text(jd, place) -> str:
     return ", ".join(parts) if parts else "—"
 
 
-def _karana_text(jd, place, names) -> str:
-    kar = panchanga.karana(jd, place)
+def _karana_text(kar, names) -> str:
     name = names["karanas"][str(kar[0])]
     return f"{name} (ends {format_time(kar[1])})"
 
@@ -57,10 +50,7 @@ def _karana_text(jd, place, names) -> str:
 def generate_ics(location, start_year, start_month, *, month_system="amanta",
                  coordinate_selection="citra"):
     amanta = parse_month_system(month_system)
-    panchanga.set_coordinate_selection(coordinate_selection)
-
     names = sanskrit_names()
-    zone = ZoneInfo(location.timezone_name)
     records = daily_records(list(month_range(start_year, start_month)), location)
     out = [
         "BEGIN:VCALENDAR",
@@ -73,56 +63,48 @@ def generate_ics(location, start_year, start_month, *, month_system="amanta",
         civil = rec.civil_date
         d = date(civil.year, civil.month, civil.day)
         nxt = d + timedelta(days=1)
-        jd = panchanga.gregorian_to_jd(panchanga.Date(civil.year, civil.month, civil.day))
-        place = panchanga.Place(
-            location.latitude, location.longitude,
-            timezone_hours(zone, civil.year, civil.month, civil.day))
+        details = compute_day_details(
+            location, civil, amanta=amanta, coordinate_selection=coordinate_selection)
+        jd = details["jd"]
+        place = details["place"]
+        sunrise = details["sunrise"]
+        sunset = details["sunset"]
+        day_dur = details["day_dur"]
+        sunrise_jd_ut = details["sunrise_jd_ut"]
+        ti = details["ti"]
+        nak = details["nak"]
+        yog = details["yog"]
+        kar = details["kar"]
+        masa_num = details["masa_num"]
+        is_adhika = details["is_adhika"]
+        rtu_num = details["rtu_num"]
+        drik_rtu_num = details["drik_rtu_num"]
+        samvat_num = details["samvat_num"]
+        samvat_north_num = details["samvat_north_num"]
+        kali_year = details["kali_year"]
+        saka_year = details["saka_year"]
+        vikrama_year = details["vikrama_year"]
+        kali_day = details["kali_day"]
+        sun_raasi = details["sun_raasi"]
+        vara_num = details["vara_num"]
+        moonrise = details["moonrise"]
+        mr_status = details["moonrise_status"]
+        moonset = details["moonset"]
+        ms_status = details["moonset_status"]
 
-        sunrise = panchanga.sunrise(jd, place)
-        sunset = panchanga.sunset(jd, place)
-        sunrise_jd_ut = sunrise[0] - place.timezone / 24.0
-        day_dur = panchanga.day_duration(jd, place)
-
-        ti = panchanga.tithi(jd, place)
-        nak = panchanga.nakshatra(jd, place)
-        yog = panchanga.yoga(jd, place)
-        ti_num, last_nm, lunar_num, is_adhika = panchanga.lunar_masa(
-            jd, place, tithi_number=ti[0])
-        masa_num = lunar_num
-        if not amanta and not is_adhika and ti_num >= 16:
-            masa_num = masa_num % 12 + 1
-
-        rtu_num = panchanga.ritu(lunar_num)
-        prev_was_adhika = False
-        if not is_adhika:
-            prev_nm = panchanga.new_moon(last_nm - 1, 29, -1)
-            prev_was_adhika = (
-                panchanga.raasi(prev_nm) == panchanga.raasi(last_nm))
-        drik_rtu_num = panchanga.drik_ritu(
-            lunar_num, is_adhika, ti_num, prev_was_adhika)
-
-        samvat_num = panchanga.samvatsara(jd, masa_num)
-        samvat_north_num = panchanga.samvatsara_north_modern(jd, masa_num)
-        kali_year, saka_year, vikrama_year = panchanga.elapsed_year(jd, masa_num)
-        kali_day = int(panchanga.ahargana(jd))
-        sun_raasi = int(panchanga.raasi(sunrise_jd_ut))
-
-        tithi_name = names["tithis"][str(_tithi_index(rec.tithi))]
-        nak_name = names["nakshatras"][str(rec.nakshatra)]
-        yoga_name = names["yogas"][str(rec.yoga)]
+        tithi_name = names["tithis"][str(ti[0])]
+        nak_name = names["nakshatras"][str(nak[0])]
+        yoga_name = names["yogas"][str(yog[0])]
         masa_name = names["masas"][str(masa_num)]
         if is_adhika:
             masa_name = f"Adhika {masa_name}"
         masa_label = f"{masa_name} māsa"
-        vara_name = names["varas"][str(panchanga.vaara(jd))]
+        vara_name = names["varas"][str(vara_num)]
         rtu_label = f"{names['ritus'][str(rtu_num)]} ṛtu"
         drik_rtu_label = f"{names['ritus'][str(drik_rtu_num)]} ṛtu"
         ayana = ayana_label(sun_raasi)
         drik_ayana = drik_ayana_label(drik_rtu_num)
 
-        cdate = panchanga.Date(civil.year, civil.month, civil.day)
-        moonrise, mr_status = probe_moon_event(jd, place, cdate, rise=True)
-        moonset, ms_status = probe_moon_event(jd, place, cdate, rise=False)
         moon_line = f"Moon*: {moonrise or '—'} – {moonset or '—'}"
         if mr_status != "ok" or ms_status != "ok":
             moon_line += f" ({mr_status} / {ms_status})"
@@ -139,7 +121,7 @@ def generate_ics(location, start_year, start_month, *, month_system="amanta",
             f"Nakṣatra: {nak_name} (ends {format_time(nak[1])})\\n"
             f"Vāra: {vara_name}\\n"
             f"Yoga: {yoga_name} (ends {format_time(yog[1])})\\n"
-            f"Karaṇa: {_karana_text(jd, place, names)}\\n"
+            f"Karaṇa: {_karana_text(kar, names)}\\n"
             f"Sun*: {format_time(sunrise[1])} – {format_time(sunset[1])}\\n"
             f"{moon_line}\\n"
             f"Day duration: {format_time(day_dur[1])}\\n"

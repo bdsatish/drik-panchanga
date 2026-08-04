@@ -161,28 +161,17 @@ def drik_ayana_label(ritu_num: int) -> str:
     return "Dakṣiṇāyana"
 
 
-def compute_day_panchanga(city: str, date_text: str, month_system: str | None = "amanta",
-                          coordinate_selection: str | None = "citra") -> dict:
-    """Return named panchanga fields for ``city`` on ``date_text`` (DD/MM/YYYY).
+def compute_day_details(location, civil, *, amanta, coordinate_selection):
+    """Compute all mode-sensitive panchanga fields for one civil day.
 
-    ``month_system`` is ``amanta`` (default) or ``purnimanta``; it affects the
-    displayed māsa name (and samvatsara / year counters derived from that name).
-    Vedic and Drik ṛtu always use the shared new-moon–bounded māsa identity.
+    Shared by the JSON day API and the ICS generator so both consume the
+    same normalized day record.  ``civil`` has ``year``/``month``/``day``
+    attributes (``panchanga.Date`` or ``datetime.date``).
 
-    ``coordinate_selection`` is a sidereal ayanāṃśa key (``citra`` default,
-    ``revati``, ``rohini``, ``pushya``, ``mula``, ``krishnamurti``, ``raman``)
-    or ``"tropical"`` for tropical (sāyana) longitudes.
+    Raises ``ValueError`` when sunrise cannot be computed for the date/location.
     """
-    city = (city or "").strip()
-    if not city:
-        raise ValueError("City is required.")
-    amanta = parse_month_system(month_system)
-    use_tropical = coordinate_selection == "tropical"
     panchanga.set_coordinate_selection(coordinate_selection)
-    civil = parse_civil_date(date_text)
-    location = load_location(city)
     place = place_for_date(location, civil)
-
     jd = panchanga.gregorian_to_jd(civil)
 
     try:
@@ -219,7 +208,6 @@ def compute_day_panchanga(city: str, date_text: str, month_system: str | None = 
             panchanga.raasi(prev_nm) == panchanga.raasi(last_nm))
     drik_rtu_num = panchanga.drik_ritu(
         lunar_num, is_adhika, ti_num, prev_was_adhika)
-    drik_ayana = drik_ayana_label(drik_rtu_num)
     samvat_num = panchanga.samvatsara(jd, masa_num)
     samvat_north_num = panchanga.samvatsara_north_modern(jd, masa_num)
     vara_num = panchanga.vaara(jd)
@@ -231,7 +219,96 @@ def compute_day_panchanga(city: str, date_text: str, month_system: str | None = 
         ayanamsa_degrees = float(panchanga.swe.get_ayanamsa_ut(sunrise_jd_ut))
     finally:
         panchanga.reset_ayanamsa_mode()
+    sun_raasi = int(panchanga.raasi(sunrise_jd_ut))
+    moonrise, moonrise_status = probe_moon_event(jd, place, civil, rise=True)
+    moonset, moonset_status = probe_moon_event(jd, place, civil, rise=False)
 
+    return {
+        "civil": civil,
+        "place": place,
+        "jd": jd,
+        "sunrise_jd_ut": sunrise_jd_ut,
+        "sunrise": sunrise,
+        "sunset": sunset,
+        "day_dur": day_dur,
+        "names": names,
+        "ti": ti,
+        "nak": nak,
+        "yog": yog,
+        "kar": kar,
+        "ti_num": ti_num,
+        "lunar_num": lunar_num,
+        "is_adhika": bool(is_adhika),
+        "masa_num": masa_num,
+        "rtu_num": rtu_num,
+        "drik_rtu_num": drik_rtu_num,
+        "samvat_num": samvat_num,
+        "samvat_north_num": samvat_north_num,
+        "vara_num": vara_num,
+        "kali_year": int(kali_year),
+        "saka_year": int(saka_year),
+        "vikrama_year": int(vikrama_year),
+        "kali_day": kali_day,
+        "ayanamsa_degrees": ayanamsa_degrees,
+        "sun_raasi": sun_raasi,
+        "moonrise": moonrise,
+        "moonrise_status": moonrise_status,
+        "moonset": moonset,
+        "moonset_status": moonset_status,
+    }
+
+
+def compute_day_panchanga(city: str, date_text: str, month_system: str | None = "amanta",
+                          coordinate_selection: str | None = "citra") -> dict:
+    """Return named panchanga fields for ``city`` on ``date_text`` (DD/MM/YYYY).
+
+    ``month_system`` is ``amanta`` (default) or ``purnimanta``; it affects the
+    displayed māsa name (and samvatsara / year counters derived from that name).
+    Vedic and Drik ṛtu always use the shared new-moon–bounded māsa identity.
+
+    ``coordinate_selection`` is a sidereal ayanāṃśa key (``citra`` default,
+    ``revati``, ``rohini``, ``pushya``, ``mula``, ``krishnamurti``, ``raman``)
+    or ``"tropical"`` for tropical (sāyana) longitudes.
+    """
+    city = (city or "").strip()
+    if not city:
+        raise ValueError("City is required.")
+    amanta = parse_month_system(month_system)
+    civil = parse_civil_date(date_text)
+    location = load_location(city)
+
+    details = compute_day_details(
+        location, civil, amanta=amanta, coordinate_selection=coordinate_selection)
+    names = details["names"]
+    jd = details["jd"]
+    place = details["place"]
+    sunrise = details["sunrise"]
+    sunset = details["sunset"]
+    day_dur = details["day_dur"]
+    sunrise_jd_ut = details["sunrise_jd_ut"]
+    ti = details["ti"]
+    nak = details["nak"]
+    yog = details["yog"]
+    kar = details["kar"]
+    masa_num = details["masa_num"]
+    is_adhika = details["is_adhika"]
+    rtu_num = details["rtu_num"]
+    drik_rtu_num = details["drik_rtu_num"]
+    samvat_num = details["samvat_num"]
+    samvat_north_num = details["samvat_north_num"]
+    vara_num = details["vara_num"]
+    kali_day = details["kali_day"]
+    saka_year = details["saka_year"]
+    kali_year = details["kali_year"]
+    vikrama_year = details["vikrama_year"]
+    ayanamsa_degrees = details["ayanamsa_degrees"]
+    sun_raasi = details["sun_raasi"]
+    moonrise = details["moonrise"]
+    moonrise_status = details["moonrise_status"]
+    moonset = details["moonset"]
+    moonset_status = details["moonset_status"]
+
+    use_tropical = coordinate_selection == "tropical"
     masa_name = names["masas"][str(masa_num)]
     if is_adhika:
         masa_label = f"Adhika {masa_name} māsa"
@@ -239,10 +316,8 @@ def compute_day_panchanga(city: str, date_text: str, month_system: str | None = 
         masa_label = f"{masa_name} māsa"
     month_label = month_system_label(amanta)
     ayan_label = None if use_tropical else ayanamsa_label(coordinate_selection)
-    sun_raasi = int(panchanga.raasi(sunrise_jd_ut))
     ayana = ayana_label(sun_raasi)
-    moonrise, moonrise_status = probe_moon_event(jd, place, civil, rise=True)
-    moonset, moonset_status = probe_moon_event(jd, place, civil, rise=False)
+    drik_ayana = drik_ayana_label(drik_rtu_num)
 
     return {
         "city": location.name,
@@ -262,14 +337,14 @@ def compute_day_panchanga(city: str, date_text: str, month_system: str | None = 
         "drik_ayana": drik_ayana,
         "masa": masa_label,
         "masa_number": masa_num,
-        "is_adhika": bool(is_adhika),
+        "is_adhika": is_adhika,
         "rtu": f"{names['ritus'][str(rtu_num)]} ṛtu",
         "drik_rtu": f"{names['ritus'][str(drik_rtu_num)]} ṛtu",
         "vaara": names["varas"][str(vara_num)],
         "kali_day": kali_day,
-        "saka_year": int(saka_year),
-        "kali_year": int(kali_year),
-        "vikrama_year": int(vikrama_year),
+        "saka_year": saka_year,
+        "kali_year": kali_year,
+        "vikrama_year": vikrama_year,
         "sunrise": format_time(sunrise[1]),
         "sunset": format_time(sunset[1]),
         "moonrise": moonrise,
