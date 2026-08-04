@@ -13,7 +13,6 @@ from generate_panchanga_calendar import (
     ayanamsa_label,
     load_location,
     month_system_label,
-    parse_coordinate_selection,
     parse_month_system,
     require_local_sunrise,
     timezone_hours,
@@ -163,22 +162,21 @@ def drik_ayana_label(ritu_num: int) -> str:
 
 
 def compute_day_panchanga(city: str, date_text: str, month_system: str | None = "amanta",
-                          ayanamsa: str | None = "citra") -> dict:
+                          coordinate_selection: str | None = "citra") -> dict:
     """Return named panchanga fields for ``city`` on ``date_text`` (DD/MM/YYYY).
 
     ``month_system`` is ``amanta`` (default) or ``purnimanta``; it affects the
     displayed māsa name (and samvatsara / year counters derived from that name).
     Vedic and Drik ṛtu always use the shared new-moon–bounded māsa identity.
 
-    ``ayanamsa`` is a key from ``AYANAMSA_OPTIONS`` (default ``citra``):
-    citra, revati, rohini, pushya, mula, krishnamurti, or raman.
-    Pass ``"tropical"`` for tropical (sāyana) longitudes.
+    ``coordinate_selection`` is a sidereal ayanāṃśa key (``citra`` default,
+    ``revati``, ``rohini``, ``pushya``, ``mula``, ``krishnamurti``, ``raman``)
+    or ``"tropical"`` for tropical (sāyana) longitudes.
     """
     city = (city or "").strip()
     if not city:
         raise ValueError("City is required.")
     amanta = parse_month_system(month_system)
-    coordinate_selection = parse_coordinate_selection(ayanamsa)
     use_tropical = coordinate_selection == "tropical"
     panchanga.set_coordinate_selection(coordinate_selection)
     civil = parse_civil_date(date_text)

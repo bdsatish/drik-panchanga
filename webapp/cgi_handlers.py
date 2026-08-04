@@ -20,6 +20,7 @@ from webapp.app import (  # noqa: E402
 )
 from webapp.day_panchanga import compute_day_panchanga  # noqa: E402
 from webapp.pdf_service import generate_pdf  # noqa: E402
+from generate_panchanga_calendar import parse_coordinate_selection  # noqa: E402
 
 PROJECT_ROOT = _REPO_ROOT
 
@@ -118,9 +119,9 @@ def handle_panchanga() -> None:
         date = (params.get("date") or [""])[0]
         month = (params.get("month") or ["amanta"])[0]
         a = params.get("ayanamsa")
-        ayanamsa = a[0] if a else None
+        coordinate_selection = parse_coordinate_selection(a[0] if a else None)
         write_json(compute_day_panchanga(
-            city, date, month_system=month, ayanamsa=ayanamsa))
+            city, date, month_system=month, coordinate_selection=coordinate_selection))
     except ValueError as error:
         write_error(str(error), as_json=True)
     except Exception as error:  # noqa: BLE001

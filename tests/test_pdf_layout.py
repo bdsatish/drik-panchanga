@@ -89,12 +89,12 @@ class PdfLayoutTests(unittest.TestCase):
 
     def test_ayanamsa_filename_suffix(self):
         path = default_output_path(
-            load_location("Helsinki"), 2026, 3, ayanamsa="raman")
+            load_location("Helsinki"), 2026, 3, coordinate_selection="raman")
         self.assertEqual(path.name, "helsinki-fi_panchanga_2026-03_to_2027-04_raman.pdf")
 
     def test_tropical_filename_suffix(self):
         path = default_output_path(
-            load_location("Helsinki"), 2026, 3, ayanamsa="tropical")
+            load_location("Helsinki"), 2026, 3, coordinate_selection="tropical")
         self.assertEqual(path.name, "helsinki-fi_panchanga_2026-03_to_2027-04_tropical.pdf")
 
     def test_cli_accepts_month_system(self):

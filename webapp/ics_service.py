@@ -4,8 +4,7 @@ from datetime import date, timedelta
 from zoneinfo import ZoneInfo
 
 from generate_panchanga_calendar import (
-    daily_records, display_masa, month_range, parse_coordinate_selection,
-    parse_month_system,
+    daily_records, display_masa, month_range, parse_month_system,
     timezone_hours,
 )
 from webapp.day_panchanga import (
@@ -56,10 +55,8 @@ def _karana_text(jd, place, names) -> str:
 
 
 def generate_ics(location, start_year, start_month, *, month_system="amanta",
-                 ayanamsa=None):
+                 coordinate_selection="citra"):
     amanta = parse_month_system(month_system)
-    coordinate_selection = parse_coordinate_selection(ayanamsa)
-    tropical = coordinate_selection == "tropical"
     panchanga.set_coordinate_selection(coordinate_selection)
 
     names = sanskrit_names()

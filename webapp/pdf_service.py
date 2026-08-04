@@ -9,6 +9,7 @@ from generate_panchanga_calendar import (
     build_pdf,
     default_output_path,
     load_location,
+    parse_coordinate_selection,
     parse_start_month,
 )
 
@@ -24,11 +25,12 @@ def generate_pdf(fields: Mapping[str, str]) -> tuple[bytes, str]:
 
     start_year, start_month = parse_start_month(start)
     month_system = (fields.get("month") or "amanta").strip()
-    ayanamsa = (fields.get("ayanamsa") or "").strip() or None
+    coordinate_selection = parse_coordinate_selection(
+        (fields.get("ayanamsa") or "").strip() or None)
     location = load_location(city)
     filename = default_output_path(
         location, start_year, start_month,
-        month_system=month_system, ayanamsa=ayanamsa,
+        month_system=month_system, coordinate_selection=coordinate_selection,
     ).name
     with TemporaryDirectory(prefix="panchanga-web-") as directory:
         output_path = Path(directory) / filename
@@ -39,6 +41,6 @@ def generate_pdf(fields: Mapping[str, str]) -> tuple[bytes, str]:
             output_path,
             festivals_path=DEFAULT_FESTIVALS_PATH,
             month_system=month_system,
-            ayanamsa=ayanamsa,
+            coordinate_selection=coordinate_selection,
         )
         return generated.read_bytes(), filename

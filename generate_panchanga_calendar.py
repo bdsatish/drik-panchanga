@@ -195,7 +195,7 @@ def ensure_pdf_fonts() -> None:
     _pdf_fonts_registered = True
 
 
-def embed_pdf_metadata(pdf, *, title, subject, ruleset_version, ayanamsa="citra", tropical=False):
+def embed_pdf_metadata(pdf, *, title, subject, ruleset_version, coordinate_selection="citra"):
     """Set Info dictionary fields, including custom copyright/email/URL keys."""
     from reportlab.pdfbase.pdfdoc import (
         PDFDate,
@@ -204,10 +204,7 @@ def embed_pdf_metadata(pdf, *, title, subject, ruleset_version, ayanamsa="citra"
         PDFString
     )
 
-    if tropical:
-        coord_label = "Tropical (Sāyana)"
-    else:
-        coord_label = ayanamsa_label(ayanamsa)
+    coord_label = coordinate_selection_label(coordinate_selection)
     pdf.setTitle(title)
     pdf.setAuthor(PDF_AUTHOR)
     pdf.setSubject(subject)
@@ -914,8 +911,8 @@ def coordinate_label(value, positive, negative):
 
 
 def draw_page_header(
-        pdf, location, months, ruleset_version, *, amanta=True, ayanamsa="citra",
-        tropical=False, calendar_years=None, kali_ahargana=None):
+        pdf, location, months, ruleset_version, *, amanta=True,
+        coordinate_selection="citra", calendar_years=None, kali_ahargana=None):
     page_width, page_height = landscape(A4)
     title = f"{location.name} Panchanga: {month_span_label(months)}"
     pdf.setFillColor(INK)
@@ -927,10 +924,10 @@ def draw_page_header(
     if calendar_years:
         subtitle_parts.append(calendar_years)
     masa_label = "Amanta" if amanta else "Purnimanta"
-    if tropical:
+    if coordinate_selection == "tropical":
         subtitle_parts.append("Tropical (Sāyana)")
     else:
-        ayan_label = ayanamsa_label(ayanamsa)
+        ayan_label = ayanamsa_label(coordinate_selection)
         subtitle_parts.append(f"{ayan_label} ayanamsa")
     subtitle_parts.extend((
         f"{masa_label} masa",
@@ -1012,11 +1009,9 @@ def draw_page_footer(pdf, festival_entries, eclipse_line="Eclipses: None"):
 
 
 def build_pdf(location, start_year, start_month, output_path, *, festivals_path=None, month_system="amanta",
-              ayanamsa=None):
+              coordinate_selection="citra"):
     ensure_pdf_fonts()
     amanta = parse_month_system(month_system)
-    coordinate_selection = parse_coordinate_selection(ayanamsa)
-    tropical = coordinate_selection == "tropical"
     panchanga.set_coordinate_selection(coordinate_selection)
     months = list(month_range(start_year, start_month))
     if start_month == 1:
@@ -1076,19 +1071,19 @@ def build_pdf(location, start_year, start_month, output_path, *, festivals_path=
     pdf = canvas.Canvas(
         str(output_path), pagesize=(page_width, page_height), initialFontName=PDF_FONT)
     masa_label = "amanta" if amanta else "purnimanta"
-    ayan_label = None if tropical else ayanamsa_label(coordinate_selection)
-    coordinate_desc = (
-        coordinate_selection_label(coordinate_selection)
-        if tropical else f"{ayan_label} nakshatra")
+    if coordinate_selection == "tropical":
+        coordinate_desc = coordinate_selection_label(coordinate_selection)
+    else:
+        coordinate_desc = f"{ayanamsa_label(coordinate_selection)} nakshatra"
     embed_pdf_metadata(
         pdf, title=f"{location.name} Panchanga {month_span_label(months)}",
         subject=(f"Daily tithi, {coordinate_desc}, yoga, and {masa_label} masa at "
                  f"{location.name} sunrise"),
-        ruleset_version=RULESET_VERSION, ayanamsa=coordinate_selection, tropical=tropical)
+        ruleset_version=RULESET_VERSION, coordinate_selection=coordinate_selection)
 
     draw_page_header(
-        pdf, location, months, RULESET_VERSION, amanta=amanta, ayanamsa=coordinate_selection,
-        tropical=tropical,
+        pdf, location, months, RULESET_VERSION, amanta=amanta,
+        coordinate_selection=coordinate_selection,
         calendar_years=calendar_years, kali_ahargana=kali_ahargana)
 
     margin = 18
@@ -1112,14 +1107,13 @@ def build_pdf(location, start_year, start_month, output_path, *, festivals_path=
     return output_path
 
 
-def default_output_path(location, start_year, start_month, *, month_system="amanta", ayanamsa=None):
+def default_output_path(location, start_year, start_month, *, month_system="amanta", coordinate_selection="citra"):
     months = list(month_range(start_year, start_month))
     end_year, end_month = months[-1]
     city_slug = re.sub(r"[^a-z0-9]+", "-", location.name.casefold()).strip("-") or "location"
     parts = []
     if not parse_month_system(month_system):
         parts.append("purnimanta")
-    coordinate_selection = parse_coordinate_selection(ayanamsa)
     if coordinate_selection == "tropical":
         parts.append("tropical")
     elif coordinate_selection != "citra":
@@ -1159,14 +1153,14 @@ def main(argv=None):
         start_year, start_month = parse_start_month(arguments.start)
         location = load_location(arguments.city)
         month_system = arguments.month
-        ayanamsa = arguments.ayanamsa
+        coordinate_selection = parse_coordinate_selection(arguments.ayanamsa)
         parse_month_system(month_system)  # validate early
-        parse_coordinate_selection(ayanamsa)
         output_path = arguments.output or default_output_path(
-            location, start_year, start_month, month_system=month_system, ayanamsa=ayanamsa)
+            location, start_year, start_month, month_system=month_system,
+            coordinate_selection=coordinate_selection)
         generated = build_pdf(
             location, start_year, start_month, output_path, festivals_path=arguments.festivals,
-            month_system=month_system, ayanamsa=ayanamsa)
+            month_system=month_system, coordinate_selection=coordinate_selection)
     except (OSError, ValueError, RuntimeError) as error:
         parser.error(str(error))
     print(generated.resolve())

@@ -28,7 +28,7 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from generate_panchanga_calendar import (  # noqa: E402
-    city_locations, load_location, parse_start_month,
+    city_locations, load_location, parse_coordinate_selection, parse_start_month,
 )
 from panchanga import sweph_version
 from webapp.day_panchanga import compute_day_panchanga  # noqa: E402
@@ -121,7 +121,8 @@ def api_panchanga():
     try:
         return jsonify(compute_day_panchanga(city, date,
             month_system=month.strip() if month else month,
-            ayanamsa=ayanamsa.strip() if ayanamsa else ayanamsa))
+            coordinate_selection=parse_coordinate_selection(
+                ayanamsa.strip() if ayanamsa else ayanamsa)))
     except ValueError as error:
         abort(400, description=str(error))
 
@@ -147,7 +148,8 @@ def ics_calendar():
         ics_text = generate_ics(
             location, start_year, start_month,
             month_system=(request.args.get("month") or "amanta").strip(),
-            ayanamsa=(request.args.get("ayanamsa") or "").strip() or None)
+            coordinate_selection=parse_coordinate_selection(
+                (request.args.get("ayanamsa") or "").strip() or None))
     except (OSError, ValueError, RuntimeError) as error:
         abort(400, description=str(error))
     name = f"panchanga-{start_year:04d}-{start_month:02d}.ics"
