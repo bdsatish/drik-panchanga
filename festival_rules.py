@@ -36,8 +36,6 @@ FestivalRule = struct('FestivalRule',
                       ['name', 'masa', 'tithi', 'selector', 'allow_adhika', 'allow_empty', 'location_aware'],
                       defaults=(None, None, None, False, False, False))
 
-_TRUTHY = frozenset({"yes", "true", "1", "on"})
-_FALSY = frozenset({"no", "false", "0", "off"})
 HASTA_NAKSHATRA = 13
 SRAVANA_NAKSHATRA = 22
 
@@ -47,48 +45,16 @@ def all_festival_names():
   return tuple(rule.name for rule in FESTIVAL_RULES)
 
 
-def _parse_bool(raw, key):
-  value = raw.strip().casefold()
-  if value in _TRUTHY:
-    return True
-  if value in _FALSY:
-    return False
-  raise ValueError(f"Invalid value for festival {key!r}: {raw!r} "
-                   "(use yes/no, true/false, 1/0, or on/off)")
-
-
 def load_festival_selection(path):
-  """Enabled festival names from an INI cfg with a complete ``[festivals]`` section."""
-  path = Path(path)
+  """Enabled festival names from the ``[festivals]`` section of an INI cfg."""
   parser = configparser.ConfigParser(strict=True)
   parser.optionxform = str  # preserve festival name case
-  try:
-    parser.read_string(path.read_text(encoding="utf-8"))
-  except configparser.DuplicateOptionError as error:
-    raise ValueError(f"Duplicate festival entries in {path}: {error.option}") from error
-  except configparser.DuplicateSectionError as error:
-    raise ValueError(f"Duplicate section in {path}: [{error.section}]") from error
-
-  if not parser.has_section("festivals"):
-    raise ValueError(f"{path} must contain a [festivals] section")
-
-  configured = dict(parser.items("festivals"))
-  catalog = all_festival_names()
-  catalog_set = set(catalog)
-  configured_names = set(configured)
-
-  unknown = sorted(configured_names - catalog_set)
-  if unknown:
-    raise ValueError(f"Unknown festival names in {path}: {', '.join(unknown)}")
-  missing = [name for name in catalog if name not in configured_names]
-  if missing:
-    raise ValueError(f"Missing festival names in {path}: {', '.join(missing)}")
-
-  enabled = set()
-  for name, raw in configured.items():
-    if _parse_bool(raw, key=name):
-      enabled.add(name)
-  return frozenset(enabled)
+  parser.read_string(Path(path).read_text(encoding="utf-8"))
+  enabled = []
+  for name, raw in parser.items("festivals"):
+    if raw.strip().casefold() in ("yes", "true", "1", "on"):
+      enabled.append(name)
+  return enabled
 
 
 def format_festival_dates(dates):

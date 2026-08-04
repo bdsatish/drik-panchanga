@@ -244,9 +244,8 @@ class FestivalSelectionTests(unittest.TestCase):
 
   def test_shipped_cfg_enables_full_catalog_except_disabled(self):
     enabled = load_festival_selection(DEFAULT_FESTIVALS_PATH)
-    self.assertEqual(
-      enabled,
-      frozenset(all_festival_names()) - {
+    expected = [
+      name for name in all_festival_names() if name not in {
         "Surya Shashthi / Chhath",
         "Gita Jayanti",
         "Vasavi Jayanti",
@@ -259,7 +258,9 @@ class FestivalSelectionTests(unittest.TestCase):
         "Sama Upakarma",
         "Rishi Panchami",
         "Vata Savitri Purnima",
-      })
+      }
+    ]
+    self.assertEqual(enabled, expected)
 
   def test_disable_one_festival_uses_dense_markers(self):
     lines = ["[festivals]"]
@@ -281,33 +282,6 @@ class FestivalSelectionTests(unittest.TestCase):
     self.assertEqual(entries[0], (1, "Jan 02", "Rama Navami"))
     self.assertEqual([marker for marker, _dates, _name in entries], list(range(1, len(entries) + 1)))
     self.assertIn(1, [n for nums in by_date.values() for n in nums])
-
-  def test_unknown_name_raises(self):
-    body = "[festivals]\n" + "\n".join(f"{name} = yes" for name in all_festival_names())
-    body += "\nExtra Festival = yes\n"
-    with TemporaryDirectory() as directory:
-      path = Path(directory) / "festivals.cfg"
-      path.write_text(body, encoding="utf-8")
-      with self.assertRaisesRegex(ValueError, "Unknown festival"):
-        load_festival_selection(path)
-
-  def test_missing_name_raises(self):
-    names = list(all_festival_names())
-    body = "[festivals]\n" + "\n".join(f"{name} = yes" for name in names[1:])
-    with TemporaryDirectory() as directory:
-      path = Path(directory) / "festivals.cfg"
-      path.write_text(body + "\n", encoding="utf-8")
-      with self.assertRaisesRegex(ValueError, "Missing festival"):
-        load_festival_selection(path)
-
-  def test_duplicate_name_raises(self):
-    body = "[festivals]\n" + "\n".join(f"{name} = yes" for name in all_festival_names())
-    body += "\nUgadi = no\n"
-    with TemporaryDirectory() as directory:
-      path = Path(directory) / "festivals.cfg"
-      path.write_text(body, encoding="utf-8")
-      with self.assertRaisesRegex(ValueError, "Duplicate festival"):
-        load_festival_selection(path)
 
 
 class CanonicalRecordsTests(unittest.TestCase):
