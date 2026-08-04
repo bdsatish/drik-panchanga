@@ -3,7 +3,8 @@
 from datetime import date, timedelta
 
 from generate_panchanga_calendar import (
-    daily_records, month_range, parse_month_system,
+    coordinate_selection_label, daily_records, month_range, month_system_label,
+    parse_month_system,
 )
 from webapp.day_panchanga import (
     ayana_label, compute_day_details, drik_ayana_label, format_time,
@@ -50,6 +51,7 @@ def _karana_text(kar, names) -> str:
 def generate_ics(location, start_year, start_month, *, month_system="amanta",
                  coordinate_selection="citra"):
     amanta = parse_month_system(month_system)
+    month_key = "amanta" if amanta else "purnimanta"
     names = sanskrit_names()
     records = daily_records(list(month_range(start_year, start_month)), location)
     out = [
@@ -58,6 +60,8 @@ def generate_ics(location, start_year, start_month, *, month_system="amanta",
         "PRODID:-//Drik Panchanga//EN",
         "CALSCALE:GREGORIAN",
         f"X-WR-CALNAME:Panchanga · {location.name}",
+        f"X-WR-CALDESC:{coordinate_selection_label(coordinate_selection)} · "
+        f"{month_system_label(amanta)}",
     ]
     for rec in records:
         civil = rec.civil_date
@@ -138,7 +142,7 @@ def generate_ics(location, start_year, start_month, *, month_system="amanta",
             f"DTEND;VALUE=DATE:{ymd_n}",
             f"SUMMARY:{summary}",
             f"DESCRIPTION:{desc}",
-            f"UID:panchanga-{ymd}@{location.name}",
+            f"UID:panchanga-{coordinate_selection}-{month_key}-{ymd}@{location.name}",
             "END:VEVENT",
         ]
     out.append("END:VCALENDAR")

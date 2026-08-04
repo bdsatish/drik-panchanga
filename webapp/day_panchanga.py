@@ -11,6 +11,7 @@ from zoneinfo import ZoneInfo
 import panchanga
 from generate_panchanga_calendar import (
     ayanamsa_label,
+    coordinate_selection_label,
     load_location,
     month_system_label,
     parse_month_system,
@@ -325,10 +326,11 @@ def compute_day_panchanga(city: str, date_text: str, month_system: str | None = 
         "timezone": location.timezone_name,
         "jd": jd,
         "sunrise_jd": sunrise_jd_ut,
-        "coordinate_mode": "Tropical (Sāyana)" if use_tropical else "Sidereal",
+        "coordinate_mode": "tropical" if use_tropical else "sidereal",
+        "coordinate_label": coordinate_selection_label(coordinate_selection),
         "ayanamsa": ayan_label,
-        "ayanamsa_key": coordinate_selection,
-        "ayanamsa_degrees": round(ayanamsa_degrees, 8),
+        "ayanamsa_key": None if use_tropical else coordinate_selection,
+        "ayanamsa_degrees": None if use_tropical else round(ayanamsa_degrees, 8),
         "month_system": "amanta" if amanta else "purnimanta",
         "month_system_label": month_label,
         "samvatsara": names["samvats"][str(samvat_num)],

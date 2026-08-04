@@ -9,10 +9,27 @@ from webapp.day_panchanga import compute_day_panchanga
 class DayPanchangaMasaRituTests(unittest.TestCase):
 
     def setUp(self):
-        panchanga.set_chosen_ayanamsa("citra")
+        panchanga.set_coordinate_selection("citra")
 
     def tearDown(self):
         panchanga.reset_ayanamsa_mode()
+
+    def test_coordinate_metadata_is_structured(self):
+        sidereal = compute_day_panchanga(
+            "Bengaluru", "21/04/2023", coordinate_selection="citra")
+        self.assertEqual(sidereal["coordinate_mode"], "sidereal")
+        self.assertEqual(sidereal["coordinate_label"], "Chitra-paksha")
+        self.assertEqual(sidereal["ayanamsa_key"], "citra")
+        self.assertIsNotNone(sidereal["ayanamsa"])
+        self.assertIsNotNone(sidereal["ayanamsa_degrees"])
+
+        tropical = compute_day_panchanga(
+            "Bengaluru", "21/04/2023", coordinate_selection="tropical")
+        self.assertEqual(tropical["coordinate_mode"], "tropical")
+        self.assertEqual(tropical["coordinate_label"], "Tropical (Sāyana)")
+        self.assertIsNone(tropical["ayanamsa_key"])
+        self.assertIsNone(tropical["ayanamsa"])
+        self.assertIsNone(tropical["ayanamsa_degrees"])
 
     def test_purnimanta_renames_ordinary_krishna_masa(self):
         amanta = compute_day_panchanga(

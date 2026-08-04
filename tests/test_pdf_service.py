@@ -114,6 +114,34 @@ class IcsServiceTests(unittest.TestCase):
         self.assertGreater(ics.count("BEGIN:VEVENT"), 400)
         self.assertLessEqual(ics.count("BEGIN:VEVENT"), 435)
 
+    def test_ics_metadata_is_selection_aware(self):
+        loc = load_location("Tirupati")
+        sid = generate_ics(loc, 2026, 1, coordinate_selection="citra")
+        trop = generate_ics(loc, 2026, 1, coordinate_selection="tropical")
+        self.assertIn("X-WR-CALDESC:Chitra-paksha · Amānta", sid)
+        self.assertIn("X-WR-CALDESC:Tropical (Sāyana) · Amānta", trop)
+
+    def test_ics_uid_differs_by_selection_and_month_system(self):
+        loc = load_location("Tirupati")
+        sid = generate_ics(loc, 2026, 1, coordinate_selection="citra")
+        trop = generate_ics(loc, 2026, 1, coordinate_selection="tropical")
+        purni = generate_ics(
+            loc, 2026, 1, coordinate_selection="citra", month_system="purnimanta")
+
+        def first_uid(text):
+            return next(line for line in text.split("\r\n") if line.startswith("UID:"))
+
+        self.assertNotEqual(first_uid(sid), first_uid(trop))
+        self.assertNotEqual(first_uid(sid), first_uid(purni))
+
+    def test_ics_flask_filename_is_selection_aware(self):
+        response = app.test_client().get(
+            "/api/panchanga.ics?city=Helsinki&start=2026-03&ayanamsa=tropical")
+        self.assertEqual(response.status_code, 200)
+        disposition = response.headers["Content-Disposition"]
+        self.assertIn("tropical", disposition)
+        self.assertIn("amanta", disposition)
+
     def test_ics_flask_endpoint_returns_calendar(self):
         response = app.test_client().get(
             "/api/panchanga.ics?city=Helsinki&start=2026-03")

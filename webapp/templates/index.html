@@ -570,10 +570,9 @@
         dayContext.innerHTML =
           `<strong>${escapeHtml(data.city)}</strong> · ${escapeHtml(data.date)}`
           + ` · ${escapeHtml(monthLabel)}`
-          + ` · ${escapeHtml(data.coordinate_mode || "Sidereal")}`
-          + (data.coordinate_mode && data.coordinate_mode.startsWith("Trop")
-            ? ""
-            : ` · ${escapeHtml(data.ayanamsa)}`
+          + (data.coordinate_mode === "tropical"
+            ? ` · ${escapeHtml(data.coordinate_label)}`
+            : ` · Sidereal · ${escapeHtml(data.ayanamsa)}`
               + (data.ayanamsa_degrees != null
                 ? ` (${Number(data.ayanamsa_degrees).toFixed(6)}°)`
                 : ""));

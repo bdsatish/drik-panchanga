@@ -6,6 +6,7 @@ from __future__ import annotations
 import io
 import ipaddress
 import json
+import re
 import sys
 from functools import lru_cache
 from pathlib import Path
@@ -28,7 +29,8 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from generate_panchanga_calendar import (  # noqa: E402
-    city_locations, load_location, parse_coordinate_selection, parse_start_month,
+    city_locations, load_location, parse_coordinate_selection, parse_month_system,
+    parse_start_month,
 )
 from panchanga import sweph_version
 from webapp.day_panchanga import compute_day_panchanga  # noqa: E402
@@ -145,14 +147,18 @@ def ics_calendar():
     try:
         location = load_location(city)
         start_year, start_month = parse_start_month(start)
+        month = (request.args.get("month") or "amanta").strip()
+        month_key = "amanta" if parse_month_system(month) else "purnimanta"
+        coordinate_selection = parse_coordinate_selection(
+            (request.args.get("ayanamsa") or "").strip() or None)
         ics_text = generate_ics(
             location, start_year, start_month,
-            month_system=(request.args.get("month") or "amanta").strip(),
-            coordinate_selection=parse_coordinate_selection(
-                (request.args.get("ayanamsa") or "").strip() or None))
+            month_system=month, coordinate_selection=coordinate_selection)
     except (OSError, ValueError, RuntimeError) as error:
         abort(400, description=str(error))
-    name = f"panchanga-{start_year:04d}-{start_month:02d}.ics"
+    city_slug = re.sub(r"[^a-z0-9]+", "-", city.casefold()).strip("-") or "location"
+    name = (f"panchanga-{city_slug}-{coordinate_selection}-{month_key}-"
+            f"{start_year:04d}-{start_month:02d}.ics")
     return send_file(io.BytesIO(ics_text.encode("utf-8")),
                      mimetype="text/calendar; charset=utf-8",
                      as_attachment=True, download_name=name, max_age=0)
