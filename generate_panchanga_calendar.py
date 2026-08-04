@@ -513,7 +513,10 @@ def format_eclipse_line(eclipses, timezone_name, sunrise_by_date=None):
 
 def eclipse_civil_dates(eclipses, timezone_name):
   """Local civil date of each eclipse maximum."""
-  return {jd_to_local_civil_date(maximum_jd, timezone_name) for _kind, _phase, maximum_jd in eclipses}
+  dates = set()
+  for _kind, _phase, maximum_jd in eclipses:
+    dates.add(jd_to_local_civil_date(maximum_jd, timezone_name))
+  return dates
 
 
 def tithi_underline_bounds(x, tithi_column_width):

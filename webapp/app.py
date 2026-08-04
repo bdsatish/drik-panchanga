@@ -120,7 +120,10 @@ def api_cities():
 @app.get("/api/suggest-city")
 def api_suggest_city():
   xff = request.headers.get("X-Forwarded-For", "")
-  ip = (xff.split(",")[0] if xff else request.remote_addr or "").strip()
+  if xff:
+    ip = xff.split(",")[0].strip()
+  else:
+    ip = (request.remote_addr or "").strip()
   return jsonify({"city": suggest_city_for_ip(ip)})
 
 
@@ -131,13 +134,15 @@ def api_panchanga():
   month = request.args.get("month")
   ayanamsa = request.args.get("ayanamsa")
   try:
-    coordinate_selection = parse_coordinate_selection(ayanamsa.strip() if ayanamsa else ayanamsa)
+    if ayanamsa:
+      ayanamsa = ayanamsa.strip()
+    coordinate_selection = parse_coordinate_selection(ayanamsa)
     if coordinate_selection is None:
       allowed = ", ".join(COORDINATE_OPTIONS)
       raise ValueError(f"Coordinate selection must be one of: {allowed}.")
-    return jsonify(
-      compute_day_panchanga(city, date, month_system=month.strip() if month else month,
-                            coordinate_selection=coordinate_selection))
+    if month:
+      month = month.strip()
+    return jsonify(compute_day_panchanga(city, date, month_system=month, coordinate_selection=coordinate_selection))
   except ValueError as error:
     abort(400, description=str(error))
 

@@ -117,7 +117,10 @@ def handle_suggest_city():
   """GET suggest_city.py → JSON ``{\"city\": ...}`` from client IP."""
   try:
     xff = os.environ.get("HTTP_X_FORWARDED_FOR", "")
-    ip = (xff.split(",")[0] if xff else os.environ.get("REMOTE_ADDR") or "").strip()
+    if xff:
+      ip = xff.split(",")[0].strip()
+    else:
+      ip = (os.environ.get("REMOTE_ADDR") or "").strip()
     write_json({"city": suggest_city_for_ip(ip)})
   except Exception as error:  # catch-all so CGI still returns a response
     log.error("CGI suggest_city failed: %s", error)
@@ -132,7 +135,11 @@ def handle_panchanga():
     date = (params.get("date") or [""])[0]
     month = (params.get("month") or ["amanta"])[0]
     a = params.get("ayanamsa")
-    coordinate_selection = parse_coordinate_selection(a[0] if a else None)
+    if a:
+      ayanamsa = a[0]
+    else:
+      ayanamsa = None
+    coordinate_selection = parse_coordinate_selection(ayanamsa)
     if coordinate_selection is None:
       allowed = ", ".join(COORDINATE_OPTIONS)
       raise ValueError(f"Coordinate selection must be one of: {allowed}.")

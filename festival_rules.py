@@ -101,7 +101,9 @@ def masa_codes_for(masa, allow_adhika=False):
   """Accepted masa codes for a rule, or ``None`` to accept any masa."""
   if masa is None:
     return None
-  return {str(masa), f"A{masa}"} if allow_adhika else {str(masa)}
+  if allow_adhika:
+    return {str(masa), "A" + str(masa)}
+  return {str(masa)}
 
 
 def resolve_vriddhi_dates(dates):
@@ -133,11 +135,17 @@ def select_kshaya_dates(records, tithi, masa=None, allow_adhika=False):
       continue
     start_tithi = plain_tithi_number(day_tithi)
     end_tithi = plain_tithi_number(next_tithi)
-    skipped = [(start_tithi + offset - 1) % 30 + 1 for offset in range(1, (end_tithi - start_tithi) % 30)]
+    skipped = []
+    gap = (end_tithi - start_tithi) % 30
+    for offset in range(1, gap):
+      skipped.append((start_tithi + offset - 1) % 30 + 1)
     if target_tithi not in skipped:
       continue
     if masa_codes is not None:
-      check_masa = next_masa if target_tithi <= 15 else day_masa
+      if target_tithi <= 15:
+        check_masa = next_masa
+      else:
+        check_masa = day_masa
       if check_masa not in masa_codes:
         continue
     matches.append(next_date)
@@ -172,13 +180,17 @@ def select_plain_tithi_dates(records, masa, tithi, allow_adhika=False):
   matches = select_tithi_dates(records, tithi, masa=masa, allow_adhika=allow_adhika)
   if not allow_adhika or not matches:
     return matches
-  records_by_date = {record.civil_date: record for record in records}
+  records_by_date = {}
+  for record in records:
+    records_by_date[record.civil_date] = record
   adhika_matches = []
   for civil_date in matches:
     record = records_by_date[civil_date]
     if record.is_adhika or record.masa.startswith("A"):
       adhika_matches.append(civil_date)
-  return adhika_matches if adhika_matches else matches
+  if adhika_matches:
+    return adhika_matches
+  return matches
 
 
 def select_varamahalakshmi_dates(records):
@@ -336,7 +348,9 @@ def select_onam_dates(records):
 
 def select_vaikuntha_ekadashi_dates(records):
   """Margasira/Pausha Shukla Ekadashi upavasa while the Sun is in Dhanur."""
-  records_by_date = {record.civil_date: record for record in records}
+  records_by_date = {}
+  for record in records:
+    records_by_date[record.civil_date] = record
   selected = []
   for civil_date in select_tithi_dates(records, "S11"):
     record = records_by_date[civil_date]
@@ -391,8 +405,14 @@ def select_solstice_dates(records, solstice_longitude, timezone_name=None):
     local-date window around the event; sunrise JDs are UT, so comparing them
     directly with the UT event moment preserves the local sunrise rule.
     """
-  records_by_date = {record.civil_date: record for record in records}
-  years = sorted({civil_date.year for civil_date in records_by_date})
+  records_by_date = {}
+  for record in records:
+    records_by_date[record.civil_date] = record
+  years = []
+  for civil_date in records_by_date:
+    if civil_date.year not in years:
+      years.append(civil_date.year)
+  years.sort()
   local_timezone = timezone_name or "UTC"
   selected = []
   for year in years:
