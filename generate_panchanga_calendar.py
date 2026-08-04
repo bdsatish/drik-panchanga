@@ -4,6 +4,7 @@
 import argparse
 import calendar
 import json
+import logging
 import re
 from collections import namedtuple as struct
 from datetime import date as CivilDate
@@ -28,6 +29,8 @@ FOOTER_FESTIVAL_SLOTS = 30  # 6 columns x 5 rows in draw_page_footer
 FOOTER_KEY_FONT_MAX = 5.5
 FOOTER_KEY_FONT_MIN = 3.8
 FOOTER_KEY_LINE_HEIGHT = 6.5  # line spacing
+log = logging.getLogger(__name__)
+log.addHandler(logging.NullHandler())
 FOOTER_KEY_TOP = 44.0  # baseline of first muted key line below festivals
 RULESET_VERSION = "Udaya-Vyapini-1.1"
 LAYOUT_VERSION = "A4-1.20"
@@ -362,16 +365,18 @@ def format_sunrise_unavailable_message(location_name, year, month, day, place):
 
 
 def require_local_sunrise(jd, place, location_name, year, month, day):
-  """Return ``panchanga.sunrise`` result, or raise ``RuntimeError`` with context."""
+  """Return ``panchanga.sunrise`` result, or ``None`` when sunrise is unavailable."""
+  message = format_sunrise_unavailable_message(location_name, year, month, day, place)
   try:
     sunrise = panchanga.sunrise(jd, place)
     sunrise_jd = sunrise[0]
     if not jd - 1 <= sunrise_jd <= jd + 2:
-      raise RuntimeError("no local sunrise")
+      log.error("%s", message)
+      return None
     return sunrise
   except Exception as error:
-    message = format_sunrise_unavailable_message(location_name, year, month, day, place)
-    raise RuntimeError(message) from error
+    log.error("%s (%s)", message, error)
+    return None
 
 
 def city_base_name(key):
@@ -599,17 +604,14 @@ def daily_records(months, location):
       date = panchanga.Date(year, month, day)
       place = panchanga.Place(location.latitude, location.longitude, timezone_hours(timezone, year, month, day))
       jd = panchanga.gregorian_to_jd(date)
-      try:
-        sunrise_jd = require_local_sunrise(jd, place, location.name, year, month, day)[0]
-        tithi_number = panchanga.tithi(jd, place)[0]
-        nakshatra_number = panchanga.nakshatra(jd, place)[0]
-        yoga_number = panchanga.yoga(jd, place)[0]
-        masa_number, is_adhika = panchanga.masa(jd, place, amanta=True, tithi_number=tithi_number)
-      except RuntimeError:
-        raise
-      except Exception as error:
-        raise RuntimeError(format_sunrise_unavailable_message(location.name, year, month, day, place) +
-                           f" ({error})") from error
+      sunrise = require_local_sunrise(jd, place, location.name, year, month, day)
+      if sunrise is None:
+        raise RuntimeError(format_sunrise_unavailable_message(location.name, year, month, day, place))
+      sunrise_jd = sunrise[0]
+      tithi_number = panchanga.tithi(jd, place)[0]
+      nakshatra_number = panchanga.nakshatra(jd, place)[0]
+      yoga_number = panchanga.yoga(jd, place)[0]
+      masa_number, is_adhika = panchanga.masa(jd, place, amanta=True, tithi_number=tithi_number)
       result.append(
         DayRecord(CivilDate(year, month, day), tithi_code(tithi_number), nakshatra_number, yoga_number,
                   masa_code(masa_number, is_adhika), is_adhika, sunrise_jd - place.timezone / 24))

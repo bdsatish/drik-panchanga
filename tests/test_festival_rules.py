@@ -497,10 +497,13 @@ class ResolveFestivalsTests(unittest.TestCase):
     rows = month_data[(civil.year, civil.month)]
     rows[civil.day - 1] = day_row(civil.day, "S3", "A2", is_adhika=True)
 
-    with self.assertRaisesRegex(RuntimeError, "Akshaya Tritiya"):
-      records = canonical_records(months, month_data)
-      resolve_festivals(records, {record.civil_date
-                                  for record in records}, enabled_names=self.enabled_without_solstice_festivals())
+    records = canonical_records(months, month_data)
+    by_date, entries = resolve_festivals(records, {record.civil_date
+                                                   for record in records},
+                                         enabled_names=self.enabled_without_solstice_festivals())
+    marker, dates = entries_by_name(entries)["Akshaya Tritiya"]
+    self.assertEqual(dates, "None")
+    self.assertEqual(dates_for_marker(by_date, marker), [])
 
   def test_context_matches_are_clipped_to_target_months(self):
     target_months, target_data = covering_months_and_data(2030, 3)
@@ -523,14 +526,17 @@ class ResolveFestivalsTests(unittest.TestCase):
     self.assertEqual((ugadi_marker, ugadi_dates), (1, "Mar 01"))
     self.assertNotIn(date(2030, 2, 1), by_date)
 
-  def test_raises_when_a_festival_has_no_date(self):
+  def test_omits_markers_when_a_festival_has_no_date(self):
     months, month_data = covering_months_and_data()
     month_data[(2030, 1)][0] = day_row(1, "S2", "1")
     records = canonical_records(months, month_data)
 
-    with self.assertRaisesRegex(RuntimeError, "Ugadi"):
-      resolve_festivals(records, {record.civil_date
-                                  for record in records}, enabled_names=self.enabled_without_solstice_festivals())
+    by_date, entries = resolve_festivals(records, {record.civil_date
+                                                   for record in records},
+                                         enabled_names=self.enabled_without_solstice_festivals())
+    marker, dates = entries_by_name(entries)["Ugadi"]
+    self.assertEqual(dates, "None")
+    self.assertEqual(dates_for_marker(by_date, marker), [])
 
   def test_vriddhi_marks_only_the_former_date(self):
     rows = []

@@ -6,6 +6,7 @@ request so ayanāṃśa / tropical mode stays stable under concurrent web use.
 """
 
 import json
+import logging
 import re
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -14,6 +15,7 @@ import panchanga
 from generate_panchanga_calendar import (
   ayanamsa_label,
   coordinate_selection_label,
+  format_sunrise_unavailable_message,
   load_location,
   month_system_label,
   parse_month_system,
@@ -23,6 +25,8 @@ from generate_panchanga_calendar import (
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 _NAMES_PATH = _REPO_ROOT / "sanskrit_names.json"
+log = logging.getLogger(__name__)
+log.addHandler(logging.NullHandler())
 
 
 def _load_json(path):
@@ -107,7 +111,8 @@ def probe_moon_event(jd, place, civil, rise=True):
   try:
     rc, times = swe.rise_trans(t0, swe.MOON, geopos=(place.longitude, place.latitude, 0.0),
                                rsmi=panchanga._rise_flags + flag)
-  except Exception:
+  except Exception as error:
+    log.error("Moon %s probe failed: %s", "rise" if rise else "set", error)
     return None, "unavailable"
   if rc != 0:
     altitude = _moon_altitude_at_local_noon(civil.year, civil.month, civil.day, place)
@@ -180,18 +185,16 @@ def _compute_day_details_unlocked(location, civil, amanta=None, coordinate_selec
   place = place_for_date(location, civil)
   jd = panchanga.gregorian_to_jd(civil)
 
-  try:
-    sunrise = require_local_sunrise(jd, place, location.name, civil.year, civil.month, civil.day)
-    sunset = panchanga.sunset(jd, place)
-    sunset_jd = sunset[0]
-    if not jd - 1 <= sunset_jd <= jd + 2:
-      raise RuntimeError("no local sunset")
-    day_dur = panchanga.day_duration(jd, place)
-  except RuntimeError as error:
-    raise ValueError(str(error)) from error
-  except Exception as error:
-    raise ValueError(f"Cannot compute sunrise panchanga for {location.name} "
-                     f"on {civil.day:02d}/{civil.month:02d}/{civil.year}: {error}") from error
+  sunrise = require_local_sunrise(jd, place, location.name, civil.year, civil.month, civil.day)
+  if sunrise is None:
+    raise ValueError(format_sunrise_unavailable_message(location.name, civil.year, civil.month, civil.day, place))
+  sunset = panchanga.sunset(jd, place)
+  sunset_jd = sunset[0]
+  if not jd - 1 <= sunset_jd <= jd + 2:
+    message = format_sunrise_unavailable_message(location.name, civil.year, civil.month, civil.day, place)
+    log.error("%s (no local sunset)", message)
+    raise ValueError(message)
+  day_dur = panchanga.day_duration(jd, place)
 
   names = sanskrit_names()
   ti = panchanga.tithi(jd, place)

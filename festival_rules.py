@@ -2,6 +2,7 @@
 
 import calendar
 import configparser
+import logging
 from collections import namedtuple as struct
 from datetime import date as CivilDate
 from datetime import datetime, timedelta, timezone
@@ -12,6 +13,8 @@ import panchanga
 
 SECONDS_PER_DAY = 24 * 60 * 60
 JULIAN_DAY_AT_UNIX_EPOCH = 2440587.5
+log = logging.getLogger(__name__)
+log.addHandler(logging.NullHandler())
 
 
 def julian_day_from_datetime(value):
@@ -199,7 +202,8 @@ def find_local_eclipses(start_jd, end_jd, geopos):
     while search_jd < end_jd + 2.0:
       try:
         flags, times, _ = finder(search_jd, geopos)
-      except Exception:
+      except Exception as error:
+        log.error("Eclipse search for %s failed at JD %s: %s", kind, search_jd, error)
         break
       maximum = times[0]
       if not maximum or maximum <= search_jd:
@@ -232,7 +236,8 @@ def postpone_upakarma_if_eclipse(primary, fallback, geopos, timezone_name):
   if not primary:
     return list(fallback)
   if geopos is not None and timezone_name is None:
-    raise ValueError("Upakarma eclipse handling requires a timezone name")
+    log.error("Upakarma eclipse check skipped: no timezone name")
+    return list(primary)
   if geopos is not None and any(civil_day_has_eclipse(civil_date, geopos, timezone_name) for civil_date in primary):
     return list(fallback) if fallback else list(primary)
   return list(primary)
@@ -488,7 +493,7 @@ def resolve_festivals(records, target_dates, geopos=None, timezone_name=None, en
       if civil_date in target_dates:
         dates.append(civil_date)
     if not dates and not rule.allow_empty:
-      raise RuntimeError(f"No calendar date found for {rule.name}")
+      log.error("No calendar date found for %s; omitting day markers", rule.name)
     for civil_date in dates:
       markers_by_date.setdefault(civil_date, []).append(marker)
     entries.append((marker, format_festival_dates(dates), rule.name))
