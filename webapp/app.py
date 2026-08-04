@@ -26,14 +26,19 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(_REPO_ROOT) not in sys.path:
   sys.path.insert(0, str(_REPO_ROOT))
 
-from app_logging import configure_logging  # noqa: E402
-from generate_panchanga_calendar import (  # noqa: E402
-  COORDINATE_OPTIONS, city_locations, load_location, parse_coordinate_selection, parse_month_system, parse_start_month,
+from app_logging import configure_logging
+from generate_panchanga_calendar import (
+  COORDINATE_OPTIONS,
+  city_locations,
+  load_location,
+  parse_coordinate_selection,
+  parse_month_system,
+  parse_start_month,
 )
 from panchanga import sweph_version
-from webapp.day_panchanga import compute_day_panchanga  # noqa: E402
-from webapp.pdf_service import generate_pdf  # noqa: E402
-from webapp.ics_service import generate_ics  # noqa: E402
+from webapp.day_panchanga import compute_day_panchanga
+from webapp.pdf_service import generate_pdf
+from webapp.ics_service import generate_ics
 
 configure_logging()
 app = Flask(__name__)
