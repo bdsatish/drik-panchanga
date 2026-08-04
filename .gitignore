@@ -39,5 +39,7 @@ venv/
 .pydevproject
 .aider*
 .opencode/
+.agents/
+skills-lock.json
 
 *.pdf
