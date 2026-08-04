@@ -191,22 +191,23 @@ def embed_pdf_metadata(pdf, title, subject, ruleset_version, coordinate_selectio
   info.copyright = PDF_COPYRIGHT
   info.url = PDF_SOURCE_URL
 
+  # ReportLab has no public API for custom Info keys (AuthorEmail, Copyright,
+  # URL). Replace info.format so those fields are written into the PDF.
   def format_info(document):
-    return PDFDictionary(
-      {
-        "Title": PDFString(info.title),
-        "Author": PDFString(info.author),
-        "AuthorEmail": PDFString(info.author_email),
-        "Copyright": PDFString(info.copyright),
-        "URL": PDFString(info.url),
-        "ModDate": PDFDate(ts=document._timeStamp, dateFormatter=info._dateFormatter),
-        "CreationDate": PDFDate(ts=document._timeStamp, dateFormatter=info._dateFormatter),
-        "Producer": PDFString(info.producer),
-        "Creator": PDFString(info.creator),
-        "Subject": PDFString(info.subject),
-        "Keywords": PDFString(info.keywords),
-        "Trapped": PDFName(info.trapped)
-      }).format(document)
+    return PDFDictionary({
+      "Title": PDFString(info.title),
+      "Author": PDFString(info.author),
+      "AuthorEmail": PDFString(info.author_email),
+      "Copyright": PDFString(info.copyright),
+      "URL": PDFString(info.url),
+      "ModDate": PDFDate(ts=document._timeStamp, dateFormatter=info._dateFormatter),
+      "CreationDate": PDFDate(ts=document._timeStamp, dateFormatter=info._dateFormatter),
+      "Producer": PDFString(info.producer),
+      "Creator": PDFString(info.creator),
+      "Subject": PDFString(info.subject),
+      "Keywords": PDFString(info.keywords),
+      "Trapped": PDFName(info.trapped)
+    }).format(document)
 
   info.format = format_info
 
@@ -453,8 +454,12 @@ def resolve_city_key(city, locations):
     near = difflib.get_close_matches(query, bases, n=5, cutoff=0.6)
     expanded = []
     for base in near:
-      expanded.extend(
-        sorted((name for name in locations if city_base_name(name).casefold() == base.casefold()), key=str.casefold))
+      matches = []
+      for name in locations:
+        if city_base_name(name).casefold() == base.casefold():
+          matches.append(name)
+      matches.sort(key=str.casefold)
+      expanded.extend(matches)
     suggestions = expanded[:8]
   message = f"City {city!r} was not found in {DEFAULT_CITIES_PATH.name}"
   if suggestions:
@@ -905,10 +910,12 @@ def draw_page_footer(pdf, festival_entries, eclipse_line="Eclipses: None"):
   available_width = page_width - 36
   eclipse_size = fitted_font_size(pdf, eclipse_line, PDF_FONT_BOLD, FOOTER_KEY_FONT_MAX, FOOTER_KEY_FONT_MIN,
                                   available_width, "eclipse footer")
-  key_size = min([eclipse_size] + [
-    fitted_font_size(pdf, line, PDF_FONT, FOOTER_KEY_FONT_MAX, FOOTER_KEY_FONT_MIN, available_width,
-                     f"footer key line {index + 1}") for index, line in enumerate(key_lines)
-  ])
+  key_sizes = [eclipse_size]
+  for index, line in enumerate(key_lines):
+    key_sizes.append(
+      fitted_font_size(pdf, line, PDF_FONT, FOOTER_KEY_FONT_MAX, FOOTER_KEY_FONT_MIN, available_width,
+                       f"footer key line {index + 1}"))
+  key_size = min(key_sizes)
   pdf.setFont(PDF_FONT_BOLD, key_size)
   pdf.drawString(18, FOOTER_KEY_TOP, eclipse_line)
   pdf.setFont(PDF_FONT, key_size)
@@ -918,7 +925,13 @@ def draw_page_footer(pdf, festival_entries, eclipse_line="Eclipses: None"):
 
 def build_pdf(location, start_year, start_month, output_path, festivals_path=None, month_system="amanta",
               coordinate_selection="citra"):
-  """Build a calendar while holding coordinate state for the full document."""
+  """Build a calendar while holding coordinate state for the full document.
+
+  Pattern: take ``coordinate_calculation_lock``, then call ``_build_pdf_unlocked``.
+  The lock keeps ayanāṃśa / tropical mode stable for the whole PDF; the
+  ``_unlocked`` helper holds the real work and must not be called alone from
+  other threads.
+  """
   with panchanga.coordinate_calculation_lock:
     return _build_pdf_unlocked(location, start_year, start_month, output_path, festivals_path=festivals_path,
                                month_system=month_system, coordinate_selection=coordinate_selection)
@@ -940,7 +953,10 @@ def _build_pdf_unlocked(location, start_year, start_month, output_path, festival
   range_start = CivilDate(start_year, start_month, 1)
   end_year, end_month = months[-1]
   range_end = CivilDate(end_year, end_month, calendar.monthrange(end_year, end_month)[1])
-  target_records = [record for record in context_records if range_start <= record.civil_date <= range_end]
+  target_records = []
+  for record in context_records:
+    if range_start <= record.civil_date <= range_end:
+      target_records.append(record)
   target_dates = {record.civil_date for record in target_records}
   festivals_path = Path(festivals_path) if festivals_path is not None else DEFAULT_FESTIVALS_PATH
   enabled_names = load_festival_selection(festivals_path)
@@ -959,15 +975,15 @@ def _build_pdf_unlocked(location, start_year, start_month, output_path, festival
   # is not missed.
   sankranti_by_date = sankranti_raasi_by_date(context_records)
   solar_by_date = solar_dates_by_date(context_records)
-  ekadashi_dates = {
-    value
-    for value in ekadashi_dates_from_records(context_records) if range_start <= value <= range_end
-  }
+  ekadashi_dates = set()
+  for value in ekadashi_dates_from_records(context_records):
+    if range_start <= value <= range_end:
+      ekadashi_dates.add(value)
   header_year, header_month = months[len(months) // 2]
-  header_records = [
-    record for record in target_records
-    if (record.civil_date.year, record.civil_date.month) == (header_year, header_month)
-  ]
+  header_records = []
+  for record in target_records:
+    if (record.civil_date.year, record.civil_date.month) == (header_year, header_month):
+      header_records.append(record)
   calendar_years = calendar_year_label(header_records, amanta=amanta)
   kali_ahargana = kali_ahargana_range(months)
   masa_badges = masa_badges_by_date(target_records, amanta=amanta)

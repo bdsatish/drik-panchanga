@@ -30,14 +30,11 @@ def jd_to_local_civil_date(jd, timezone_name):
   return jd_to_local_datetime(jd, timezone_name).date()
 
 
-DayRecord = struct('DayRecord', [
-  'civil_date', 'tithi', 'nakshatra', 'yoga', 'masa', 'is_adhika', 'sunrise_jd'
-])
+DayRecord = struct('DayRecord', ['civil_date', 'tithi', 'nakshatra', 'yoga', 'masa', 'is_adhika', 'sunrise_jd'])
 
-FestivalRule = struct(
-  'FestivalRule',
-  ['name', 'masa', 'tithi', 'selector', 'allow_adhika', 'allow_empty', 'location_aware'],
-  defaults=(None, None, None, False, False, False))
+FestivalRule = struct('FestivalRule',
+                      ['name', 'masa', 'tithi', 'selector', 'allow_adhika', 'allow_empty', 'location_aware'],
+                      defaults=(None, None, None, False, False, False))
 
 _TRUTHY = frozenset({"yes", "true", "1", "on"})
 _FALSY = frozenset({"no", "false", "0", "off"})
@@ -87,16 +84,22 @@ def load_festival_selection(path):
   if missing:
     raise ValueError(f"Missing festival names in {path}: {', '.join(missing)}")
 
-  return frozenset(name for name, raw in configured.items() if _parse_bool(raw, key=name))
+  enabled = set()
+  for name, raw in configured.items():
+    if _parse_bool(raw, key=name):
+      enabled.add(name)
+  return frozenset(enabled)
 
 
 def format_festival_dates(dates):
   dates = sorted(dates)
   if not dates:
     return "None"
-  if (len(dates) > 1 and len({(value.year, value.month)
-                              for value in dates}) == 1 and all(right == left + timedelta(days=1)
-                                                                for left, right in zip(dates, dates[1:]))):
+
+  # Consecutive days in one month → "Mar 19-21"; otherwise list each date.
+  same_month = all(value.year == dates[0].year and value.month == dates[0].month for value in dates)
+  consecutive = all(dates[i] == dates[i - 1] + timedelta(days=1) for i in range(1, len(dates)))
+  if len(dates) > 1 and same_month and consecutive:
     return (f"{calendar.month_abbr[dates[0].month]} "
             f"{dates[0].day:02d}-{dates[-1].day:02d}")
   return ",".join(f"{calendar.month_abbr[value.month]} {value.day:02d}" for value in dates)
@@ -175,15 +178,20 @@ def select_tithi_dates(records, tithi, masa=None, allow_adhika=False):
     Vriddhi keeps the former date; kshaya keeps the later civil date.
     """
   masa_codes = masa_codes_for(masa, allow_adhika)
-  sunrise_matches = resolve_vriddhi_dates([
-    record.civil_date for record in records
-    if record.tithi == tithi and (masa_codes is None or record.masa in masa_codes)
-  ])
-  sunrise_dates = set(sunrise_matches)
-  kshaya_matches = [
-    civil_date for civil_date in select_kshaya_dates(records, tithi, masa=masa, allow_adhika=allow_adhika)
-    if civil_date not in sunrise_dates
-  ]
+  sunrise_dates = []
+  for record in records:
+    if record.tithi != tithi:
+      continue
+    if masa_codes is not None and record.masa not in masa_codes:
+      continue
+    sunrise_dates.append(record.civil_date)
+  sunrise_matches = resolve_vriddhi_dates(sunrise_dates)
+  sunrise_set = set(sunrise_matches)
+
+  kshaya_matches = []
+  for civil_date in select_kshaya_dates(records, tithi, masa=masa, allow_adhika=allow_adhika):
+    if civil_date not in sunrise_set:
+      kshaya_matches.append(civil_date)
   return sorted(set(sunrise_matches) | set(kshaya_matches))
 
 
@@ -193,10 +201,11 @@ def select_plain_tithi_dates(records, masa, tithi, allow_adhika=False):
   if not allow_adhika or not matches:
     return matches
   records_by_date = {record.civil_date: record for record in records}
-  adhika_matches = [
-    civil_date for civil_date in matches
-    if records_by_date[civil_date].is_adhika or records_by_date[civil_date].masa.startswith("A")
-  ]
+  adhika_matches = []
+  for civil_date in matches:
+    record = records_by_date[civil_date]
+    if record.is_adhika or record.masa.startswith("A"):
+      adhika_matches.append(civil_date)
   return adhika_matches if adhika_matches else matches
 
 
@@ -282,6 +291,33 @@ def select_yajur_upakarma_dates(records, geopos=None, timezone_name=None):
   return postpone_upakarma_if_eclipse(primary, fallback, geopos, timezone_name)
 
 
+def _nija_nakshatra_dates(records, masa, nakshatra):
+  """Non-adhika civil dates with ``nakshatra`` in lunar ``masa``, vriddhi-resolved."""
+  dates = []
+  masa_code = str(masa)
+  for record in records:
+    if record.masa != masa_code:
+      continue
+    if record.is_adhika:
+      continue
+    if record.nakshatra != nakshatra:
+      continue
+    dates.append(record.civil_date)
+  return resolve_vriddhi_dates(dates)
+
+
+def _sravana_nakshatra_in_raasi_dates(records, raasi):
+  """Sravana-nakshatra sunrises in solar ``raasi``, vriddhi-resolved."""
+  dates = []
+  for record in records:
+    if record.nakshatra != SRAVANA_NAKSHATRA:
+      continue
+    if panchanga.raasi(record.sunrise_jd) != raasi:
+      continue
+    dates.append(record.civil_date)
+  return resolve_vriddhi_dates(dates)
+
+
 def select_rig_upakarma_dates(records, geopos=None, timezone_name=None):
   """Nija Sravana-nakshatra day, postponed to Bhadrapada on kshaya/eclipse."""
   # For kshaya nakshatra / eclipse:
@@ -290,27 +326,15 @@ def select_rig_upakarma_dates(records, geopos=None, timezone_name=None):
   # Madhwas use Sravana-S05 instead (e.g. SRS Mutt: 03-08-2022)
   # Smartas use the former civil date when there is Kshaya nakshatra
   # (e.g. Sringeri: 11-08-2022)
-  primary = resolve_vriddhi_dates([
-    record.civil_date for record in records
-    if record.masa == "5" and not record.is_adhika and record.nakshatra == SRAVANA_NAKSHATRA
-  ])
-  fallback = resolve_vriddhi_dates([
-    record.civil_date for record in records
-    if record.masa == "6" and not record.is_adhika and record.nakshatra == SRAVANA_NAKSHATRA
-  ])
+  primary = _nija_nakshatra_dates(records, 5, SRAVANA_NAKSHATRA)
+  fallback = _nija_nakshatra_dates(records, 6, SRAVANA_NAKSHATRA)
   return postpone_upakarma_if_eclipse(primary, fallback, geopos, timezone_name)
 
 
 def select_sama_upakarma_dates(records, geopos=None, timezone_name=None):
   """Nija Bhadrapada Hasta, postponed to Sravana Hasta on kshaya / local lunar eclipse."""
-  primary = resolve_vriddhi_dates([
-    record.civil_date for record in records
-    if record.masa == "6" and not record.is_adhika and record.nakshatra == HASTA_NAKSHATRA
-  ])
-  fallback = resolve_vriddhi_dates([
-    record.civil_date for record in records
-    if record.masa == "5" and not record.is_adhika and record.nakshatra == HASTA_NAKSHATRA
-  ])
+  primary = _nija_nakshatra_dates(records, 6, HASTA_NAKSHATRA)
+  fallback = _nija_nakshatra_dates(records, 5, HASTA_NAKSHATRA)
   return postpone_upakarma_if_eclipse(primary, fallback, geopos, timezone_name)
 
 
@@ -323,16 +347,10 @@ def select_onam_dates(records):
   SIMHA_RAASI = 5
   KANYA_RAASI = 6
 
-  primary = resolve_vriddhi_dates([
-    record.civil_date for record in records
-    if record.nakshatra == SRAVANA_NAKSHATRA and panchanga.raasi(record.sunrise_jd) == SIMHA_RAASI
-  ])
+  primary = _sravana_nakshatra_in_raasi_dates(records, SIMHA_RAASI)
   if primary:
     return primary
-  return resolve_vriddhi_dates([
-    record.civil_date for record in records
-    if record.nakshatra == SRAVANA_NAKSHATRA and panchanga.raasi(record.sunrise_jd) == KANYA_RAASI
-  ])
+  return _sravana_nakshatra_in_raasi_dates(records, KANYA_RAASI)
 
 
 def select_vaikuntha_ekadashi_dates(records):
@@ -367,7 +385,11 @@ def sankranti_raasi_by_date(records):
 def select_sankranti_dates(records, target_raasi):
   """First civil sunrise after each transition into ``target_raasi``."""
   target = int(target_raasi)
-  return [civil_date for civil_date, raasi in sankranti_raasi_by_date(records).items() if raasi == target]
+  dates = []
+  for civil_date, raasi in sankranti_raasi_by_date(records).items():
+    if raasi == target:
+      dates.append(civil_date)
+  return dates
 
 
 def select_mesha_sankranti_dates(records):
@@ -433,6 +455,8 @@ def select_dakshinayana_dates(records, geopos=None, timezone_name=None):
 
 
 # Seasonal catalog and each entry's complete resolution policy.
+# Plain entries use masa+tithi; ``selector`` is a custom date-finder function
+# for festivals that need extra rules (sankranti, upakarma, solstice, …).
 FESTIVAL_RULES = [
   FestivalRule("Ugadi", masa=1, tithi="S1", allow_adhika=True),
   FestivalRule("Rama Navami", masa=1, tithi="S9"),
@@ -498,11 +522,17 @@ def resolve_festivals(records, target_dates, geopos=None, timezone_name=None, en
   target_dates = set(target_dates)
   markers_by_date = {}
   entries = []
-  enabled_rules = [rule for rule in FESTIVAL_RULES if enabled_names is None or rule.name in enabled_names]
+  enabled_rules = []
+  for rule in FESTIVAL_RULES:
+    if enabled_names is None or rule.name in enabled_names:
+      enabled_rules.append(rule)
 
   for marker, rule in enumerate(enabled_rules, start=1):
     candidates = select_dates_for_rule(rule, records, geopos, timezone_name)
-    dates = [civil_date for civil_date in candidates if civil_date in target_dates]
+    dates = []
+    for civil_date in candidates:
+      if civil_date in target_dates:
+        dates.append(civil_date)
     if not dates and not rule.allow_empty:
       raise RuntimeError(f"No calendar date found for {rule.name}")
     for civil_date in dates:

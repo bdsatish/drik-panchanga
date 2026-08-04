@@ -38,7 +38,10 @@ import swisseph as swe
 coordinate_flag = swe.FLG_SIDEREAL
 nakshatra_system = 'equal'
 chosen_ayanamsa = 'citra'
-# High-level calculations must hold this lock while using these globals.
+# Mutable ayanāṃśa / coordinate globals above are not thread-safe alone.
+# Web and PDF code hold this lock around any calculation that calls
+# set_coordinate_selection / set_chosen_ayanamsa so concurrent requests
+# do not mix modes.
 coordinate_calculation_lock = RLock()
 # ---------
 
@@ -373,8 +376,8 @@ def nakshatra_pada_unequal_system(longitude):
   return [nak, pada]
 
 
-# Memoized swe calls. Sizes comfortably exceed one 14-month PDF build (tens of
-# thousands of unique longitudes, a few hundred rises) while bounding memory
+# @lru_cache memoizes expensive Swiss Ephemeris calls (longitudes, rise/set,
+# new/full moon). Cache sizes fit one 14-month PDF build while bounding memory
 # for long-running web servers that serve many distinct (city, date) queries.
 @lru_cache(maxsize=65536)
 def _planet_longitude_cached(ayanamsa, coord_flag, jd, planet):
@@ -398,7 +401,7 @@ solar_longitude = lambda jd: planet_longitude(jd, swe.SUN)
 lunar_longitude = lambda jd: planet_longitude(jd, swe.MOON)
 
 
-@lru_cache(maxsize=4096)
+@lru_cache(maxsize=4096)  # memoize expensive Swiss Ephemeris rise lookup
 def sunrise(jd, place):
   """Sunrise when centre of disc is at horizon for given date and place"""
   lat, lon, tz = place
@@ -408,7 +411,7 @@ def sunrise(jd, place):
   return [rise + tz / 24., to_dms((rise - jd) * 24 + tz)]
 
 
-@lru_cache(maxsize=4096)
+@lru_cache(maxsize=4096)  # memoize expensive Swiss Ephemeris set lookup
 def sunset(jd, place):
   """Sunset when centre of disc is at horizon for given date and place"""
   lat, lon, tz = place
@@ -424,7 +427,7 @@ def moonrise(jd, place):
   return to_dms((rise - jd) * 24)
 
 
-@lru_cache(maxsize=4096)
+@lru_cache(maxsize=4096)  # memoize expensive Swiss Ephemeris moonrise lookup
 def moonrise_jd(jd, place):
   """Local Julian day of the first moonrise after local midnight."""
   lat, lon, tz = place
@@ -679,7 +682,7 @@ def new_moon(jd, tithi_, opt=-1):
   return _new_moon_cached(round(start), opt)
 
 
-@lru_cache(maxsize=4096)
+@lru_cache(maxsize=4096)  # memoize expensive Swiss Ephemeris new-moon search
 def _new_moon_cached(day, opt):
   # Search within a span of (day +- 2) days
   x = [-2 + offset / 4 for offset in range(17)]
@@ -708,7 +711,7 @@ def full_moon(jd, tithi_, opt=-1):
   return _full_moon_cached(round(start), opt)
 
 
-@lru_cache(maxsize=4096)
+@lru_cache(maxsize=4096)  # memoize expensive Swiss Ephemeris full-moon search
 def _full_moon_cached(day, opt):
   # Search within a span of (day +- 2) days
   x = [-2 + offset / 4 for offset in range(17)]
