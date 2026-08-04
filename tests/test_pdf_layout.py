@@ -94,12 +94,7 @@ class PdfLayoutTests(unittest.TestCase):
 
     def test_tropical_filename_suffix(self):
         path = default_output_path(
-            load_location("Helsinki"), 2026, 3, tropical="1")
-        self.assertEqual(path.name, "helsinki-fi_panchanga_2026-03_to_2027-04_tropical.pdf")
-
-    def test_tropical_filename_ignores_ayanamsa(self):
-        path = default_output_path(
-            load_location("Helsinki"), 2026, 3, ayanamsa="raman", tropical="1")
+            load_location("Helsinki"), 2026, 3, ayanamsa="tropical")
         self.assertEqual(path.name, "helsinki-fi_panchanga_2026-03_to_2027-04_tropical.pdf")
 
     def test_cli_accepts_month_system(self):
@@ -114,13 +109,11 @@ class PdfLayoutTests(unittest.TestCase):
             ["--city", "Helsinki", "--start", "2026-03", "--ayanamsa", "revati"])
         self.assertEqual(arguments.ayanamsa, "revati")
 
-    def test_cli_accepts_tropical(self):
+    def test_cli_accepts_tropical_ayanamsa(self):
         parser = argument_parser()
         arguments = parser.parse_args(
-            ["--city", "Helsinki", "--start", "2026-03", "--tropical"])
-        self.assertTrue(arguments.tropical)
-        plain = parser.parse_args(["--city", "Helsinki", "--start", "2026-03"])
-        self.assertFalse(plain.tropical)
+            ["--city", "Helsinki", "--start", "2026-03", "--ayanamsa", "tropical"])
+        self.assertEqual(arguments.ayanamsa, "tropical")
 
     def test_parse_ayanamsa_accepts_star_based_modes(self):
         from generate_panchanga_calendar import parse_ayanamsa, ayanamsa_label
@@ -128,6 +121,9 @@ class PdfLayoutTests(unittest.TestCase):
         self.assertEqual(parse_ayanamsa("rohini-paksha"), "rohini")
         self.assertEqual(parse_ayanamsa("pushya"), "pushya")
         self.assertEqual(parse_ayanamsa("true_mula"), "mula")
+        self.assertIsNone(parse_ayanamsa("tropical"))
+        self.assertIsNone(parse_ayanamsa("sayana"))
+        self.assertEqual(parse_ayanamsa("kp"), "krishnamurti")
         self.assertEqual(ayanamsa_label("citra"), "Chitra-paksha")
         self.assertEqual(ayanamsa_label("revati"), "Revati-paksha")
         self.assertEqual(ayanamsa_label("rohini"), "Rohini-paksha")

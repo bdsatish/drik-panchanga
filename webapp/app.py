@@ -116,11 +116,12 @@ def api_suggest_city():
 def api_panchanga():
     city = (request.args.get("city") or "").strip()
     date = (request.args.get("date") or "").strip()
-    month = (request.args.get("month") or "amanta").strip()
-    ayanamsa = (request.args.get("ayanamsa") or "citra").strip()
-    tropical = (request.args.get("tropical") or "0").strip()
+    month = request.args.get("month")
+    ayanamsa = request.args.get("ayanamsa")
     try:
-        return jsonify(compute_day_panchanga(city, date, month_system=month, ayanamsa=ayanamsa, tropical=tropical))
+        return jsonify(compute_day_panchanga(city, date,
+            month_system=month.strip() if month else month,
+            ayanamsa=ayanamsa.strip() if ayanamsa else ayanamsa))
     except ValueError as error:
         abort(400, description=str(error))
 
@@ -146,8 +147,7 @@ def ics_calendar():
         ics_text = generate_ics(
             location, start_year, start_month,
             month_system=(request.args.get("month") or "amanta").strip(),
-            ayanamsa=(request.args.get("ayanamsa") or "citra").strip(),
-            tropical=(request.args.get("tropical") or "0").strip())
+            ayanamsa=(request.args.get("ayanamsa") or "").strip() or None)
     except (OSError, ValueError, RuntimeError) as error:
         abort(400, description=str(error))
     name = f"panchanga-{start_year:04d}-{start_month:02d}.ics"

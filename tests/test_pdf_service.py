@@ -37,7 +37,7 @@ class PdfServiceTests(unittest.TestCase):
         self.assertEqual(
             filename, "helsinki-fi_panchanga_2026-03_to_2027-04.pdf")
         self.assertEqual(build.call_args.kwargs["month_system"], "amanta")
-        self.assertEqual(build.call_args.kwargs["ayanamsa"], "citra")
+        self.assertIsNone(build.call_args.kwargs["ayanamsa"])
 
 
 class FlaskGenerationTests(unittest.TestCase):
@@ -104,8 +104,8 @@ class IcsServiceTests(unittest.TestCase):
 
     def test_ics_respects_tropical_mode(self):
         loc = load_location("Tirupati")
-        sid = generate_ics(loc, 2026, 1, tropical="0")
-        trop = generate_ics(loc, 2026, 1, tropical="1")
+        sid = generate_ics(loc, 2026, 1, ayanamsa="citra")
+        trop = generate_ics(loc, 2026, 1, ayanamsa="tropical")
         self.assertEqual(sid.count("BEGIN:VEVENT"), trop.count("BEGIN:VEVENT"))
         self.assertEqual(sid.count("BEGIN:VEVENT"), 424)
 

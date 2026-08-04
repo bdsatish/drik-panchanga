@@ -55,12 +55,14 @@ def _karana_text(jd, place, names) -> str:
 
 
 def generate_ics(location, start_year, start_month, *, month_system="amanta",
-                 ayanamsa="citra", tropical="0"):
+                 ayanamsa=None):
     amanta = parse_month_system(month_system)
     ayanamsa_key = parse_ayanamsa(ayanamsa)
-    tropical_on = (tropical or "0").strip() in {"1", "true", "yes", "on"}
-    panchanga.set_chosen_ayanamsa(ayanamsa_key)
-    panchanga.set_coordinate_mode("tropical" if tropical_on else "sidereal")
+    tropical = ayanamsa_key is None
+    if tropical:
+        panchanga.set_coordinate_mode("tropical")
+    else:
+        panchanga.set_chosen_ayanamsa(ayanamsa_key)
 
     names = sanskrit_names()
     zone = ZoneInfo(location.timezone_name)

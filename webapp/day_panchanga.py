@@ -163,7 +163,7 @@ def drik_ayana_label(ritu_num: int) -> str:
 
 
 def compute_day_panchanga(city: str, date_text: str, month_system: str | None = "amanta",
-                          ayanamsa: str | None = "citra", tropical: str | None = "0") -> dict:
+                          ayanamsa: str | None = "citra") -> dict:
     """Return named panchanga fields for ``city`` on ``date_text`` (DD/MM/YYYY).
 
     ``month_system`` is ``amanta`` (default) or ``purnimanta``; it affects the
@@ -172,22 +172,22 @@ def compute_day_panchanga(city: str, date_text: str, month_system: str | None = 
 
     ``ayanamsa`` is a key from ``AYANAMSA_OPTIONS`` (default ``citra``):
     citra, revati, rohini, pushya, mula, krishnamurti, or raman.
-
-    ``tropical`` is ``"1"`` / ``"true"`` / ``"yes"`` to use tropical (sāyana)
-    longitudes; when enabled, ayanāṃśa is ignored. Default ``"0"`` (sidereal).
+    Pass ``"tropical"`` for tropical (sāyana) longitudes.
     """
     city = (city or "").strip()
     if not city:
         raise ValueError("City is required.")
     amanta = parse_month_system(month_system)
     ayanamsa_key = parse_ayanamsa(ayanamsa)
-    use_tropical = (tropical or "0").strip() in {"1", "true", "yes", "on"}
+    use_tropical = ayanamsa_key is None
+    if use_tropical:
+        panchanga.set_coordinate_mode("tropical")
+    else:
+        panchanga.set_chosen_ayanamsa(ayanamsa_key)
     civil = parse_civil_date(date_text)
     location = load_location(city)
     place = place_for_date(location, civil)
 
-    panchanga.set_chosen_ayanamsa(ayanamsa_key)
-    panchanga.set_coordinate_mode("tropical" if use_tropical else "sidereal")
     jd = panchanga.gregorian_to_jd(civil)
 
     try:

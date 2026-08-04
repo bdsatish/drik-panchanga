@@ -172,14 +172,12 @@ city name alone is insufficient for disambiguation.
 python generate_panchanga_calendar.py --city Ujjain --start 2026-06
 python generate_panchanga_calendar.py --city "Berlin,US" --start 2026-03 \
        --month purnimanta --ayanamsa revati  --output berlin_not_germany.pdf
-python generate_panchanga_calendar.py --city Tirupati --start 2026-06 --tropical
+python generate_panchanga_calendar.py --city Tirupati --start 2026-06 --ayanamsa tropical
 ```
 
-`--tropical` switches the whole calendar to tropical (sāyana) longitudes —
-tithi, nakṣatra, yoga, and māsa are all computed from the equinox-referenced
-ecliptic rather than a fixed-star (nirayana) reference. When set, the ayanāṃśa
-is ignored, the PDF subtitle shows *Tropical (Sāyana)* instead of an ayanamśa
-label, and the default filename gets a `_tropical` suffix.
+`--ayanamsa tropical` uses the equinox-referenced ecliptic instead of a
+fixed-star (nirayana) reference.  The PDF subtitle shows *Tropical (Sāyana)*
+instead of an ayanamśa label, and the default filename gets a `_tropical` suffix.
 
 ### Festivals
 
@@ -232,9 +230,9 @@ ambiguous ones need ``Name, ISO`` (e.g. `Sydney, AU`). Then either:
 
 * look up a single day’s panchanga with a `DD/MM/YYYY` date (negative years
   allowed as proleptic Gregorian), choosing amānta or pūrṇimānta for the māsa
-  label, an ayanamsa, and optionally *Tropical (Sāyana)* mode, or
-* pick the first month of the 14-month PDF calendar range (same month-system,
-  ayanamsa, and tropical controls) and download the PDF, or
+  label, an ayanamsa (including *Tropical (Sāyana)*), or
+* pick the first month of the 14-month PDF calendar range (same month-system
+  and ayanamsa controls) and download the PDF, or
 * export the same 14-month span as an iCal (.ics) file for import into
   Google Calendar, Apple Calendar, etc.
 

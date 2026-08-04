@@ -350,24 +350,13 @@
           <option value="mula">Mula-paksha</option>
           <option value="krishnamurti">Krishnamurti</option>
           <option value="raman">Raman</option>
+          <option value="tropical">Tropical (Sāyana)</option>
         </select>
         <p class="hint">
           Sidereal zero-point used for nakṣatra, yoga, and related fields.
-          Chitra-paksha is the default.
-        </p>
-      </div>
-      <div class="field">
-        <label>
-          <input type="checkbox" id="tropical" name="tropical" value="1"
-            style="width:auto;margin-right:0.4rem;vertical-align:middle;">
-          <span style="vertical-align:middle;text-transform:none;font-size:0.95rem;font-weight:400;">
-            Tropical (Sāyana) mode
-          </span>
-        </label>
-        <p class="hint">
-          Use tropical (sāyana) longitudes for all panchanga elements:
-          tithi, nakṣatra, yoga, and māsa. Ayanāṃśa is ignored. PDF filename
-          is suffixed with <code>_tropical</code>.
+          Chitra-paksha is the default.  Choose Tropical (Sāyana) to use
+          equinox-referenced longitudes; the ayanāṃśa is ignored and the
+          PDF filename gets a <code>_tropical</code> suffix.
         </p>
       </div>
     </div>
@@ -398,7 +387,6 @@
         <input type="hidden" name="city" id="pdf-city">
         <input type="hidden" name="month" id="pdf-month" value="amanta">
         <input type="hidden" name="ayanamsa" id="pdf-ayanamsa" value="citra">
-        <input type="hidden" name="tropical" id="pdf-tropical" value="0">
         <div class="field">
           <label for="start">First month</label>
           <input id="start" name="start" type="month" required>
@@ -440,10 +428,8 @@
       const pdfCity = document.getElementById("pdf-city");
       const pdfMonth = document.getElementById("pdf-month");
       const pdfAyanamsa = document.getElementById("pdf-ayanamsa");
-      const pdfTropical = document.getElementById("pdf-tropical");
       const monthSelect = document.getElementById("month");
       const ayanamsaSelect = document.getElementById("ayanamsa");
-      const tropicalCheckbox = document.getElementById("tropical");
       const submitBtn = document.getElementById("submit-btn");
       const status = document.getElementById("status");
 
@@ -451,13 +437,10 @@
         return monthSelect.value || "amanta";
       }
 
-      function selectedAyanamsa() {
+      function ayanamsaParams() {
         return ayanamsaSelect.value || "citra";
       }
 
-      function selectedTropical() {
-        return tropicalCheckbox.checked ? "1" : "0";
-      }
 
       if (!startInput.value) {
         const now = new Date();
@@ -681,8 +664,7 @@
         const city = cityInput.value.trim();
         const date = dateInput.value.trim();
         const month = selectedMonthSystem();
-        const ayanamsa = selectedAyanamsa();
-        const tropical = selectedTropical();
+        const ayanamsa = ayanamsaParams();
         if (!city) {
           dayStatus.textContent = "Enter a city.";
           return;
@@ -695,8 +677,7 @@
           const url = `/api/panchanga?city=${encodeURIComponent(city)}`
             + `&date=${encodeURIComponent(date)}`
             + `&month=${encodeURIComponent(month)}`
-            + `&ayanamsa=${encodeURIComponent(ayanamsa)}`
-            + `&tropical=${encodeURIComponent(tropical)}`;
+            + `&ayanamsa=${encodeURIComponent(ayanamsa)}`;
           const response = await fetch(url);
           const data = await response.json();
           if (!response.ok) {
@@ -721,8 +702,7 @@
         }
         pdfCity.value = city;
         pdfMonth.value = selectedMonthSystem();
-        pdfAyanamsa.value = selectedAyanamsa();
-        pdfTropical.value = selectedTropical();
+        pdfAyanamsa.value = ayanamsaParams();
         submitBtn.disabled = true;
         status.textContent = "Generating calendar…";
         setTimeout(() => {
@@ -743,12 +723,12 @@
           status.textContent = "Pick a first month.";
           return;
         }
+        const ayanamsa = ayanamsaParams();
         const url = "/api/panchanga.ics?"
           + `city=${encodeURIComponent(city)}`
           + `&start=${encodeURIComponent(start)}`
           + `&month=${encodeURIComponent(selectedMonthSystem())}`
-          + `&ayanamsa=${encodeURIComponent(selectedAyanamsa())}`
-          + `&tropical=${encodeURIComponent(selectedTropical())}`;
+          + `&ayanamsa=${encodeURIComponent(ayanamsa)}`;
         window.location.href = url;
       });
     })();

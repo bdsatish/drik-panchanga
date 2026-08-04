@@ -320,17 +320,18 @@ def parse_ayanamsa(text):
         "truemula": "mula",
         "krishnamurti": "krishnamurti",
         "kp": "krishnamurti",
-        "raman": "raman"
+        "raman": "raman",
+        "tropical": None,
+        "sayana": None,
     }
-    key = aliases.get(value)
-    if key is None:
+    if value not in aliases:
         allowed = ", ".join(AYANAMSA_OPTIONS)
         raise ValueError(f"Ayanamsa must be one of: {allowed}.")
-    return key
+    return aliases[value]
 
 
 def ayanamsa_label(key):
-    return AYANAMSA_OPTIONS[parse_ayanamsa(key)]
+    return AYANAMSA_OPTIONS[parse_ayanamsa(key) or "citra"]
 
 
 def sun_altitude_at_local_noon(year, month, day, place):
@@ -999,13 +1000,15 @@ def draw_page_footer(pdf, festival_entries, eclipse_line="Eclipses: None"):
 
 
 def build_pdf(location, start_year, start_month, output_path, *, festivals_path=None, month_system="amanta",
-              ayanamsa="citra", tropical="0"):
+              ayanamsa=None):
     ensure_pdf_fonts()
     amanta = parse_month_system(month_system)
     ayanamsa_key = parse_ayanamsa(ayanamsa)
-    panchanga.set_chosen_ayanamsa(ayanamsa_key)
-    use_tropical = (tropical or "0").strip() in {"1", "true", "yes", "on"}
-    panchanga.set_coordinate_mode("tropical" if use_tropical else "sidereal")
+    tropical = ayanamsa_key is None
+    if tropical:
+        panchanga.set_coordinate_mode("tropical")
+    else:
+        panchanga.set_chosen_ayanamsa(ayanamsa_key)
     months = list(month_range(start_year, start_month))
     if start_month == 1:
         context_start = (start_year - 1, 12)
@@ -1065,16 +1068,16 @@ def build_pdf(location, start_year, start_month, output_path, *, festivals_path=
         str(output_path), pagesize=(page_width, page_height), initialFontName=PDF_FONT)
     masa_label = "amanta" if amanta else "purnimanta"
     ayan_label = ayanamsa_label(ayanamsa_key)
-    coordinate_desc = "Tropical (Sāyana)" if use_tropical else f"{ayan_label} nakshatra"
+    coordinate_desc = "Tropical (Sāyana)" if tropical else f"{ayan_label} nakshatra"
     embed_pdf_metadata(
         pdf, title=f"{location.name} Panchanga {month_span_label(months)}",
         subject=(f"Daily tithi, {coordinate_desc}, yoga, and {masa_label} masa at "
                  f"{location.name} sunrise"),
-        ruleset_version=RULESET_VERSION, ayanamsa=ayanamsa_key, tropical=use_tropical)
+        ruleset_version=RULESET_VERSION, ayanamsa=ayanamsa_key, tropical=tropical)
 
     draw_page_header(
         pdf, location, months, RULESET_VERSION, amanta=amanta, ayanamsa=ayanamsa_key,
-        tropical=use_tropical,
+        tropical=tropical,
         calendar_years=calendar_years, kali_ahargana=kali_ahargana)
 
     margin = 18
@@ -1098,19 +1101,18 @@ def build_pdf(location, start_year, start_month, output_path, *, festivals_path=
     return output_path
 
 
-def default_output_path(location, start_year, start_month, *, month_system="amanta", ayanamsa="citra", tropical="0"):
+def default_output_path(location, start_year, start_month, *, month_system="amanta", ayanamsa=None):
     months = list(month_range(start_year, start_month))
     end_year, end_month = months[-1]
     city_slug = re.sub(r"[^a-z0-9]+", "-", location.name.casefold()).strip("-") or "location"
     parts = []
     if not parse_month_system(month_system):
         parts.append("purnimanta")
-    if (tropical or "0").strip() in {"1", "true", "yes", "on"}:
+    ayanamsa_key = parse_ayanamsa(ayanamsa)
+    if ayanamsa_key is None:
         parts.append("tropical")
-    else:
-        ayanamsa_key = parse_ayanamsa(ayanamsa)
-        if ayanamsa_key != "citra":
-            parts.append(ayanamsa_key)
+    elif ayanamsa_key != "citra":
+        parts.append(ayanamsa_key)
     suffix = ("_" + "_".join(parts)) if parts else ""
     return Path(f"{city_slug}_panchanga_"
                 f"{start_year:04d}-{start_month:02d}_to_"
@@ -1131,10 +1133,7 @@ def argument_parser():
     parser.add_argument(
         "--ayanamsa", default="citra", metavar="NAME",
         help=("ayanamsa: citra (default), revati, rohini, pushya, mula, "
-              "krishnamurti or raman"))
-    parser.add_argument(
-        "--tropical", action="store_true",
-        help="use tropical (sāyana) longitudes instead of sidereal; ayanamsa is ignored when set")
+              "krishnamurti, raman or tropical"))
     parser.add_argument(
         "--festivals", type=Path, default=DEFAULT_FESTIVALS_PATH,
         help=(f"INI file selecting which festivals to include "
@@ -1150,15 +1149,13 @@ def main(argv=None):
         location = load_location(arguments.city)
         month_system = arguments.month
         ayanamsa = arguments.ayanamsa
-        tropical_flag = "1" if arguments.tropical else "0"
         parse_month_system(month_system)  # validate early
         parse_ayanamsa(ayanamsa)
         output_path = arguments.output or default_output_path(
-            location, start_year, start_month, month_system=month_system, ayanamsa=ayanamsa,
-            tropical=tropical_flag)
+            location, start_year, start_month, month_system=month_system, ayanamsa=ayanamsa)
         generated = build_pdf(
             location, start_year, start_month, output_path, festivals_path=arguments.festivals,
-            month_system=month_system, ayanamsa=ayanamsa, tropical=tropical_flag)
+            month_system=month_system, ayanamsa=ayanamsa)
     except (OSError, ValueError, RuntimeError) as error:
         parser.error(str(error))
     print(generated.resolve())
