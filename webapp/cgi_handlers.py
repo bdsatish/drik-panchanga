@@ -2,6 +2,7 @@
 
 import html
 import json
+import logging
 import os
 import sys
 import traceback
@@ -19,10 +20,12 @@ from webapp.app import (  # noqa: E402
 )
 from webapp.day_panchanga import compute_day_panchanga  # noqa: E402
 from webapp.pdf_service import generate_pdf  # noqa: E402
-from generate_panchanga_calendar import parse_coordinate_selection  # noqa: E402
+from generate_panchanga_calendar import COORDINATE_OPTIONS, parse_coordinate_selection  # noqa: E402
 
 configure_logging()
 PROJECT_ROOT = _REPO_ROOT
+log = logging.getLogger(__name__)
+log.addHandler(logging.NullHandler())
 
 
 def _query_params():
@@ -98,6 +101,7 @@ def handle_cities():
     city_names()  # fail fast if cities.json is missing
     write_json({"cities": search_cities(query, limit=limit)})
   except Exception as error:  # noqa: BLE001 — surface to the browser for CGI
+    log.error("CGI cities failed: %s", error)
     write_error(str(error) or traceback.format_exc(), status="500 Internal Server Error", as_json=True)
 
 
@@ -108,6 +112,7 @@ def handle_suggest_city():
     ip = (xff.split(",")[0] if xff else os.environ.get("REMOTE_ADDR") or "").strip()
     write_json({"city": suggest_city_for_ip(ip)})
   except Exception as error:  # noqa: BLE001
+    log.error("CGI suggest_city failed: %s", error)
     write_error(str(error) or traceback.format_exc(), status="500 Internal Server Error", as_json=True)
 
 
@@ -120,10 +125,14 @@ def handle_panchanga():
     month = (params.get("month") or ["amanta"])[0]
     a = params.get("ayanamsa")
     coordinate_selection = parse_coordinate_selection(a[0] if a else None)
+    if coordinate_selection is None:
+      allowed = ", ".join(COORDINATE_OPTIONS)
+      raise ValueError(f"Coordinate selection must be one of: {allowed}.")
     write_json(compute_day_panchanga(city, date, month_system=month, coordinate_selection=coordinate_selection))
   except ValueError as error:
     write_error(str(error), as_json=True)
   except Exception as error:  # noqa: BLE001
+    log.error("CGI panchanga failed: %s", error)
     write_error(str(error) or traceback.format_exc(), status="500 Internal Server Error", as_json=True)
 
 
@@ -148,6 +157,7 @@ def handle_generate():
   except (OSError, ValueError, RuntimeError) as error:
     write_error(str(error))
   except Exception as error:  # noqa: BLE001
+    log.error("CGI generate failed: %s", error)
     write_error(f"Internal error: {error}", status="500 Internal Server Error")
 
 
@@ -161,4 +171,5 @@ def handle_status():
       "project": str(PROJECT_ROOT),
     })
   except Exception as error:  # noqa: BLE001
+    log.error("CGI status failed: %s", error)
     write_error(str(error), status="500 Internal Server Error", as_json=True)

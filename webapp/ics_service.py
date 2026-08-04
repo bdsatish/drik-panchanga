@@ -117,6 +117,8 @@ def generate_ics(location, start_year, start_month, month_system="amanta", coord
 
 def _generate_ics_unlocked(location, start_year, start_month, month_system="amanta", coordinate_selection="citra"):
   amanta = parse_month_system(month_system)
+  if amanta is None:
+    raise ValueError("Month system must be 'amanta' or 'purnimanta'.")
   month_key = "amanta" if amanta else "purnimanta"
   dtstamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
   location_slug = _location_slug(location.name)

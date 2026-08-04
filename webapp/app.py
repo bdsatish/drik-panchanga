@@ -4,6 +4,7 @@
 import io
 import ipaddress
 import json
+import logging
 import re
 import sys
 from pathlib import Path
@@ -27,7 +28,7 @@ if str(_REPO_ROOT) not in sys.path:
 
 from app_logging import configure_logging  # noqa: E402
 from generate_panchanga_calendar import (  # noqa: E402
-  city_locations, load_location, parse_coordinate_selection, parse_month_system, parse_start_month,
+  COORDINATE_OPTIONS, city_locations, load_location, parse_coordinate_selection, parse_month_system, parse_start_month,
 )
 from panchanga import sweph_version
 from webapp.day_panchanga import compute_day_panchanga  # noqa: E402
@@ -36,6 +37,8 @@ from webapp.ics_service import generate_ics  # noqa: E402
 
 configure_logging()
 app = Flask(__name__)
+log = logging.getLogger(__name__)
+log.addHandler(logging.NullHandler())
 
 _CITY_NAMES = None
 
@@ -89,7 +92,8 @@ def suggest_city_for_ip(ip):
     if data.get("status") != "success":
       return None
     return load_location(f"{data['city']}, {data['countryCode']}").name
-  except (ValueError, KeyError, TypeError, OSError, TimeoutError, json.JSONDecodeError):
+  except (ValueError, KeyError, TypeError, OSError, TimeoutError, json.JSONDecodeError) as error:
+    log.error("City suggestion failed for IP %r: %s", ip, error)
     return None
 
 
@@ -122,10 +126,13 @@ def api_panchanga():
   month = request.args.get("month")
   ayanamsa = request.args.get("ayanamsa")
   try:
+    coordinate_selection = parse_coordinate_selection(ayanamsa.strip() if ayanamsa else ayanamsa)
+    if coordinate_selection is None:
+      allowed = ", ".join(COORDINATE_OPTIONS)
+      raise ValueError(f"Coordinate selection must be one of: {allowed}.")
     return jsonify(
-      compute_day_panchanga(
-        city, date, month_system=month.strip() if month else month,
-        coordinate_selection=parse_coordinate_selection(ayanamsa.strip() if ayanamsa else ayanamsa)))
+      compute_day_panchanga(city, date, month_system=month.strip() if month else month,
+                            coordinate_selection=coordinate_selection))
   except ValueError as error:
     abort(400, description=str(error))
 
@@ -146,10 +153,19 @@ def ics_calendar():
   start = (request.args.get("start") or "").strip()
   try:
     location = load_location(city)
-    start_year, start_month = parse_start_month(start)
+    parsed_start = parse_start_month(start)
+    if parsed_start is None:
+      raise ValueError("start month must use YYYY-MM format")
+    start_year, start_month = parsed_start
     month = (request.args.get("month") or "amanta").strip()
-    month_key = "amanta" if parse_month_system(month) else "purnimanta"
+    amanta = parse_month_system(month)
+    if amanta is None:
+      raise ValueError("Month system must be 'amanta' or 'purnimanta'.")
+    month_key = "amanta" if amanta else "purnimanta"
     coordinate_selection = parse_coordinate_selection((request.args.get("ayanamsa") or "").strip() or None)
+    if coordinate_selection is None:
+      allowed = ", ".join(COORDINATE_OPTIONS)
+      raise ValueError(f"Coordinate selection must be one of: {allowed}.")
     ics_text = generate_ics(location, start_year, start_month, month_system=month,
                             coordinate_selection=coordinate_selection)
   except (OSError, ValueError, RuntimeError) as error:

@@ -304,6 +304,8 @@ def _compute_day_panchanga_unlocked(city, date_text, month_system="amanta", coor
   if not city:
     raise ValueError("City is required.")
   amanta = parse_month_system(month_system)
+  if amanta is None:
+    raise ValueError("Month system must be 'amanta' or 'purnimanta'.")
   civil = parse_civil_date(date_text)
   if civil is None:
     raise ValueError("Date must be DD/MM/YYYY (negative years allowed).")

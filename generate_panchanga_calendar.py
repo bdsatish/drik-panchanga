@@ -228,17 +228,20 @@ def month_range(start_year, start_month, count=MONTH_COUNT):
 
 
 def parse_start_month(value):
-  match = re.fullmatch(r"(\d{4})-(\d{2})", value)
+  """Parse ``YYYY-MM`` into ``(year, month)``, or ``None`` if invalid."""
+  match = re.fullmatch(r"(\d{4})-(\d{2})", value or "")
   if not match:
-    raise ValueError("start month must use YYYY-MM format")
+    log.error("start month must use YYYY-MM format (got %r)", value)
+    return None
   year, month = (int(part) for part in match.groups())
   if not 1 <= month <= 12:
-    raise ValueError("start month must be between 01 and 12")
+    log.error("start month must be between 01 and 12 (got %r)", value)
+    return None
   return year, month
 
 
 def parse_month_system(text):
-  """Return ``True`` for amānta, ``False`` for pūrṇimānta.
+  """Return ``True`` for amānta, ``False`` for pūrṇimānta, or ``None`` if invalid.
 
     Accepts ``amanta`` / ``purnimanta``. Also ``true``/``false`` and ``1``/``0``
     for the amānta flag. Both systems are first-class for display; omit or pass
@@ -249,7 +252,8 @@ def parse_month_system(text):
     return True
   if value in {"purnimanta", "pūrṇimānta", "poornimanta", "false", "0", "no", "off"}:
     return False
-  raise ValueError("Month system must be 'amanta' or 'purnimanta'.")
+  log.error("Month system must be 'amanta' or 'purnimanta' (got %r)", text)
+  return None
 
 
 def month_system_label(amanta):
@@ -274,7 +278,7 @@ COORDINATE_OPTIONS = {
 
 
 def parse_coordinate_selection(text):
-  """Return a canonical sidereal ayanāṃśa key or ``tropical``."""
+  """Return a canonical sidereal ayanāṃśa key or ``tropical``, or ``None`` if invalid."""
   value = (text or "citra").strip().casefold().replace(" ", "_").replace("-", "_")
   aliases = {
     "citra": "citra",
@@ -310,7 +314,8 @@ def parse_coordinate_selection(text):
   }
   if value not in aliases:
     allowed = ", ".join(COORDINATE_OPTIONS)
-    raise ValueError(f"Coordinate selection must be one of: {allowed}.")
+    log.error("Coordinate selection must be one of: %s (got %r)", allowed, text)
+    return None
   return aliases[value]
 
 
@@ -921,6 +926,8 @@ def _build_pdf_unlocked(location, start_year, start_month, output_path, festival
                         coordinate_selection="citra"):
   ensure_pdf_fonts()
   amanta = parse_month_system(month_system)
+  if amanta is None:
+    raise ValueError("Month system must be 'amanta' or 'purnimanta'.")
   panchanga.set_coordinate_selection(coordinate_selection)
   months = month_range(start_year, start_month)
   if start_month == 1:
@@ -1009,7 +1016,10 @@ def default_output_path(location, start_year, start_month, month_system="amanta"
   end_year, end_month = months[-1]
   city_slug = re.sub(r"[^a-z0-9]+", "-", location.name.casefold()).strip("-") or "location"
   parts = []
-  if not parse_month_system(month_system):
+  amanta = parse_month_system(month_system)
+  if amanta is None:
+    raise ValueError("Month system must be 'amanta' or 'purnimanta'.")
+  if not amanta:
     parts.append("purnimanta")
   if coordinate_selection == "tropical":
     parts.append("tropical")
@@ -1044,11 +1054,18 @@ def main(argv=None):
   parser = argument_parser()
   arguments = parser.parse_args(argv)
   try:
-    start_year, start_month = parse_start_month(arguments.start)
+    parsed_start = parse_start_month(arguments.start)
+    if parsed_start is None:
+      raise ValueError("start month must use YYYY-MM format")
+    start_year, start_month = parsed_start
     location = load_location(arguments.city)
     month_system = arguments.month
     coordinate_selection = parse_coordinate_selection(arguments.ayanamsa)
-    parse_month_system(month_system)  # validate early
+    if coordinate_selection is None:
+      allowed = ", ".join(COORDINATE_OPTIONS)
+      raise ValueError(f"Coordinate selection must be one of: {allowed}.")
+    if parse_month_system(month_system) is None:
+      raise ValueError("Month system must be 'amanta' or 'purnimanta'.")
     output_path = arguments.output or default_output_path(location, start_year, start_month, month_system=month_system,
                                                           coordinate_selection=coordinate_selection)
     generated = build_pdf(location, start_year, start_month, output_path, festivals_path=arguments.festivals,
