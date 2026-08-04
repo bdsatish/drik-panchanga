@@ -31,6 +31,16 @@ class DayPanchangaMasaRituTests(unittest.TestCase):
         self.assertIsNone(tropical["ayanamsa"])
         self.assertIsNone(tropical["ayanamsa_degrees"])
 
+    def test_shared_day_details_contains_common_intervals(self):
+        from generate_panchanga_calendar import load_location
+        from webapp.day_panchanga import compute_day_details, parse_civil_date
+
+        details = compute_day_details(
+            load_location("Bengaluru"), parse_civil_date("21/04/2023"),
+            amanta=True, coordinate_selection="citra")
+        self.assertEqual(len(details["rahu_kala"]), 2)
+        self.assertEqual(len(details["durmuhurta"]), 2)
+
     def test_purnimanta_renames_ordinary_krishna_masa(self):
         amanta = compute_day_panchanga(
             "Bengaluru", "10/02/2023", month_system="amanta")

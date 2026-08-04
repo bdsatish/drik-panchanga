@@ -124,14 +124,8 @@ def _interval_from_hms(start_hms, end_hms) -> dict:
     return {"start": format_time(start_hms), "end": format_time(end_hms)}
 
 
-def _rahu_kala(jd, place) -> dict:
-    start_hms, end_hms = panchanga.rahu_kalam(jd, place)
-    return _interval_from_hms(start_hms, end_hms)
-
-
-def _durmuhurta_intervals(jd, place) -> list[dict]:
-    """One or two daytime (Tue: second is nocturnal) durmuhūrta windows."""
-    starts, ends = panchanga.durmuhurtam(jd, place)
+def _durmuhurta_intervals_from_values(values) -> list[dict]:
+    starts, ends = values
     intervals = []
     for start, end in zip(starts, ends):
         # Unused slots stay at the 0 sentinel from panchanga.durmuhurtam.
@@ -226,6 +220,8 @@ def compute_day_details(location, civil, *, amanta, coordinate_selection):
     sun_raasi = int(panchanga.raasi(sunrise_jd_ut))
     moonrise, moonrise_status = probe_moon_event(jd, place, civil, rise=True)
     moonset, moonset_status = probe_moon_event(jd, place, civil, rise=False)
+    rahu_kala = panchanga.rahu_kalam(jd, place)
+    durmuhurta = panchanga.durmuhurtam(jd, place)
 
     return {
         "civil": civil,
@@ -259,6 +255,8 @@ def compute_day_details(location, civil, *, amanta, coordinate_selection):
         "moonrise_status": moonrise_status,
         "moonset": moonset,
         "moonset_status": moonset_status,
+        "rahu_kala": rahu_kala,
+        "durmuhurta": durmuhurta,
     }
 
 
@@ -311,6 +309,8 @@ def compute_day_panchanga(city: str, date_text: str, month_system: str | None = 
     moonrise_status = details["moonrise_status"]
     moonset = details["moonset"]
     moonset_status = details["moonset_status"]
+    rahu_kala = details["rahu_kala"]
+    durmuhurta = details["durmuhurta"]
 
     use_tropical = coordinate_selection == "tropical"
     masa_name = names["masas"][str(masa_num)]
@@ -357,8 +357,8 @@ def compute_day_panchanga(city: str, date_text: str, month_system: str | None = 
         "moonset": moonset,
         "moonset_status": moonset_status,
         "day_duration": format_time(day_dur[1]),
-        "rahu_kala": _rahu_kala(jd, place),
-        "durmuhurta": _durmuhurta_intervals(jd, place),
+        "rahu_kala": _interval_from_hms(*rahu_kala),
+        "durmuhurta": _durmuhurta_intervals_from_values(durmuhurta),
         "varjyam": _varjyam_intervals(jd, place),
         "tithi": _named_segments(ti, names["tithis"]),
         "nakshatra": _named_segments(nak, names["nakshatras"]),

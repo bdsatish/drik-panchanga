@@ -79,13 +79,13 @@ def _fmt_interval(start_hms, end_hms) -> str:
     return f"{format_time(start_hms)}–{format_time(end_hms)}"
 
 
-def _rahu_kala_text(jd, place) -> str:
-    start, end = panchanga.rahu_kalam(jd, place)
+def _rahu_kala_text(values) -> str:
+    start, end = values
     return _fmt_interval(start, end)
 
 
-def _durmuhurta_text(jd, place) -> str:
-    starts, ends = panchanga.durmuhurtam(jd, place)
+def _durmuhurta_text(values) -> str:
+    starts, ends = values
     parts = []
     for s, e in zip(starts, ends):
         if s == 0 and e == 0:
@@ -121,7 +121,6 @@ def generate_ics(location, start_year, start_month, *, month_system="amanta",
             location, civil, amanta=amanta, coordinate_selection=coordinate_selection)
         names = details["names"]
         jd = details["jd"]
-        place = details["place"]
         sunrise = details["sunrise"]
         sunset = details["sunset"]
         day_dur = details["day_dur"]
@@ -146,6 +145,8 @@ def generate_ics(location, start_year, start_month, *, month_system="amanta",
         mr_status = details["moonrise_status"]
         moonset = details["moonset"]
         ms_status = details["moonset_status"]
+        rahu_kala = details["rahu_kala"]
+        durmuhurta = details["durmuhurta"]
 
         tithi_name = names["tithis"][str(ti[0])]
         nak_name = names["nakshatras"][str(nak[0])]
@@ -180,8 +181,8 @@ def generate_ics(location, start_year, start_month, *, month_system="amanta",
             f"Sun*: {format_time(sunrise[1])} – {format_time(sunset[1])}",
             moon_line,
             f"Day duration: {format_time(day_dur[1])}",
-            f"Rāhukāla: {_rahu_kala_text(jd, place)}",
-            f"Durmuhūrta: {_durmuhurta_text(jd, place)}",
+            f"Rāhukāla: {_rahu_kala_text(rahu_kala)}",
+            f"Durmuhūrta: {_durmuhurta_text(durmuhurta)}",
             f"Kali Day: {kali_day}",
             f"Julian day: {jd:.1f}",
             f"Sunrise JD (UT): {sunrise_jd_ut:.6f}",
