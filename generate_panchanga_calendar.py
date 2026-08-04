@@ -9,7 +9,7 @@ from collections import namedtuple as struct
 from datetime import date as CivilDate
 from datetime import datetime
 from pathlib import Path
-from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+from zoneinfo import ZoneInfo
 
 from reportlab.lib.colors import HexColor, white
 from reportlab.lib.pagesizes import A4, landscape
@@ -374,30 +374,6 @@ def require_local_sunrise(jd, place, location_name, year, month, day):
     raise RuntimeError(message) from error
 
 
-def make_location(name, latitude, longitude, timezone_name):
-  try:
-    latitude = float(latitude)
-    longitude = float(longitude)
-  except (TypeError, ValueError) as error:
-    raise ValueError(f"Invalid coordinates for city {name!r}") from error
-  if not -90 <= latitude <= 90:
-    raise ValueError(f"Latitude for city {name!r} is outside [-90, 90]")
-  if not -180 <= longitude <= 180:
-    raise ValueError(f"Longitude for city {name!r} is outside [-180, 180]")
-  try:
-    ZoneInfo(timezone_name)
-  except ZoneInfoNotFoundError as error:
-    raise ValueError(f"Unknown IANA timezone {timezone_name!r} for city {name!r}") from error
-  return Location(name, latitude, longitude, timezone_name)
-
-
-def location_from_mapping(name, record):
-  try:
-    return make_location(name, record["latitude"], record["longitude"], str(record["timezone"]))
-  except (KeyError, TypeError) as error:
-    raise ValueError(f"Location record for {name!r} needs latitude, longitude, and timezone") from error
-
-
 def city_base_name(key):
   """Return the place name from a ``Name, ISO`` cities.json key.
 
@@ -468,9 +444,11 @@ def resolve_city_key(city, locations):
 
 
 def load_location(city):
+  """Resolve ``city`` against ``cities.json`` and return a ``Location``."""
   locations = city_locations()
   name = resolve_city_key(city, locations)
-  return location_from_mapping(name, locations[name])
+  record = locations[name]
+  return Location(name, record["latitude"], record["longitude"], record["timezone"])
 
 
 def format_local_hm(jd, timezone_name):
