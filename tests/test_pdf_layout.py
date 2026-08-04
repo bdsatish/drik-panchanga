@@ -115,22 +115,27 @@ class PdfLayoutTests(unittest.TestCase):
             ["--city", "Helsinki", "--start", "2026-03", "--ayanamsa", "tropical"])
         self.assertEqual(arguments.ayanamsa, "tropical")
 
-    def test_parse_ayanamsa_accepts_star_based_modes(self):
-        from generate_panchanga_calendar import parse_ayanamsa, ayanamsa_label
-        self.assertEqual(parse_ayanamsa("rohini"), "rohini")
-        self.assertEqual(parse_ayanamsa("rohini-paksha"), "rohini")
-        self.assertEqual(parse_ayanamsa("pushya"), "pushya")
-        self.assertEqual(parse_ayanamsa("true_mula"), "mula")
-        self.assertIsNone(parse_ayanamsa("tropical"))
-        self.assertIsNone(parse_ayanamsa("sayana"))
-        self.assertEqual(parse_ayanamsa("kp"), "krishnamurti")
+    def test_parse_coordinate_selection_accepts_sidereal_and_tropical_modes(self):
+        from generate_panchanga_calendar import (
+            ayanamsa_label, coordinate_selection_label, parse_coordinate_selection,
+        )
+        self.assertEqual(parse_coordinate_selection("rohini"), "rohini")
+        self.assertEqual(parse_coordinate_selection("rohini-paksha"), "rohini")
+        self.assertEqual(parse_coordinate_selection("pushya"), "pushya")
+        self.assertEqual(parse_coordinate_selection("true_mula"), "mula")
+        self.assertEqual(parse_coordinate_selection("tropical"), "tropical")
+        self.assertEqual(parse_coordinate_selection("sayana"), "tropical")
+        self.assertEqual(parse_coordinate_selection("kp"), "krishnamurti")
+        self.assertEqual(parse_coordinate_selection(None), "citra")
         self.assertEqual(ayanamsa_label("citra"), "Chitra-paksha")
         self.assertEqual(ayanamsa_label("revati"), "Revati-paksha")
         self.assertEqual(ayanamsa_label("rohini"), "Rohini-paksha")
         self.assertEqual(ayanamsa_label("pushya"), "Pushya-paksha")
         self.assertEqual(ayanamsa_label("mula"), "Mula-paksha")
-        with self.assertRaisesRegex(ValueError, "Ayanamsa must be one of"):
-            parse_ayanamsa("lahiri")
+        self.assertEqual(
+            coordinate_selection_label("tropical"), "Tropical (Sāyana)")
+        with self.assertRaisesRegex(ValueError, "Coordinate selection must be one of"):
+            parse_coordinate_selection("lahiri")
 
     def test_purnimanta_header_uses_single_daily_records_pass(self):
         import generate_panchanga_calendar as calendar_module

@@ -13,7 +13,7 @@ from generate_panchanga_calendar import (
     ayanamsa_label,
     load_location,
     month_system_label,
-    parse_ayanamsa,
+    parse_coordinate_selection,
     parse_month_system,
     require_local_sunrise,
     timezone_hours,
@@ -178,12 +178,12 @@ def compute_day_panchanga(city: str, date_text: str, month_system: str | None = 
     if not city:
         raise ValueError("City is required.")
     amanta = parse_month_system(month_system)
-    ayanamsa_key = parse_ayanamsa(ayanamsa)
-    use_tropical = ayanamsa_key is None
+    coordinate_selection = parse_coordinate_selection(ayanamsa)
+    use_tropical = coordinate_selection == "tropical"
     if use_tropical:
         panchanga.set_coordinate_mode("tropical")
     else:
-        panchanga.set_chosen_ayanamsa(ayanamsa_key)
+        panchanga.set_chosen_ayanamsa(coordinate_selection)
     civil = parse_civil_date(date_text)
     location = load_location(city)
     place = place_for_date(location, civil)
@@ -243,7 +243,7 @@ def compute_day_panchanga(city: str, date_text: str, month_system: str | None = 
     else:
         masa_label = f"{masa_name} māsa"
     month_label = month_system_label(amanta)
-    ayan_label = ayanamsa_label(ayanamsa_key)
+    ayan_label = None if use_tropical else ayanamsa_label(coordinate_selection)
     sun_raasi = int(panchanga.raasi(sunrise_jd_ut))
     ayana = ayana_label(sun_raasi)
     moonrise, moonrise_status = probe_moon_event(jd, place, civil, rise=True)
@@ -257,7 +257,7 @@ def compute_day_panchanga(city: str, date_text: str, month_system: str | None = 
         "sunrise_jd": sunrise_jd_ut,
         "coordinate_mode": "Tropical (Sāyana)" if use_tropical else "Sidereal",
         "ayanamsa": ayan_label,
-        "ayanamsa_key": ayanamsa_key,
+        "ayanamsa_key": coordinate_selection,
         "ayanamsa_degrees": round(ayanamsa_degrees, 8),
         "month_system": "amanta" if amanta else "purnimanta",
         "month_system_label": month_label,

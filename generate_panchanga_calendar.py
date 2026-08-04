@@ -277,7 +277,7 @@ def month_system_label(amanta):
     return "Amānta" if amanta else "Pūrṇimānta"
 
 
-# Web/CLI ayanāṃśa choices → panchanga.set_chosen_ayanamsa() keys and display labels.
+# Web/CLI sidereal ayanāṃśa choices → panchanga.set_chosen_ayanamsa() keys.
 AYANAMSA_OPTIONS = {
     "citra": "Chitra-paksha",
     "revati": "Revati-paksha",
@@ -289,8 +289,14 @@ AYANAMSA_OPTIONS = {
 }
 
 
-def parse_ayanamsa(text):
-    """Return ayanāṃśa key from ``AYANAMSA_OPTIONS`` (default ``citra``)."""
+COORDINATE_OPTIONS = {
+    **AYANAMSA_OPTIONS,
+    "tropical": "Tropical (Sāyana)",
+}
+
+
+def parse_coordinate_selection(text):
+    """Return a canonical sidereal ayanāṃśa key or ``tropical``."""
     value = (text or "citra").strip().casefold().replace(" ", "_").replace("-", "_")
     aliases = {
         "citra": "citra",
@@ -321,17 +327,23 @@ def parse_ayanamsa(text):
         "krishnamurti": "krishnamurti",
         "kp": "krishnamurti",
         "raman": "raman",
-        "tropical": None,
-        "sayana": None,
+        "tropical": "tropical",
+        "sayana": "tropical",
     }
     if value not in aliases:
-        allowed = ", ".join(AYANAMSA_OPTIONS)
-        raise ValueError(f"Ayanamsa must be one of: {allowed}.")
+        allowed = ", ".join(COORDINATE_OPTIONS)
+        raise ValueError(f"Coordinate selection must be one of: {allowed}.")
     return aliases[value]
 
 
 def ayanamsa_label(key):
-    return AYANAMSA_OPTIONS[parse_ayanamsa(key) or "citra"]
+    if key == "tropical":
+        raise ValueError("Tropical mode has no ayanāṃśa label.")
+    return AYANAMSA_OPTIONS[key]
+
+
+def coordinate_selection_label(selection):
+    return COORDINATE_OPTIONS[selection]
 
 
 def sun_altitude_at_local_noon(year, month, day, place):
@@ -1003,12 +1015,12 @@ def build_pdf(location, start_year, start_month, output_path, *, festivals_path=
               ayanamsa=None):
     ensure_pdf_fonts()
     amanta = parse_month_system(month_system)
-    ayanamsa_key = parse_ayanamsa(ayanamsa)
-    tropical = ayanamsa_key is None
+    coordinate_selection = parse_coordinate_selection(ayanamsa)
+    tropical = coordinate_selection == "tropical"
     if tropical:
         panchanga.set_coordinate_mode("tropical")
     else:
-        panchanga.set_chosen_ayanamsa(ayanamsa_key)
+        panchanga.set_chosen_ayanamsa(coordinate_selection)
     months = list(month_range(start_year, start_month))
     if start_month == 1:
         context_start = (start_year - 1, 12)
@@ -1067,16 +1079,18 @@ def build_pdf(location, start_year, start_month, output_path, *, festivals_path=
     pdf = canvas.Canvas(
         str(output_path), pagesize=(page_width, page_height), initialFontName=PDF_FONT)
     masa_label = "amanta" if amanta else "purnimanta"
-    ayan_label = ayanamsa_label(ayanamsa_key)
-    coordinate_desc = "Tropical (Sāyana)" if tropical else f"{ayan_label} nakshatra"
+    ayan_label = None if tropical else ayanamsa_label(coordinate_selection)
+    coordinate_desc = (
+        coordinate_selection_label(coordinate_selection)
+        if tropical else f"{ayan_label} nakshatra")
     embed_pdf_metadata(
         pdf, title=f"{location.name} Panchanga {month_span_label(months)}",
         subject=(f"Daily tithi, {coordinate_desc}, yoga, and {masa_label} masa at "
                  f"{location.name} sunrise"),
-        ruleset_version=RULESET_VERSION, ayanamsa=ayanamsa_key, tropical=tropical)
+        ruleset_version=RULESET_VERSION, ayanamsa=coordinate_selection, tropical=tropical)
 
     draw_page_header(
-        pdf, location, months, RULESET_VERSION, amanta=amanta, ayanamsa=ayanamsa_key,
+        pdf, location, months, RULESET_VERSION, amanta=amanta, ayanamsa=coordinate_selection,
         tropical=tropical,
         calendar_years=calendar_years, kali_ahargana=kali_ahargana)
 
@@ -1108,11 +1122,11 @@ def default_output_path(location, start_year, start_month, *, month_system="aman
     parts = []
     if not parse_month_system(month_system):
         parts.append("purnimanta")
-    ayanamsa_key = parse_ayanamsa(ayanamsa)
-    if ayanamsa_key is None:
+    coordinate_selection = parse_coordinate_selection(ayanamsa)
+    if coordinate_selection == "tropical":
         parts.append("tropical")
-    elif ayanamsa_key != "citra":
-        parts.append(ayanamsa_key)
+    elif coordinate_selection != "citra":
+        parts.append(coordinate_selection)
     suffix = ("_" + "_".join(parts)) if parts else ""
     return Path(f"{city_slug}_panchanga_"
                 f"{start_year:04d}-{start_month:02d}_to_"
@@ -1150,7 +1164,7 @@ def main(argv=None):
         month_system = arguments.month
         ayanamsa = arguments.ayanamsa
         parse_month_system(month_system)  # validate early
-        parse_ayanamsa(ayanamsa)
+        parse_coordinate_selection(ayanamsa)
         output_path = arguments.output or default_output_path(
             location, start_year, start_month, month_system=month_system, ayanamsa=ayanamsa)
         generated = build_pdf(
