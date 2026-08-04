@@ -45,19 +45,29 @@ def sanskrit_names():
 
 
 def parse_civil_date(text):
-  """Parse ``DD/MM/YYYY``; negative years are proleptic Gregorian."""
+  """Parse ``DD/MM/YYYY``; negative years are proleptic Gregorian.
+
+    Returns ``None`` when the text is missing or not a usable date.
+    """
   text = (text or "").strip()
   if not text:
-    raise ValueError("Date is required (DD/MM/YYYY).")
+    log.error("Date is required (DD/MM/YYYY)")
+    return None
+  parts = text.split("/")
+  if len(parts) != 3:
+    log.error("Date must be DD/MM/YYYY (got %r)", text)
+    return None
   try:
-    day_s, month_s, year_s = text.split("/")
-    day, month, year = int(day_s), int(month_s), int(year_s)
-  except ValueError as error:
-    raise ValueError("Date must be DD/MM/YYYY (negative years allowed).") from error
+    day, month, year = int(parts[0]), int(parts[1]), int(parts[2])
+  except ValueError:
+    log.error("Date must be DD/MM/YYYY (got %r)", text)
+    return None
   if year == 0:
-    raise ValueError("Year 0 is not used; use negative years for BCE.")
+    log.error("Year 0 is not used; use negative years for BCE")
+    return None
   if not 1 <= month <= 12 or not 1 <= day <= 31:
-    raise ValueError(f"Invalid date {text!r}.")
+    log.error("Invalid date %r", text)
+    return None
   return panchanga.Date(year, month, day)
 
 
@@ -295,6 +305,8 @@ def _compute_day_panchanga_unlocked(city, date_text, month_system="amanta", coor
     raise ValueError("City is required.")
   amanta = parse_month_system(month_system)
   civil = parse_civil_date(date_text)
+  if civil is None:
+    raise ValueError("Date must be DD/MM/YYYY (negative years allowed).")
   location = load_location(city)
 
   details = compute_day_details(location, civil, amanta=amanta, coordinate_selection=coordinate_selection)
