@@ -20,7 +20,6 @@ from festival_rules import (DayRecord, ekadashi_dates_from_records, find_local_e
                             jd_to_local_datetime, julian_day_from_datetime, load_festival_selection, resolve_festivals,
                             sankranti_raasi_by_date)
 import panchanga
-from panchanga import sweph_version
 
 MONTH_COUNT = 14
 DEFAULT_CITIES_PATH = Path(__file__).with_name("cities.json")
@@ -89,16 +88,14 @@ EKADASHI_MARK = HexColor("#168078")
 ECLIPSE_MARK = HexColor("#8B4518")
 
 
-def _load_json_with_comments(path: Path) -> dict:
-    content = path.read_text(encoding="utf-8")
-    content = re.sub(r"//.*", "", content)
-    content = re.sub(r"/\*.*?\*/", "", content, flags=re.DOTALL)
-    return json.loads(content)
+def _load_json(path: Path) -> dict:
+    with path.open(encoding="utf-8") as source:
+        return json.load(source)
 
 
 @lru_cache(maxsize=1)
 def sanskrit_names() -> dict:
-    return _load_json_with_comments(DEFAULT_NAMES_PATH)
+    return _load_json(DEFAULT_NAMES_PATH)
 
 
 @lru_cache(maxsize=1)
@@ -184,7 +181,7 @@ def embed_pdf_metadata(pdf, *, title, subject, ruleset_version, coordinate_selec
     pdf.setSubject(subject)
     pdf.setCreator(PDF_SOURCE_URL)
     pdf.setKeywords(f"ruleset={ruleset_version}; layout={LAYOUT_VERSION}; "
-                    f"ayanamsa={coord_label}; sweph={sweph_version()}; "
+                    f"ayanamsa={coord_label}; sweph={panchanga.sweph_version()}; "
                     f"author-email={PDF_AUTHOR_EMAIL}; "
                     f"copyright={PDF_COPYRIGHT}; url={PDF_SOURCE_URL}")
 
@@ -866,7 +863,7 @@ def draw_page_header(pdf, location, months, ruleset_version, *, amanta=True, coo
     pdf.drawString(18, page_height - 31, subtitle)
     pdf.setFont(PDF_FONT, 4.7)
     pdf.drawRightString(page_width - 18, page_height - 19,
-                        f"SwEph {sweph_version()} | Ruleset: {ruleset_version} | Layout: {LAYOUT_VERSION}")
+                        f"SwEph {panchanga.sweph_version()} | Ruleset: {ruleset_version} | Layout: {LAYOUT_VERSION}")
 
 
 def draw_page_footer(pdf, festival_entries, eclipse_line="Eclipses: None"):

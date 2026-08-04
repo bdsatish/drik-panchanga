@@ -23,17 +23,14 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent
 _NAMES_PATH = _REPO_ROOT / "sanskrit_names.json"
 
 
-def _load_json_file(path: Path) -> dict:
-    """Load JSON, stripping ``//`` and ``/* ... */`` comments (sanskrit_names.json)."""
-    content = path.read_text(encoding="utf-8")
-    content = re.sub(r"//.*", "", content)
-    content = re.sub(r"/\*.*?\*/", "", content, flags=re.DOTALL)
-    return json.loads(content)
+def _load_json(path: Path) -> dict:
+    with path.open(encoding="utf-8") as source:
+        return json.load(source)
 
 
 @lru_cache(maxsize=1)
 def sanskrit_names() -> dict:
-    return _load_json_file(_NAMES_PATH)
+    return _load_json(_NAMES_PATH)
 
 
 def parse_civil_date(text: str) -> panchanga.Date:

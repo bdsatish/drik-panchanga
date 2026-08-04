@@ -258,8 +258,9 @@
            "6": ["viṣa", "amṛta", "jvara", "udyoga", "śubha", "lābha", "dhana", "lābha", "viṣa", "udyoga", "śubha", "amṛta", "kalaha", "roga", "amṛta", "lābha"]
          },
 
-// Must match the order of SE_SUN, SE_MOON, etc in swephexp.h
-// 9 = SE_PLUTO, but meh it's no longer a major planet. So, reassigning 9 = Ketu
+"comment": [ "Must match the order of SE_SUN, SE_MOON, etc in swephexp.h",
+             "9 = SE_PLUTO, but meh it's no longer a major planet. So, reassigning 9 = Ketu" ],
+
 "planets": { "0": "sūrya",
              "1": "candra",
              "4": "maṅgala",
@@ -273,7 +274,6 @@
              "8": "galla"
            },
 
-// 0 = Aries, 1 = Taurus, etc
 "zodiac": { "0": "meṣa",
             "1": "vṛṣabha",
             "2": "mithuna",
