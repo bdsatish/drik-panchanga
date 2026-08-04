@@ -5,8 +5,7 @@ import argparse
 import calendar
 import json
 import re
-from functools import lru_cache
-from collections import namedtuple
+from collections import namedtuple as struct
 from datetime import date as CivilDate
 from datetime import datetime
 from pathlib import Path
@@ -59,7 +58,7 @@ TITHI_UNDERLINE_RATIO = 0.50
 TITHI_UNDERLINE_LEFT_PADDING = 3.0
 EKADASHI_UNDERLINE_RATIO = TITHI_UNDERLINE_RATIO  # Backward-compatible alias.
 
-Location = namedtuple("Location", "name latitude longitude timezone_name")
+Location = struct('Location', ['name', 'latitude', 'longitude', 'timezone_name'])
 
 INK = HexColor("#172033")
 MUTED = HexColor("#465466")
@@ -81,19 +80,27 @@ EKADASHI_MARK = HexColor("#168078")
 ECLIPSE_MARK = HexColor("#8B4518")
 
 
-def _load_json(path: Path) -> dict:
+def _load_json(path):
   with path.open(encoding="utf-8") as source:
     return json.load(source)
 
 
-@lru_cache(maxsize=1)
-def sanskrit_names() -> dict:
-  return _load_json(DEFAULT_NAMES_PATH)
+_SANSKRIT_NAMES = None
+_CITY_LOCATIONS = None
 
 
-@lru_cache(maxsize=1)
-def city_locations() -> dict:
+def sanskrit_names():
+  global _SANSKRIT_NAMES
+  if _SANSKRIT_NAMES is None:
+    _SANSKRIT_NAMES = _load_json(DEFAULT_NAMES_PATH)
+  return _SANSKRIT_NAMES
+
+
+def city_locations():
   """Parsed ``cities.json``; cached so web/CLI requests do not re-read 1.3 MB."""
+  global _CITY_LOCATIONS
+  if _CITY_LOCATIONS is not None:
+    return _CITY_LOCATIONS
   path = DEFAULT_CITIES_PATH
   if not path.exists():
     raise ValueError(f"Cities file does not exist: {path}")
@@ -101,31 +108,32 @@ def city_locations() -> dict:
     locations = json.load(source)
   if not isinstance(locations, dict):
     raise ValueError("cities.json must contain an object keyed by city")
-  return locations
+  _CITY_LOCATIONS = locations
+  return _CITY_LOCATIONS
 
 
-def _numbered_iast_names(mapping: dict, *, width=None) -> list[str]:
+def _numbered_iast_names(mapping, width=None):
   items = sorted(mapping.items(), key=lambda item: int(item[0]))
   if width is None:
     return [f"{key} {name}" for key, name in items]
   return [f"{int(key):0{width}d} {name}" for key, name in items]
 
 
-def tithi_key_line() -> str:
+def tithi_key_line():
   """Footer key for the T column and related T-cell marks."""
   return ("T: 01-15; Sukla = upright bold, Krsna = bold italic. Tiny red numbers "
           "refer to the festival key. Sundays have a red right edge; Ekadashi "
           "upavasa has a teal T-cell underline.")
 
 
-def masa_key_line() -> str:
+def masa_key_line():
   names = ", ".join(_numbered_iast_names(sanskrit_names()["masas"]))
   return ("Māsa: green T-cell with upper-left badge marks its first visible tithi; "
           f"gold fill denotes adhika. {names}. "
           "Display māsa follows amānta or pūrṇimānta; festival dates internally use amānta rules.")
 
 
-def sankranti_key_line() -> str:
+def sankranti_key_line():
   """Footer key for solar saṅkrānti markers (rāśi 1–12)."""
   zodiac = sanskrit_names()["zodiac"]
   names = ", ".join(f"{index} {zodiac[str(index - 1)].capitalize()}" for index in range(1, 13))
@@ -135,17 +143,17 @@ def sankranti_key_line() -> str:
           f"{names}.")
 
 
-def nakshatra_key_line() -> str:
+def nakshatra_key_line():
   names = _numbered_iast_names(sanskrit_names()["nakshatras"])
   return "N: " + ", ".join(names)
 
 
-def yoga_key_line() -> str:
+def yoga_key_line():
   names = _numbered_iast_names(sanskrit_names()["yogas"], width=2)
   return "Y: " + ", ".join(names)
 
 
-def ensure_pdf_fonts() -> None:
+def ensure_pdf_fonts():
   """Register IndUni-H faces from the vendored ``.ttc`` for all PDF text."""
   global _pdf_fonts_registered
   if _pdf_fonts_registered:
@@ -164,7 +172,7 @@ def ensure_pdf_fonts() -> None:
   _pdf_fonts_registered = True
 
 
-def embed_pdf_metadata(pdf, *, title, subject, ruleset_version, coordinate_selection="citra"):
+def embed_pdf_metadata(pdf, title, subject, ruleset_version, coordinate_selection="citra"):
   """Set Info dictionary fields, including custom copyright/email/URL keys."""
   from reportlab.pdfbase.pdfdoc import (PDFDate, PDFDictionary, PDFName, PDFString)
 
@@ -183,31 +191,36 @@ def embed_pdf_metadata(pdf, *, title, subject, ruleset_version, coordinate_selec
   info.copyright = PDF_COPYRIGHT
   info.url = PDF_SOURCE_URL
 
-  info.format = lambda document, self=info: PDFDictionary(
-    {
-      "Title": PDFString(self.title),
-      "Author": PDFString(self.author),
-      "AuthorEmail": PDFString(self.author_email),
-      "Copyright": PDFString(self.copyright),
-      "URL": PDFString(self.url),
-      "ModDate": PDFDate(ts=document._timeStamp, dateFormatter=self._dateFormatter),
-      "CreationDate": PDFDate(ts=document._timeStamp, dateFormatter=self._dateFormatter),
-      "Producer": PDFString(self.producer),
-      "Creator": PDFString(self.creator),
-      "Subject": PDFString(self.subject),
-      "Keywords": PDFString(self.keywords),
-      "Trapped": PDFName(self.trapped)
-    }).format(document)
+  def format_info(document):
+    return PDFDictionary(
+      {
+        "Title": PDFString(info.title),
+        "Author": PDFString(info.author),
+        "AuthorEmail": PDFString(info.author_email),
+        "Copyright": PDFString(info.copyright),
+        "URL": PDFString(info.url),
+        "ModDate": PDFDate(ts=document._timeStamp, dateFormatter=info._dateFormatter),
+        "CreationDate": PDFDate(ts=document._timeStamp, dateFormatter=info._dateFormatter),
+        "Producer": PDFString(info.producer),
+        "Creator": PDFString(info.creator),
+        "Subject": PDFString(info.subject),
+        "Keywords": PDFString(info.keywords),
+        "Trapped": PDFName(info.trapped)
+      }).format(document)
+
+  info.format = format_info
 
 
 def month_range(start_year, start_month, count=MONTH_COUNT):
+  months = []
   year, month = start_year, start_month
   for _ in range(count):
-    yield year, month
+    months.append((year, month))
     if month == 12:
       year, month = year + 1, 1
     else:
       month += 1
+  return months
 
 
 def parse_start_month(value):
@@ -384,7 +397,7 @@ def location_from_mapping(name, record):
     raise ValueError(f"Location record for {name!r} needs latitude, longitude, and timezone") from error
 
 
-def city_base_name(key: str) -> str:
+def city_base_name(key):
   """Return the place name from a ``Name, ISO`` cities.json key.
 
     Keys always use a single comma (before the country code); place names
@@ -394,7 +407,7 @@ def city_base_name(key: str) -> str:
   return name if sep else key
 
 
-def normalize_city_query(city: str) -> str:
+def normalize_city_query(city):
   """Canonicalize user input toward ``Name, ISO`` (space after comma, upper ISO).
 
     Accepts ``Helsinki, FI``, ``Helsinki,FI``, and mixed whitespace/case.
@@ -407,7 +420,7 @@ def normalize_city_query(city: str) -> str:
   return query
 
 
-def resolve_city_key(city: str, locations: dict) -> str:
+def resolve_city_key(city, locations):
   """Resolve a user city string to a cities.json key.
 
     Accepts full keys (``Sydney, AU`` or ``Sydney,AU``) or a bare name when
@@ -494,7 +507,7 @@ def tithi_underline_bounds(x, tithi_column_width):
   return x + TITHI_UNDERLINE_LEFT_PADDING, width
 
 
-def draw_tithi_underline(pdf, x, row_y, tithi_column_width, color, *, wavy=False):
+def draw_tithi_underline(pdf, x, row_y, tithi_column_width, color, wavy=False):
   """Draw a shared-geometry solid or wavy T-cell underline."""
   left, underline_width = tithi_underline_bounds(x, tithi_column_width)
   if not wavy:
@@ -620,7 +633,7 @@ def daily_records(months, location):
   return result
 
 
-def display_masa(record, *, amanta=True):
+def display_masa(record, amanta=True):
   """Māsa code displayed for a canonical amānta record."""
   masa_number = int(record.masa.lstrip("A"))
   if not amanta and not record.is_adhika and record.tithi.startswith("K"):
@@ -628,7 +641,7 @@ def display_masa(record, *, amanta=True):
   return masa_code(masa_number, record.is_adhika)
 
 
-def masa_badges_by_date(records, *, amanta=True):
+def masa_badges_by_date(records, amanta=True):
   """Map each first visible date of a display māsa to its badge code."""
   badges = {}
   previous_masa = None
@@ -804,7 +817,7 @@ def kali_ahargana_range(months):
   return int(panchanga.ahargana(start_jd)), int(panchanga.ahargana(end_jd))
 
 
-def calendar_year_label(records, *, amanta=True):
+def calendar_year_label(records, amanta=True):
   """Return era and samvatsara labels for a representative calendar month."""
   representative = records[len(records) // 2]
   civil = representative.civil_date
@@ -824,7 +837,7 @@ def coordinate_label(value, positive, negative):
   return f"{abs(value):.5f} {direction}"
 
 
-def draw_page_header(pdf, location, months, ruleset_version, *, amanta=True, coordinate_selection="citra",
+def draw_page_header(pdf, location, months, ruleset_version, amanta=True, coordinate_selection="citra",
                      calendar_years=None, kali_ahargana=None):
   page_width, page_height = landscape(A4)
   title = f"{location.name} Panchanga: {month_span_label(months)}"
@@ -903,7 +916,7 @@ def draw_page_footer(pdf, festival_entries, eclipse_line="Eclipses: None"):
     pdf.drawString(18, FOOTER_KEY_TOP - (index + 1) * FOOTER_KEY_LINE_HEIGHT, line)
 
 
-def build_pdf(location, start_year, start_month, output_path, *, festivals_path=None, month_system="amanta",
+def build_pdf(location, start_year, start_month, output_path, festivals_path=None, month_system="amanta",
               coordinate_selection="citra"):
   """Build a calendar while holding coordinate state for the full document."""
   with panchanga.coordinate_calculation_lock:
@@ -911,17 +924,17 @@ def build_pdf(location, start_year, start_month, output_path, *, festivals_path=
                                month_system=month_system, coordinate_selection=coordinate_selection)
 
 
-def _build_pdf_unlocked(location, start_year, start_month, output_path, *, festivals_path=None, month_system="amanta",
+def _build_pdf_unlocked(location, start_year, start_month, output_path, festivals_path=None, month_system="amanta",
                         coordinate_selection="citra"):
   ensure_pdf_fonts()
   amanta = parse_month_system(month_system)
   panchanga.set_coordinate_selection(coordinate_selection)
-  months = list(month_range(start_year, start_month))
+  months = month_range(start_year, start_month)
   if start_month == 1:
     context_start = (start_year - 1, 12)
   else:
     context_start = (start_year, start_month - 1)
-  context_months = list(month_range(*context_start, count=MONTH_COUNT + 2))
+  context_months = month_range(*context_start, count=MONTH_COUNT + 2)
   context_records = daily_records(context_months, location)
   records_by_date = {record.civil_date: record for record in context_records}
   range_start = CivilDate(start_year, start_month, 1)
@@ -995,8 +1008,8 @@ def _build_pdf_unlocked(location, start_year, start_month, output_path, *, festi
   return output_path
 
 
-def default_output_path(location, start_year, start_month, *, month_system="amanta", coordinate_selection="citra"):
-  months = list(month_range(start_year, start_month))
+def default_output_path(location, start_year, start_month, month_system="amanta", coordinate_selection="citra"):
+  months = month_range(start_year, start_month)
   end_year, end_month = months[-1]
   city_slug = re.sub(r"[^a-z0-9]+", "-", location.name.casefold()).strip("-") or "location"
   parts = []

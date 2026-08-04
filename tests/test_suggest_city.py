@@ -4,14 +4,14 @@ import json
 import unittest
 from unittest import mock
 
-from generate_panchanga_calendar import city_locations
+import generate_panchanga_calendar as calendar_module
 from webapp.app import suggest_city_for_ip
 
 
 class SuggestCityTests(unittest.TestCase):
 
     def setUp(self):
-        city_locations.cache_clear()
+        calendar_module._CITY_LOCATIONS = None
 
     def test_private_ip(self):
         self.assertIsNone(suggest_city_for_ip("127.0.0.1"))

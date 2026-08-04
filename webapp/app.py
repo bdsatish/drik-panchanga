@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
 """Minimal web UI for generating one-page panchanga calendar PDFs."""
 
-from __future__ import annotations
-
 import io
 import ipaddress
 import json
 import re
 import sys
-from functools import lru_cache
 from pathlib import Path
 from urllib.parse import quote
 from urllib.request import urlopen
@@ -39,23 +36,27 @@ from webapp.ics_service import generate_ics  # noqa: E402
 
 app = Flask(__name__)
 
+_CITY_NAMES = None
+
 
 @app.context_processor
 def inject_sweph_version():
     return {"sweph_version": sweph_version()}
 
 
-def city_records() -> dict:
+def city_records():
     # Same underlying parse as CLI ``load_location``; keep this name for search APIs.
     return city_locations()
 
 
-@lru_cache(maxsize=1)
-def city_names() -> tuple[str, ...]:
-    return tuple(sorted(city_records().keys(), key=str.casefold))
+def city_names():
+    global _CITY_NAMES
+    if _CITY_NAMES is None:
+        _CITY_NAMES = tuple(sorted(city_records().keys(), key=str.casefold))
+    return _CITY_NAMES
 
 
-def search_cities(query: str, limit: int = 20) -> list[str]:
+def search_cities(query, limit=20):
     query = query.strip()
     if not query:
         return []
@@ -76,7 +77,7 @@ def search_cities(query: str, limit: int = 20) -> list[str]:
     return (starts + contains)[:limit]
 
 
-def suggest_city_for_ip(ip: str | None) -> str | None:
+def suggest_city_for_ip(ip):
     """Public IP → ip-api.com city → cities.json key, or None."""
     try:
         if not ip or not ipaddress.ip_address(ip.strip()).is_global:

@@ -2,7 +2,6 @@
 
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Mapping
 
 from generate_panchanga_calendar import (
     DEFAULT_FESTIVALS_PATH,
@@ -14,7 +13,7 @@ from generate_panchanga_calendar import (
 )
 
 
-def generate_pdf(fields: Mapping[str, str]) -> tuple[bytes, str]:
+def generate_pdf(fields):
     """Validate shared form fields and generate the requested PDF."""
     city = (fields.get("city") or "").strip()
     start = (fields.get("start") or "").strip()

@@ -2,13 +2,14 @@
 
 import unittest
 
+import generate_panchanga_calendar as calendar_module
 from generate_panchanga_calendar import city_locations, load_location, normalize_city_query
 
 
 class CityLookupTests(unittest.TestCase):
 
     def setUp(self):
-        city_locations.cache_clear()
+        calendar_module._CITY_LOCATIONS = None
 
     def test_normalize_inserts_space_and_uppercases_iso(self):
         self.assertEqual(normalize_city_query("helsinki,fi"), "helsinki, FI")
@@ -33,10 +34,9 @@ class CityLookupTests(unittest.TestCase):
 
     def test_city_locations_cached_across_load_location(self):
         """Fresh requests must not re-parse the 1.3 MB cities.json."""
-        city_locations.cache_clear()
+        calendar_module._CITY_LOCATIONS = None
+        first = city_locations()
         load_location("Bengaluru, IN")
-        self.assertEqual(city_locations.cache_info().misses, 1)
         load_location("Helsinki, FI")
         load_location("Bengaluru, IN")
-        self.assertEqual(city_locations.cache_info().misses, 1)
-        self.assertEqual(city_locations.cache_info().hits, 2)
+        self.assertIs(city_locations(), first)

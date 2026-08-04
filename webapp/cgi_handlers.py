@@ -1,7 +1,5 @@
 """CGI request handlers for freesshell.de public_html deployment."""
 
-from __future__ import annotations
-
 import html
 import json
 import os
@@ -25,11 +23,11 @@ from generate_panchanga_calendar import parse_coordinate_selection  # noqa: E402
 PROJECT_ROOT = _REPO_ROOT
 
 
-def _query_params() -> dict[str, list[str]]:
+def _query_params():
     return parse_qs(os.environ.get("QUERY_STRING", ""), keep_blank_values=False)
 
 
-def _parse_urlencoded_post() -> dict[str, str]:
+def _parse_urlencoded_post():
     """Parse a classic HTML form POST (not multipart)."""
     try:
         length = int(os.environ.get("CONTENT_LENGTH") or "0")
@@ -44,7 +42,7 @@ def _parse_urlencoded_post() -> dict[str, str]:
     return {key: (values[-1] if values else "") for key, values in parsed.items()}
 
 
-def write_headers(headers: list[tuple[str, str]], *, status: str | None = None) -> None:
+def write_headers(headers, status=None):
     out = sys.stdout.buffer
     if status:
         # CGI status header (Apache converts this to the HTTP status line).
@@ -54,7 +52,7 @@ def write_headers(headers: list[tuple[str, str]], *, status: str | None = None) 
     out.write(b"\r\n")
 
 
-def write_text(body: str, *, content_type: str = "text/plain; charset=utf-8", status: str | None = None) -> None:
+def write_text(body, content_type="text/plain; charset=utf-8", status=None):
     data = body.encode("utf-8")
     write_headers([
         ("Content-Type", content_type),
@@ -64,7 +62,7 @@ def write_text(body: str, *, content_type: str = "text/plain; charset=utf-8", st
     sys.stdout.buffer.write(data)
 
 
-def write_json(payload: object, *, status: str | None = None) -> None:
+def write_json(payload, status=None):
     data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
     write_headers([
         ("Content-Type", "application/json; charset=utf-8"),
@@ -74,7 +72,7 @@ def write_json(payload: object, *, status: str | None = None) -> None:
     sys.stdout.buffer.write(data)
 
 
-def write_error(message: str, *, status: str = "400 Bad Request", as_json: bool = False) -> None:
+def write_error(message, status="400 Bad Request", as_json=False):
     if as_json:
         write_json({"error": message}, status=status)
         return
@@ -85,7 +83,7 @@ def write_error(message: str, *, status: str = "400 Bad Request", as_json: bool 
     write_text(body, content_type="text/html; charset=utf-8", status=status)
 
 
-def handle_cities() -> None:
+def handle_cities():
     """GET cities.py?q=...&limit=... → JSON city name list."""
     try:
         params = _query_params()
@@ -101,7 +99,7 @@ def handle_cities() -> None:
         write_error(str(error) or traceback.format_exc(), status="500 Internal Server Error", as_json=True)
 
 
-def handle_suggest_city() -> None:
+def handle_suggest_city():
     """GET suggest_city.py → JSON ``{\"city\": ...}`` from client IP."""
     try:
         xff = os.environ.get("HTTP_X_FORWARDED_FOR", "")
@@ -111,7 +109,7 @@ def handle_suggest_city() -> None:
         write_error(str(error) or traceback.format_exc(), status="500 Internal Server Error", as_json=True)
 
 
-def handle_panchanga() -> None:
+def handle_panchanga():
     """GET panchanga.py?city=...&date=...[&month=...][&ayanamsa=...] → JSON."""
     try:
         params = _query_params()
@@ -128,7 +126,7 @@ def handle_panchanga() -> None:
         write_error(str(error) or traceback.format_exc(), status="500 Internal Server Error", as_json=True)
 
 
-def handle_generate() -> None:
+def handle_generate():
     """POST generate.py with city + start + optional month → PDF attachment."""
     method = os.environ.get("REQUEST_METHOD", "GET").upper()
     if method != "POST":
@@ -152,7 +150,7 @@ def handle_generate() -> None:
         write_error(f"Internal error: {error}", status="500 Internal Server Error")
 
 
-def handle_status() -> None:
+def handle_status():
     """GET status.py — tiny health / version probe."""
     try:
         n_cities = len(city_names())

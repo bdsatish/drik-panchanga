@@ -1,10 +1,7 @@
 """Compute sunrise panchanga for one civil date and city (GUI-compatible)."""
 
-from __future__ import annotations
-
 import json
 import re
-from functools import lru_cache
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -23,17 +20,22 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent
 _NAMES_PATH = _REPO_ROOT / "sanskrit_names.json"
 
 
-def _load_json(path: Path) -> dict:
+def _load_json(path):
     with path.open(encoding="utf-8") as source:
         return json.load(source)
 
 
-@lru_cache(maxsize=1)
-def sanskrit_names() -> dict:
-    return _load_json(_NAMES_PATH)
+_SANSKRIT_NAMES = None
 
 
-def parse_civil_date(text: str) -> panchanga.Date:
+def sanskrit_names():
+    global _SANSKRIT_NAMES
+    if _SANSKRIT_NAMES is None:
+        _SANSKRIT_NAMES = _load_json(_NAMES_PATH)
+    return _SANSKRIT_NAMES
+
+
+def parse_civil_date(text):
     """Parse ``DD/MM/YYYY``; negative years are proleptic Gregorian."""
     text = (text or "").strip()
     if not text:
@@ -50,12 +52,12 @@ def parse_civil_date(text: str) -> panchanga.Date:
     return panchanga.Date(year, month, day)
 
 
-def format_time(hms) -> str:
+def format_time(hms):
     hours, minutes, seconds = hms
     return f"{int(hours):02d}:{int(minutes):02d}:{int(seconds):02d}"
 
 
-def _named_segments(nhms, lookup: dict) -> list[dict]:
+def _named_segments(nhms, lookup):
     """Map ``[index, [h,m,s]]`` or skipped ``[..., next_index, next_hms]`` to names."""
     segments = [{
         "number": int(nhms[0]),
@@ -71,7 +73,7 @@ def _named_segments(nhms, lookup: dict) -> list[dict]:
     return segments
 
 
-def place_for_date(location, civil: panchanga.Date) -> panchanga.Place:
+def place_for_date(location, civil):
     """Build a Place with the city's UTC offset on the given civil date."""
     zone = ZoneInfo(location.timezone_name)
     year = civil.year if civil.year > 0 else 2000
@@ -79,7 +81,7 @@ def place_for_date(location, civil: panchanga.Date) -> panchanga.Place:
     return panchanga.Place(location.latitude, location.longitude, offset)
 
 
-def _moon_altitude_at_local_noon(year: int, month: int, day: int, place) -> float:
+def _moon_altitude_at_local_noon(year, month, day, place):
     swe = panchanga.swe
     noon_ut = swe.julday(year, month, day, 12.0) - place.timezone / 24.0
     xx, _retflag = swe.calc_ut(noon_ut, swe.MOON)
@@ -89,7 +91,7 @@ def _moon_altitude_at_local_noon(year: int, month: int, day: int, place) -> floa
     return true_altitude
 
 
-def probe_moon_event(jd, place, civil: panchanga.Date, *, rise: bool) -> tuple[str | None, str]:
+def probe_moon_event(jd, place, civil, rise=True):
     """Return ``(time_or_None, status)`` for moonrise/moonset on a civil day.
 
     Status is ``ok``, ``none_today`` (next event is after local midnight+24h),
@@ -117,11 +119,11 @@ def probe_moon_event(jd, place, civil: panchanga.Date, *, rise: bool) -> tuple[s
     return format_time(panchanga.to_dms(local_hours)), "ok"
 
 
-def _interval_from_hms(start_hms, end_hms) -> dict:
+def _interval_from_hms(start_hms, end_hms):
     return {"start": format_time(start_hms), "end": format_time(end_hms)}
 
 
-def _durmuhurta_intervals_from_values(values) -> list[dict]:
+def _durmuhurta_intervals_from_values(values):
     starts, ends = values
     intervals = []
     for start, end in zip(starts, ends):
@@ -132,35 +134,35 @@ def _durmuhurta_intervals_from_values(values) -> list[dict]:
     return intervals
 
 
-def _varjyam_intervals(jd, place) -> list[dict]:
+def _varjyam_intervals(jd, place):
     return [
         _interval_from_hms(start, end)
         for start, end in panchanga.varjyam(jd, place)
     ]
 
 
-def ayana_label(raasi_num: int) -> str:
+def ayana_label(raasi_num):
     """Uttarāyaṇa from Makara–Mithuna (10–12, 1–3); else Dakṣiṇāyana."""
     if raasi_num >= 10 or raasi_num <= 3:
         return "Uttarāyaṇa"
     return "Dakṣiṇāyana"
 
 
-def drik_ayana_label(ritu_num: int) -> str:
+def drik_ayana_label(ritu_num):
     """Ayana from Drik ṛtu: Śiśira–Vasanta–Grīṣma = Uttara; Varṣā–Śarad–Hemanta = Dakṣiṇa."""
     if ritu_num in (0, 1, 5):  # Vasanta, Grīṣma, Śiśira
         return "Uttarāyaṇa"
     return "Dakṣiṇāyana"
 
 
-def compute_day_details(location, civil, *, amanta, coordinate_selection):
+def compute_day_details(location, civil, amanta=None, coordinate_selection=None):
     """Compute one day while holding the shared coordinate-state lock."""
     with panchanga.coordinate_calculation_lock:
         return _compute_day_details_unlocked(
             location, civil, amanta=amanta, coordinate_selection=coordinate_selection)
 
 
-def _compute_day_details_unlocked(location, civil, *, amanta, coordinate_selection):
+def _compute_day_details_unlocked(location, civil, amanta=None, coordinate_selection=None):
     """Compute all mode-sensitive panchanga fields for one civil day.
 
     Shared by the JSON day API and the ICS generator so both consume the
@@ -264,8 +266,8 @@ def _compute_day_details_unlocked(location, civil, *, amanta, coordinate_selecti
     }
 
 
-def compute_day_panchanga(city: str, date_text: str, month_system: str | None = "amanta",
-                          coordinate_selection: str = "citra") -> dict:
+def compute_day_panchanga(city, date_text, month_system="amanta",
+                          coordinate_selection="citra"):
     """Return one city's day panchanga while holding coordinate state stable."""
     with panchanga.coordinate_calculation_lock:
         return _compute_day_panchanga_unlocked(
@@ -274,8 +276,8 @@ def compute_day_panchanga(city: str, date_text: str, month_system: str | None = 
 
 
 def _compute_day_panchanga_unlocked(
-        city: str, date_text: str, month_system: str | None = "amanta",
-        coordinate_selection: str = "citra") -> dict:
+        city, date_text, month_system="amanta",
+        coordinate_selection="citra"):
     """Return named panchanga fields for ``city`` on ``date_text`` (DD/MM/YYYY).
 
     ``month_system`` is ``amanta`` (default) or ``purnimanta``; it affects the

@@ -19,7 +19,7 @@ from webapp.day_panchanga import (
 import panchanga
 
 
-def _utf8_cut(data: bytes, limit: int) -> int:
+def _utf8_cut(data, limit):
     cut = min(limit, len(data))
     while cut:
         try:
@@ -30,7 +30,7 @@ def _utf8_cut(data: bytes, limit: int) -> int:
     raise ValueError("Cannot fold invalid UTF-8 content")
 
 
-def _fold(line: str) -> str:
+def _fold(line):
     """Fold content lines to at most 75 octets, including continuation spaces."""
     data = line.encode("utf-8")
     if len(data) <= 75:
@@ -46,17 +46,17 @@ def _fold(line: str) -> str:
     return "\r\n".join(parts)
 
 
-def _escape_text(text: str) -> str:
+def _escape_text(text):
     return (text.replace("\\", "\\\\").replace(";", "\\;")
             .replace(",", "\\,").replace("\r\n", "\n")
             .replace("\r", "\n").replace("\n", "\\n"))
 
 
-def _location_slug(name: str) -> str:
+def _location_slug(name):
     return re.sub(r"[^a-z0-9]+", "-", name.casefold()).strip("-") or "location"
 
 
-def _ics_date(civil) -> str:
+def _ics_date(civil):
     return f"{civil.year:04d}{civil.month:02d}{civil.day:02d}"
 
 
@@ -70,21 +70,23 @@ def _next_civil_date(civil):
 
 
 def _civil_dates(months):
+    dates = []
     for year, month in months:
         for day in range(1, monthrange(year, month)[1] + 1):
-            yield panchanga.Date(year, month, day)
+            dates.append(panchanga.Date(year, month, day))
+    return dates
 
 
-def _fmt_interval(start_hms, end_hms) -> str:
+def _fmt_interval(start_hms, end_hms):
     return f"{format_time(start_hms)}–{format_time(end_hms)}"
 
 
-def _rahu_kala_text(values) -> str:
+def _rahu_kala_text(values):
     start, end = values
     return _fmt_interval(start, end)
 
 
-def _durmuhurta_text(values) -> str:
+def _durmuhurta_text(values):
     starts, ends = values
     parts = []
     for s, e in zip(starts, ends):
@@ -94,12 +96,12 @@ def _durmuhurta_text(values) -> str:
     return ", ".join(parts) if parts else "—"
 
 
-def _karana_text(kar, names) -> str:
+def _karana_text(kar, names):
     name = names["karanas"][str(kar[0])]
     return f"{name} (ends {format_time(kar[1])})"
 
 
-def generate_ics(location, start_year, start_month, *, month_system="amanta",
+def generate_ics(location, start_year, start_month, month_system="amanta",
                  coordinate_selection="citra"):
     """Generate a feed while holding coordinate state for the full span."""
     with panchanga.coordinate_calculation_lock:
@@ -108,7 +110,7 @@ def generate_ics(location, start_year, start_month, *, month_system="amanta",
             month_system=month_system, coordinate_selection=coordinate_selection)
 
 
-def _generate_ics_unlocked(location, start_year, start_month, *, month_system="amanta",
+def _generate_ics_unlocked(location, start_year, start_month, month_system="amanta",
                            coordinate_selection="citra"):
     amanta = parse_month_system(month_system)
     month_key = "amanta" if amanta else "purnimanta"
@@ -123,7 +125,7 @@ def _generate_ics_unlocked(location, start_year, start_month, *, month_system="a
         f"X-WR-CALNAME:{_escape_text(f'Panchanga · {location.name}')}",
         f"X-WR-CALDESC:{_escape_text(coordinate_selection_label(coordinate_selection) + ' · ' + month_system_label(amanta))}",
     ]
-    for civil in _civil_dates(list(month_range(start_year, start_month))):
+    for civil in _civil_dates(month_range(start_year, start_month)):
         d = _ics_date(civil)
         nxt = _ics_date(_next_civil_date(civil))
         details = compute_day_details(

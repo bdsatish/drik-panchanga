@@ -2,7 +2,7 @@
 
 import calendar
 import configparser
-from collections import namedtuple
+from collections import namedtuple as struct
 from datetime import date as CivilDate
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -30,10 +30,14 @@ def jd_to_local_civil_date(jd, timezone_name):
   return jd_to_local_datetime(jd, timezone_name).date()
 
 
-DayRecord = namedtuple("DayRecord", "civil_date tithi nakshatra yoga masa is_adhika sunrise_jd")
+DayRecord = struct('DayRecord', [
+  'civil_date', 'tithi', 'nakshatra', 'yoga', 'masa', 'is_adhika', 'sunrise_jd'
+])
 
-FestivalRule = namedtuple("FestivalRule", "name masa tithi selector allow_adhika allow_empty location_aware",
-                          defaults=(None, None, None, False, False, False))
+FestivalRule = struct(
+  'FestivalRule',
+  ['name', 'masa', 'tithi', 'selector', 'allow_adhika', 'allow_empty', 'location_aware'],
+  defaults=(None, None, None, False, False, False))
 
 _TRUTHY = frozenset({"yes", "true", "1", "on"})
 _FALSY = frozenset({"no", "false", "0", "off"})
@@ -46,7 +50,7 @@ def all_festival_names():
   return tuple(rule.name for rule in FESTIVAL_RULES)
 
 
-def _parse_bool(raw, *, key):
+def _parse_bool(raw, key):
   value = raw.strip().casefold()
   if value in _TRUTHY:
     return True
@@ -134,7 +138,7 @@ def resolve_vriddhi_dates(dates):
   return resolved
 
 
-def select_kshaya_dates(records, tithi, *, masa=None, allow_adhika=False):
+def select_kshaya_dates(records, tithi, masa=None, allow_adhika=False):
   """Later civil day when the tithi is skipped between sunrises.
 
     With ``masa``, check the later sunrise for Shukla and the earlier for Krishna.
@@ -165,7 +169,7 @@ def select_kshaya_dates(records, tithi, *, masa=None, allow_adhika=False):
   return matches
 
 
-def select_tithi_dates(records, tithi, *, masa=None, allow_adhika=False):
+def select_tithi_dates(records, tithi, masa=None, allow_adhika=False):
   """Civil days for a tithi using sunrise, vriddhi, and kshaya rules.
 
     Vriddhi keeps the former date; kshaya keeps the later civil date.
@@ -183,7 +187,7 @@ def select_tithi_dates(records, tithi, *, masa=None, allow_adhika=False):
   return sorted(set(sunrise_matches) | set(kshaya_matches))
 
 
-def select_plain_tithi_dates(records, masa, tithi, *, allow_adhika=False):
+def select_plain_tithi_dates(records, masa, tithi, allow_adhika=False):
   """Civil days for a plain masa+tithi festival (adhika-preferring when allowed)."""
   matches = select_tithi_dates(records, tithi, masa=masa, allow_adhika=allow_adhika)
   if not allow_adhika or not matches:
@@ -484,7 +488,7 @@ def select_dates_for_rule(rule, records, geopos=None, timezone_name=None):
   return rule.selector(records)
 
 
-def resolve_festivals(records, target_dates, *, geopos=None, timezone_name=None, enabled_names=None):
+def resolve_festivals(records, target_dates, geopos=None, timezone_name=None, enabled_names=None):
   """Return PDF day markers and footer entries for enabled festivals.
 
     ``markers_by_date`` looks like ``{date: [1, 3]}``; ``entries`` looks like
