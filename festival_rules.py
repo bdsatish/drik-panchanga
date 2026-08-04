@@ -106,19 +106,11 @@ def format_festival_dates(dates):
 
 
 def plain_tithi_number(tithi):
-  """Convert a plain S1..S15 or K1..K15 code to 1..30."""
-  if not isinstance(tithi, str) or len(tithi) < 2:
-    return None
-  paksha = tithi[0]
-  if paksha not in {"S", "K"}:
-    return None
-  try:
-    paksha_tithi = int(tithi[1:])
-  except ValueError:
-    return None
-  if not 1 <= paksha_tithi <= 15:
-    return None
-  return paksha_tithi if paksha == "S" else paksha_tithi + 15
+  """Convert ``S1``..``S15`` or ``K1``..``K15`` to 1..30."""
+  number = int(tithi[1:])
+  if tithi.startswith("S"):
+    return number
+  return number + 15
 
 
 def masa_codes_for(masa, allow_adhika=False):
@@ -147,8 +139,6 @@ def select_kshaya_dates(records, tithi, masa=None, allow_adhika=False):
     With ``masa``, check the later sunrise for Shukla and the earlier for Krishna.
     """
   target_tithi = plain_tithi_number(tithi)
-  if target_tithi is None:
-    return []
   masa_codes = masa_codes_for(masa, allow_adhika)
   matches = []
   ordered = sorted(records, key=lambda record: record.civil_date)
@@ -159,8 +149,6 @@ def select_kshaya_dates(records, tithi, masa=None, allow_adhika=False):
       continue
     start_tithi = plain_tithi_number(day_tithi)
     end_tithi = plain_tithi_number(next_tithi)
-    if start_tithi is None or end_tithi is None:
-      continue
     skipped = [(start_tithi + offset - 1) % 30 + 1 for offset in range(1, (end_tithi - start_tithi) % 30)]
     if target_tithi not in skipped:
       continue
