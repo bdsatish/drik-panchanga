@@ -1039,6 +1039,8 @@ def argument_parser():
 
 
 def main(argv=None):
+  from app_logging import configure_logging
+  configure_logging()
   parser = argument_parser()
   arguments = parser.parse_args(argv)
   try:
