@@ -6,7 +6,7 @@ import calendar
 import json
 import re
 from functools import lru_cache
-from dataclasses import dataclass
+from collections import namedtuple
 from datetime import date as CivilDate
 from datetime import datetime
 from pathlib import Path
@@ -60,12 +60,7 @@ TITHI_UNDERLINE_LEFT_PADDING = 3.0
 EKADASHI_UNDERLINE_RATIO = TITHI_UNDERLINE_RATIO  # Backward-compatible alias.
 
 
-@dataclass(frozen=True)
-class Location:
-    name: str
-    latitude: float
-    longitude: float
-    timezone_name: str
+Location = namedtuple("Location", "name latitude longitude timezone_name")
 
 
 INK = HexColor("#172033")
