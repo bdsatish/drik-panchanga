@@ -32,6 +32,7 @@ from collections import namedtuple as struct
 from functools import lru_cache
 import os
 import sys
+from threading import RLock
 import swisseph as swe
 
 # ------- Global options ----------
@@ -39,6 +40,8 @@ import swisseph as swe
 coordinate_flag = swe.FLG_SIDEREAL
 nakshatra_system = 'equal'
 chosen_ayanamsa = 'citra'
+# High-level calculations must hold this lock while using these globals.
+coordinate_calculation_lock = RLock()
 # ---------
 
 def default_se_ephe_path():

@@ -101,6 +101,15 @@ def _karana_text(kar, names) -> str:
 
 def generate_ics(location, start_year, start_month, *, month_system="amanta",
                  coordinate_selection="citra"):
+    """Generate a feed while holding coordinate state for the full span."""
+    with panchanga.coordinate_calculation_lock:
+        return _generate_ics_unlocked(
+            location, start_year, start_month,
+            month_system=month_system, coordinate_selection=coordinate_selection)
+
+
+def _generate_ics_unlocked(location, start_year, start_month, *, month_system="amanta",
+                           coordinate_selection="citra"):
     amanta = parse_month_system(month_system)
     month_key = "amanta" if amanta else "purnimanta"
     dtstamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")

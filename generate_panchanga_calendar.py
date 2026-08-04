@@ -1010,6 +1010,17 @@ def draw_page_footer(pdf, festival_entries, eclipse_line="Eclipses: None"):
 
 def build_pdf(location, start_year, start_month, output_path, *, festivals_path=None, month_system="amanta",
               coordinate_selection="citra"):
+    """Build a calendar while holding coordinate state for the full document."""
+    with panchanga.coordinate_calculation_lock:
+        return _build_pdf_unlocked(
+            location, start_year, start_month, output_path,
+            festivals_path=festivals_path, month_system=month_system,
+            coordinate_selection=coordinate_selection)
+
+
+def _build_pdf_unlocked(
+        location, start_year, start_month, output_path, *, festivals_path=None,
+        month_system="amanta", coordinate_selection="citra"):
     ensure_pdf_fonts()
     amanta = parse_month_system(month_system)
     panchanga.set_coordinate_selection(coordinate_selection)

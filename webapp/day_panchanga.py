@@ -157,6 +157,13 @@ def drik_ayana_label(ritu_num: int) -> str:
 
 
 def compute_day_details(location, civil, *, amanta, coordinate_selection):
+    """Compute one day while holding the shared coordinate-state lock."""
+    with panchanga.coordinate_calculation_lock:
+        return _compute_day_details_unlocked(
+            location, civil, amanta=amanta, coordinate_selection=coordinate_selection)
+
+
+def _compute_day_details_unlocked(location, civil, *, amanta, coordinate_selection):
     """Compute all mode-sensitive panchanga fields for one civil day.
 
     Shared by the JSON day API and the ICS generator so both consume the
@@ -262,6 +269,16 @@ def compute_day_details(location, civil, *, amanta, coordinate_selection):
 
 def compute_day_panchanga(city: str, date_text: str, month_system: str | None = "amanta",
                           coordinate_selection: str = "citra") -> dict:
+    """Return one city's day panchanga while holding coordinate state stable."""
+    with panchanga.coordinate_calculation_lock:
+        return _compute_day_panchanga_unlocked(
+            city, date_text, month_system=month_system,
+            coordinate_selection=coordinate_selection)
+
+
+def _compute_day_panchanga_unlocked(
+        city: str, date_text: str, month_system: str | None = "amanta",
+        coordinate_selection: str = "citra") -> dict:
     """Return named panchanga fields for ``city`` on ``date_text`` (DD/MM/YYYY).
 
     ``month_system`` is ``amanta`` (default) or ``purnimanta``; it affects the

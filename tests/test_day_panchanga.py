@@ -1,6 +1,8 @@
 """Day WebUI panchanga API: māsa labels and convention-free ṛtus."""
 
 import unittest
+from threading import Event, Lock, Thread
+from unittest.mock import patch
 
 import panchanga
 from webapp.day_panchanga import compute_day_panchanga
@@ -40,6 +42,51 @@ class DayPanchangaMasaRituTests(unittest.TestCase):
             amanta=True, coordinate_selection="citra")
         self.assertEqual(len(details["rahu_kala"]), 2)
         self.assertEqual(len(details["durmuhurta"]), 2)
+
+    def test_coordinate_lock_covers_the_full_day_calculation(self):
+        first_selected = Event()
+        second_started = Event()
+        release_first = Event()
+        calls = []
+        calls_lock = Lock()
+        errors = []
+        original_set_selection = panchanga.set_coordinate_selection
+
+        def blocking_set_selection(selection):
+            with calls_lock:
+                calls.append(selection)
+                first_call = len(calls) == 1
+            if first_call:
+                first_selected.set()
+                if not release_first.wait(5):
+                    raise AssertionError("timed out waiting for first calculation")
+            return original_set_selection(selection)
+
+        def run(selection, started=None):
+            if started is not None:
+                started.set()
+            try:
+                compute_day_panchanga(
+                    "Bengaluru", "21/04/2023", coordinate_selection=selection)
+            except BaseException as error:  # pragma: no cover - assertion below reports it
+                errors.append(error)
+
+        with patch.object(
+                panchanga, "set_coordinate_selection", side_effect=blocking_set_selection):
+            first = Thread(target=run, args=("tropical",))
+            second = Thread(target=run, args=("citra", second_started))
+            first.start()
+            self.assertTrue(first_selected.wait(5))
+            second.start()
+            self.assertTrue(second_started.wait(5))
+            self.assertEqual(calls, ["tropical"])
+            release_first.set()
+            first.join(10)
+            second.join(10)
+
+        self.assertFalse(first.is_alive() or second.is_alive())
+        self.assertEqual(errors, [])
+        self.assertEqual(calls, ["tropical", "citra"])
 
     def test_purnimanta_renames_ordinary_krishna_masa(self):
         amanta = compute_day_panchanga(
