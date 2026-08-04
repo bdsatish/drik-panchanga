@@ -66,8 +66,16 @@ def format_festival_dates(dates):
     return "None"
 
   # Consecutive days in one month → "Mar 19-21"; otherwise list each date.
-  same_month = all(value.year == dates[0].year and value.month == dates[0].month for value in dates)
-  consecutive = all(dates[i] == dates[i - 1] + timedelta(days=1) for i in range(1, len(dates)))
+  same_month = True
+  for value in dates:
+    if value.year != dates[0].year or value.month != dates[0].month:
+      same_month = False
+      break
+  consecutive = True
+  for index in range(1, len(dates)):
+    if dates[index] != dates[index - 1] + timedelta(days=1):
+      consecutive = False
+      break
   if len(dates) > 1 and same_month and consecutive:
     month_name = calendar.month_abbr[dates[0].month]
     first_day = f"{dates[0].day:02d}"
@@ -235,7 +243,10 @@ def civil_day_has_eclipse(civil_date, geopos, timezone_name):
   day_end = day_start + timedelta(days=1)
   start_jd = julian_day_from_datetime(day_start)
   end_jd = julian_day_from_datetime(day_end)
-  return any(kind == "Lunar" for kind, _phase, _maximum_jd in find_local_eclipses(start_jd, end_jd, geopos))
+  for kind, _phase, _maximum_jd in find_local_eclipses(start_jd, end_jd, geopos):
+    if kind == "Lunar":
+      return True
+  return False
 
 
 def postpone_upakarma_if_eclipse(primary, fallback, geopos, timezone_name):
@@ -245,8 +256,12 @@ def postpone_upakarma_if_eclipse(primary, fallback, geopos, timezone_name):
   if geopos is not None and timezone_name is None:
     log.error("Upakarma eclipse check skipped: no timezone name")
     return list(primary)
-  if geopos is not None and any(civil_day_has_eclipse(civil_date, geopos, timezone_name) for civil_date in primary):
-    return list(fallback) if fallback else list(primary)
+  if geopos is not None:
+    for civil_date in primary:
+      if civil_day_has_eclipse(civil_date, geopos, timezone_name):
+        if fallback:
+          return list(fallback)
+        return list(primary)
   return list(primary)
 
 

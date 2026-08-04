@@ -425,13 +425,19 @@ def resolve_city_key(city, locations):
     raise ValueError("City is required.")
 
   folded = query.casefold()
-  exact = [name for name in locations if name.casefold() == folded]
+  exact = []
+  for name in locations:
+    if name.casefold() == folded:
+      exact.append(name)
   if len(exact) == 1:
     return exact[0]
   if len(exact) > 1:
     raise ValueError(f"City {city!r} matches multiple keys: {', '.join(sorted(exact))}")
 
-  bare = [name for name in locations if city_base_name(name).casefold() == folded]
+  bare = []
+  for name in locations:
+    if city_base_name(name).casefold() == folded:
+      bare.append(name)
   if len(bare) == 1:
     return bare[0]
   if len(bare) > 1:
@@ -443,7 +449,14 @@ def resolve_city_key(city, locations):
   suggestions = difflib.get_close_matches(query, list(locations), n=5, cutoff=0.6)
   if not suggestions:
     # Also suggest by bare-name similarity against unique bases.
-    bases = sorted({city_base_name(name) for name in locations}, key=str.casefold)
+    bases = []
+    seen = set()
+    for name in locations:
+      base = city_base_name(name)
+      if base not in seen:
+        seen.add(base)
+        bases.append(base)
+    bases.sort(key=str.casefold)
     near = difflib.get_close_matches(query, bases, n=5, cutoff=0.6)
     expanded = []
     for base in near:
@@ -948,7 +961,9 @@ def _build_pdf_unlocked(location, start_year, start_month, output_path, festival
     context_start = (start_year, start_month - 1)
   context_months = month_range(*context_start, count=MONTH_COUNT + 2)
   context_records = daily_records(context_months, location)
-  records_by_date = {record.civil_date: record for record in context_records}
+  records_by_date = {}
+  for record in context_records:
+    records_by_date[record.civil_date] = record
   range_start = CivilDate(start_year, start_month, 1)
   end_year, end_month = months[-1]
   range_end = CivilDate(end_year, end_month, calendar.monthrange(end_year, end_month)[1])
@@ -956,7 +971,9 @@ def _build_pdf_unlocked(location, start_year, start_month, output_path, festival
   for record in context_records:
     if range_start <= record.civil_date <= range_end:
       target_records.append(record)
-  target_dates = {record.civil_date for record in target_records}
+  target_dates = set()
+  for record in target_records:
+    target_dates.add(record.civil_date)
   festivals_path = Path(festivals_path) if festivals_path is not None else DEFAULT_FESTIVALS_PATH
   enabled_names = load_festival_selection(festivals_path)
   geopos = (location.longitude, location.latitude, 0.0)
@@ -966,7 +983,9 @@ def _build_pdf_unlocked(location, start_year, start_month, output_path, festival
   eclipse_start_jd, eclipse_end_jd = local_range_jds(start_year, start_month, end_year, end_month,
                                                      location.timezone_name)
   eclipses = find_local_eclipses(eclipse_start_jd, eclipse_end_jd, geopos)
-  sunrise_by_date = {record.civil_date: record.sunrise_jd for record in target_records}
+  sunrise_by_date = {}
+  for record in target_records:
+    sunrise_by_date[record.civil_date] = record.sunrise_jd
   eclipse_line = format_eclipse_line(eclipses, location.timezone_name, sunrise_by_date=sunrise_by_date)
   eclipse_dates = eclipse_civil_dates(eclipses, location.timezone_name)
   # Saṅkrānti markers use the same sunrise-in-new-rāśi rule as Mesha/Makara

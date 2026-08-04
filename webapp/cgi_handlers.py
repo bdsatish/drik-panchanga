@@ -46,7 +46,13 @@ def _parse_urlencoded_post():
     raise ValueError("Unsupported Content-Type for generate: "
                      f"{content_type!r} (expected application/x-www-form-urlencoded)")
   parsed = parse_qs(raw.decode("utf-8", errors="replace"), keep_blank_values=True)
-  return {key: (values[-1] if values else "") for key, values in parsed.items()}
+  fields = {}
+  for key, values in parsed.items():
+    if values:
+      fields[key] = values[-1]
+    else:
+      fields[key] = ""
+  return fields
 
 
 def write_headers(headers, status=None):
