@@ -149,7 +149,7 @@
       color: var(--accent);
     }
 
-    button[type="submit"] {
+    button[type="submit"], #ics-btn {
       width: 100%;
       margin-top: 0.35rem;
       padding: 0.85rem 1rem;
@@ -163,11 +163,11 @@
       transition: background 0.15s, transform 0.05s;
     }
 
-    button[type="submit"]:hover:not(:disabled) {
+    button[type="submit"]:hover:not(:disabled), #ics-btn:hover {
       background: #1c3260;
     }
 
-    button[type="submit"]:active:not(:disabled) {
+    button[type="submit"]:active:not(:disabled), #ics-btn:active {
       transform: translateY(1px);
     }
 
