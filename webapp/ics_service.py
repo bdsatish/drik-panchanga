@@ -1,27 +1,78 @@
 """ICS export: daily all-day events for a 14-month panchanga span."""
 
-from datetime import date, timedelta
+from calendar import monthrange
+from datetime import datetime, timezone
+import re
 
 from generate_panchanga_calendar import (
-    coordinate_selection_label, daily_records, month_range, month_system_label,
+    coordinate_selection_label,
+    month_range,
+    month_system_label,
     parse_month_system,
 )
 from webapp.day_panchanga import (
-    ayana_label, compute_day_details, drik_ayana_label, format_time,
-    sanskrit_names,
+    ayana_label,
+    compute_day_details,
+    drik_ayana_label,
+    format_time,
 )
 import panchanga
 
 
+def _utf8_cut(data: bytes, limit: int) -> int:
+    cut = min(limit, len(data))
+    while cut:
+        try:
+            data[:cut].decode("utf-8")
+            return cut
+        except UnicodeDecodeError:
+            cut -= 1
+    raise ValueError("Cannot fold invalid UTF-8 content")
+
+
 def _fold(line: str) -> str:
-    """RFC 5545 line fold at 75 octets without splitting a UTF-8 code unit."""
+    """Fold content lines to at most 75 octets, including continuation spaces."""
     data = line.encode("utf-8")
     if len(data) <= 75:
         return line
-    cut = 75
-    while cut > 1 and (data[cut] & 0xC0) == 0x80:
-        cut -= 1
-    return data[:cut].decode("utf-8") + "\r\n " + _fold(data[cut:].decode("utf-8"))
+    parts = []
+    cut = _utf8_cut(data, 75)
+    parts.append(data[:cut].decode("utf-8"))
+    data = data[cut:]
+    while data:
+        cut = _utf8_cut(data, 74)
+        parts.append(" " + data[:cut].decode("utf-8"))
+        data = data[cut:]
+    return "\r\n".join(parts)
+
+
+def _escape_text(text: str) -> str:
+    return (text.replace("\\", "\\\\").replace(";", "\\;")
+            .replace(",", "\\,").replace("\r\n", "\n")
+            .replace("\r", "\n").replace("\n", "\\n"))
+
+
+def _location_slug(name: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "-", name.casefold()).strip("-") or "location"
+
+
+def _ics_date(civil) -> str:
+    return f"{civil.year:04d}{civil.month:02d}{civil.day:02d}"
+
+
+def _next_civil_date(civil):
+    days = monthrange(civil.year, civil.month)[1]
+    if civil.day < days:
+        return panchanga.Date(civil.year, civil.month, civil.day + 1)
+    if civil.month < 12:
+        return panchanga.Date(civil.year, civil.month + 1, 1)
+    return panchanga.Date(civil.year + 1, 1, 1)
+
+
+def _civil_dates(months):
+    for year, month in months:
+        for day in range(1, monthrange(year, month)[1] + 1):
+            yield panchanga.Date(year, month, day)
 
 
 def _fmt_interval(start_hms, end_hms) -> str:
@@ -52,23 +103,23 @@ def generate_ics(location, start_year, start_month, *, month_system="amanta",
                  coordinate_selection="citra"):
     amanta = parse_month_system(month_system)
     month_key = "amanta" if amanta else "purnimanta"
-    names = sanskrit_names()
-    records = daily_records(list(month_range(start_year, start_month)), location)
+    dtstamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    location_slug = _location_slug(location.name)
     out = [
         "BEGIN:VCALENDAR",
         "VERSION:2.0",
         "PRODID:-//Drik Panchanga//EN",
         "CALSCALE:GREGORIAN",
-        f"X-WR-CALNAME:Panchanga · {location.name}",
-        f"X-WR-CALDESC:{coordinate_selection_label(coordinate_selection)} · "
-        f"{month_system_label(amanta)}",
+        "METHOD:PUBLISH",
+        f"X-WR-CALNAME:{_escape_text(f'Panchanga · {location.name}')}",
+        f"X-WR-CALDESC:{_escape_text(coordinate_selection_label(coordinate_selection) + ' · ' + month_system_label(amanta))}",
     ]
-    for rec in records:
-        civil = rec.civil_date
-        d = date(civil.year, civil.month, civil.day)
-        nxt = d + timedelta(days=1)
+    for civil in _civil_dates(list(month_range(start_year, start_month))):
+        d = _ics_date(civil)
+        nxt = _ics_date(_next_civil_date(civil))
         details = compute_day_details(
             location, civil, amanta=amanta, coordinate_selection=coordinate_selection)
+        names = details["names"]
         jd = details["jd"]
         place = details["place"]
         sunrise = details["sunrise"]
@@ -113,36 +164,36 @@ def generate_ics(location, start_year, start_month, *, month_system="amanta",
         if mr_status != "ok" or ms_status != "ok":
             moon_line += f" ({mr_status} / {ms_status})"
 
-        summary = f"{tithi_name} · {nak_name} · {masa_name}".replace(",", "\\,")
-        desc = (
-            f"Samvatsara: {names['samvats'][str(samvat_num)]} {saka_year}"
-            f", {names['samvats'][str(samvat_north_num)]} {vikrama_year}"
-            f", Kali (elapsed) {kali_year}\\n"
-            f"Ayana: {drik_ayana} (drik) · {ayana} (siddhantic)\\n"
-            f"Ṛtu: {drik_rtu_label} (drik) · {rtu_label} (siddhantic)\\n"
-            f"Māsa: {masa_label}\\n"
-            f"Tithi: {tithi_name} (ends {format_time(ti[1])})\\n"
-            f"Nakṣatra: {nak_name} (ends {format_time(nak[1])})\\n"
-            f"Vāra: {vara_name}\\n"
-            f"Yoga: {yoga_name} (ends {format_time(yog[1])})\\n"
-            f"Karaṇa: {_karana_text(kar, names)}\\n"
-            f"Sun*: {format_time(sunrise[1])} – {format_time(sunset[1])}\\n"
-            f"{moon_line}\\n"
-            f"Day duration: {format_time(day_dur[1])}\\n"
-            f"Rāhukāla: {_rahu_kala_text(jd, place)}\\n"
-            f"Durmuhūrta: {_durmuhurta_text(jd, place)}\\n"
-            f"Kali Day: {kali_day}\\n"
-            f"Julian day: {jd:.1f}\\n"
-            f"Sunrise JD (UT): {sunrise_jd_ut:.6f}"
-        ).replace(",", "\\,")
-        ymd, ymd_n = d.strftime("%Y%m%d"), nxt.strftime("%Y%m%d")
+        summary = _escape_text(f"{tithi_name} · {nak_name} · {masa_name}")
+        description = _escape_text("\n".join((
+            f"Samvatsara: {names['samvats'][str(samvat_num)]} {saka_year}, "
+            f"{names['samvats'][str(samvat_north_num)]} {vikrama_year}, "
+            f"Kali (elapsed) {kali_year}",
+            f"Ayana: {drik_ayana} (drik) · {ayana} (siddhantic)",
+            f"Ṛtu: {drik_rtu_label} (drik) · {rtu_label} (siddhantic)",
+            f"Māsa: {masa_label}",
+            f"Tithi: {tithi_name} (ends {format_time(ti[1])})",
+            f"Nakṣatra: {nak_name} (ends {format_time(nak[1])})",
+            f"Vāra: {vara_name}",
+            f"Yoga: {yoga_name} (ends {format_time(yog[1])})",
+            f"Karaṇa: {_karana_text(kar, names)}",
+            f"Sun*: {format_time(sunrise[1])} – {format_time(sunset[1])}",
+            moon_line,
+            f"Day duration: {format_time(day_dur[1])}",
+            f"Rāhukāla: {_rahu_kala_text(jd, place)}",
+            f"Durmuhūrta: {_durmuhurta_text(jd, place)}",
+            f"Kali Day: {kali_day}",
+            f"Julian day: {jd:.1f}",
+            f"Sunrise JD (UT): {sunrise_jd_ut:.6f}",
+        )))
         out += [
             "BEGIN:VEVENT",
-            f"DTSTART;VALUE=DATE:{ymd}",
-            f"DTEND;VALUE=DATE:{ymd_n}",
+            f"DTSTART;VALUE=DATE:{d}",
+            f"DTEND;VALUE=DATE:{nxt}",
+            f"DTSTAMP:{dtstamp}",
             f"SUMMARY:{summary}",
-            f"DESCRIPTION:{desc}",
-            f"UID:panchanga-{coordinate_selection}-{month_key}-{ymd}@{location.name}",
+            f"DESCRIPTION:{description}",
+            f"UID:panchanga-{coordinate_selection}-{month_key}-{d}@{location_slug}",
             "END:VEVENT",
         ]
     out.append("END:VCALENDAR")

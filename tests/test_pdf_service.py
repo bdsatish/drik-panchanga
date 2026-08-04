@@ -92,6 +92,7 @@ class IcsServiceTests(unittest.TestCase):
         self.assertTrue(ics.startswith("BEGIN:VCALENDAR\r\n"))
         self.assertIn("VERSION:2.0", ics)
         self.assertIn("CALSCALE:GREGORIAN", ics)
+        self.assertIn("METHOD:PUBLISH", ics)
         self.assertIn("PRODID:-//Drik Panchanga//EN", ics)
         self.assertIn("X-WR-CALNAME:Panchanga", ics)
         self.assertIn("BEGIN:VEVENT", ics)
@@ -100,7 +101,11 @@ class IcsServiceTests(unittest.TestCase):
         self.assertIn("SUMMARY:", ics)
         self.assertIn("DESCRIPTION:", ics)
         self.assertIn("UID:panchanga-", ics)
+        self.assertIn("DTSTAMP:", ics)
         self.assertTrue(ics.endswith("END:VCALENDAR\r\n"))
+
+        physical_lines = [line for line in ics.split("\r\n") if line]
+        self.assertTrue(all(len(line.encode("utf-8")) <= 75 for line in physical_lines))
 
     def test_ics_respects_tropical_mode(self):
         loc = load_location("Tirupati")
@@ -108,6 +113,22 @@ class IcsServiceTests(unittest.TestCase):
         trop = generate_ics(loc, 2026, 1, coordinate_selection="tropical")
         self.assertEqual(sid.count("BEGIN:VEVENT"), trop.count("BEGIN:VEVENT"))
         self.assertEqual(sid.count("BEGIN:VEVENT"), 424)
+
+        def first_description(text):
+            lines = text.split("\r\n")
+            chunks = []
+            in_description = False
+            for line in lines:
+                if line.startswith("DESCRIPTION:"):
+                    in_description = True
+                    chunks.append(line[len("DESCRIPTION:"):])
+                elif in_description and line.startswith(" "):
+                    chunks.append(line[1:])
+                elif in_description:
+                    break
+            return "".join(chunks)
+
+        self.assertNotEqual(first_description(sid), first_description(trop))
 
     def test_ics_event_count_matches_month_span(self):
         ics = generate_ics(load_location("Tirupati"), 2026, 6)

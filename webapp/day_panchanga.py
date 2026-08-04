@@ -215,11 +215,14 @@ def compute_day_details(location, civil, *, amanta, coordinate_selection):
     kali_year, saka_year, vikrama_year = panchanga.elapsed_year(jd, masa_num)
     kali_day = int(panchanga.ahargana(jd))
     sunrise_jd_ut = sunrise[0] - place.timezone / 24.0
-    panchanga.set_ayanamsa_mode()
-    try:
-        ayanamsa_degrees = float(panchanga.swe.get_ayanamsa_ut(sunrise_jd_ut))
-    finally:
-        panchanga.reset_ayanamsa_mode()
+    if coordinate_selection == "tropical":
+        ayanamsa_degrees = None
+    else:
+        panchanga.set_ayanamsa_mode()
+        try:
+            ayanamsa_degrees = float(panchanga.swe.get_ayanamsa_ut(sunrise_jd_ut))
+        finally:
+            panchanga.reset_ayanamsa_mode()
     sun_raasi = int(panchanga.raasi(sunrise_jd_ut))
     moonrise, moonrise_status = probe_moon_event(jd, place, civil, rise=True)
     moonset, moonset_status = probe_moon_event(jd, place, civil, rise=False)
@@ -260,7 +263,7 @@ def compute_day_details(location, civil, *, amanta, coordinate_selection):
 
 
 def compute_day_panchanga(city: str, date_text: str, month_system: str | None = "amanta",
-                          coordinate_selection: str | None = "citra") -> dict:
+                          coordinate_selection: str = "citra") -> dict:
     """Return named panchanga fields for ``city`` on ``date_text`` (DD/MM/YYYY).
 
     ``month_system`` is ``amanta`` (default) or ``purnimanta``; it affects the
