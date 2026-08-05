@@ -80,6 +80,15 @@ def search_cities(query, limit=20):
   return (starts + contains)[:limit]
 
 
+def city_search_limit(raw_limit):
+  """Parse a city-search limit, defaulting invalid input to 20 and capping at 50."""
+  try:
+    limit = int(raw_limit)
+  except (TypeError, ValueError):
+    limit = 20
+  return min(max(limit, 1), 50)
+
+
 def suggest_city_for_ip(ip):
   """Public IP → ip-api.com city → cities.json key, or None."""
   try:
@@ -104,10 +113,7 @@ def index():
 @app.get("/api/cities")
 def api_cities():
   query = request.args.get("q", "")
-  try:
-    limit = min(max(int(request.args.get("limit", 20)), 1), 50)
-  except ValueError:
-    limit = 20
+  limit = city_search_limit(request.args.get("limit", 20))
   return jsonify({"cities": search_cities(query, limit=limit)})
 
 

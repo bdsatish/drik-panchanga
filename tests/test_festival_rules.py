@@ -24,6 +24,7 @@ from festival_rules import (
   select_mesha_sankranti_dates,
   select_onam_dates,
   select_plain_tithi_dates,
+  postpone_upakarma_if_eclipse,
   select_dakshinayana_dates,
   select_rig_upakarma_dates,
   select_sama_upakarma_dates,
@@ -633,6 +634,36 @@ class VaramahalakshmiTests(unittest.TestCase):
       festival_record(date(2030, 8, 11), "K1", masa="A5", is_adhika=True, nakshatra=1, sunrise_jd=0.0),
     ]
     self.assertEqual(select_varamahalakshmi_dates(records), [])
+
+
+class UpakarmaEclipseFallbackTests(unittest.TestCase):
+
+  def setUp(self):
+    self.primary = [date(2030, 8, 10)]
+    self.fallback = [date(2030, 9, 8)]
+    self.geopos = (79.42, 13.65, 0.0)
+
+  def test_keeps_primary_without_an_eclipse(self):
+    with mock.patch("festival_rules.civil_day_has_eclipse", return_value=False) as eclipse:
+      selected = postpone_upakarma_if_eclipse(self.primary, self.fallback, self.geopos, "Asia/Kolkata")
+    self.assertEqual(selected, self.primary)
+    eclipse.assert_called_once_with(self.primary[0], self.geopos, "Asia/Kolkata")
+
+  def test_uses_fallback_for_an_eclipse(self):
+    with mock.patch("festival_rules.civil_day_has_eclipse", return_value=True):
+      selected = postpone_upakarma_if_eclipse(self.primary, self.fallback, self.geopos, "Asia/Kolkata")
+    self.assertEqual(selected, self.fallback)
+
+  def test_keeps_primary_when_an_eclipse_has_no_fallback(self):
+    with mock.patch("festival_rules.civil_day_has_eclipse", return_value=True):
+      selected = postpone_upakarma_if_eclipse(self.primary, [], self.geopos, "Asia/Kolkata")
+    self.assertEqual(selected, self.primary)
+
+  def test_keeps_primary_without_timezone(self):
+    with mock.patch("festival_rules.civil_day_has_eclipse") as eclipse:
+      selected = postpone_upakarma_if_eclipse(self.primary, self.fallback, self.geopos, None)
+    self.assertEqual(selected, self.primary)
+    eclipse.assert_not_called()
 
 
 class RigUpakarmaTests(unittest.TestCase):

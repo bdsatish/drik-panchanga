@@ -852,13 +852,20 @@ def day_duration(jd, place):
   return [diff, to_dms(diff)]
 
 
+def solar_times_utc(jd, place):
+  """Today's sunrise/sunset and tomorrow's sunrise as UTC Julian days."""
+  timezone = place.timezone / 24
+  today_sunrise = sunrise(jd, place)[0] - timezone
+  today_sunset = sunset(jd, place)[0] - timezone
+  tomorrow_sunrise = sunrise(jd + 1, place)[0] - timezone
+  return today_sunrise, today_sunset, tomorrow_sunrise
+
+
 # The day duration is divided into 8 parts
 # Similarly night duration
 def gauri_chogadiya(jd, place):
-  lat, lon, tz = place
   tz = place.timezone
-  srise = swe.rise_trans(jd - tz / 24, swe.SUN, geopos=(lon, lat, 0), rsmi=_rise_flags + swe.CALC_RISE)[1][0]
-  sset = swe.rise_trans(jd - tz / 24, swe.SUN, geopos=(lon, lat, 0), rsmi=_rise_flags + swe.CALC_SET)[1][0]
+  srise, sset, tomorrow_srise = solar_times_utc(jd, place)
   day_dur = (sset - srise)
 
   end_times = []
@@ -866,8 +873,7 @@ def gauri_chogadiya(jd, place):
     end_times.append(to_dms((srise + (i * day_dur) / 8 - jd) * 24 + tz))
 
   # Night duration = time from today's sunset to tomorrow's sunrise
-  srise = swe.rise_trans((jd + 1) - tz / 24, swe.SUN, geopos=(lon, lat, 0), rsmi=_rise_flags + swe.CALC_RISE)[1][0]
-  night_dur = (srise - sset)
+  night_dur = (tomorrow_srise - sset)
   for i in range(1, 9):
     end_times.append(to_dms((sset + (i * night_dur) / 8 - jd) * 24 + tz))
 
@@ -875,10 +881,8 @@ def gauri_chogadiya(jd, place):
 
 
 def trikalam(jd, place, option='rahu'):
-  lat, lon, tz = place
   tz = place.timezone
-  srise = swe.rise_trans(jd - tz / 24, swe.SUN, geopos=(lon, lat, 0), rsmi=_rise_flags + swe.CALC_RISE)[1][0]
-  sset = swe.rise_trans(jd - tz / 24, swe.SUN, geopos=(lon, lat, 0), rsmi=_rise_flags + swe.CALC_SET)[1][0]
+  srise, sset, _tomorrow_srise = solar_times_utc(jd, place)
   day_dur = (sset - srise)
   weekday = vaara(jd)
 
@@ -904,16 +908,13 @@ gulika_kalam = lambda jd, place: trikalam(jd, place, 'gulika')
 
 
 def durmuhurtam(jd, place):
-  lat, lon, tz = place
   tz = place.timezone
 
   # Night = today's sunset to tomorrow's sunrise
-  sset = swe.rise_trans(jd - tz / 24, swe.SUN, geopos=(lon, lat, 0), rsmi=_rise_flags + swe.CALC_SET)[1][0]
-  srise = swe.rise_trans((jd + 1) - tz / 24, swe.SUN, geopos=(lon, lat, 0), rsmi=_rise_flags + swe.CALC_RISE)[1][0]
-  night_dur = (srise - sset)
+  srise, sset, tomorrow_srise = solar_times_utc(jd, place)
+  night_dur = (tomorrow_srise - sset)
 
   # Day = today's sunrise to today's sunset
-  srise = swe.rise_trans(jd - tz / 24, swe.SUN, geopos=(lon, lat, 0), rsmi=_rise_flags + swe.CALC_RISE)[1][0]
   day_dur = (sset - srise)
 
   weekday = vaara(jd)
@@ -955,10 +956,8 @@ def durmuhurtam(jd, place):
 def abhijit_muhurta(jd, place):
   """Abhijit muhurta is the 8th muhurta (middle one) of the 15 muhurtas
   during the day_duration (~12 hours)"""
-  lat, lon, tz = place
   tz = place.timezone
-  srise = swe.rise_trans(jd - tz / 24, swe.SUN, geopos=(lon, lat, 0), rsmi=_rise_flags + swe.CALC_RISE)[1][0]
-  sset = swe.rise_trans(jd - tz / 24, swe.SUN, geopos=(lon, lat, 0), rsmi=_rise_flags + swe.CALC_SET)[1][0]
+  srise, sset, _tomorrow_srise = solar_times_utc(jd, place)
   day_dur = (sset - srise)
 
   start_time = srise + 7 / 15 * day_dur

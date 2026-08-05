@@ -11,14 +11,15 @@ import swisseph as swe
 
 import panchanga
 from panchanga import (
-  Date, Place, gregorian_to_jd, from_dms, sunrise, sunset, moonrise, moonrise_jd, moonset, tithi, nakshatra,
-  nakshatra_pada, nakshatra_end_point, yoga, karana, vaara, masa, varjyam, ascendant, navamsa, navamsa_from_long,
-  planetary_positions, day_duration, gauri_chogadiya, trikalam, rahu_kalam, yamaganda_kalam, gulika_kalam, durmuhurtam,
-  abhijit_muhurta, elapsed_year, samvatsara, samvatsara_north, samvatsara_north_modern, ritu, drik_ritu, drik_ritu_at,
-  lunar_masa, raasi, lunar_phase, new_moon, full_moon, local_time_to_jdut1, sweph_version, default_se_ephe_path,
-  get_planet_name, to_dms, to_dms_prec, unwrap_angles, lon_relative_to_base, inverse_lagrange, bisection_search,
-  sidereal_saptarshi_nakshatra, saptarshi_nakshatra_traditional, set_nakshatra_system, set_chosen_ayanamsa,
-  set_ayanamsa_mode, set_coordinate_mode, set_coordinate_selection, reset_ayanamsa_mode, solar_longitude)
+  Date, Place, gregorian_to_jd, from_dms, sunrise, sunset, solar_times_utc, moonrise, moonrise_jd, moonset, tithi,
+  nakshatra, nakshatra_pada, nakshatra_end_point, yoga, karana, vaara, masa, varjyam, ascendant, navamsa,
+  navamsa_from_long, planetary_positions, day_duration, gauri_chogadiya, trikalam, rahu_kalam, yamaganda_kalam,
+  gulika_kalam, durmuhurtam, abhijit_muhurta, elapsed_year, samvatsara, samvatsara_north, samvatsara_north_modern, ritu,
+  drik_ritu, drik_ritu_at, lunar_masa, raasi, lunar_phase, new_moon, full_moon, local_time_to_jdut1, sweph_version,
+  default_se_ephe_path, get_planet_name, to_dms, to_dms_prec, unwrap_angles, lon_relative_to_base, inverse_lagrange,
+  bisection_search, sidereal_saptarshi_nakshatra, saptarshi_nakshatra_traditional, set_nakshatra_system,
+  set_chosen_ayanamsa, set_ayanamsa_mode, set_coordinate_mode, set_coordinate_selection, reset_ayanamsa_mode,
+  solar_longitude)
 
 bangalore = Place(12.972, 77.594, +5.5)
 shillong = Place(25.569, 91.883, +5.5)
@@ -664,6 +665,15 @@ class EphemerisCacheTests(PanchangaTestCase):
     self.assertEqual(sunset(date2, bangalore), first_set)
     self.assertEqual(sunrise.cache_info().hits, rise_hits + 1)
     self.assertEqual(sunset.cache_info().hits, set_hits + 1)
+
+  def test_solar_times_utc_matches_cached_local_rise_and_set(self):
+    timezone = bangalore.timezone / 24
+    expected = (
+      sunrise(date2, bangalore)[0] - timezone,
+      sunset(date2, bangalore)[0] - timezone,
+      sunrise(date2 + 1, bangalore)[0] - timezone,
+    )
+    self.assertEqual(solar_times_utc(date2, bangalore), expected)
 
   def test_moonrise_jd_cache_hit_on_repeat(self):
     first = moonrise_jd(date2, bangalore)

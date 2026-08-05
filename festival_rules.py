@@ -270,13 +270,14 @@ def postpone_upakarma_if_eclipse(primary, fallback, geopos, timezone_name):
   if geopos is not None and timezone_name is None:
     log.error("Upakarma eclipse check skipped: no timezone name")
     return list(primary)
+  eclipse_on_primary = False
   if geopos is not None:
     for civil_date in primary:
       if civil_day_has_eclipse(civil_date, geopos, timezone_name):
-        if fallback:
-          return list(fallback)
-        return list(primary)
-  return list(primary)
+        eclipse_on_primary = True
+        break
+  selected = fallback if eclipse_on_primary and fallback else primary
+  return list(selected)
 
 
 def select_yajur_upakarma_dates(records, geopos=None, timezone_name=None):

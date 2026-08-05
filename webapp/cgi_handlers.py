@@ -15,6 +15,7 @@ if str(_REPO_ROOT) not in sys.path:
   sys.path.insert(0, str(_REPO_ROOT))
 
 from webapp.app import (
+  city_search_limit,
   city_names,
   client_ip,
   search_cities,
@@ -101,11 +102,7 @@ def handle_cities():
   try:
     params = _query_params()
     query = (params.get("q") or [""])[0]
-    try:
-      limit = int((params.get("limit") or ["20"])[0])
-    except ValueError:
-      limit = 20
-    limit = min(max(limit, 1), 50)
+    limit = city_search_limit((params.get("limit") or ["20"])[0])
     write_json({"cities": search_cities(query, limit=limit)})
   except Exception as error:  # catch-all so CGI still returns a response
     log.error("CGI cities failed: %s", error)
