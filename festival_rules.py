@@ -168,12 +168,7 @@ def select_tithi_dates(records, tithi, masa=None, allow_adhika=False):
       continue
     sunrise_dates.append(record.civil_date)
   sunrise_matches = resolve_vriddhi_dates(sunrise_dates)
-  sunrise_set = set(sunrise_matches)
-
-  kshaya_matches = []
-  for civil_date in select_kshaya_dates(records, tithi, masa=masa, allow_adhika=allow_adhika):
-    if civil_date not in sunrise_set:
-      kshaya_matches.append(civil_date)
+  kshaya_matches = select_kshaya_dates(records, tithi, masa=masa, allow_adhika=allow_adhika)
   return sorted(set(sunrise_matches) | set(kshaya_matches))
 
 

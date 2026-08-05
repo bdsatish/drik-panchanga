@@ -230,17 +230,22 @@ def embed_pdf_metadata(pdf, title, subject, ruleset_version, coordinate_selectio
   info.format = format_info
 
 
-def month_range(start_year, start_month):
-  """Fourteen consecutive Gregorian months starting at ``start_year``/``start_month``."""
+def _month_sequence(start_year, start_month, count):
+  """Consecutive Gregorian ``(year, month)`` pairs."""
   months = []
   year, month = start_year, start_month
-  for _ in range(MONTH_COUNT):
+  for _ in range(count):
     months.append((year, month))
     if month == 12:
       year, month = year + 1, 1
     else:
       month += 1
   return months
+
+
+def month_range(start_year, start_month):
+  """Fourteen consecutive Gregorian months starting at ``start_year``/``start_month``."""
+  return _month_sequence(start_year, start_month, MONTH_COUNT)
 
 
 def context_month_range(start_year, start_month):
@@ -249,14 +254,7 @@ def context_month_range(start_year, start_month):
     year, month = start_year - 1, 12
   else:
     year, month = start_year, start_month - 1
-  months = []
-  for _ in range(MONTH_COUNT + 2):
-    months.append((year, month))
-    if month == 12:
-      year, month = year + 1, 1
-    else:
-      month += 1
-  return months
+  return _month_sequence(year, month, MONTH_COUNT + 2)
 
 
 def month_system_label(amanta):

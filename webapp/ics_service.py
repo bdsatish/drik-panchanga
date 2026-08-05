@@ -16,6 +16,7 @@ from generate_panchanga_calendar import (
 )
 from webapp.day_panchanga import (
   _compute_day_details_unlocked,
+  _valid_durmuhurta_intervals,
   ayana_label,
   drik_ayana_label,
   format_masa_label,
@@ -92,11 +93,8 @@ def _fmt_interval(start_hms, end_hms):
 
 
 def _durmuhurta_text(values):
-  starts, ends = values
   parts = []
-  for s, e in zip(starts, ends):
-    if s == 0 and e == 0:
-      continue
+  for s, e in _valid_durmuhurta_intervals(values):
     parts.append(_fmt_interval(panchanga.to_dms(s), panchanga.to_dms(e)))
   return ", ".join(parts) if parts else "—"
 

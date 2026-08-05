@@ -28,6 +28,7 @@ from generate_panchanga_calendar import (
   argument_parser,
   build_pdf,
   calendar_year_label,
+  context_month_range,
   daily_records,
   default_output_path,
   display_masa,
@@ -51,6 +52,24 @@ from generate_panchanga_calendar import (
 
 
 class PdfLayoutTests(unittest.TestCase):
+
+  def test_month_ranges_cross_january_and_december(self):
+    cases = {
+      (2026, 1): ((2027, 2), (2025, 12), (2027, 3)),
+      (2026, 12): ((2028, 1), (2026, 11), (2028, 2)),
+    }
+    for start, expected in cases.items():
+      with self.subTest(start=start):
+        months = month_range(*start)
+        context = context_month_range(*start)
+        last_month, first_context, last_context = expected
+        self.assertEqual(len(months), 14)
+        self.assertEqual(months[0], start)
+        self.assertEqual(months[-1], last_month)
+        self.assertEqual(len(context), 16)
+        self.assertEqual(context[0], first_context)
+        self.assertEqual(context[1:-1], months)
+        self.assertEqual(context[-1], last_context)
 
   def test_generated_calendar_has_exactly_one_page(self):
     import generate_panchanga_calendar as calendar_module

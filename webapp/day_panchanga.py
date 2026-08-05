@@ -109,13 +109,19 @@ def _interval_from_hms(start_hms, end_hms):
   return {"start": format_time(start_hms), "end": format_time(end_hms)}
 
 
-def _durmuhurta_intervals_from_values(values):
+def _valid_durmuhurta_intervals(values):
+  """Return Durmuhūrta interval values without unused ``(0, 0)`` slots."""
   starts, ends = values
   intervals = []
   for start, end in zip(starts, ends):
-    # Unused slots stay at the 0 sentinel from panchanga.durmuhurtam.
-    if start == 0 and end == 0:
-      continue
+    if start != 0 or end != 0:
+      intervals.append((start, end))
+  return intervals
+
+
+def _durmuhurta_intervals_from_values(values):
+  intervals = []
+  for start, end in _valid_durmuhurta_intervals(values):
     intervals.append(_interval_from_hms(panchanga.to_dms(start), panchanga.to_dms(end)))
   return intervals
 

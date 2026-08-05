@@ -28,6 +28,7 @@ from festival_rules import (
   select_dakshinayana_dates,
   select_rig_upakarma_dates,
   select_sama_upakarma_dates,
+  select_tithi_dates,
   select_uttarayana_dates,
   select_vaikuntha_ekadashi_dates,
   select_varamahalakshmi_dates,
@@ -352,6 +353,15 @@ class SelectPlainTithiTests(unittest.TestCase):
       festival_record(date(2030, 5, 5), "S4", masa="2", is_adhika=False, nakshatra=1, sunrise_jd=0.0),
     ]
     self.assertEqual(select_plain_tithi_dates(records, 2, "S3"), [date(2030, 5, 5)])
+
+  def test_kshaya_overlap_is_returned_once(self):
+    civil_date = date(2030, 5, 5)
+    records = [
+      festival_record(civil_date, "S3", masa="2", is_adhika=False, nakshatra=1, sunrise_jd=0.0),
+    ]
+    with mock.patch("festival_rules.select_kshaya_dates", return_value=[civil_date]):
+      selected = select_tithi_dates(records, "S3", masa=2)
+    self.assertEqual(selected, [civil_date])
 
   def test_kshaya_ugadi_across_masa_boundary(self):
     records = [
