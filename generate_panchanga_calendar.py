@@ -453,8 +453,7 @@ def normalize_city_query(city):
     """
   query = " ".join((city or "").split())
   match = re.fullmatch(r"([^,]+),\s*([A-Za-z]{2})", query)
-  if match:
-    return f"{match.group(1).rstrip()}, {match.group(2).upper()}"
+  query = f"{match.group(1).rstrip()}, {match.group(2).upper()}" if match else query
   return query
 
 
@@ -538,21 +537,23 @@ def format_eclipse_line(eclipses, timezone_name, sunrise_by_date=None):
 
     Optional ``sunrise_by_date`` adds that date's local sunrise to each entry.
     """
-  if not eclipses:
-    return "Eclipses: None"
-  sunrise_by_date = sunrise_by_date or {}
-  parts = []
-  for kind, phase, maximum_jd in eclipses:
-    civil = jd_to_local_civil_date(maximum_jd, timezone_name)
-    month_name = calendar.month_abbr[civil.month]
-    day = f"{civil.day:02d}"
-    maximum_hm = format_local_hm(maximum_jd, timezone_name)
-    part = kind + " " + month_name + " " + day + " (" + phase + ") maximum phase at " + maximum_hm
-    sunrise_jd = sunrise_by_date.get(civil)
-    if sunrise_jd is not None:
-      part = part + ", sunrise " + format_local_hm(sunrise_jd, timezone_name)
-    parts.append(part)
-  return "Eclipses: " + "; ".join(parts) + ". Eclipses have a brown wavy underline below Tithi."
+  if eclipses:
+    sunrise_by_date = sunrise_by_date or {}
+    parts = []
+    for kind, phase, maximum_jd in eclipses:
+      civil = jd_to_local_civil_date(maximum_jd, timezone_name)
+      month_name = calendar.month_abbr[civil.month]
+      day = f"{civil.day:02d}"
+      maximum_hm = format_local_hm(maximum_jd, timezone_name)
+      part = kind + " " + month_name + " " + day + " (" + phase + ") maximum phase at " + maximum_hm
+      sunrise_jd = sunrise_by_date.get(civil)
+      if sunrise_jd is not None:
+        part = part + ", sunrise " + format_local_hm(sunrise_jd, timezone_name)
+      parts.append(part)
+    line = "Eclipses: " + "; ".join(parts) + ". Eclipses have a brown wavy underline below Tithi."
+  else:
+    line = "Eclipses: None"
+  return line
 
 
 def eclipse_civil_dates(eclipses, timezone_name):

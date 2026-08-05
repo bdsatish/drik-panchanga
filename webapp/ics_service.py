@@ -40,16 +40,18 @@ def _fold(line):
   """Fold content lines to at most 75 octets, including continuation spaces."""
   data = line.encode("utf-8")
   if len(data) <= 75:
-    return line
-  parts = []
-  cut = _utf8_cut(data, 75)
-  parts.append(data[:cut].decode("utf-8"))
-  data = data[cut:]
-  while data:
-    cut = _utf8_cut(data, 74)
-    parts.append(" " + data[:cut].decode("utf-8"))
+    folded = line
+  else:
+    parts = []
+    cut = _utf8_cut(data, 75)
+    parts.append(data[:cut].decode("utf-8"))
     data = data[cut:]
-  return "\r\n".join(parts)
+    while data:
+      cut = _utf8_cut(data, 74)
+      parts.append(" " + data[:cut].decode("utf-8"))
+      data = data[cut:]
+    folded = "\r\n".join(parts)
+  return folded
 
 
 def _escape_text(text):
@@ -69,10 +71,12 @@ def _ics_date(civil):
 def _next_civil_date(civil):
   days = monthrange(civil.year, civil.month)[1]
   if civil.day < days:
-    return panchanga.Date(civil.year, civil.month, civil.day + 1)
-  if civil.month < 12:
-    return panchanga.Date(civil.year, civil.month + 1, 1)
-  return panchanga.Date(civil.year + 1, 1, 1)
+    nxt = panchanga.Date(civil.year, civil.month, civil.day + 1)
+  elif civil.month < 12:
+    nxt = panchanga.Date(civil.year, civil.month + 1, 1)
+  else:
+    nxt = panchanga.Date(civil.year + 1, 1, 1)
+  return nxt
 
 
 def _civil_dates(months):

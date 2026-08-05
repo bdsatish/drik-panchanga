@@ -62,31 +62,33 @@ def load_festival_selection(path):
 
 def format_festival_dates(dates):
   dates = sorted(dates)
-  if not dates:
-    return "None"
-
-  # Consecutive days in one month → "Mar 19-21"; otherwise list each date.
-  same_month = True
-  for value in dates:
-    if value.year != dates[0].year or value.month != dates[0].month:
-      same_month = False
-      break
-  consecutive = True
-  for index in range(1, len(dates)):
-    if dates[index] != dates[index - 1] + timedelta(days=1):
-      consecutive = False
-      break
-  if len(dates) > 1 and same_month and consecutive:
-    month_name = calendar.month_abbr[dates[0].month]
-    first_day = f"{dates[0].day:02d}"
-    last_day = f"{dates[-1].day:02d}"
-    return month_name + " " + first_day + "-" + last_day
-  parts = []
-  for value in dates:
-    month_name = calendar.month_abbr[value.month]
-    day = f"{value.day:02d}"
-    parts.append(month_name + " " + day)
-  return ",".join(parts)
+  if dates:
+    # Consecutive days in one month → "Mar 19-21"; otherwise list each date.
+    same_month = True
+    for value in dates:
+      if value.year != dates[0].year or value.month != dates[0].month:
+        same_month = False
+        break
+    consecutive = True
+    for index in range(1, len(dates)):
+      if dates[index] != dates[index - 1] + timedelta(days=1):
+        consecutive = False
+        break
+    if len(dates) == 1 or not same_month or not consecutive:
+      parts = []
+      for value in dates:
+        month_name = calendar.month_abbr[value.month]
+        day = f"{value.day:02d}"
+        parts.append(month_name + " " + day)
+      text = ",".join(parts)
+    else:
+      month_name = calendar.month_abbr[dates[0].month]
+      first_day = f"{dates[0].day:02d}"
+      last_day = f"{dates[-1].day:02d}"
+      text = month_name + " " + first_day + "-" + last_day
+  else:
+    text = "None"
+  return text
 
 
 def plain_tithi_number(tithi):
@@ -98,12 +100,12 @@ def plain_tithi_number(tithi):
 
 def masa_codes_for(masa, allow_adhika=False):
   """Accepted masa codes for a rule, or ``None`` to accept any masa."""
-  if masa is None:
-    codes = None
-  elif allow_adhika:
-    codes = {str(masa), "A" + str(masa)}
-  else:
+  if masa is not None:
     codes = {str(masa)}
+    if allow_adhika:
+      codes.add("A" + str(masa))
+  else:
+    codes = None
   return codes
 
 
@@ -180,18 +182,18 @@ def select_plain_tithi_dates(records, masa, tithi, allow_adhika=False):
   """Civil days for a plain masa+tithi festival (adhika-preferring when allowed)."""
   matches = select_tithi_dates(records, tithi, masa=masa, allow_adhika=allow_adhika)
   if not allow_adhika or not matches:
-    return matches
-  records_by_date = {}
-  for record in records:
-    records_by_date[record.civil_date] = record
-  adhika_matches = []
-  for civil_date in matches:
-    record = records_by_date[civil_date]
-    if record.is_adhika or record.masa.startswith("A"):
-      adhika_matches.append(civil_date)
-  if adhika_matches:
-    return adhika_matches
-  return matches
+    selected = matches
+  else:
+    records_by_date = {}
+    for record in records:
+      records_by_date[record.civil_date] = record
+    adhika_matches = []
+    for civil_date in matches:
+      record = records_by_date[civil_date]
+      if record.is_adhika or record.masa.startswith("A"):
+        adhika_matches.append(civil_date)
+    selected = adhika_matches if adhika_matches else matches
+  return selected
 
 
 def select_varamahalakshmi_dates(records):
@@ -342,9 +344,8 @@ def select_onam_dates(records):
   KANYA_RAASI = 6
 
   primary = _sravana_nakshatra_in_raasi_dates(records, SIMHA_RAASI)
-  if primary:
-    return primary
-  return _sravana_nakshatra_in_raasi_dates(records, KANYA_RAASI)
+  selected = primary if primary else _sravana_nakshatra_in_raasi_dates(records, KANYA_RAASI)
+  return selected
 
 
 def select_vaikuntha_ekadashi_dates(records):
@@ -508,10 +509,12 @@ FESTIVAL_RULES = [
 def select_dates_for_rule(rule, records, geopos=None, timezone_name=None):
   """Run a custom selector or the standard māsa+tithi selector."""
   if not rule.selector:
-    return select_plain_tithi_dates(records, rule.masa, rule.tithi, allow_adhika=rule.allow_adhika)
-  if rule.location_aware:
-    return rule.selector(records, geopos=geopos, timezone_name=timezone_name)
-  return rule.selector(records)
+    dates = select_plain_tithi_dates(records, rule.masa, rule.tithi, allow_adhika=rule.allow_adhika)
+  elif rule.location_aware:
+    dates = rule.selector(records, geopos=geopos, timezone_name=timezone_name)
+  else:
+    dates = rule.selector(records)
+  return dates
 
 
 def resolve_festivals(records, target_dates, geopos=None, timezone_name=None, enabled_names=None):
