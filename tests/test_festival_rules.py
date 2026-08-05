@@ -35,7 +35,7 @@ from festival_rules import (
 )
 from generate_panchanga_calendar import (
   DEFAULT_FESTIVALS_PATH,
-  MONTH_COUNT,
+  context_month_range,
   daily_records,
   load_location,
   month_range,
@@ -232,7 +232,6 @@ class FestivalCatalogTests(unittest.TestCase):
                         "Dakshinayana",
                       })
     self.assertEqual({rule.name for rule in FESTIVAL_RULES if rule.allow_adhika}, {"Ugadi"})
-    self.assertTrue(by_name["Vaikuntha Ekadashi"].allow_empty)
 
   def test_ugadi_catalog_metadata_allows_adhika_chaitra(self):
     rule = next(rule for rule in FESTIVAL_RULES if rule.name == "Ugadi")
@@ -787,7 +786,7 @@ class YajurUpakarmaTests(unittest.TestCase):
   def test_helsinki_pre_sunrise_eclipse_postpones_to_bhadrapada(self):
     location = load_location("Helsinki")
     panchanga.set_chosen_ayanamsa("citra")
-    months = list(month_range(2026, 5, count=6))
+    months = list(month_range(2026, 5))
     records = daily_records(months, location)
     geopos = (location.longitude, location.latitude, 0.0)
 
@@ -835,7 +834,7 @@ class VaikunthaEkadashiTests(unittest.TestCase):
     location = load_location("Tirupati")
     panchanga.set_chosen_ayanamsa("citra")
     months = list(month_range(2086, 3))
-    context_months = list(month_range(2086, 2, count=MONTH_COUNT + 2))
+    context_months = list(context_month_range(2086, 3))
     records = daily_records(context_months, location)
     target_month_set = set(months)
     target_dates = {

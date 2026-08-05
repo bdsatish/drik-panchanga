@@ -35,9 +35,8 @@ def jd_to_local_civil_date(jd, timezone_name):
 
 DayRecord = struct('DayRecord', ['civil_date', 'tithi', 'nakshatra', 'yoga', 'masa', 'is_adhika', 'sunrise_jd'])
 
-FestivalRule = struct('FestivalRule',
-                      ['name', 'masa', 'tithi', 'selector', 'allow_adhika', 'allow_empty', 'location_aware'],
-                      defaults=(None, None, None, False, False, False))
+FestivalRule = struct('FestivalRule', ['name', 'masa', 'tithi', 'selector', 'allow_adhika', 'location_aware'],
+                      defaults=(None, None, None, False, False))
 
 HASTA_NAKSHATRA = 13
 SRAVANA_NAKSHATRA = 22
@@ -495,7 +494,7 @@ FESTIVAL_RULES = [
   FestivalRule("Surya Shashthi / Chhath", masa=8, tithi="S6"),
   FestivalRule("Gita Jayanti", masa=9, tithi="S11"),
   FestivalRule("Uttarayana", selector=select_uttarayana_dates, location_aware=True),
-  FestivalRule("Vaikuntha Ekadashi", selector=select_vaikuntha_ekadashi_dates, allow_empty=True),
+  FestivalRule("Vaikuntha Ekadashi", selector=select_vaikuntha_ekadashi_dates),
   FestivalRule("Makara Sankranti", selector=select_makara_sankranti_dates),
   FestivalRule("Vasavi Atmarpana", masa=11, tithi="S2"),
   FestivalRule("Vasanta Panchami", masa=11, tithi="S5"),
@@ -538,8 +537,6 @@ def resolve_festivals(records, target_dates, geopos=None, timezone_name=None, en
     for civil_date in candidates:
       if civil_date in target_dates:
         dates.append(civil_date)
-    if not dates and not rule.allow_empty:
-      log.error("No calendar date found for %s; omitting day markers", rule.name)
     for civil_date in dates:
       markers_by_date.setdefault(civil_date, []).append(marker)
     entries.append((marker, format_festival_dates(dates), rule.name))

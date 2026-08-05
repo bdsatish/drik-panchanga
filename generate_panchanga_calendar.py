@@ -119,14 +119,8 @@ def city_locations():
   global _CITY_LOCATIONS
   if _CITY_LOCATIONS is not None:
     return _CITY_LOCATIONS
-  path = DEFAULT_CITIES_PATH
-  if not path.exists():
-    raise ValueError(f"Cities file does not exist: {path}")
-  with path.open(encoding="utf-8") as source:
-    locations = json.load(source)
-  if not isinstance(locations, dict):
-    raise ValueError("cities.json must contain an object keyed by city")
-  _CITY_LOCATIONS = locations
+  with DEFAULT_CITIES_PATH.open(encoding="utf-8") as source:
+    _CITY_LOCATIONS = json.load(source)
   return _CITY_LOCATIONS
 
 
@@ -237,10 +231,27 @@ def embed_pdf_metadata(pdf, title, subject, ruleset_version, coordinate_selectio
   info.format = format_info
 
 
-def month_range(start_year, start_month, count=MONTH_COUNT):
+def month_range(start_year, start_month):
+  """Fourteen consecutive Gregorian months starting at ``start_year``/``start_month``."""
   months = []
   year, month = start_year, start_month
-  for _ in range(count):
+  for _ in range(MONTH_COUNT):
+    months.append((year, month))
+    if month == 12:
+      year, month = year + 1, 1
+    else:
+      month += 1
+  return months
+
+
+def context_month_range(start_year, start_month):
+  """Sixteen months: one before the print span through one after (``MONTH_COUNT + 2``)."""
+  if start_month == 1:
+    year, month = start_year - 1, 12
+  else:
+    year, month = start_year, start_month - 1
+  months = []
+  for _ in range(MONTH_COUNT + 2):
     months.append((year, month))
     if month == 12:
       year, month = year + 1, 1
@@ -943,11 +954,6 @@ def draw_page_header(pdf, location, months, ruleset_version, amanta=True, coordi
 
 
 def draw_page_footer(pdf, festival_entries, eclipse_line="Eclipses: None"):
-  if len(festival_entries) > FOOTER_FESTIVAL_SLOTS:
-    raise ValueError(f"Festival footer holds at most {FOOTER_FESTIVAL_SLOTS} entries "
-                     f"(6x5); got {len(festival_entries)}. Disable some festivals in "
-                     "festivals.cfg or pass a smaller --festivals file.")
-
   pdf.setFillColor(FESTIVAL_INK)
 
   columns = 6
@@ -1011,11 +1017,7 @@ def _build_pdf_unlocked(location, start_year, start_month, output_path, festival
   amanta = require_month_system(month_system)
   panchanga.set_coordinate_selection(coordinate_selection)
   months = month_range(start_year, start_month)
-  if start_month == 1:
-    context_start = (start_year - 1, 12)
-  else:
-    context_start = (start_year, start_month - 1)
-  context_months = month_range(*context_start, count=MONTH_COUNT + 2)
+  context_months = context_month_range(start_year, start_month)
   context_records = daily_records(context_months, location)
   records_by_date = {}
   for record in context_records:

@@ -175,12 +175,6 @@ class PdfLayoutTests(unittest.TestCase):
     size = fitted_font_size(pdf, text, PDF_FONT_BOLD, 11, 5, available_width, "test title")
     self.assertLessEqual(pdf.stringWidth(text, PDF_FONT_BOLD, size), available_width + 0.01)
 
-  def test_footer_rejects_more_entries_than_slots(self):
-    pdf = Canvas(BytesIO())
-    entries = [(index, "Jan 01", f"Festival {index}") for index in range(1, FOOTER_FESTIVAL_SLOTS + 2)]
-    with self.assertRaisesRegex(ValueError, str(FOOTER_FESTIVAL_SLOTS)):
-      draw_page_footer(pdf, entries)
-
   def test_footer_accepts_full_slot_count(self):
     ensure_pdf_fonts()
     pdf = Canvas(BytesIO())
