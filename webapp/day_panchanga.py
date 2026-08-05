@@ -5,43 +5,24 @@ an ``_unlocked`` helper that does the real work. Hold the lock for the whole
 request so ayanāṃśa / tropical mode stays stable under concurrent web use.
 """
 
-import json
 import logging
-import re
-from pathlib import Path
-from zoneinfo import ZoneInfo
 
 import panchanga
 from generate_panchanga_calendar import (
   ayanamsa_label,
+  body_altitude_at_local_noon,
   coordinate_selection_label,
   format_sunrise_unavailable_message,
   load_location,
   month_system_label,
-  parse_month_system,
+  place_for_date,
   require_local_sunrise,
-  timezone_hours,
+  require_month_system,
+  sanskrit_names,
 )
 
-_REPO_ROOT = Path(__file__).resolve().parent.parent
-_NAMES_PATH = _REPO_ROOT / "sanskrit_names.json"
 log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
-
-
-def _load_json(path):
-  with path.open(encoding="utf-8") as source:
-    return json.load(source)
-
-
-_SANSKRIT_NAMES = None
-
-
-def sanskrit_names():
-  global _SANSKRIT_NAMES
-  if _SANSKRIT_NAMES is None:
-    _SANSKRIT_NAMES = _load_json(_NAMES_PATH)
-  return _SANSKRIT_NAMES
 
 
 def parse_civil_date(text):
@@ -92,21 +73,17 @@ def _named_segments(nhms, lookup):
   return segments
 
 
-def place_for_date(location, civil):
-  """Build a Place with the city's UTC offset on the given civil date."""
-  zone = ZoneInfo(location.timezone_name)
-  year = civil.year if civil.year > 0 else 2000
-  offset = timezone_hours(zone, year, civil.month, civil.day)
-  return panchanga.Place(location.latitude, location.longitude, offset)
+def format_masa_name(names, masa_num, is_adhika):
+  """Bare māsa name, with Adhika prefix when needed."""
+  name = names["masas"][str(masa_num)]
+  if is_adhika:
+    return "Adhika " + name
+  return name
 
 
-def _moon_altitude_at_local_noon(year, month, day, place):
-  swe = panchanga.swe
-  noon_ut = swe.julday(year, month, day, 12.0) - place.timezone / 24.0
-  xx, _retflag = swe.calc_ut(noon_ut, swe.MOON)
-  _azimuth, true_altitude, _apparent = swe.azalt(noon_ut, swe.ECL2HOR, (place.longitude, place.latitude, 0.0), 0, 0,
-                                                 [xx[0], xx[1], xx[2]])
-  return true_altitude
+def format_masa_label(names, masa_num, is_adhika):
+  """Display māsa including the ``māsa`` suffix."""
+  return format_masa_name(names, masa_num, is_adhika) + " māsa"
 
 
 def probe_moon_event(jd, place, civil, rise=True):
@@ -125,7 +102,7 @@ def probe_moon_event(jd, place, civil, rise=True):
     log.error("Moon %s probe failed: %s", "rise" if rise else "set", error)
     return None, "unavailable"
   if rc != 0:
-    altitude = _moon_altitude_at_local_noon(civil.year, civil.month, civil.day, place)
+    altitude = body_altitude_at_local_noon(swe.MOON, civil.year, civil.month, civil.day, place)
     if altitude > 0.5:
       return None, "always_above"
     if altitude < -0.5:
@@ -303,16 +280,16 @@ def _compute_day_panchanga_unlocked(city, date_text, month_system="amanta", coor
   city = (city or "").strip()
   if not city:
     raise ValueError("City is required.")
-  amanta = parse_month_system(month_system)
-  if amanta is None:
-    raise ValueError("Month system must be 'amanta' or 'purnimanta'.")
+  amanta = require_month_system(month_system)
   civil = parse_civil_date(date_text)
   if civil is None:
     raise ValueError("Date must be DD/MM/YYYY (negative years allowed).")
   location = load_location(city)
 
-  details = compute_day_details(location, civil, amanta=amanta, coordinate_selection=coordinate_selection)
+  # Already under coordinate_calculation_lock — call unlocked helper directly.
+  details = _compute_day_details_unlocked(location, civil, amanta=amanta, coordinate_selection=coordinate_selection)
   names = details["names"]
+  civil = details["civil"]
   jd = details["jd"]
   place = details["place"]
   sunrise = details["sunrise"]
@@ -344,11 +321,7 @@ def _compute_day_panchanga_unlocked(city, date_text, month_system="amanta", coor
   durmuhurta = details["durmuhurta"]
 
   use_tropical = coordinate_selection == "tropical"
-  masa_name = names["masas"][str(masa_num)]
-  if is_adhika:
-    masa_label = f"Adhika {masa_name} māsa"
-  else:
-    masa_label = f"{masa_name} māsa"
+  masa_label = format_masa_label(names, masa_num, is_adhika)
   month_label = month_system_label(amanta)
   ayan_label = None if use_tropical else ayanamsa_label(coordinate_selection)
   ayana = ayana_label(sun_raasi)

@@ -4,14 +4,13 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from generate_panchanga_calendar import (
-  COORDINATE_OPTIONS,
   DEFAULT_FESTIVALS_PATH,
   build_pdf,
   default_output_path,
   load_location,
-  parse_coordinate_selection,
-  parse_month_system,
   parse_start_month,
+  require_coordinate_selection,
+  require_month_system,
 )
 
 
@@ -29,12 +28,8 @@ def generate_pdf(fields):
     raise ValueError("start month must use YYYY-MM format")
   start_year, start_month = parsed_start
   month_system = (fields.get("month") or "amanta").strip()
-  if parse_month_system(month_system) is None:
-    raise ValueError("Month system must be 'amanta' or 'purnimanta'.")
-  coordinate_selection = parse_coordinate_selection((fields.get("ayanamsa") or "").strip() or None)
-  if coordinate_selection is None:
-    allowed = ", ".join(COORDINATE_OPTIONS)
-    raise ValueError(f"Coordinate selection must be one of: {allowed}.")
+  require_month_system(month_system)
+  coordinate_selection = require_coordinate_selection((fields.get("ayanamsa") or "").strip() or None)
   location = load_location(city)
   filename = default_output_path(
     location,

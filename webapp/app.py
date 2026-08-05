@@ -5,7 +5,6 @@ import io
 import ipaddress
 import json
 import logging
-import re
 import sys
 from pathlib import Path
 from urllib.parse import quote
@@ -28,12 +27,12 @@ if str(_REPO_ROOT) not in sys.path:
 
 from app_logging import configure_logging
 from generate_panchanga_calendar import (
-  COORDINATE_OPTIONS,
   city_locations,
   load_location,
-  parse_coordinate_selection,
-  parse_month_system,
+  location_slug,
   parse_start_month,
+  require_coordinate_selection,
+  require_month_system,
 )
 from panchanga import sweph_version
 from webapp.day_panchanga import compute_day_panchanga
@@ -117,13 +116,16 @@ def api_cities():
   return jsonify({"cities": search_cities(query, limit=limit)})
 
 
+def client_ip(xff, remote):
+  """First X-Forwarded-For hop, else direct remote address."""
+  if xff:
+    return xff.split(",")[0].strip()
+  return (remote or "").strip()
+
+
 @app.get("/api/suggest-city")
 def api_suggest_city():
-  xff = request.headers.get("X-Forwarded-For", "")
-  if xff:
-    ip = xff.split(",")[0].strip()
-  else:
-    ip = (request.remote_addr or "").strip()
+  ip = client_ip(request.headers.get("X-Forwarded-For", ""), request.remote_addr)
   return jsonify({"city": suggest_city_for_ip(ip)})
 
 
@@ -136,10 +138,7 @@ def api_panchanga():
   try:
     if ayanamsa:
       ayanamsa = ayanamsa.strip()
-    coordinate_selection = parse_coordinate_selection(ayanamsa)
-    if coordinate_selection is None:
-      allowed = ", ".join(COORDINATE_OPTIONS)
-      raise ValueError(f"Coordinate selection must be one of: {allowed}.")
+    coordinate_selection = require_coordinate_selection(ayanamsa)
     if month:
       month = month.strip()
     return jsonify(compute_day_panchanga(city, date, month_system=month, coordinate_selection=coordinate_selection))
@@ -168,20 +167,14 @@ def ics_calendar():
       raise ValueError("start month must use YYYY-MM format")
     start_year, start_month = parsed_start
     month = (request.args.get("month") or "amanta").strip()
-    amanta = parse_month_system(month)
-    if amanta is None:
-      raise ValueError("Month system must be 'amanta' or 'purnimanta'.")
+    amanta = require_month_system(month)
     month_key = "amanta" if amanta else "purnimanta"
-    coordinate_selection = parse_coordinate_selection((request.args.get("ayanamsa") or "").strip() or None)
-    if coordinate_selection is None:
-      allowed = ", ".join(COORDINATE_OPTIONS)
-      raise ValueError(f"Coordinate selection must be one of: {allowed}.")
+    coordinate_selection = require_coordinate_selection((request.args.get("ayanamsa") or "").strip() or None)
     ics_text = generate_ics(location, start_year, start_month, month_system=month,
                             coordinate_selection=coordinate_selection)
   except (OSError, ValueError, RuntimeError) as error:
     abort(400, description=str(error))
-  city_slug = re.sub(r"[^a-z0-9]+", "-", city.casefold()).strip("-") or "location"
-  name = (f"panchanga-{city_slug}-{coordinate_selection}-{month_key}-"
+  name = (f"panchanga-{location_slug(city)}-{coordinate_selection}-{month_key}-"
           f"{start_year:04d}-{start_month:02d}.ics")
   return send_file(io.BytesIO(ics_text.encode("utf-8")), mimetype="text/calendar; charset=utf-8", as_attachment=True,
                    download_name=name, max_age=0)

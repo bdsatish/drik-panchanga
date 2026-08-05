@@ -17,12 +17,13 @@ if str(_REPO_ROOT) not in sys.path:
 from app_logging import configure_logging
 from webapp.app import (
   city_names,
+  client_ip,
   search_cities,
   suggest_city_for_ip,
 )
 from webapp.day_panchanga import compute_day_panchanga
 from webapp.pdf_service import generate_pdf
-from generate_panchanga_calendar import COORDINATE_OPTIONS, parse_coordinate_selection
+from generate_panchanga_calendar import require_coordinate_selection
 
 configure_logging()
 PROJECT_ROOT = _REPO_ROOT
@@ -116,11 +117,7 @@ def handle_cities():
 def handle_suggest_city():
   """GET suggest_city.py → JSON ``{\"city\": ...}`` from client IP."""
   try:
-    xff = os.environ.get("HTTP_X_FORWARDED_FOR", "")
-    if xff:
-      ip = xff.split(",")[0].strip()
-    else:
-      ip = (os.environ.get("REMOTE_ADDR") or "").strip()
+    ip = client_ip(os.environ.get("HTTP_X_FORWARDED_FOR", ""), os.environ.get("REMOTE_ADDR"))
     write_json({"city": suggest_city_for_ip(ip)})
   except Exception as error:  # catch-all so CGI still returns a response
     log.error("CGI suggest_city failed: %s", error)
@@ -139,10 +136,7 @@ def handle_panchanga():
       ayanamsa = a[0]
     else:
       ayanamsa = None
-    coordinate_selection = parse_coordinate_selection(ayanamsa)
-    if coordinate_selection is None:
-      allowed = ", ".join(COORDINATE_OPTIONS)
-      raise ValueError(f"Coordinate selection must be one of: {allowed}.")
+    coordinate_selection = require_coordinate_selection(ayanamsa)
     write_json(compute_day_panchanga(city, date, month_system=month, coordinate_selection=coordinate_selection))
   except ValueError as error:
     write_error(str(error), as_json=True)

@@ -326,6 +326,23 @@ def parse_coordinate_selection(text):
   return aliases[value]
 
 
+def require_month_system(text):
+  """Parse month system or raise ``ValueError``."""
+  amanta = parse_month_system(text)
+  if amanta is None:
+    raise ValueError("Month system must be 'amanta' or 'purnimanta'.")
+  return amanta
+
+
+def require_coordinate_selection(text):
+  """Parse coordinate selection or raise ``ValueError``."""
+  selection = parse_coordinate_selection(text)
+  if selection is None:
+    allowed = ", ".join(COORDINATE_OPTIONS)
+    raise ValueError(f"Coordinate selection must be one of: {allowed}.")
+  return selection
+
+
 def ayanamsa_label(key):
   if key == "tropical":
     raise ValueError("Tropical mode has no ayanāṃśa label.")
@@ -336,14 +353,24 @@ def coordinate_selection_label(selection):
   return COORDINATE_OPTIONS[selection]
 
 
-def sun_altitude_at_local_noon(year, month, day, place):
-  """True solar altitude in degrees at local civil noon."""
+def location_slug(name):
+  """Filename-safe city key: ``Helsinki, FI`` → ``helsinki-fi``."""
+  return (name or "").replace(", ", "-").casefold()
+
+
+def body_altitude_at_local_noon(body, year, month, day, place):
+  """True altitude in degrees of ``body`` at local civil noon."""
   swe = panchanga.swe
   noon_ut = swe.julday(year, month, day, 12.0) - place.timezone / 24.0
-  xx, _retflag = swe.calc_ut(noon_ut, swe.SUN)
+  xx, _retflag = swe.calc_ut(noon_ut, body)
   _azimuth, true_altitude, _apparent = swe.azalt(noon_ut, swe.ECL2HOR, (place.longitude, place.latitude, 0.0), 0, 0,
                                                  [xx[0], xx[1], xx[2]])
   return true_altitude
+
+
+def sun_altitude_at_local_noon(year, month, day, place):
+  """True solar altitude in degrees at local civil noon."""
+  return body_altitude_at_local_noon(panchanga.swe.SUN, year, month, day, place)
 
 
 def classify_missing_sunrise(year, month, day, place):
@@ -596,6 +623,14 @@ def timezone_hours(timezone, year, month, day):
   return local_noon.utcoffset().total_seconds() / 3600
 
 
+def place_for_date(location, civil):
+  """Build a ``Place`` with the city's UTC offset on the given civil date."""
+  zone = ZoneInfo(location.timezone_name)
+  year = civil.year if civil.year > 0 else 2000
+  offset = timezone_hours(zone, year, civil.month, civil.day)
+  return panchanga.Place(location.latitude, location.longitude, offset)
+
+
 def tithi_code(tithi_number):
   if tithi_number <= 15:
     return f"S{tithi_number}"
@@ -628,11 +663,10 @@ def tithi_font(is_sukla):
 def daily_records(months, location):
   """Canonical amānta sunrise records for ordered Gregorian ``months``."""
   result = []
-  timezone = ZoneInfo(location.timezone_name)
   for year, month in months:
     for day in range(1, calendar.monthrange(year, month)[1] + 1):
       date = panchanga.Date(year, month, day)
-      place = panchanga.Place(location.latitude, location.longitude, timezone_hours(timezone, year, month, day))
+      place = place_for_date(location, date)
       jd = panchanga.gregorian_to_jd(date)
       sunrise = require_local_sunrise(jd, place, location.name, year, month, day)
       if sunrise is None:
@@ -953,9 +987,7 @@ def build_pdf(location, start_year, start_month, output_path, festivals_path=Non
 def _build_pdf_unlocked(location, start_year, start_month, output_path, festivals_path=None, month_system="amanta",
                         coordinate_selection="citra"):
   ensure_pdf_fonts()
-  amanta = parse_month_system(month_system)
-  if amanta is None:
-    raise ValueError("Month system must be 'amanta' or 'purnimanta'.")
+  amanta = require_month_system(month_system)
   panchanga.set_coordinate_selection(coordinate_selection)
   months = month_range(start_year, start_month)
   if start_month == 1:
@@ -1048,11 +1080,8 @@ def _build_pdf_unlocked(location, start_year, start_month, output_path, festival
 def default_output_path(location, start_year, start_month, month_system="amanta", coordinate_selection="citra"):
   months = month_range(start_year, start_month)
   end_year, end_month = months[-1]
-  city_slug = re.sub(r"[^a-z0-9]+", "-", location.name.casefold()).strip("-") or "location"
   parts = []
-  amanta = parse_month_system(month_system)
-  if amanta is None:
-    raise ValueError("Month system must be 'amanta' or 'purnimanta'.")
+  amanta = require_month_system(month_system)
   if not amanta:
     parts.append("purnimanta")
   if coordinate_selection == "tropical":
@@ -1060,7 +1089,7 @@ def default_output_path(location, start_year, start_month, month_system="amanta"
   elif coordinate_selection != "citra":
     parts.append(coordinate_selection)
   suffix = ("_" + "_".join(parts)) if parts else ""
-  return Path(f"{city_slug}_panchanga_"
+  return Path(f"{location_slug(location.name)}_panchanga_"
               f"{start_year:04d}-{start_month:02d}_to_"
               f"{end_year:04d}-{end_month:02d}{suffix}.pdf")
 
@@ -1094,12 +1123,8 @@ def main(argv=None):
     start_year, start_month = parsed_start
     location = load_location(arguments.city)
     month_system = arguments.month
-    coordinate_selection = parse_coordinate_selection(arguments.ayanamsa)
-    if coordinate_selection is None:
-      allowed = ", ".join(COORDINATE_OPTIONS)
-      raise ValueError(f"Coordinate selection must be one of: {allowed}.")
-    if parse_month_system(month_system) is None:
-      raise ValueError("Month system must be 'amanta' or 'purnimanta'.")
+    coordinate_selection = require_coordinate_selection(arguments.ayanamsa)
+    require_month_system(month_system)
     output_path = arguments.output or default_output_path(location, start_year, start_month, month_system=month_system,
                                                           coordinate_selection=coordinate_selection)
     generated = build_pdf(location, start_year, start_month, output_path, festivals_path=arguments.festivals,

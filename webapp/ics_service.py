@@ -6,18 +6,20 @@ builds the feed so ayanāṃśa / tropical mode stays stable for every day.
 
 from calendar import monthrange
 from datetime import datetime, timezone
-import re
 
 from generate_panchanga_calendar import (
   coordinate_selection_label,
+  location_slug,
   month_range,
   month_system_label,
-  parse_month_system,
+  require_month_system,
 )
 from webapp.day_panchanga import (
   ayana_label,
   compute_day_details,
   drik_ayana_label,
+  format_masa_label,
+  format_masa_name,
   format_time,
 )
 import panchanga
@@ -51,13 +53,13 @@ def _fold(line):
 
 
 def _escape_text(text):
-  return (text.replace("\\", "\\\\").replace(";", "\\;").replace(",", "\\,").replace("\r\n",
-                                                                                     "\n").replace("\r", "\n").replace(
-                                                                                       "\n", "\\n"))
-
-
-def _location_slug(name):
-  return re.sub(r"[^a-z0-9]+", "-", name.casefold()).strip("-") or "location"
+  text = text.replace("\\", "\\\\")
+  text = text.replace(";", "\\;")
+  text = text.replace(",", "\\,")
+  text = text.replace("\r\n", "\n")
+  text = text.replace("\r", "\n")
+  text = text.replace("\n", "\\n")
+  return text
 
 
 def _ics_date(civil):
@@ -116,12 +118,10 @@ def generate_ics(location, start_year, start_month, month_system="amanta", coord
 
 
 def _generate_ics_unlocked(location, start_year, start_month, month_system="amanta", coordinate_selection="citra"):
-  amanta = parse_month_system(month_system)
-  if amanta is None:
-    raise ValueError("Month system must be 'amanta' or 'purnimanta'.")
+  amanta = require_month_system(month_system)
   month_key = "amanta" if amanta else "purnimanta"
   dtstamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-  location_slug = _location_slug(location.name)
+  loc_slug = location_slug(location.name)
   cal_name = _escape_text("Panchanga · " + location.name)
   cal_desc = _escape_text(coordinate_selection_label(coordinate_selection) + " · " + month_system_label(amanta))
   out = [
@@ -169,10 +169,8 @@ def _generate_ics_unlocked(location, start_year, start_month, month_system="aman
     tithi_name = names["tithis"][str(ti[0])]
     nak_name = names["nakshatras"][str(nak[0])]
     yoga_name = names["yogas"][str(yog[0])]
-    masa_name = names["masas"][str(masa_num)]
-    if is_adhika:
-      masa_name = "Adhika " + masa_name
-    masa_label = masa_name + " māsa"
+    masa_name = format_masa_name(names, masa_num, is_adhika)
+    masa_label = format_masa_label(names, masa_num, is_adhika)
     vara_name = names["varas"][str(vara_num)]
     rtu_label = names["ritus"][str(rtu_num)] + " ṛtu"
     drik_rtu_label = names["ritus"][str(drik_rtu_num)] + " ṛtu"
@@ -215,7 +213,7 @@ def _generate_ics_unlocked(location, start_year, start_month, month_system="aman
     out.append("DTSTAMP:" + dtstamp)
     out.append("SUMMARY:" + summary)
     out.append("DESCRIPTION:" + description)
-    out.append("UID:panchanga-" + coordinate_selection + "-" + month_key + "-" + d + "@" + location_slug)
+    out.append("UID:panchanga-" + coordinate_selection + "-" + month_key + "-" + d + "@" + loc_slug)
     out.append("END:VEVENT")
   out.append("END:VCALENDAR")
   folded = []
