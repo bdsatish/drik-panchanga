@@ -97,11 +97,6 @@ def configure_logging():
     )
 
 
-def _load_json(path):
-  with path.open(encoding="utf-8") as source:
-    return json.load(source)
-
-
 _SANSKRIT_NAMES = None
 _CITY_LOCATIONS = None
 
@@ -109,7 +104,8 @@ _CITY_LOCATIONS = None
 def sanskrit_names():
   global _SANSKRIT_NAMES
   if _SANSKRIT_NAMES is None:
-    _SANSKRIT_NAMES = _load_json(DEFAULT_NAMES_PATH)
+    with DEFAULT_NAMES_PATH.open(encoding="utf-8") as source:
+      _SANSKRIT_NAMES = json.load(source)
   return _SANSKRIT_NAMES
 
 

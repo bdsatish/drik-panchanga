@@ -119,20 +119,6 @@ def _valid_durmuhurta_intervals(values):
   return intervals
 
 
-def _durmuhurta_intervals_from_values(values):
-  intervals = []
-  for start, end in _valid_durmuhurta_intervals(values):
-    intervals.append(_interval_from_hms(panchanga.to_dms(start), panchanga.to_dms(end)))
-  return intervals
-
-
-def _varjyam_intervals(jd, place):
-  intervals = []
-  for start, end in panchanga.varjyam(jd, place):
-    intervals.append(_interval_from_hms(start, end))
-  return intervals
-
-
 def ayana_label(raasi_num):
   """Uttarāyaṇa from Makara–Mithuna (10–12, 1–3); else Dakṣiṇāyana."""
   label = "Uttarāyaṇa" if raasi_num >= 10 or raasi_num <= 3 else "Dakṣiṇāyana"
@@ -316,6 +302,14 @@ def _compute_day_panchanga_unlocked(city, date_text, month_system="amanta", coor
   ayana = ayana_label(sun_raasi)
   drik_ayana = drik_ayana_label(drik_rtu_num)
 
+  durmuhurta_intervals = []
+  for start, end in _valid_durmuhurta_intervals(durmuhurta):
+    durmuhurta_intervals.append(_interval_from_hms(panchanga.to_dms(start), panchanga.to_dms(end)))
+
+  varjyam_intervals = []
+  for start, end in panchanga.varjyam(jd, place):
+    varjyam_intervals.append(_interval_from_hms(start, end))
+
   return {
     "city": location.name,
     "date": f"{civil.day:02d}/{civil.month:02d}/{civil.year}",
@@ -351,8 +345,8 @@ def _compute_day_panchanga_unlocked(city, date_text, month_system="amanta", coor
     "moonset_status": moonset_status,
     "day_duration": format_time(day_dur[1]),
     "rahu_kala": _interval_from_hms(*rahu_kala),
-    "durmuhurta": _durmuhurta_intervals_from_values(durmuhurta),
-    "varjyam": _varjyam_intervals(jd, place),
+    "durmuhurta": durmuhurta_intervals,
+    "varjyam": varjyam_intervals,
     "tithi": _named_segments(ti, names["tithis"]),
     "nakshatra": _named_segments(nak, names["nakshatras"]),
     "yoga": _named_segments(yog, names["yogas"]),

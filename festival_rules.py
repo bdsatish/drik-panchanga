@@ -201,19 +201,6 @@ def select_varamahalakshmi_dates(records):
   return selected
 
 
-def _eclipse_phase(flags):
-  """Return Partial/Total/Annular, or None if not locally usable."""
-  if not (flags & panchanga.swe.ECL_VISIBLE):
-    return None
-  if flags & panchanga.swe.ECL_TOTAL:
-    return "Total"
-  if flags & (panchanga.swe.ECL_ANNULAR | panchanga.swe.ECL_ANNULAR_TOTAL):
-    return "Annular"
-  if flags & panchanga.swe.ECL_PARTIAL:
-    return "Partial"
-  return None
-
-
 def find_local_eclipses(start_jd, end_jd, geopos):
   """Locally visible partial/total/annular eclipses with maximum in ``[start_jd, end_jd)``."""
   if end_jd <= start_jd:
@@ -232,7 +219,15 @@ def find_local_eclipses(start_jd, end_jd, geopos):
       maximum = times[0]
       if not maximum or maximum <= search_jd:
         break
-      phase = _eclipse_phase(flags)
+      # Partial/Total/Annular only when locally usable; skip penumbral/invisible.
+      phase = None
+      if flags & panchanga.swe.ECL_VISIBLE:
+        if flags & panchanga.swe.ECL_TOTAL:
+          phase = "Total"
+        elif flags & (panchanga.swe.ECL_ANNULAR | panchanga.swe.ECL_ANNULAR_TOTAL):
+          phase = "Annular"
+        elif flags & panchanga.swe.ECL_PARTIAL:
+          phase = "Partial"
       if phase is not None and start_jd <= maximum < end_jd:
         found.append((kind, phase, maximum))
       # Advance by a full day. A tiny epsilon can make swe return the same

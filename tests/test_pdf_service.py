@@ -9,11 +9,12 @@ from unittest import mock
 
 from webapp import cgi_handlers
 from webapp.app import app
-from webapp.day_panchanga import _durmuhurta_intervals_from_values, _valid_durmuhurta_intervals
+from webapp.day_panchanga import _interval_from_hms, _valid_durmuhurta_intervals
 from webapp.ics_service import generate_ics
-from webapp.ics_service import _durmuhurta_text
+from webapp.ics_service import _fmt_interval
 from webapp.pdf_service import generate_pdf
 from generate_panchanga_calendar import load_location
+import panchanga
 
 
 class PdfServiceTests(unittest.TestCase):
@@ -87,23 +88,23 @@ class DurmuhurtaRenderingTests(unittest.TestCase):
 
   def test_filters_unused_slots_for_json_and_ics(self):
     values = ([0, 10.5], [0, 11.25])
-    self.assertEqual(_valid_durmuhurta_intervals(values), [(10.5, 11.25)])
-    self.assertEqual(
-      _durmuhurta_intervals_from_values(values),
-      [{
-        "start": "10:30:00",
-        "end": "11:15:00"
-      }],
-    )
-    self.assertEqual(_durmuhurta_text(values), "10:30:00–11:15:00")
+    intervals = _valid_durmuhurta_intervals(values)
+    self.assertEqual(intervals, [(10.5, 11.25)])
+    json_intervals = []
+    for start, end in intervals:
+      json_intervals.append(_interval_from_hms(panchanga.to_dms(start), panchanga.to_dms(end)))
+    self.assertEqual(json_intervals, [{"start": "10:30:00", "end": "11:15:00"}])
+    ics_parts = []
+    for start, end in intervals:
+      ics_parts.append(_fmt_interval(panchanga.to_dms(start), panchanga.to_dms(end)))
+    self.assertEqual(", ".join(ics_parts), "10:30:00–11:15:00")
 
   def test_preserves_two_intervals_and_empty_fallback(self):
     self.assertEqual(
       _valid_durmuhurta_intervals(([1.0, 3.0], [2.0, 4.0])),
       [(1.0, 2.0), (3.0, 4.0)],
     )
-    self.assertEqual(_durmuhurta_intervals_from_values(([0, 0], [0, 0])), [])
-    self.assertEqual(_durmuhurta_text(([0, 0], [0, 0])), "—")
+    self.assertEqual(_valid_durmuhurta_intervals(([0, 0], [0, 0])), [])
 
 
 class IcsServiceTests(unittest.TestCase):
