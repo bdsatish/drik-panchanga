@@ -26,29 +26,21 @@ log.addHandler(logging.NullHandler())
 
 
 def parse_civil_date(text):
-  """Parse ``DD/MM/YYYY``; negative years are proleptic Gregorian.
-
-    Returns ``None`` when the text is missing or not a usable date.
-    """
+  """Parse ``DD/MM/YYYY``; negative years are proleptic Gregorian."""
   text = (text or "").strip()
   if not text:
-    log.error("Date is required (DD/MM/YYYY)")
-    return None
+    raise ValueError("Date is required (DD/MM/YYYY)")
   parts = text.split("/")
   if len(parts) != 3:
-    log.error("Date must be DD/MM/YYYY (got %r)", text)
-    return None
+    raise ValueError("Date must be DD/MM/YYYY (negative years allowed).")
   try:
     day, month, year = int(parts[0]), int(parts[1]), int(parts[2])
   except ValueError:
-    log.error("Date must be DD/MM/YYYY (got %r)", text)
-    return None
+    raise ValueError("Date must be DD/MM/YYYY (negative years allowed).") from None
   if year == 0:
-    log.error("Year 0 is not used; use negative years for BCE")
-    return None
+    raise ValueError("Year 0 is not used; use negative years for BCE")
   if not 1 <= month <= 12 or not 1 <= day <= 31:
-    log.error("Invalid date %r", text)
-    return None
+    raise ValueError(f"Invalid date {text!r}")
   return panchanga.Date(year, month, day)
 
 
@@ -280,8 +272,6 @@ def _compute_day_panchanga_unlocked(city, date_text, month_system="amanta", coor
     raise ValueError("City is required.")
   amanta = require_month_system(month_system)
   civil = parse_civil_date(date_text)
-  if civil is None:
-    raise ValueError("Date must be DD/MM/YYYY (negative years allowed).")
   location = load_location(city)
 
   # Already under coordinate_calculation_lock — call unlocked helper directly.

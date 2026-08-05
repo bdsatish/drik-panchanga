@@ -360,6 +360,14 @@ def require_month_system(text):
   return amanta
 
 
+def require_start_month(text):
+  """Parse ``YYYY-MM`` or raise ``ValueError``."""
+  parsed = parse_start_month(text)
+  if parsed is None:
+    raise ValueError("start month must use YYYY-MM format")
+  return parsed
+
+
 def require_coordinate_selection(text):
   """Parse coordinate selection or raise ``ValueError``."""
   selection = parse_coordinate_selection(text)
@@ -1139,10 +1147,7 @@ def main(argv=None):
   parser = argument_parser()
   arguments = parser.parse_args(argv)
   try:
-    parsed_start = parse_start_month(arguments.start)
-    if parsed_start is None:
-      raise ValueError("start month must use YYYY-MM format")
-    start_year, start_month = parsed_start
+    start_year, start_month = require_start_month(arguments.start)
     location = load_location(arguments.city)
     month_system = arguments.month
     coordinate_selection = require_coordinate_selection(arguments.ayanamsa)

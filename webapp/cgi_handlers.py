@@ -106,7 +106,6 @@ def handle_cities():
     except ValueError:
       limit = 20
     limit = min(max(limit, 1), 50)
-    city_names()  # fail fast if cities.json is missing
     write_json({"cities": search_cities(query, limit=limit)})
   except Exception as error:  # catch-all so CGI still returns a response
     log.error("CGI cities failed: %s", error)

@@ -8,9 +8,9 @@ from generate_panchanga_calendar import (
   build_pdf,
   default_output_path,
   load_location,
-  parse_start_month,
   require_coordinate_selection,
   require_month_system,
+  require_start_month,
 )
 
 
@@ -18,19 +18,11 @@ def generate_pdf(fields):
   """Validate shared form fields and generate the requested PDF."""
   city = (fields.get("city") or "").strip()
   start = (fields.get("start") or "").strip()
-  if not city:
-    raise ValueError("City is required.")
-  if not start:
-    raise ValueError("Start month is required (YYYY-MM).")
-
-  parsed_start = parse_start_month(start)
-  if parsed_start is None:
-    raise ValueError("start month must use YYYY-MM format")
-  start_year, start_month = parsed_start
+  location = load_location(city)
+  start_year, start_month = require_start_month(start)
   month_system = (fields.get("month") or "amanta").strip()
   require_month_system(month_system)
   coordinate_selection = require_coordinate_selection((fields.get("ayanamsa") or "").strip() or None)
-  location = load_location(city)
   filename = default_output_path(
     location,
     start_year,

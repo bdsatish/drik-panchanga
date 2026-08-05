@@ -30,9 +30,9 @@ from generate_panchanga_calendar import (
   configure_logging,
   load_location,
   location_slug,
-  parse_start_month,
   require_coordinate_selection,
   require_month_system,
+  require_start_month,
 )
 from panchanga import sweph_version
 from webapp.day_panchanga import compute_day_panchanga
@@ -161,10 +161,7 @@ def ics_calendar():
   start = (request.args.get("start") or "").strip()
   try:
     location = load_location(city)
-    parsed_start = parse_start_month(start)
-    if parsed_start is None:
-      raise ValueError("start month must use YYYY-MM format")
-    start_year, start_month = parsed_start
+    start_year, start_month = require_start_month(start)
     month = (request.args.get("month") or "amanta").strip()
     amanta = require_month_system(month)
     month_key = "amanta" if amanta else "purnimanta"
