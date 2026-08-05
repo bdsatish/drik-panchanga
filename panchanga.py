@@ -328,18 +328,15 @@ def local_time_to_jdut1(year, month, day, hour=0, minutes=0, seconds=0, timezone
 
 def nakshatra_end_point(nakshatra_number):
   """Given nakshatra_number [1..27] return the longitude at which it ends"""
-  if nakshatra_system == 'unequal':
-    return garga_end_points[nakshatra_number]
-  else:
-    return nakshatra_number * 360 / 27
+  end = garga_end_points[nakshatra_number] if nakshatra_system == 'unequal' else nakshatra_number * 360 / 27
+  return end
 
 
 def nakshatra_pada(longitude):
   """Gives nakshatra (1..27) and paada (1..4) in which given longitude lies"""
-  if nakshatra_system == 'unequal':
-    return nakshatra_pada_unequal_system(longitude)
-  else:
-    return nakshatra_pada_equal_spacing(longitude)
+  pada = (nakshatra_pada_unequal_system(longitude)
+          if nakshatra_system == 'unequal' else nakshatra_pada_equal_spacing(longitude))
+  return pada
 
 
 def nakshatra_pada_equal_spacing(longitude):

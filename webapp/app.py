@@ -118,9 +118,8 @@ def api_cities():
 
 def client_ip(xff, remote):
   """First X-Forwarded-For hop, else direct remote address."""
-  if xff:
-    return xff.split(",")[0].strip()
-  return (remote or "").strip()
+  ip = xff.split(",")[0].strip() if xff else (remote or "").strip()
+  return ip
 
 
 @app.get("/api/suggest-city")

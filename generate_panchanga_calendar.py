@@ -392,10 +392,12 @@ def classify_missing_sunrise(year, month, day, place):
   """Why local sunrise is unavailable: ``polar_night``, ``polar_day``, or ``no_sunrise``."""
   altitude = sun_altitude_at_local_noon(year, month, day, place)
   if altitude > 0.5:
-    return "polar_day"
-  if altitude < -0.5:
-    return "polar_night"
-  return "no_sunrise"
+    kind = "polar_day"
+  elif altitude < -0.5:
+    kind = "polar_night"
+  else:
+    kind = "no_sunrise"
+  return kind
 
 
 def format_sunrise_unavailable_message(location_name, year, month, day, place):
@@ -647,9 +649,8 @@ def place_for_date(location, civil):
 
 
 def tithi_code(tithi_number):
-  if tithi_number <= 15:
-    return f"S{tithi_number}"
-  return f"K{tithi_number - 15}"
+  code = f"S{tithi_number}" if tithi_number <= 15 else f"K{tithi_number - 15}"
+  return code
 
 
 def masa_code(masa_number, is_adhika):
@@ -664,10 +665,14 @@ def tithi_display_parts(tithi):
 def tithi_ink(is_sukla, is_masa_start=False, is_adhika=False):
   """Ink for the T cell: masa-start overrides, else Sukla blue / Krsna dark."""
   if is_masa_start and is_adhika:
-    return ADHIKA_INK
-  if is_masa_start:
-    return MASA_START_INK
-  return ACCENT if is_sukla else KRSNA_INK
+    ink = ADHIKA_INK
+  elif is_masa_start:
+    ink = MASA_START_INK
+  elif is_sukla:
+    ink = ACCENT
+  else:
+    ink = KRSNA_INK
+  return ink
 
 
 def tithi_font(is_sukla):

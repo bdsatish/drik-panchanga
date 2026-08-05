@@ -92,18 +92,19 @@ def format_festival_dates(dates):
 def plain_tithi_number(tithi):
   """Convert ``S1``..``S15`` or ``K1``..``K15`` to 1..30."""
   number = int(tithi[1:])
-  if tithi.startswith("S"):
-    return number
-  return number + 15
+  plain = number if tithi.startswith("S") else number + 15
+  return plain
 
 
 def masa_codes_for(masa, allow_adhika=False):
   """Accepted masa codes for a rule, or ``None`` to accept any masa."""
   if masa is None:
-    return None
-  if allow_adhika:
-    return {str(masa), "A" + str(masa)}
-  return {str(masa)}
+    codes = None
+  elif allow_adhika:
+    codes = {str(masa), "A" + str(masa)}
+  else:
+    codes = {str(masa)}
+  return codes
 
 
 def resolve_vriddhi_dates(dates):

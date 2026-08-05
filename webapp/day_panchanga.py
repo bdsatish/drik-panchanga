@@ -76,8 +76,7 @@ def _named_segments(nhms, lookup):
 def format_masa_name(names, masa_num, is_adhika):
   """Bare māsa name, with Adhika prefix when needed."""
   name = names["masas"][str(masa_num)]
-  if is_adhika:
-    return "Adhika " + name
+  name = ("Adhika " + name) if is_adhika else name
   return name
 
 
@@ -138,16 +137,15 @@ def _varjyam_intervals(jd, place):
 
 def ayana_label(raasi_num):
   """Uttarāyaṇa from Makara–Mithuna (10–12, 1–3); else Dakṣiṇāyana."""
-  if raasi_num >= 10 or raasi_num <= 3:
-    return "Uttarāyaṇa"
-  return "Dakṣiṇāyana"
+  label = "Uttarāyaṇa" if raasi_num >= 10 or raasi_num <= 3 else "Dakṣiṇāyana"
+  return label
 
 
 def drik_ayana_label(ritu_num):
   """Ayana from Drik ṛtu: Śiśira–Vasanta–Grīṣma = Uttara; Varṣā–Śarad–Hemanta = Dakṣiṇa."""
-  if ritu_num in (0, 1, 5):  # Vasanta, Grīṣma, Śiśira
-    return "Uttarāyaṇa"
-  return "Dakṣiṇāyana"
+  # Vasanta, Grīṣma, Śiśira → Uttarāyaṇa
+  label = "Uttarāyaṇa" if ritu_num in (0, 1, 5) else "Dakṣiṇāyana"
+  return label
 
 
 def compute_day_details(location, civil, amanta=None, coordinate_selection=None):
