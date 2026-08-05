@@ -52,15 +52,10 @@ def inject_sweph_version():
   return {"sweph_version": sweph_version()}
 
 
-def city_records():
-  # Same underlying parse as CLI ``load_location``; keep this name for search APIs.
-  return city_locations()
-
-
 def city_names():
   global _CITY_NAMES
   if _CITY_NAMES is None:
-    _CITY_NAMES = tuple(sorted(city_records().keys(), key=str.casefold))
+    _CITY_NAMES = tuple(sorted(city_locations().keys(), key=str.casefold))
   return _CITY_NAMES
 
 
@@ -69,7 +64,7 @@ def search_cities(query, limit=20):
   if not query:
     return []
   folded = query.casefold()
-  records = city_records()
+  records = city_locations()
   starts = []
   contains = []
   for name in city_names():

@@ -15,8 +15,8 @@ from generate_panchanga_calendar import (
   require_month_system,
 )
 from webapp.day_panchanga import (
+  _compute_day_details_unlocked,
   ayana_label,
-  compute_day_details,
   drik_ayana_label,
   format_masa_label,
   format_masa_name,
@@ -91,11 +91,6 @@ def _fmt_interval(start_hms, end_hms):
   return f"{format_time(start_hms)}–{format_time(end_hms)}"
 
 
-def _rahu_kala_text(values):
-  start, end = values
-  return _fmt_interval(start, end)
-
-
 def _durmuhurta_text(values):
   starts, ends = values
   parts = []
@@ -140,7 +135,7 @@ def _generate_ics_unlocked(location, start_year, start_month, month_system="aman
   for civil in _civil_dates(month_range(start_year, start_month)):
     d = _ics_date(civil)
     nxt = _ics_date(_next_civil_date(civil))
-    details = compute_day_details(location, civil, amanta=amanta, coordinate_selection=coordinate_selection)
+    details = _compute_day_details_unlocked(location, civil, amanta=amanta, coordinate_selection=coordinate_selection)
     names = details["names"]
     jd = details["jd"]
     sunrise = details["sunrise"]
@@ -204,7 +199,7 @@ def _generate_ics_unlocked(location, start_year, start_month, month_system="aman
     desc_lines.append("Sun*: " + format_time(sunrise[1]) + " – " + format_time(sunset[1]))
     desc_lines.append(moon_line)
     desc_lines.append("Day duration: " + format_time(day_dur[1]))
-    desc_lines.append("Rāhukāla: " + _rahu_kala_text(rahu_kala))
+    desc_lines.append("Rāhukāla: " + _fmt_interval(*rahu_kala))
     desc_lines.append("Durmuhūrta: " + _durmuhurta_text(durmuhurta))
     desc_lines.append("Kali Day: " + str(kali_day))
     desc_lines.append("Julian day: " + f"{jd:.1f}")

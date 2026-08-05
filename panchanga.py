@@ -643,12 +643,15 @@ def masa(jd, place, amanta=True, tithi_number=None):
      Optional ``tithi_number`` skips a second ``tithi()`` call.
   """
   ti, _, maasa, is_leap_month = lunar_masa(jd, place, tithi_number=tithi_number)
-
-  if not amanta and not is_leap_month and ti >= 16:
-    # Ordinary kṛṣṇa: next month. During adhika, keep the shared adhika name.
-    maasa = maasa % 12 + 1
-
+  maasa = display_masa_number(maasa, is_leap_month, ti, amanta)
   return [int(maasa), is_leap_month]
+
+
+def display_masa_number(masa_num, is_adhika, tithi_num, amanta=True):
+  """Displayed māsa number; pūrṇimānta ordinary Kṛṣṇa uses the next month."""
+  if not amanta and not is_adhika and tithi_num >= 16:
+    masa_num = masa_num % 12 + 1
+  return masa_num
 
 
 # epoch-midnight to given midnight
@@ -676,16 +679,16 @@ def new_moon(jd, tithi_, opt=-1):
   # ``start`` while searching for the same event, and the interpolated event
   # time is essentially independent of which day asks for it. Memoizing per
   # bucket turns ~15 identical bisections per event into one.
-  return _new_moon_cached(round(start), opt)
+  return _phase_event_cached(round(start), 360)
 
 
-@lru_cache(maxsize=4096)  # memoize expensive Swiss Ephemeris new-moon search
-def _new_moon_cached(day, opt):
+@lru_cache(maxsize=4096)  # memoize expensive Swiss Ephemeris phase-event search
+def _phase_event_cached(day, target_degrees):
   # Search within a span of (day +- 2) days
   x = [-2 + offset / 4 for offset in range(17)]
   y = [lunar_phase(day + i) for i in x]
   y = unwrap_angles(y)
-  y0 = inverse_lagrange(x, y, 360)
+  y0 = inverse_lagrange(x, y, target_degrees)
   return day + y0
 
 
@@ -705,17 +708,7 @@ def full_moon(jd, tithi_, opt=-1):
   if opt == +1:  # next full moon (including today when tithi_ == 15)
     start = jd + (15 - tithi_) if tithi_ <= 15 else jd - tithi_ + 45
   # Bucket by whole civil day for the same reason as new_moon().
-  return _full_moon_cached(round(start), opt)
-
-
-@lru_cache(maxsize=4096)  # memoize expensive Swiss Ephemeris full-moon search
-def _full_moon_cached(day, opt):
-  # Search within a span of (day +- 2) days
-  x = [-2 + offset / 4 for offset in range(17)]
-  y = [lunar_phase(day + i) for i in x]
-  y = unwrap_angles(y)
-  y0 = inverse_lagrange(x, y, 180)
-  return day + y0
+  return _phase_event_cached(round(start), 180)
 
 
 def raasi(jd):
@@ -840,11 +833,16 @@ def drik_ritu(masa_num, is_adhika=False, tithi_num=1, prev_was_adhika=False):
 def drik_ritu_at(jd, place, tithi_number=None):
   """Drik ṛtu at sunrise; see ``drik_ritu`` for the convention-free rules."""
   ti, last_nm, masa_num, is_adhika = lunar_masa(jd, place, tithi_number)
-  prev_was_adhika = False
-  if not is_adhika:
-    prev_nm = new_moon(last_nm - 1, 29, -1)
-    prev_was_adhika = raasi(prev_nm) == raasi(last_nm)
+  prev_was_adhika = previous_masa_was_adhika(last_nm, is_adhika)
   return drik_ritu(masa_num, is_adhika, ti, prev_was_adhika)
+
+
+def previous_masa_was_adhika(last_new_moon, is_adhika):
+  """Whether the previous new-moon-bounded māsa was adhika."""
+  if is_adhika:
+    return False
+  previous_new_moon = new_moon(last_new_moon - 1, 29, -1)
+  return raasi(previous_new_moon) == raasi(last_new_moon)
 
 
 def day_duration(jd, place):
@@ -1055,6 +1053,18 @@ def varjyam(jd, place):
 
 # 'jd' can be any time: ex, 2015-09-19 14:20 UTC
 # today = swe.julday(2015, 9, 19, 14 + 20./60)
+def _planetary_longitudes(jd_utc):
+  """Sidereal longitude for each configured planet, including Ketu."""
+  longitudes = []
+  for planet in planet_list:
+    if planet == swe.KETU:
+      longitude = ketu(planet_longitude(jd_utc, swe.RAHU))
+    else:
+      longitude = planet_longitude(jd_utc, planet)
+    longitudes.append((planet, longitude))
+  return longitudes
+
+
 def planetary_positions(jd, place):
   """Computes instantaneous planetary positions
      (i.e., which celestial object lies in which constellation)
@@ -1064,12 +1074,7 @@ def planetary_positions(jd, place):
   jd_ut = jd - place.timezone / 24.
 
   positions = []
-  for planet in planet_list:
-    if planet != swe.KETU:
-      planet_long = planet_longitude(jd_ut, planet)
-    else:  # Ketu
-      planet_long = ketu(planet_longitude(jd_ut, swe.RAHU))
-
+  for planet, planet_long in _planetary_longitudes(jd_ut):
     # 12 zodiac signs span 360°, so each one takes 30°
     # 0 = Mesha, 1 = Vrishabha, ..., 11 = Meena
     constellation = int(planet_long / 30)
@@ -1114,12 +1119,7 @@ def navamsa(jd, place):
   jd_utc = jd - place.timezone / 24.
 
   positions = []
-  for planet in planet_list:
-    if planet != swe.KETU:
-      nirayana_long = planet_longitude(jd_utc, planet)
-    else:  # Ketu
-      nirayana_long = ketu(planet_longitude(jd_utc, swe.RAHU))
-
+  for planet, nirayana_long in _planetary_longitudes(jd_utc):
     positions.append([planet, navamsa_from_long(nirayana_long)])
 
   return positions

@@ -18,8 +18,7 @@ from reportlab.lib.pagesizes import A4, landscape
 from reportlab.pdfgen import canvas
 
 from festival_rules import (DayRecord, ekadashi_dates_from_records, find_local_eclipses, jd_to_local_civil_date,
-                            jd_to_local_datetime, julian_day_from_datetime, load_festival_selection, resolve_festivals,
-                            sankranti_raasi_by_date)
+                            jd_to_local_datetime, julian_day_from_datetime, load_festival_selection, resolve_festivals)
 import panchanga
 
 MONTH_COUNT = 14
@@ -260,35 +259,6 @@ def context_month_range(start_year, start_month):
   return months
 
 
-def parse_start_month(value):
-  """Parse ``YYYY-MM`` into ``(year, month)``, or ``None`` if invalid."""
-  match = re.fullmatch(r"(\d{4})-(\d{2})", value or "")
-  if not match:
-    log.error("start month must use YYYY-MM format (got %r)", value)
-    return None
-  year, month = (int(part) for part in match.groups())
-  if not 1 <= month <= 12:
-    log.error("start month must be between 01 and 12 (got %r)", value)
-    return None
-  return year, month
-
-
-def parse_month_system(text):
-  """Return ``True`` for amānta, ``False`` for pūrṇimānta, or ``None`` if invalid.
-
-    Accepts ``amanta`` / ``purnimanta``. Also ``true``/``false`` and ``1``/``0``
-    for the amānta flag. Both systems are first-class for display; omit or pass
-    ``amanta`` when unspecified.
-    """
-  value = (text or "amanta").strip().casefold()
-  if value in {"amanta", "āmānta", "amaanta", "true", "1", "yes", "on"}:
-    return True
-  if value in {"purnimanta", "pūrṇimānta", "poornimanta", "false", "0", "no", "off"}:
-    return False
-  log.error("Month system must be 'amanta' or 'purnimanta' (got %r)", text)
-  return None
-
-
 def month_system_label(amanta):
   return "Amānta" if amanta else "Pūrṇimānta"
 
@@ -354,18 +324,23 @@ def parse_coordinate_selection(text):
 
 def require_month_system(text):
   """Parse month system or raise ``ValueError``."""
-  amanta = parse_month_system(text)
-  if amanta is None:
-    raise ValueError("Month system must be 'amanta' or 'purnimanta'.")
-  return amanta
+  value = (text or "amanta").strip().casefold()
+  if value in {"amanta", "āmānta", "amaanta", "true", "1", "yes", "on"}:
+    return True
+  if value in {"purnimanta", "pūrṇimānta", "poornimanta", "false", "0", "no", "off"}:
+    return False
+  raise ValueError("Month system must be 'amanta' or 'purnimanta'.")
 
 
 def require_start_month(text):
   """Parse ``YYYY-MM`` or raise ``ValueError``."""
-  parsed = parse_start_month(text)
-  if parsed is None:
+  match = re.fullmatch(r"(\d{4})-(\d{2})", text or "")
+  if not match:
     raise ValueError("start month must use YYYY-MM format")
-  return parsed
+  year, month = (int(part) for part in match.groups())
+  if not 1 <= month <= 12:
+    raise ValueError("start month must use YYYY-MM format")
+  return year, month
 
 
 def require_coordinate_selection(text):
@@ -441,15 +416,16 @@ def format_sunrise_unavailable_message(location_name, year, month, day, place):
 
 def require_local_sunrise(jd, place, location_name, year, month, day):
   """Return ``panchanga.sunrise`` result, or ``None`` when sunrise is unavailable."""
-  message = format_sunrise_unavailable_message(location_name, year, month, day, place)
   try:
     sunrise = panchanga.sunrise(jd, place)
     sunrise_jd = sunrise[0]
     if not jd - 1 <= sunrise_jd <= jd + 2:
+      message = format_sunrise_unavailable_message(location_name, year, month, day, place)
       log.error("%s", message)
       return None
     return sunrise
   except Exception as error:
+    message = format_sunrise_unavailable_message(location_name, year, month, day, place)
     log.error("%s (%s)", message, error)
     return None
 
@@ -725,8 +701,10 @@ def daily_records(months, location):
 def display_masa(record, amanta=True):
   """Māsa code displayed for a canonical amānta record."""
   masa_number = int(record.masa.lstrip("A"))
-  if not amanta and not record.is_adhika and record.tithi.startswith("K"):
-    masa_number = masa_number % 12 + 1
+  tithi_number = int(record.tithi[1:])
+  if record.tithi.startswith("K"):
+    tithi_number += 15
+  masa_number = panchanga.display_masa_number(masa_number, record.is_adhika, tithi_number, amanta)
   return masa_code(masa_number, record.is_adhika)
 
 
@@ -784,7 +762,7 @@ def draw_day_column(pdf, x, top, width):
 
 
 def draw_month(pdf, year, month, records_by_date, masa_badges, festivals_by_date, ekadashi_dates, eclipse_dates,
-               sankranti_by_date, solar_by_date, x, top, width):
+               solar_by_date, x, top, width):
   tithi_column_width = width * TITHI_COLUMN_RATIO
   nakshatra_column_width = width * NAKSHATRA_COLUMN_RATIO
   yoga_column_width = width * YOGA_COLUMN_RATIO
@@ -831,16 +809,14 @@ def draw_month(pdf, year, month, records_by_date, masa_badges, festivals_by_date
     is_masa_start = masa_badge is not None
     is_adhika = record.is_adhika
     tithi_display, is_sukla = tithi_display_parts(tithi)
-    sankranti_raasi = sankranti_by_date.get(civil_date)
-    solar_info = solar_by_date.get(civil_date)
-    solar_day = solar_info[1] if solar_info is not None else None
+    raasi, solar_day, is_sankranti = solar_by_date[civil_date]
     if is_masa_start:
       pdf.setFillColor(ADHIKA_ROW if is_adhika else MASA_START_ROW)
       pdf.rect(x, row_y, tithi_column_width, ROW_HEIGHT, stroke=0, fill=1)
       pdf.setFillColor(ADHIKA_INK if is_adhika else MASA_START_INK)
       pdf.setFont(PDF_FONT_BOLD, 5.2)
       pdf.drawRightString(x + tithi_column_width - 1.0, row_y + 8.2, masa_badge.removeprefix("A"))
-    if sankranti_raasi is not None:
+    if is_sankranti:
       # Solar markers use the N-cell so the T-cell stays clear for lunar marks.
       pdf.setFillColor(SANKRANTI_ROW)
       pdf.rect(x + tithi_column_width, row_y, nakshatra_column_width, ROW_HEIGHT, stroke=0, fill=1)
@@ -849,11 +825,10 @@ def draw_month(pdf, year, month, records_by_date, masa_badges, festivals_by_date
       pdf.rect(x + width - 1.6, row_y, 1.6, ROW_HEIGHT, stroke=0, fill=1)
     if civil_date in ekadashi_dates:
       draw_tithi_underline(pdf, x, row_y, tithi_column_width, EKADASHI_MARK)
-    if sankranti_raasi is not None:
-      draw_sankranti_mark(pdf, x + tithi_column_width, row_y, sankranti_raasi, nakshatra_column_width)
-    if solar_day is not None:
-      if sankranti_raasi is None and solar_day % 7 == 0:
-        draw_solar_day_mark(pdf, x + tithi_column_width, row_y, solar_day, nakshatra_column_width)
+    if is_sankranti:
+      draw_sankranti_mark(pdf, x + tithi_column_width, row_y, raasi, nakshatra_column_width)
+    elif solar_day % 7 == 0:
+      draw_solar_day_mark(pdf, x + tithi_column_width, row_y, solar_day, nakshatra_column_width)
     if civil_date in eclipse_dates:
       draw_eclipse_mark(pdf, x, row_y, tithi_column_width)
     festival_numbers = festivals_by_date.get(civil_date, ())
@@ -1054,10 +1029,6 @@ def _build_pdf_unlocked(location, start_year, start_month, output_path, festival
     sunrise_by_date[record.civil_date] = record.sunrise_jd
   eclipse_line = format_eclipse_line(eclipses, location.timezone_name, sunrise_by_date=sunrise_by_date)
   eclipse_dates = eclipse_civil_dates(eclipses, location.timezone_name)
-  # Saṅkrānti markers use the same sunrise-in-new-rāśi rule as Mesha/Makara
-  # festivals; scan context months so a transition at the print-range start
-  # is not missed.
-  sankranti_by_date = sankranti_raasi_by_date(context_records)
   solar_by_date = solar_dates_by_date(context_records)
   ekadashi_dates = set()
   for value in ekadashi_dates_from_records(context_records):
@@ -1099,7 +1070,7 @@ def _build_pdf_unlocked(location, start_year, start_month, output_path, festival
   for index, (year, month) in enumerate(months):
     x = margin + day_column_width + index * month_width
     draw_month(pdf, year, month, records_by_date, masa_badges, festivals_by_date, ekadashi_dates, eclipse_dates,
-               sankranti_by_date, solar_by_date, x, top, month_width)
+               solar_by_date, x, top, month_width)
 
   draw_page_footer(pdf, festival_entries, eclipse_line=eclipse_line)
   pdf.showPage()

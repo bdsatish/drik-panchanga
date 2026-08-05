@@ -180,14 +180,9 @@ def _compute_day_details_unlocked(location, civil, amanta=None, coordinate_selec
   kar = panchanga.karana(jd, place)
   ti_num, last_nm, lunar_num, is_adhika = panchanga.lunar_masa(jd, place, tithi_number=ti[0])
   # Display māsa follows amānta/pūrṇimānta; ṛtus use lunar_num only.
-  masa_num = lunar_num
-  if not amanta and not is_adhika and ti_num >= 16:
-    masa_num = masa_num % 12 + 1
+  masa_num = panchanga.display_masa_number(lunar_num, is_adhika, ti_num, amanta)
   rtu_num = panchanga.ritu(lunar_num)
-  prev_was_adhika = False
-  if not is_adhika:
-    prev_nm = panchanga.new_moon(last_nm - 1, 29, -1)
-    prev_was_adhika = (panchanga.raasi(prev_nm) == panchanga.raasi(last_nm))
+  prev_was_adhika = panchanga.previous_masa_was_adhika(last_nm, is_adhika)
   drik_rtu_num = panchanga.drik_ritu(lunar_num, is_adhika, ti_num, prev_was_adhika)
   samvat_num = panchanga.samvatsara(jd, masa_num)
   samvat_north_num = panchanga.samvatsara_north_modern(jd, masa_num)
