@@ -25,9 +25,9 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(_REPO_ROOT) not in sys.path:
   sys.path.insert(0, str(_REPO_ROOT))
 
-from app_logging import configure_logging
 from generate_panchanga_calendar import (
   city_locations,
+  configure_logging,
   load_location,
   location_slug,
   parse_start_month,

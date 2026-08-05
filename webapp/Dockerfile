@@ -15,7 +15,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Core calendar library + web package (see root .dockerignore).
-COPY generate_panchanga_calendar.py festival_rules.py panchanga.py app_logging.py \
+COPY generate_panchanga_calendar.py festival_rules.py panchanga.py \
      cities.json festivals.cfg sanskrit_names.json ./
 COPY fonts ./fonts
 COPY webapp ./webapp

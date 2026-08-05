@@ -6,6 +6,7 @@ import calendar
 import json
 import logging
 import re
+import sys
 from collections import namedtuple as struct
 from datetime import date as CivilDate
 from datetime import datetime
@@ -81,6 +82,20 @@ SANKRANTI_INK = HexColor("#9A4E12")
 FESTIVAL_INK = HexColor("#9A3154")
 EKADASHI_MARK = HexColor("#168078")
 ECLIPSE_MARK = HexColor("#8B4518")
+
+
+def configure_logging():
+  """Attach a stderr WARNING handler once (safe to call from every entrypoint).
+
+  Skipped when ``unittest`` is already loaded so the test suite stays quiet.
+  ``logging.basicConfig`` itself is a no-op if the root logger already has handlers.
+  """
+  if "unittest" not in sys.modules:
+    logging.basicConfig(
+      level=logging.WARNING,
+      format="%(name)s: %(levelname)s: %(message)s",
+      stream=sys.stderr,
+    )
 
 
 def _load_json(path):
@@ -1112,7 +1127,6 @@ def argument_parser():
 
 
 def main(argv=None):
-  from app_logging import configure_logging
   configure_logging()
   parser = argument_parser()
   arguments = parser.parse_args(argv)
