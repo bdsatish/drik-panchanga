@@ -39,6 +39,17 @@ class DayPanchangaMasaRituTests(unittest.TestCase):
                                   coordinate_selection="citra")
     self.assertEqual(len(details["rahu_kala"]), 2)
     self.assertEqual(len(details["durmuhurta"]), 2)
+    self.assertEqual(details["varjyam"], panchanga.varjyam(details["jd"], details["place"]))
+
+  def test_json_varjyam_reuses_the_shared_day_details(self):
+    day = compute_day_panchanga("Bengaluru", "21/04/2023", coordinate_selection="citra")
+    for interval in day["varjyam"]:
+      self.assertRegex(interval["start"], r"^\d{2}:\d{2}:\d{2}$")
+      self.assertRegex(interval["end"], r"^\d{2}:\d{2}:\d{2}$")
+    with patch.object(panchanga, "varjyam", return_value=[([1, 2, 3], [4, 5, 6])]) as stub:
+      stubbed = compute_day_panchanga("Bengaluru", "21/04/2023", coordinate_selection="citra")
+    self.assertEqual(stub.call_count, 1)
+    self.assertEqual(stubbed["varjyam"], [{"start": "01:02:03", "end": "04:05:06"}])
 
   def test_coordinate_lock_covers_the_full_day_calculation(self):
     first_selected = Event()

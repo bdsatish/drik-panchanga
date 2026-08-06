@@ -107,7 +107,22 @@ class DurmuhurtaRenderingTests(unittest.TestCase):
     self.assertEqual(_valid_durmuhurta_intervals(([0, 0], [0, 0])), [])
 
 
+def unfold_ics(text):
+  """Undo RFC 5545 line folding so description content can be matched whole."""
+  return text.replace("\r\n ", "")
+
+
 class IcsServiceTests(unittest.TestCase):
+
+  def test_describes_varjyam_for_every_day(self):
+    ics = unfold_ics(generate_ics(load_location("Tirupati"), 2026, 1))
+    self.assertEqual(ics.count("Varjyam:"), ics.count("BEGIN:VEVENT"))
+    with mock.patch.object(panchanga, "varjyam", return_value=[([1, 2, 3], [4, 5, 6])]):
+      stubbed = unfold_ics(generate_ics(load_location("Tirupati"), 2026, 1))
+    self.assertIn("Varjyam: 01:02:03–04:05:06", stubbed)
+    with mock.patch.object(panchanga, "varjyam", return_value=[]):
+      empty = unfold_ics(generate_ics(load_location("Tirupati"), 2026, 1))
+    self.assertIn("Varjyam: —", empty)
 
   def test_generates_valid_ics_structure(self):
     ics = generate_ics(load_location("Helsinki"), 2026, 1)

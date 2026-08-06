@@ -195,6 +195,7 @@ def _compute_day_details_unlocked(location, civil, amanta=None, coordinate_selec
   moonset, moonset_status = probe_moon_event(jd, place, civil, rise=False)
   rahu_kala = panchanga.rahu_kalam(jd, place)
   durmuhurta = panchanga.durmuhurtam(jd, place)
+  varjyam = panchanga.varjyam(jd, place)
 
   return {
     "civil": civil,
@@ -230,6 +231,7 @@ def _compute_day_details_unlocked(location, civil, amanta=None, coordinate_selec
     "moonset_status": moonset_status,
     "rahu_kala": rahu_kala,
     "durmuhurta": durmuhurta,
+    "varjyam": varjyam,
   }
 
 
@@ -266,7 +268,6 @@ def _compute_day_panchanga_unlocked(city, date_text, month_system="amanta", coor
   names = details["names"]
   civil = details["civil"]
   jd = details["jd"]
-  place = details["place"]
   sunrise = details["sunrise"]
   sunset = details["sunset"]
   day_dur = details["day_dur"]
@@ -294,6 +295,7 @@ def _compute_day_panchanga_unlocked(city, date_text, month_system="amanta", coor
   moonset_status = details["moonset_status"]
   rahu_kala = details["rahu_kala"]
   durmuhurta = details["durmuhurta"]
+  varjyam = details["varjyam"]
 
   use_tropical = coordinate_selection == "tropical"
   masa_label = format_masa_label(names, masa_num, is_adhika)
@@ -307,7 +309,7 @@ def _compute_day_panchanga_unlocked(city, date_text, month_system="amanta", coor
     durmuhurta_intervals.append(_interval_from_hms(panchanga.to_dms(start), panchanga.to_dms(end)))
 
   varjyam_intervals = []
-  for start, end in panchanga.varjyam(jd, place):
+  for start, end in varjyam:
     varjyam_intervals.append(_interval_from_hms(start, end))
 
   return {

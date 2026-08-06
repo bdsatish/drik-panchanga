@@ -140,6 +140,7 @@ def _generate_ics_unlocked(location, start_year, start_month, month_system="aman
       ms_status = details["moonset_status"]
       rahu_kala = details["rahu_kala"]
       durmuhurta = details["durmuhurta"]
+      varjyam = details["varjyam"]
 
       tithi_name = names["tithis"][str(ti[0])]
       nak_name = names["nakshatras"][str(nak[0])]
@@ -165,6 +166,11 @@ def _generate_ics_unlocked(location, start_year, start_month, month_system="aman
         durmuhurta_parts.append(_fmt_interval(panchanga.to_dms(start), panchanga.to_dms(end)))
       durmuhurta_text = ", ".join(durmuhurta_parts) if durmuhurta_parts else "—"
 
+      varjyam_parts = []
+      for start, end in varjyam:
+        varjyam_parts.append(_fmt_interval(start, end))
+      varjyam_text = ", ".join(varjyam_parts) if varjyam_parts else "—"
+
       desc_lines = []
       desc_lines.append("Samvatsara: " + names["samvats"][str(samvat_num)] + " " + str(saka_year) + ", " +
                         names["samvats"][str(samvat_north_num)] + " " + str(vikrama_year) + ", " + "Kali (elapsed) " +
@@ -182,6 +188,7 @@ def _generate_ics_unlocked(location, start_year, start_month, month_system="aman
       desc_lines.append("Day duration: " + format_time(day_dur[1]))
       desc_lines.append("Rāhukāla: " + _fmt_interval(*rahu_kala))
       desc_lines.append("Durmuhūrta: " + durmuhurta_text)
+      desc_lines.append("Varjyam: " + varjyam_text)
       desc_lines.append("Kali Day: " + str(kali_day))
       desc_lines.append("Julian day: " + f"{jd:.1f}")
       desc_lines.append("Sunrise JD (UT): " + f"{sunrise_jd_ut:.6f}")
