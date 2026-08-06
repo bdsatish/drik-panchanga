@@ -808,8 +808,11 @@ def draw_month(pdf, year, month, records_by_date, masa_badges, festivals_by_date
       pdf.setFillColor(ADHIKA_ROW if is_adhika else MASA_START_ROW)
       pdf.rect(x, row_y, tithi_column_width, ROW_HEIGHT, stroke=0, fill=1)
       pdf.setFillColor(ADHIKA_INK if is_adhika else MASA_START_INK)
-      pdf.setFont(PDF_FONT_BOLD, 5.2)
-      pdf.drawRightString(x + tithi_column_width - 1.0, row_y + 8.2, masa_badge.removeprefix("A"))
+      # The badge keeps its "A" so adhika reads without relying on the gold fill.
+      badge_room = tithi_column_width - 4.6 - pdf.stringWidth(tithi_display, tithi_font(is_sukla), 7.4)
+      badge_size = fitted_font_size(pdf, masa_badge, PDF_FONT_BOLD, 5.2, 3.2, badge_room, f"masa badge {masa_badge}")
+      pdf.setFont(PDF_FONT_BOLD, badge_size)
+      pdf.drawRightString(x + tithi_column_width - 1.0, row_y + 8.2, masa_badge)
     if is_sankranti:
       # Solar markers use the N-cell so the T-cell stays clear for lunar marks.
       pdf.setFillColor(SANKRANTI_ROW)

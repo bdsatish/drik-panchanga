@@ -25,6 +25,7 @@ from generate_panchanga_calendar import (
   PDF_FONT_TTC,
   RULESET_VERSION,
   SANKRANTI_INK,
+  TITHI_COLUMN_RATIO,
   argument_parser,
   build_pdf,
   calendar_year_label,
@@ -32,6 +33,7 @@ from generate_panchanga_calendar import (
   daily_records,
   default_output_path,
   display_masa,
+  draw_month,
   draw_page_footer,
   draw_page_header,
   draw_eclipse_mark,
@@ -244,6 +246,47 @@ class TithiDisplayTests(unittest.TestCase):
     ensure_pdf_fonts()
     self.assertEqual(tithi_font(True), PDF_FONT_BOLD)
     self.assertEqual(tithi_font(False), PDF_FONT_BOLD_ITALIC)
+
+
+class MasaBadgeTests(unittest.TestCase):
+  """T-cell badge: adhika keeps its ``A`` and never overruns the cell."""
+
+  MONTH_WIDTH = (842.0 - 2 * 18 - 24) / 14
+
+  def draw_badge(self, badge, is_adhika):
+    """Draw one badge-bearing day and return ``(badge_text, font_size)``."""
+    ensure_pdf_fonts()
+    pdf = Canvas(BytesIO())
+    civil = date(2026, 5, 17)
+    record = DayRecord(civil, "S1", 5, 7, badge, is_adhika, 0.0)
+    drawn = []
+    active_size = []
+    original_set_font = pdf.setFont
+
+    def spy_set_font(name, size, *rest):
+      del active_size[:]
+      active_size.append(size)
+      return original_set_font(name, size, *rest)
+
+    pdf.setFont = spy_set_font
+    pdf.drawRightString = lambda x, y, text: drawn.append((text, active_size[-1]))
+    draw_month(pdf, 2026, 5, {civil: record}, {civil: badge}, {}, set(), set(), {civil: (2, 10, False)}, 40.0, 500.0,
+               self.MONTH_WIDTH)
+    return drawn[-1]
+
+  def test_adhika_badge_keeps_its_prefix(self):
+    self.assertEqual(self.draw_badge("A3", True)[0], "A3")
+    self.assertEqual(self.draw_badge("3", False)[0], "3")
+
+  def test_wide_badge_shrinks_instead_of_overrunning_the_tithi(self):
+    plain_text, plain_size = self.draw_badge("3", False)
+    wide_text, wide_size = self.draw_badge("A12", True)
+    self.assertEqual(wide_text, "A12")
+    self.assertLess(wide_size, plain_size)
+    cell_width = self.MONTH_WIDTH * TITHI_COLUMN_RATIO
+    tithi_width = Canvas(BytesIO()).stringWidth("01", tithi_font(True), 7.4)
+    badge_width = Canvas(BytesIO()).stringWidth(wide_text, PDF_FONT_BOLD, wide_size)
+    self.assertLessEqual(3.0 + tithi_width + badge_width, cell_width - 1.0)
 
 
 class DisplayMasaTests(unittest.TestCase):
