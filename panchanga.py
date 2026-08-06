@@ -983,57 +983,65 @@ def varjyam(jd, place):
   srise1 = sunrise(jd, place)[0] - tz / 24.
   srise2 = sunrise(jd + 1, place)[0] - tz / 24.
 
+  # Sample Moon on a 0.40d grid (shared for all nakshatras). Coarser than
+  # nakshatra/tithi's 0.25d; local 5-point Lagrange still lands within ~1s.
+  # Window covers nak starts before sunrise and ends after next sunrise.
+  step = 0.40
+  times = []
+  longitudes = []
+  t = srise1 - 1.5
+  while t <= srise2 + 1.5:
+    times.append(t)
+    longitudes.append(lunar_longitude(t))
+    t += step
+  longitudes = unwrap_angles(longitudes)
+
   naks = set()
   for t in [srise1, srise1 + 0.5, srise2]:
     naks.add(nakshatra_pada(lunar_longitude(t))[0])
+
+  def moon_crossing(target_lon):
+    """JD when Moon longitude hits ``target_lon``, via local 5-point Lagrange."""
+    targ = target_lon
+    while targ < longitudes[0]:
+      targ += 360
+    while targ > longitudes[-1]:
+      targ -= 360
+    if targ < longitudes[0] or targ > longitudes[-1]:
+      return None
+
+    bracket = None
+    for i in range(len(longitudes) - 1):
+      if (longitudes[i] - targ) * (longitudes[i + 1] - targ) <= 0:
+        bracket = i
+        break
+    if bracket is None:
+      return None
+
+    # nakshatra()-style 5-point window centered on the bracket.
+    left = bracket - 2
+    if left < 0:
+      left = 0
+    right = left + 5
+    if right > len(times):
+      right = len(times)
+      left = right - 5
+      if left < 0:
+        left = 0
+    xs = times[left:right]
+    ys = longitudes[left:right]
+    approx = inverse_lagrange(xs, ys, targ)
+    if approx < times[0] or approx > times[-1]:
+      return None
+    return approx
 
   varjyam_periods = []
 
   for nak in naks:
     prev_nak = 27 if nak == 1 else nak - 1
-    start_lon = nakshatra_end_point(prev_nak)
-    end_lon = nakshatra_end_point(nak)
-
-    t_start = None
-    t = srise1 - 1.5
-    while t <= srise2:
-      lon1 = lunar_longitude(t)
-      lon2 = lunar_longitude(t + 0.1)
-      if lon2 < lon1 - 180: lon2 += 360
-
-      targ = start_lon
-      while targ < lon1 - 180:
-        targ += 360
-      while targ > lon1 + 180:
-        targ -= 360
-
-      if (lon1 - targ) * (lon2 - targ) <= 0:
-        t_start = bisection_search(lambda x: lon_relative_to_base(lunar_longitude(x), lon1) - targ, t, t + 0.1)
-        break
-      t += 0.1
-
-    if t_start is None:
-      continue
-
-    t_end = None
-    t = t_start
-    while t <= t_start + 1.5:
-      lon1 = lunar_longitude(t)
-      lon2 = lunar_longitude(t + 0.1)
-      if lon2 < lon1 - 180: lon2 += 360
-
-      targ = end_lon
-      while targ < lon1 - 180:
-        targ += 360
-      while targ > lon1 + 180:
-        targ -= 360
-
-      if (lon1 - targ) * (lon2 - targ) <= 0:
-        t_end = bisection_search(lambda x: lon_relative_to_base(lunar_longitude(x), lon1) - targ, t, t + 0.1)
-        break
-      t += 0.1
-
-    if t_end is None:
+    t_start = moon_crossing(nakshatra_end_point(prev_nak))
+    t_end = moon_crossing(nakshatra_end_point(nak))
+    if t_start is None or t_end is None or t_end <= t_start:
       continue
 
     duration = t_end - t_start
