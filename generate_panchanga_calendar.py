@@ -979,100 +979,88 @@ def draw_page_footer(pdf, festival_entries, eclipse_line="Eclipses: None"):
 
 def build_pdf(location, start_year, start_month, output_path, festivals_path=None, month_system="amanta",
               coordinate_selection="citra"):
-  """Build a calendar while holding coordinate state for the full document.
-
-  Pattern: take ``coordinate_calculation_lock``, then call ``_build_pdf_unlocked``.
-  The lock keeps ayanāṃśa / tropical mode stable for the whole PDF; the
-  ``_unlocked`` helper holds the real work and must not be called alone from
-  other threads.
-  """
+  """Build a calendar while holding coordinate state for the full document."""
   with panchanga.coordinate_calculation_lock:
-    return _build_pdf_unlocked(location, start_year, start_month, output_path, festivals_path=festivals_path,
-                               month_system=month_system, coordinate_selection=coordinate_selection)
+    ensure_pdf_fonts()
+    amanta = require_month_system(month_system)
+    panchanga.set_coordinate_selection(coordinate_selection)
+    months = month_range(start_year, start_month)
+    range_start = CivilDate(start_year, start_month, 1)
+    end_year, end_month = months[-1]
+    range_end = CivilDate(end_year, end_month, calendar.monthrange(end_year, end_month)[1])
+    header_year, header_month = months[len(months) // 2]
 
+    context_months = context_month_range(start_year, start_month)
+    context_records = daily_records(context_months, location)
+    records_by_date = {}
+    target_records = []
+    target_dates = set()
+    sunrise_by_date = {}
+    header_records = []
+    for record in context_records:
+      civil_date = record.civil_date
+      records_by_date[civil_date] = record
+      if range_start <= civil_date <= range_end:
+        target_records.append(record)
+        target_dates.add(civil_date)
+        sunrise_by_date[civil_date] = record.sunrise_jd
+        if (civil_date.year, civil_date.month) == (header_year, header_month):
+          header_records.append(record)
 
-def _build_pdf_unlocked(location, start_year, start_month, output_path, festivals_path=None, month_system="amanta",
-                        coordinate_selection="citra"):
-  ensure_pdf_fonts()
-  amanta = require_month_system(month_system)
-  panchanga.set_coordinate_selection(coordinate_selection)
-  months = month_range(start_year, start_month)
-  range_start = CivilDate(start_year, start_month, 1)
-  end_year, end_month = months[-1]
-  range_end = CivilDate(end_year, end_month, calendar.monthrange(end_year, end_month)[1])
-  header_year, header_month = months[len(months) // 2]
+    festivals_path = Path(festivals_path) if festivals_path is not None else DEFAULT_FESTIVALS_PATH
+    enabled_names = load_festival_selection(festivals_path)
+    geopos = (location.longitude, location.latitude, 0.0)
+    festivals_by_date, festival_entries = resolve_festivals(
+      context_records, target_dates, geopos=geopos, timezone_name=location.timezone_name, enabled_names=enabled_names)
 
-  context_months = context_month_range(start_year, start_month)
-  context_records = daily_records(context_months, location)
-  records_by_date = {}
-  target_records = []
-  target_dates = set()
-  sunrise_by_date = {}
-  header_records = []
-  for record in context_records:
-    civil_date = record.civil_date
-    records_by_date[civil_date] = record
-    if range_start <= civil_date <= range_end:
-      target_records.append(record)
-      target_dates.add(civil_date)
-      sunrise_by_date[civil_date] = record.sunrise_jd
-      if (civil_date.year, civil_date.month) == (header_year, header_month):
-        header_records.append(record)
+    eclipse_start_jd, eclipse_end_jd = local_range_jds(start_year, start_month, end_year, end_month,
+                                                       location.timezone_name)
+    eclipses = find_local_eclipses(eclipse_start_jd, eclipse_end_jd, geopos)
+    eclipse_line = format_eclipse_line(eclipses, location.timezone_name, sunrise_by_date=sunrise_by_date)
+    eclipse_dates = eclipse_civil_dates(eclipses, location.timezone_name)
+    solar_by_date = solar_dates_by_date(context_records)
+    ekadashi_dates = set()
+    for value in ekadashi_dates_from_records(context_records):
+      if range_start <= value <= range_end:
+        ekadashi_dates.add(value)
+    calendar_years = calendar_year_label(header_records, amanta=amanta)
+    kali_ahargana = kali_ahargana_range(months)
+    masa_badges = masa_badges_by_date(target_records, amanta=amanta)
 
-  festivals_path = Path(festivals_path) if festivals_path is not None else DEFAULT_FESTIVALS_PATH
-  enabled_names = load_festival_selection(festivals_path)
-  geopos = (location.longitude, location.latitude, 0.0)
-  festivals_by_date, festival_entries = resolve_festivals(
-    context_records, target_dates, geopos=geopos, timezone_name=location.timezone_name, enabled_names=enabled_names)
+    page_width, page_height = landscape(A4)
+    output_path = Path(output_path)
+    # ReportLab defaults the canvas to Helvetica; pin IndUni-H so it never appears.
+    pdf = canvas.Canvas(str(output_path), pagesize=(page_width, page_height), initialFontName=PDF_FONT)
+    masa_label = "amanta" if amanta else "purnimanta"
+    if coordinate_selection == "tropical":
+      coordinate_desc = coordinate_selection_label(coordinate_selection)
+    else:
+      coordinate_desc = f"{ayanamsa_label(coordinate_selection)} nakshatra"
+    embed_pdf_metadata(
+      pdf, title=f"{location.name} Panchanga {month_span_label(months)}",
+      subject=(f"Daily tithi, {coordinate_desc}, yoga, and {masa_label} masa at "
+               f"{location.name} sunrise"), ruleset_version=RULESET_VERSION, coordinate_selection=coordinate_selection)
 
-  eclipse_start_jd, eclipse_end_jd = local_range_jds(start_year, start_month, end_year, end_month,
-                                                     location.timezone_name)
-  eclipses = find_local_eclipses(eclipse_start_jd, eclipse_end_jd, geopos)
-  eclipse_line = format_eclipse_line(eclipses, location.timezone_name, sunrise_by_date=sunrise_by_date)
-  eclipse_dates = eclipse_civil_dates(eclipses, location.timezone_name)
-  solar_by_date = solar_dates_by_date(context_records)
-  ekadashi_dates = set()
-  for value in ekadashi_dates_from_records(context_records):
-    if range_start <= value <= range_end:
-      ekadashi_dates.add(value)
-  calendar_years = calendar_year_label(header_records, amanta=amanta)
-  kali_ahargana = kali_ahargana_range(months)
-  masa_badges = masa_badges_by_date(target_records, amanta=amanta)
+    draw_page_header(pdf, location, months, RULESET_VERSION, amanta=amanta, coordinate_selection=coordinate_selection,
+                     calendar_years=calendar_years, kali_ahargana=kali_ahargana)
 
-  page_width, page_height = landscape(A4)
-  output_path = Path(output_path)
-  # ReportLab defaults the canvas to Helvetica; pin IndUni-H so it never appears.
-  pdf = canvas.Canvas(str(output_path), pagesize=(page_width, page_height), initialFontName=PDF_FONT)
-  masa_label = "amanta" if amanta else "purnimanta"
-  if coordinate_selection == "tropical":
-    coordinate_desc = coordinate_selection_label(coordinate_selection)
-  else:
-    coordinate_desc = f"{ayanamsa_label(coordinate_selection)} nakshatra"
-  embed_pdf_metadata(
-    pdf, title=f"{location.name} Panchanga {month_span_label(months)}",
-    subject=(f"Daily tithi, {coordinate_desc}, yoga, and {masa_label} masa at "
-             f"{location.name} sunrise"), ruleset_version=RULESET_VERSION, coordinate_selection=coordinate_selection)
+    margin = 18
+    day_column_width = 24
+    usable_width = page_width - 2 * margin
+    month_width = (usable_width - day_column_width) / len(months)
+    top = page_height - 37
 
-  draw_page_header(pdf, location, months, RULESET_VERSION, amanta=amanta, coordinate_selection=coordinate_selection,
-                   calendar_years=calendar_years, kali_ahargana=kali_ahargana)
+    draw_day_column(pdf, margin, top, day_column_width)
+    for index, (year, month) in enumerate(months):
+      x = margin + day_column_width + index * month_width
+      draw_month(pdf, year, month, records_by_date, masa_badges, festivals_by_date, ekadashi_dates, eclipse_dates,
+                 solar_by_date, x, top, month_width)
 
-  margin = 18
-  day_column_width = 24
-  usable_width = page_width - 2 * margin
-  month_width = (usable_width - day_column_width) / len(months)
-  top = page_height - 37
+    draw_page_footer(pdf, festival_entries, eclipse_line=eclipse_line)
+    pdf.showPage()
 
-  draw_day_column(pdf, margin, top, day_column_width)
-  for index, (year, month) in enumerate(months):
-    x = margin + day_column_width + index * month_width
-    draw_month(pdf, year, month, records_by_date, masa_badges, festivals_by_date, ekadashi_dates, eclipse_dates,
-               solar_by_date, x, top, month_width)
-
-  draw_page_footer(pdf, festival_entries, eclipse_line=eclipse_line)
-  pdf.showPage()
-
-  pdf.save()
-  return output_path
+    pdf.save()
+    return output_path
 
 
 def default_output_path(location, start_year, start_month, month_system="amanta", coordinate_selection="citra"):

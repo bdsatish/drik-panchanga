@@ -236,16 +236,6 @@ def _compute_day_details_unlocked(location, civil, amanta=None, coordinate_selec
 
 
 def compute_day_panchanga(city, date_text, month_system="amanta", coordinate_selection="citra"):
-  """Return one city's day panchanga while holding coordinate state stable.
-
-    Lock here, then ``_compute_day_panchanga_unlocked`` builds the JSON fields.
-    """
-  with panchanga.coordinate_calculation_lock:
-    return _compute_day_panchanga_unlocked(city, date_text, month_system=month_system,
-                                           coordinate_selection=coordinate_selection)
-
-
-def _compute_day_panchanga_unlocked(city, date_text, month_system="amanta", coordinate_selection="citra"):
   """Return named panchanga fields for ``city`` on ``date_text`` (DD/MM/YYYY).
 
     ``month_system`` is ``amanta`` (default) or ``purnimanta``; it affects the
@@ -256,72 +246,72 @@ def _compute_day_panchanga_unlocked(city, date_text, month_system="amanta", coor
     ``revati``, ``rohini``, ``pushya``, ``mula``, ``krishnamurti``, ``raman``)
     or ``"tropical"`` for tropical (sāyana) longitudes.
     """
-  city = (city or "").strip()
-  if not city:
-    raise ValueError("City is required.")
-  amanta = require_month_system(month_system)
-  civil = parse_civil_date(date_text)
-  location = load_location(city)
+  with panchanga.coordinate_calculation_lock:
+    city = (city or "").strip()
+    if not city:
+      raise ValueError("City is required.")
+    amanta = require_month_system(month_system)
+    civil = parse_civil_date(date_text)
+    location = load_location(city)
 
-  # Already under coordinate_calculation_lock — call unlocked helper directly.
-  details = _compute_day_details_unlocked(location, civil, amanta=amanta, coordinate_selection=coordinate_selection)
-  names = details["names"]
-  civil = details["civil"]
+    details = _compute_day_details_unlocked(location, civil, amanta=amanta, coordinate_selection=coordinate_selection)
+    names = details["names"]
+    civil = details["civil"]
 
-  use_tropical = coordinate_selection == "tropical"
-  masa_label = format_masa_label(names, details["masa_num"], details["is_adhika"])
-  month_label = month_system_label(amanta)
-  ayan_label = None if use_tropical else ayanamsa_label(coordinate_selection)
-  ayana = ayana_label(details["sun_raasi"])
-  drik_ayana = drik_ayana_label(details["drik_rtu_num"])
+    use_tropical = coordinate_selection == "tropical"
+    masa_label = format_masa_label(names, details["masa_num"], details["is_adhika"])
+    month_label = month_system_label(amanta)
+    ayan_label = None if use_tropical else ayanamsa_label(coordinate_selection)
+    ayana = ayana_label(details["sun_raasi"])
+    drik_ayana = drik_ayana_label(details["drik_rtu_num"])
 
-  durmuhurta_intervals = []
-  for start, end in _valid_durmuhurta_intervals(details["durmuhurta"]):
-    durmuhurta_intervals.append(_interval_from_hms(panchanga.to_dms(start), panchanga.to_dms(end)))
+    durmuhurta_intervals = []
+    for start, end in _valid_durmuhurta_intervals(details["durmuhurta"]):
+      durmuhurta_intervals.append(_interval_from_hms(panchanga.to_dms(start), panchanga.to_dms(end)))
 
-  varjyam_intervals = []
-  for start, end in details["varjyam"]:
-    varjyam_intervals.append(_interval_from_hms(start, end))
+    varjyam_intervals = []
+    for start, end in details["varjyam"]:
+      varjyam_intervals.append(_interval_from_hms(start, end))
 
-  return {
-    "city": location.name,
-    "date": f"{civil.day:02d}/{civil.month:02d}/{civil.year}",
-    "timezone": location.timezone_name,
-    "jd": details["jd"],
-    "sunrise_jd": details["sunrise_jd_ut"],
-    "coordinate_mode": "tropical" if use_tropical else "sidereal",
-    "coordinate_label": coordinate_selection_label(coordinate_selection),
-    "ayanamsa": ayan_label,
-    "ayanamsa_key": None if use_tropical else coordinate_selection,
-    "ayanamsa_degrees": None if use_tropical else round(details["ayanamsa_degrees"], 8),
-    "month_system": "amanta" if amanta else "purnimanta",
-    "month_system_label": month_label,
-    "samvatsara": names["samvats"][str(details["samvat_num"])],
-    "samvatsara_north": names["samvats"][str(details["samvat_north_num"])],
-    "ayana": ayana,
-    "drik_ayana": drik_ayana,
-    "masa": masa_label,
-    "masa_number": details["masa_num"],
-    "is_adhika": details["is_adhika"],
-    "rtu": f"{names['ritus'][str(details['rtu_num'])]} ṛtu",
-    "drik_rtu": f"{names['ritus'][str(details['drik_rtu_num'])]} ṛtu",
-    "vaara": names["varas"][str(details["vara_num"])],
-    "kali_day": details["kali_day"],
-    "saka_year": details["saka_year"],
-    "kali_year": details["kali_year"],
-    "vikrama_year": details["vikrama_year"],
-    "sunrise": format_time(details["sunrise"][1]),
-    "sunset": format_time(details["sunset"][1]),
-    "moonrise": details["moonrise"],
-    "moonrise_status": details["moonrise_status"],
-    "moonset": details["moonset"],
-    "moonset_status": details["moonset_status"],
-    "day_duration": format_time(details["day_dur"][1]),
-    "rahu_kala": _interval_from_hms(*details["rahu_kala"]),
-    "durmuhurta": durmuhurta_intervals,
-    "varjyam": varjyam_intervals,
-    "tithi": _named_segments(details["ti"], names["tithis"]),
-    "nakshatra": _named_segments(details["nak"], names["nakshatras"]),
-    "yoga": _named_segments(details["yog"], names["yogas"]),
-    "karana": _named_segments(details["kar"], names["karanas"]),
-  }
+    return {
+      "city": location.name,
+      "date": f"{civil.day:02d}/{civil.month:02d}/{civil.year}",
+      "timezone": location.timezone_name,
+      "jd": details["jd"],
+      "sunrise_jd": details["sunrise_jd_ut"],
+      "coordinate_mode": "tropical" if use_tropical else "sidereal",
+      "coordinate_label": coordinate_selection_label(coordinate_selection),
+      "ayanamsa": ayan_label,
+      "ayanamsa_key": None if use_tropical else coordinate_selection,
+      "ayanamsa_degrees": None if use_tropical else round(details["ayanamsa_degrees"], 8),
+      "month_system": "amanta" if amanta else "purnimanta",
+      "month_system_label": month_label,
+      "samvatsara": names["samvats"][str(details["samvat_num"])],
+      "samvatsara_north": names["samvats"][str(details["samvat_north_num"])],
+      "ayana": ayana,
+      "drik_ayana": drik_ayana,
+      "masa": masa_label,
+      "masa_number": details["masa_num"],
+      "is_adhika": details["is_adhika"],
+      "rtu": f"{names['ritus'][str(details['rtu_num'])]} ṛtu",
+      "drik_rtu": f"{names['ritus'][str(details['drik_rtu_num'])]} ṛtu",
+      "vaara": names["varas"][str(details["vara_num"])],
+      "kali_day": details["kali_day"],
+      "saka_year": details["saka_year"],
+      "kali_year": details["kali_year"],
+      "vikrama_year": details["vikrama_year"],
+      "sunrise": format_time(details["sunrise"][1]),
+      "sunset": format_time(details["sunset"][1]),
+      "moonrise": details["moonrise"],
+      "moonrise_status": details["moonrise_status"],
+      "moonset": details["moonset"],
+      "moonset_status": details["moonset_status"],
+      "day_duration": format_time(details["day_dur"][1]),
+      "rahu_kala": _interval_from_hms(*details["rahu_kala"]),
+      "durmuhurta": durmuhurta_intervals,
+      "varjyam": varjyam_intervals,
+      "tithi": _named_segments(details["ti"], names["tithis"]),
+      "nakshatra": _named_segments(details["nak"], names["nakshatras"]),
+      "yoga": _named_segments(details["yog"], names["yogas"]),
+      "karana": _named_segments(details["kar"], names["karanas"]),
+    }
