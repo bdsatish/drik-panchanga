@@ -78,6 +78,72 @@ class VarjyamTests(PanchangaTestCase):
     self.assertEqual(len(v), 2)
     self.assertEqual(v, [[[7, 12, 6], [8, 42, 56]], [[26, 21, 48], [27, 55, 30]]])
 
+  def test_varjyam_helsinki_summer(self):
+    jd = gregorian_to_jd(Date(2026, 6, 21))
+    v = varjyam(jd, helsinki)
+    self.assertEqual(v, [[[13, 27, 21], [15, 6, 44]]])
+
+  def test_varjyam_helsinki_winter(self):
+    jd = gregorian_to_jd(Date(2026, 12, 21))
+    v = varjyam(jd, helsinki)
+    self.assertEqual(v, [[[20, 25, 38], [21, 52, 5]]])
+
+  def test_varjyam_reykjavik_midnight_sun(self):
+    jd = gregorian_to_jd(Date(2026, 6, 21))
+    reykjavik = Place(64.15, -21.94, 0.0)
+    v = varjyam(jd, reykjavik)
+    self.assertEqual(v, [[[11, 27, 21], [13, 6, 44]]])
+
+  def test_varjyam_reykjavik_spring_two_periods(self):
+    jd = gregorian_to_jd(Date(2026, 3, 21))
+    reykjavik = Place(64.15, -21.94, 0.0)
+    v = varjyam(jd, reykjavik)
+    self.assertEqual(v, [[[15, 25, 11], [16, 53, 51]], [[27, 56, 48], [29, 25, 8]]])
+
+  def test_varjyam_southern_hemisphere(self):
+    jd = gregorian_to_jd(Date(2026, 1, 15))
+    cape_town = Place(-33.92, 18.42, +2.0)
+    v = varjyam(jd, cape_town)
+    self.assertEqual(v, [[[5, 46, 17], [7, 33, 13]]])
+
+  def test_varjyam_wraps_past_midnight(self):
+    jd = gregorian_to_jd(Date(2026, 12, 15))
+    fairbanks = Place(64.84, -147.72, -9.0)
+    v = varjyam(jd, fairbanks)
+    self.assertEqual(v, [[[30, 18, 7], [32, 0, 0]]])
+    for start, end in v:
+      self.assertGreaterEqual(start[0], 24)
+
+  def test_varjyam_empty_at_polar_night(self):
+    jd = gregorian_to_jd(Date(2026, 12, 21))
+    tromso = Place(69.65, 18.96, +1.0)
+    self.assertEqual(varjyam(jd, tromso), [])
+
+  def test_varjyam_empty_at_polar_day(self):
+    jd = gregorian_to_jd(Date(2026, 6, 21))
+    tromso = Place(69.65, 18.96, +1.0)
+    self.assertEqual(varjyam(jd, tromso), [])
+
+  def test_varjyam_polar_shoulder_still_computes(self):
+    jd = gregorian_to_jd(Date(2026, 3, 15))
+    tromso = Place(69.65, 18.96, +1.0)
+    v = varjyam(jd, tromso)
+    self.assertEqual(len(v), 1)
+    self.assertEqual(v, [[[29, 29, 29], [31, 7, 14]]])
+
+  def test_varjyam_empty_day_returns_empty_list(self):
+    jd = gregorian_to_jd(Date(2025, 1, 26))
+    delhi = Place(28.6139, 77.2090, 5.5)
+    self.assertEqual(varjyam(jd, delhi), [])
+
+  def test_varjyam_sorted_and_bounded(self):
+    jd = gregorian_to_jd(Date(2026, 3, 21))
+    reykjavik = Place(64.15, -21.94, 0.0)
+    v = varjyam(jd, reykjavik)
+    self.assertEqual(v, sorted(v))
+    for start, end in v:
+      self.assertLess(start[0], end[0])
+
 
 class TithiTests(PanchangaTestCase):
   """Tithi computation with various dates and locations."""

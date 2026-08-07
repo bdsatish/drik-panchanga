@@ -968,20 +968,32 @@ def abhijit_muhurta(jd, place):
 
 
 def varjyam(jd, place):
+  # Starting ghat (in the nakshatra's duration) for the varjyam period.
+  # Index 0 is unused; positions 1..27 correspond to nakshatras 1..27.
+  # References:
+  #   http://www.reliableastrology.com/nakVishGhati.htm
+  #   https://www.drikpanchang.com/tutorials/panchang-utilities/nakshatra-thyajyam.html
+  varjyam_start_ghatis = (0, 50, 24, 30, 40, 14, 21, 30, 20, 32, 30, 20, 18, 21, 20, 14, 14, 10, 14, 56, 24, 20, 10, 10,
+                          18, 16, 24, 30)
   """Varjyam (Vishaghati) timings for the day.
-  Returns a list of [start_time, end_time] in [h, m, s] format for all 
+
+  Returns a list of [start_time, end_time] in [h, m, s] format for all
   varjyam periods that overlap with the day (sunrise to next sunrise).
-  
-  Reference for starting ghatis:
-  http://www.reliableastrology.com/nakVishGhati.htm
-  https://www.drikpanchang.com/tutorials/panchang-utilities/nakshatra-thyajyam.html
+  Times past 24:00 (e.g. 26:21:48) belong to the next civil day.
+
+  Returns an empty list when sunrise is unavailable (high latitudes during
+  polar day or night), mirroring the calendar's ``require_local_sunrise``
+  guard.
   """
-  VARJYAM_START_GHATIS = [
-    0, 50, 24, 30, 40, 14, 21, 30, 20, 32, 30, 20, 18, 21, 20, 14, 14, 10, 14, 56, 24, 20, 10, 10, 18, 16, 24, 30
-  ]
   tz = place.timezone
-  srise1 = sunrise(jd, place)[0] - tz / 24.
-  srise2 = sunrise(jd + 1, place)[0] - tz / 24.
+  today_sunrise = sunrise(jd, place)[0]
+  tomorrow_sunrise = sunrise(jd + 1, place)[0]
+  # Swiss Ephemeris returns 0.0 on failed rise/set lookups (polar day/night).
+  # Detect that like the calendar layer so we never interpolate on bogus data.
+  if today_sunrise < jd - 1 or today_sunrise > jd + 2 or tomorrow_sunrise < jd - 1 or tomorrow_sunrise > jd + 2:
+    return []
+  srise1 = today_sunrise - tz / 24.
+  srise2 = tomorrow_sunrise - tz / 24.
 
   # Sample Moon on a 0.40d grid (shared for all nakshatras). Coarser than
   # nakshatra/tithi's 0.25d; local 5-point Lagrange still lands within ~1s.
@@ -1045,7 +1057,7 @@ def varjyam(jd, place):
       continue
 
     duration = t_end - t_start
-    start_ghati = VARJYAM_START_GHATIS[nak]
+    start_ghati = varjyam_start_ghatis[nak]
     v_start = t_start + (start_ghati / 60.0) * duration
     v_end = v_start + (4.0 / 60.0) * duration
 
