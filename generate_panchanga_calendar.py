@@ -934,10 +934,12 @@ def draw_page_header(pdf, location, months, ruleset_version, amanta=True, coordi
 
 
 def draw_page_footer(pdf, festival_entries, eclipse_line="Eclipses: None"):
+  if len(festival_entries) > FOOTER_FESTIVAL_SLOTS:
+    raise RuntimeError(f"Too many enabled festivals: {len(festival_entries)} > {FOOTER_FESTIVAL_SLOTS} slots")
   pdf.setFillColor(FESTIVAL_INK)
 
   columns = 6
-  rows = 5
+  rows = FOOTER_FESTIVAL_SLOTS // columns
   column_width = (landscape(A4)[0] - 36) / columns
   for index, (number, festival_date, name) in enumerate(festival_entries):
     column = index // rows
