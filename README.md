@@ -121,7 +121,8 @@ vaara, solar date, festivals and eclipses too! Each day shows:
 * `N`: nakshatra number (01-27)
 * `Y`: yoga number (01-27)
 * lunar-month start: green T-cell with an upper-left māsa badge (amānta or
-  pūrṇimānta, per `--month`)
+  pūrṇimānta, per `--month`); an adhika māsa badge carries an `A` prefix in
+  addition to the gold cell fill
 * solar-month start (saṅkrānti): peach N-cell with rāśi number 1–12 top-right;
   following N-cells mark solar days 7, 14, 21, and 28, with the count resetting
   at each saṅkrānti
@@ -233,8 +234,8 @@ ambiguous ones need ``Name, ISO`` (e.g. `Sydney, AU`). Then either:
   label, an ayanamsa (including *Tropical (Sāyana)*), or
 * pick the first month of the 14-month PDF calendar range (same month-system
   and ayanamsa controls) and download the PDF, or
-* export the same 14-month span as an iCal (.ics) file for import into
-  Google Calendar, Apple Calendar, etc.
+* export the same 14-month span as an iCal (.ics) file (with Varjyam listed
+  in each daily event) for import into Google Calendar, Apple Calendar, etc.
 
 Override the port with `--port 9000` or `PORT` / `PANCHANGA_PORT`.
 
