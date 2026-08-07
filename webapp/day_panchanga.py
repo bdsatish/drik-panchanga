@@ -267,90 +267,61 @@ def _compute_day_panchanga_unlocked(city, date_text, month_system="amanta", coor
   details = _compute_day_details_unlocked(location, civil, amanta=amanta, coordinate_selection=coordinate_selection)
   names = details["names"]
   civil = details["civil"]
-  jd = details["jd"]
-  sunrise = details["sunrise"]
-  sunset = details["sunset"]
-  day_dur = details["day_dur"]
-  sunrise_jd_ut = details["sunrise_jd_ut"]
-  ti = details["ti"]
-  nak = details["nak"]
-  yog = details["yog"]
-  kar = details["kar"]
-  masa_num = details["masa_num"]
-  is_adhika = details["is_adhika"]
-  rtu_num = details["rtu_num"]
-  drik_rtu_num = details["drik_rtu_num"]
-  samvat_num = details["samvat_num"]
-  samvat_north_num = details["samvat_north_num"]
-  vara_num = details["vara_num"]
-  kali_day = details["kali_day"]
-  saka_year = details["saka_year"]
-  kali_year = details["kali_year"]
-  vikrama_year = details["vikrama_year"]
-  ayanamsa_degrees = details["ayanamsa_degrees"]
-  sun_raasi = details["sun_raasi"]
-  moonrise = details["moonrise"]
-  moonrise_status = details["moonrise_status"]
-  moonset = details["moonset"]
-  moonset_status = details["moonset_status"]
-  rahu_kala = details["rahu_kala"]
-  durmuhurta = details["durmuhurta"]
-  varjyam = details["varjyam"]
 
   use_tropical = coordinate_selection == "tropical"
-  masa_label = format_masa_label(names, masa_num, is_adhika)
+  masa_label = format_masa_label(names, details["masa_num"], details["is_adhika"])
   month_label = month_system_label(amanta)
   ayan_label = None if use_tropical else ayanamsa_label(coordinate_selection)
-  ayana = ayana_label(sun_raasi)
-  drik_ayana = drik_ayana_label(drik_rtu_num)
+  ayana = ayana_label(details["sun_raasi"])
+  drik_ayana = drik_ayana_label(details["drik_rtu_num"])
 
   durmuhurta_intervals = []
-  for start, end in _valid_durmuhurta_intervals(durmuhurta):
+  for start, end in _valid_durmuhurta_intervals(details["durmuhurta"]):
     durmuhurta_intervals.append(_interval_from_hms(panchanga.to_dms(start), panchanga.to_dms(end)))
 
   varjyam_intervals = []
-  for start, end in varjyam:
+  for start, end in details["varjyam"]:
     varjyam_intervals.append(_interval_from_hms(start, end))
 
   return {
     "city": location.name,
     "date": f"{civil.day:02d}/{civil.month:02d}/{civil.year}",
     "timezone": location.timezone_name,
-    "jd": jd,
-    "sunrise_jd": sunrise_jd_ut,
+    "jd": details["jd"],
+    "sunrise_jd": details["sunrise_jd_ut"],
     "coordinate_mode": "tropical" if use_tropical else "sidereal",
     "coordinate_label": coordinate_selection_label(coordinate_selection),
     "ayanamsa": ayan_label,
     "ayanamsa_key": None if use_tropical else coordinate_selection,
-    "ayanamsa_degrees": None if use_tropical else round(ayanamsa_degrees, 8),
+    "ayanamsa_degrees": None if use_tropical else round(details["ayanamsa_degrees"], 8),
     "month_system": "amanta" if amanta else "purnimanta",
     "month_system_label": month_label,
-    "samvatsara": names["samvats"][str(samvat_num)],
-    "samvatsara_north": names["samvats"][str(samvat_north_num)],
+    "samvatsara": names["samvats"][str(details["samvat_num"])],
+    "samvatsara_north": names["samvats"][str(details["samvat_north_num"])],
     "ayana": ayana,
     "drik_ayana": drik_ayana,
     "masa": masa_label,
-    "masa_number": masa_num,
-    "is_adhika": is_adhika,
-    "rtu": f"{names['ritus'][str(rtu_num)]} ṛtu",
-    "drik_rtu": f"{names['ritus'][str(drik_rtu_num)]} ṛtu",
-    "vaara": names["varas"][str(vara_num)],
-    "kali_day": kali_day,
-    "saka_year": saka_year,
-    "kali_year": kali_year,
-    "vikrama_year": vikrama_year,
-    "sunrise": format_time(sunrise[1]),
-    "sunset": format_time(sunset[1]),
-    "moonrise": moonrise,
-    "moonrise_status": moonrise_status,
-    "moonset": moonset,
-    "moonset_status": moonset_status,
-    "day_duration": format_time(day_dur[1]),
-    "rahu_kala": _interval_from_hms(*rahu_kala),
+    "masa_number": details["masa_num"],
+    "is_adhika": details["is_adhika"],
+    "rtu": f"{names['ritus'][str(details['rtu_num'])]} ṛtu",
+    "drik_rtu": f"{names['ritus'][str(details['drik_rtu_num'])]} ṛtu",
+    "vaara": names["varas"][str(details["vara_num"])],
+    "kali_day": details["kali_day"],
+    "saka_year": details["saka_year"],
+    "kali_year": details["kali_year"],
+    "vikrama_year": details["vikrama_year"],
+    "sunrise": format_time(details["sunrise"][1]),
+    "sunset": format_time(details["sunset"][1]),
+    "moonrise": details["moonrise"],
+    "moonrise_status": details["moonrise_status"],
+    "moonset": details["moonset"],
+    "moonset_status": details["moonset_status"],
+    "day_duration": format_time(details["day_dur"][1]),
+    "rahu_kala": _interval_from_hms(*details["rahu_kala"]),
     "durmuhurta": durmuhurta_intervals,
     "varjyam": varjyam_intervals,
-    "tithi": _named_segments(ti, names["tithis"]),
-    "nakshatra": _named_segments(nak, names["nakshatras"]),
-    "yoga": _named_segments(yog, names["yogas"]),
-    "karana": _named_segments(kar, names["karanas"]),
+    "tithi": _named_segments(details["ti"], names["tithis"]),
+    "nakshatra": _named_segments(details["nak"], names["nakshatras"]),
+    "yoga": _named_segments(details["yog"], names["yogas"]),
+    "karana": _named_segments(details["kar"], names["karanas"]),
   }
