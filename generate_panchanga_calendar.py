@@ -997,21 +997,28 @@ def _build_pdf_unlocked(location, start_year, start_month, output_path, festival
   amanta = require_month_system(month_system)
   panchanga.set_coordinate_selection(coordinate_selection)
   months = month_range(start_year, start_month)
-  context_months = context_month_range(start_year, start_month)
-  context_records = daily_records(context_months, location)
-  records_by_date = {}
-  for record in context_records:
-    records_by_date[record.civil_date] = record
   range_start = CivilDate(start_year, start_month, 1)
   end_year, end_month = months[-1]
   range_end = CivilDate(end_year, end_month, calendar.monthrange(end_year, end_month)[1])
+  header_year, header_month = months[len(months) // 2]
+
+  context_months = context_month_range(start_year, start_month)
+  context_records = daily_records(context_months, location)
+  records_by_date = {}
   target_records = []
-  for record in context_records:
-    if range_start <= record.civil_date <= range_end:
-      target_records.append(record)
   target_dates = set()
-  for record in target_records:
-    target_dates.add(record.civil_date)
+  sunrise_by_date = {}
+  header_records = []
+  for record in context_records:
+    civil_date = record.civil_date
+    records_by_date[civil_date] = record
+    if range_start <= civil_date <= range_end:
+      target_records.append(record)
+      target_dates.add(civil_date)
+      sunrise_by_date[civil_date] = record.sunrise_jd
+      if (civil_date.year, civil_date.month) == (header_year, header_month):
+        header_records.append(record)
+
   festivals_path = Path(festivals_path) if festivals_path is not None else DEFAULT_FESTIVALS_PATH
   enabled_names = load_festival_selection(festivals_path)
   geopos = (location.longitude, location.latitude, 0.0)
@@ -1021,9 +1028,6 @@ def _build_pdf_unlocked(location, start_year, start_month, output_path, festival
   eclipse_start_jd, eclipse_end_jd = local_range_jds(start_year, start_month, end_year, end_month,
                                                      location.timezone_name)
   eclipses = find_local_eclipses(eclipse_start_jd, eclipse_end_jd, geopos)
-  sunrise_by_date = {}
-  for record in target_records:
-    sunrise_by_date[record.civil_date] = record.sunrise_jd
   eclipse_line = format_eclipse_line(eclipses, location.timezone_name, sunrise_by_date=sunrise_by_date)
   eclipse_dates = eclipse_civil_dates(eclipses, location.timezone_name)
   solar_by_date = solar_dates_by_date(context_records)
@@ -1031,11 +1035,6 @@ def _build_pdf_unlocked(location, start_year, start_month, output_path, festival
   for value in ekadashi_dates_from_records(context_records):
     if range_start <= value <= range_end:
       ekadashi_dates.add(value)
-  header_year, header_month = months[len(months) // 2]
-  header_records = []
-  for record in target_records:
-    if (record.civil_date.year, record.civil_date.month) == (header_year, header_month):
-      header_records.append(record)
   calendar_years = calendar_year_label(header_records, amanta=amanta)
   kali_ahargana = kali_ahargana_range(months)
   masa_badges = masa_badges_by_date(target_records, amanta=amanta)
