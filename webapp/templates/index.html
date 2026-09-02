@@ -387,12 +387,15 @@
         <input type="hidden" name="city" id="pdf-city">
         <input type="hidden" name="month" id="pdf-month" value="amanta">
         <input type="hidden" name="ayanamsa" id="pdf-ayanamsa" value="citra">
+        <input type="hidden" name="layout" id="pdf-layout" value="one-page">
         <div class="field">
           <label for="start">First month</label>
           <input id="start" name="start" type="month" required>
-          <p class="hint">Fourteen consecutive Gregorian months from this month.</p>
+          <p class="hint">One-page layout prints fourteen consecutive months;
+            monthly layout prints twelve pages (one month per A4 portrait page).</p>
         </div>
-        <button type="submit" id="submit-btn">Generate PDF</button>
+        <button type="submit" id="submit-btn" data-layout="one-page">Generate one-page PDF</button>
+        <button type="submit" id="monthly-btn" data-layout="monthly">Generate monthly PDF (12 pages)</button>
         <button type="button" id="ics-btn">Export iCal (.ics)</button>
         <p class="status" id="status" aria-live="polite"></p>
       </form>
@@ -428,9 +431,11 @@
       const pdfCity = document.getElementById("pdf-city");
       const pdfMonth = document.getElementById("pdf-month");
       const pdfAyanamsa = document.getElementById("pdf-ayanamsa");
+      const pdfLayout = document.getElementById("pdf-layout");
       const monthSelect = document.getElementById("month");
       const ayanamsaSelect = document.getElementById("ayanamsa");
       const submitBtn = document.getElementById("submit-btn");
+      const monthlyBtn = document.getElementById("monthly-btn");
       const status = document.getElementById("status");
 
       function selectedMonthSystem() {
@@ -693,6 +698,8 @@
       });
 
       pdfForm.addEventListener("submit", (event) => {
+        const clicked = event.submitter;
+        const layout = clicked && clicked.dataset ? clicked.dataset.layout : "one-page";
         const city = cityInput.value.trim();
         if (!city) {
           event.preventDefault();
@@ -702,12 +709,14 @@
         pdfCity.value = city;
         pdfMonth.value = selectedMonthSystem();
         pdfAyanamsa.value = ayanamsaParams();
-        submitBtn.disabled = true;
-        status.textContent = "Generating calendar…";
+        pdfLayout.value = layout;
+        const button = layout === "monthly" ? monthlyBtn : submitBtn;
+        [submitBtn, monthlyBtn].forEach((btn) => { btn.disabled = true; });
+        status.textContent = layout === "monthly" ? "Generating monthly calendar…" : "Generating calendar…";
         setTimeout(() => {
-          submitBtn.disabled = false;
+          [submitBtn, monthlyBtn].forEach((btn) => { btn.disabled = false; });
           status.textContent = "";
-        }, 8000);
+        }, 15000);
       });
 
       const icsBtn = document.getElementById("ics-btn");

@@ -201,6 +201,23 @@ above:
 
 ![Ujjain Panchanga, March 2026 through March 2027](ujjain_panchanga_mar2026_mar2027.png)
 
+Monthly calendar PDF (12 pages)
+-------------------------------
+
+`generate_monthly_calendar.py` produces a 12-page A4 **portrait** PDF with one
+month per page. It uses the same computation, colours and markers as the
+one-page landscape calendar but with wider rows suited for reading a full
+month at a glance:
+
+```
+python generate_monthly_calendar.py --city Ujjain --start 2026-03
+```
+
+The same city/month/ayanamsa/festival flags as the one-page script are
+accepted. The web UI offers both layouts via separate buttons (the form field
+`layout` is `one-page` or `monthly`); the monthly filename carries a
+`_monthly` suffix.
+
 Run the regression tests with:
 
 ```
@@ -233,7 +250,9 @@ ambiguous ones need ``Name, ISO`` (e.g. `Sydney, AU`). Then either:
   allowed as proleptic Gregorian), choosing amānta or pūrṇimānta for the māsa
   label, an ayanamsa (including *Tropical (Sāyana)*), or
 * pick the first month of the 14-month PDF calendar range (same month-system
-  and ayanamsa controls) and download the PDF, or
+  and ayanamsa controls) and download the PDF — either the default one-page
+  landscape layout (14 months), or a 12-page portrait layout with one month
+  per page, or
 * export the same 14-month span as an iCal (.ics) file (with Varjyam listed
   in each daily event) for import into Google Calendar, Apple Calendar, etc.
 

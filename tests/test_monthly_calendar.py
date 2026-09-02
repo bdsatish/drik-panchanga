@@ -1,0 +1,203 @@
+"""Regression tests for the 12-month wall-grid panchanga PDF."""
+
+from datetime import date
+from io import BytesIO
+from pathlib import Path
+import re
+from tempfile import TemporaryDirectory
+import unittest
+from unittest import mock
+
+from generate_monthly_calendar import (
+  MONTHLY_LAYOUT_VERSION,
+  RULESET_VERSION,
+  argument_parser,
+  build_monthly_pdf,
+  collect_context,
+  context_months,
+  day_details,
+  default_monthly_output_path,
+  draw_cell,
+  ensure_pdf_fonts,
+  format_hms,
+  load_location,
+  month_sequence,
+  sun_moon_lines,
+  tithi_name,
+)
+
+
+class MonthSequenceTests(unittest.TestCase):
+
+  def test_month_sequence_spans_year_boundary(self):
+    months = month_sequence(2026, 11, 4)
+    self.assertEqual(months, [(2026, 11), (2026, 12), (2027, 1), (2027, 2)])
+
+  def test_context_months_adds_buffer(self):
+    ctx = context_months(2026, 3)
+    self.assertEqual(len(ctx), 14)
+    self.assertEqual(ctx[0], (2026, 2))
+    self.assertEqual(ctx[-1], (2027, 3))
+
+
+class BuildPdfTests(unittest.TestCase):
+
+  def test_generates_exactly_twelve_pages(self):
+    with TemporaryDirectory() as directory:
+      output = Path(directory) / "calendar.pdf"
+      with mock.patch("generate_monthly_calendar.find_local_eclipses", return_value=[]):
+        build_monthly_pdf(load_location("Helsinki"), 2026, 6, output)
+      document = output.read_bytes()
+    page_objects = re.findall(rb"/Type\s*/Page\b", document)
+    self.assertEqual(len(page_objects), 12)
+    self.assertIn(RULESET_VERSION.encode("ascii"), document)
+
+  def test_contains_expected_text(self):
+    import subprocess
+    with TemporaryDirectory() as directory:
+      output = Path(directory) / "calendar.pdf"
+      with mock.patch("generate_monthly_calendar.find_local_eclipses", return_value=[]):
+        build_monthly_pdf(load_location("Ujjain"), 2026, 6, output)
+      text = subprocess.check_output(["pdftotext", str(output), "-"])
+    # Gregorian month
+    self.assertIn(b"June 2026", text)
+    # City in header
+    self.assertIn(b"Ujjain, IN", text)
+    # Solar day numbering
+    self.assertIn(b"Mithuna 1", text)
+    # Tithi with prefix
+    self.assertIn("Kṛ. ".encode("utf-8"), text)
+    # Footer page numbering
+    self.assertIn(b"page 1 of 12", text)
+
+  def test_default_output_path(self):
+    path = default_monthly_output_path(load_location("Helsinki"), 2026, 3)
+    self.assertEqual(path.name, "helsinki-fi_panchanga_wall_2026-03_to_2027-02.pdf")
+
+  def test_purnimanta_filename_suffix(self):
+    path = default_monthly_output_path(load_location("Helsinki"), 2026, 3, month_system="purnimanta")
+    self.assertEqual(path.name, "helsinki-fi_panchanga_wall_2026-03_to_2027-02_purnimanta.pdf")
+
+  def test_ayanamsa_filename_suffix(self):
+    path = default_monthly_output_path(load_location("Helsinki"), 2026, 3, coordinate_selection="raman")
+    self.assertEqual(path.name, "helsinki-fi_panchanga_wall_2026-03_to_2027-02_raman.pdf")
+
+  def test_tropical_filename_suffix(self):
+    path = default_monthly_output_path(load_location("Helsinki"), 2026, 3, coordinate_selection="tropical")
+    self.assertEqual(path.name, "helsinki-fi_panchanga_wall_2026-03_to_2027-02_tropical.pdf")
+
+
+class CliTests(unittest.TestCase):
+
+  def test_cli_defaults(self):
+    parser = argument_parser()
+    arguments = parser.parse_args(["--city", "Helsinki", "--start", "2026-03"])
+    self.assertEqual(arguments.month, "amanta")
+    self.assertEqual(arguments.ayanamsa, "citra")
+
+  def test_cli_accepts_purnimanta(self):
+    parser = argument_parser()
+    arguments = parser.parse_args(["--city", "Helsinki", "--start", "2026-03", "--month", "purnimanta"])
+    self.assertEqual(arguments.month, "purnimanta")
+
+  def test_cli_accepts_ayanamsa(self):
+    parser = argument_parser()
+    arguments = parser.parse_args(["--city", "Helsinki", "--start", "2026-03", "--ayanamsa", "revati"])
+    self.assertEqual(arguments.ayanamsa, "revati")
+
+
+class DayDetailsTests(unittest.TestCase):
+
+  def test_tithi_name_mapping(self):
+    self.assertEqual(tithi_name(1), "Prātipadā")
+    self.assertEqual(tithi_name(15), "Pūrṇimā")
+    self.assertEqual(tithi_name(30), "Amāvāsyā")
+
+  def test_format_hms_past_midnight(self):
+    self.assertEqual(format_hms([25.5, 30, 0]), "26:00")
+    self.assertEqual(format_hms([5.0, 44.0, 30.0]), "05:44")
+
+  def test_day_details_returns_leap_tithi(self):
+    location = load_location("Ujjain")
+    # 2026-06-15 has a leap tithi (Amāvāsyā + Prātipadā)
+    tithi_lines, naks_lines = day_details(location, date(2026, 6, 15))
+    self.assertEqual(len(tithi_lines), 2)
+    self.assertEqual(tithi_lines[0][1], "Amāvāsyā")
+    self.assertEqual(tithi_lines[1][1], "Prātipadā")
+
+  def test_day_details_returns_leap_nakshatra(self):
+    location = load_location("Ujjain")
+    # 2026-06-12 has a leap nakshatra
+    tithi_lines, naks_lines = day_details(location, date(2026, 6, 12))
+    self.assertEqual(len(naks_lines), 2)
+
+
+class SunMoonTests(unittest.TestCase):
+
+  def test_sun_moon_lines_for_known_day(self):
+    location = load_location("Ujjain")
+    lines = sun_moon_lines(location, date(2026, 6, 1))
+    self.assertEqual(len(lines), 2)
+    self.assertTrue(lines[0].startswith("SUN:"))
+    self.assertTrue(lines[1].startswith("MOON:"))
+
+
+class CellDrawTests(unittest.TestCase):
+
+  def test_solar_day_line_is_drawn(self):
+    ensure_pdf_fonts()
+    pdf = mock.Mock()
+    from festival_rules import DayRecord
+    context = {
+      "records_by_date": {
+        date(2026, 6, 16): DayRecord(date(2026, 6, 16), "S2", 1, 1, "5", False, 0.0)
+      },
+      "festival_names_by_date": {},
+      "eclipse_dates": set(),
+      "eclipse_details_by_date": {},
+      "masa_badges": {},
+      "solar_by_date": {
+        date(2026, 6, 16): (3, 1, True)
+      },
+      "ekadashi": set(),
+    }
+    draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 16, date(2026, 6, 16), load_location("Ujjain"), context)
+    solar_calls = [c for c in pdf.drawString.call_args_list if "Mithuna" in str(c.args[2])]
+    self.assertEqual(len(solar_calls), 1)
+
+  def test_masa_start_fill_is_drawn(self):
+    ensure_pdf_fonts()
+    pdf = mock.Mock()
+    from festival_rules import DayRecord
+    context = {
+      "records_by_date": {
+        date(2026, 6, 16): DayRecord(date(2026, 6, 16), "S2", 1, 1, "5", False, 0.0)
+      },
+      "festival_names_by_date": {},
+      "eclipse_dates": set(),
+      "eclipse_details_by_date": {},
+      "masa_badges": {
+        date(2026, 6, 16): "5"
+      },
+      "solar_by_date": {},
+      "ekadashi": set(),
+    }
+    draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 16, date(2026, 6, 16), load_location("Ujjain"), context)
+    fill_colors = [c.args[0] for c in pdf.setFillColor.call_args_list]
+    from generate_panchanga_calendar import MASA_START_ROW
+    self.assertIn(MASA_START_ROW, fill_colors)
+
+
+class ContextTests(unittest.TestCase):
+
+  def test_collect_context_includes_masa_badges(self):
+    location = load_location("Ujjain")
+    months = [(2026, 5), (2026, 6)]
+    ctx = collect_context(months, location, "festivals.cfg", amanta=True)
+    self.assertIn("masa_badges", ctx)
+    self.assertIn("solar_by_date", ctx)
+    self.assertIn("ekadashi", ctx)
+
+
+if __name__ == "__main__":
+  unittest.main()
