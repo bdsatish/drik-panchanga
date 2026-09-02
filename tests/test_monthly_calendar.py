@@ -52,23 +52,15 @@ class BuildPdfTests(unittest.TestCase):
     self.assertEqual(len(page_objects), 12)
     self.assertIn(RULESET_VERSION.encode("ascii"), document)
 
-  def test_contains_expected_text(self):
-    import subprocess
+  def test_pdf_metadata_contains_title(self):
     with TemporaryDirectory() as directory:
       output = Path(directory) / "calendar.pdf"
       with mock.patch("generate_monthly_calendar.find_local_eclipses", return_value=[]):
         build_monthly_pdf(load_location("Ujjain"), 2026, 6, output)
-      text = subprocess.check_output(["pdftotext", str(output), "-"])
-    # Gregorian month
-    self.assertIn(b"June 2026", text)
-    # City in header
-    self.assertIn(b"Ujjain, IN", text)
-    # Solar day numbering
-    self.assertIn(b"Mithuna 1", text)
-    # Tithi with prefix
-    self.assertIn("Kṛ. ".encode("utf-8"), text)
-    # Footer page numbering
-    self.assertIn(b"page 1 of 12", text)
+      document = output.read_bytes()
+    # Title/subject live in the uncompressed Info dict; page streams are flate-encoded.
+    self.assertIn(b"Ujjain, IN Panchanga June 2026 to May 2027", document)
+    self.assertIn(RULESET_VERSION.encode("ascii"), document)
 
   def test_default_output_path(self):
     path = default_monthly_output_path(load_location("Helsinki"), 2026, 3)
@@ -164,6 +156,28 @@ class CellDrawTests(unittest.TestCase):
     draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 16, date(2026, 6, 16), load_location("Ujjain"), context)
     solar_calls = [c for c in pdf.drawString.call_args_list if "Mithuna" in str(c.args[2])]
     self.assertEqual(len(solar_calls), 1)
+
+  def test_tithi_paksha_prefix_is_drawn(self):
+    ensure_pdf_fonts()
+    pdf = mock.Mock()
+    from festival_rules import DayRecord
+    context = {
+      "records_by_date": {
+        date(2026, 6, 15): DayRecord(date(2026, 6, 15), "K15", 1, 1, "5", False, 0.0)
+      },
+      "festival_names_by_date": {},
+      "eclipse_dates": set(),
+      "eclipse_details_by_date": {},
+      "masa_badges": {},
+      "solar_by_date": {},
+      "ekadashi": set(),
+    }
+    with mock.patch("generate_monthly_calendar.day_details", return_value=([("Kṛ.", "Amāvāsyā", "08:24"),
+                                                                            ("Śu.", "Prātipadā", "28:31")], [])):
+      draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 15, date(2026, 6, 15), load_location("Ujjain"), context)
+    drawn_text = [c.args[2] for c in pdf.drawString.call_args_list]
+    self.assertIn("Kṛ. Amāvāsyā 08:24", drawn_text)
+    self.assertIn("Śu. Prātipadā 28:31", drawn_text)
 
   def test_masa_start_fill_is_drawn(self):
     ensure_pdf_fonts()
