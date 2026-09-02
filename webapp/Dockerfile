@@ -15,7 +15,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Core calendar library + web package (see root .dockerignore).
-COPY generate_panchanga_calendar.py festival_rules.py panchanga.py \
+COPY generate_panchanga_calendar.py generate_monthly_calendar.py festival_rules.py panchanga.py \
      cities.json festivals.cfg sanskrit_names.json ./
 COPY fonts ./fonts
 COPY webapp ./webapp
@@ -26,14 +26,10 @@ RUN chmod +x /docker-entrypoint.sh
 ENV SE_EPHE_PATH=/app/ephe
 ENV PYTHONPATH=/app
 RUN mkdir -p /app/ephe \
-    && git clone --depth 1 --filter=blob:none --sparse \
-         https://github.com/aloistr/swisseph.git /tmp/swisseph \
-    && git -C /tmp/swisseph sparse-checkout set ephe \
-    && find /tmp/swisseph/ephe -maxdepth 1 -type f \
-         \( -name '*.se1' -o -name 'sefstars.txt' -o -name 'seleapsec.txt' \) \
-         -exec cp -t /app/ephe {} + \
+    && git clone --depth 1 https://github.com/aloistr/swisseph.git /tmp/swisseph \
+    && cp /tmp/swisseph/ephe/*.se1 /tmp/swisseph/ephe/sefstars.txt /tmp/swisseph/ephe/seleapsec.txt /app/ephe/ 2>/dev/null || true \
     && rm -rf /tmp/swisseph \
-    && test -n "$(find /app/ephe -maxdepth 1 -name '*.se1' | head -1)"
+    && test -n "$(ls /app/ephe/*.se1 2>/dev/null | head -1)"
 
 # Railway injects PORT at runtime.
 ENV PORT=8080
