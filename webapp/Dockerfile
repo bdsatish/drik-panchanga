@@ -22,29 +22,11 @@ COPY webapp ./webapp
 COPY webapp/docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 
-# Swiss Ephemeris .se1 data (~100 MB) — downloaded at build time via Python.
+# Swiss Ephemeris .se1 data (~100 MB) — downloaded at build time.
 ENV SE_EPHE_PATH=/app/ephe
 ENV PYTHONPATH=/app
-RUN python3 -c "
-import os, sys, io, urllib.request, tarfile
-url = 'https://github.com/aloistr/swisseph/archive/refs/heads/master.tar.gz'
-print('Downloading ephemeris data...')
-resp = urllib.request.urlopen(url, timeout=120)
-tf = tarfile.open(fileobj=io.BytesIO(resp.read()), mode='r:gz')
-members = [
-    m for m in tf.getmembers()
-    if m.name.startswith('swisseph-master/ephe/')
-    and (m.name.endswith('.se1') or m.name.endswith('sefstars.txt') or m.name.endswith('seleapsec.txt'))
-]
-os.makedirs('/app/ephe', exist_ok=True)
-for m in members:
-    f = tf.extractfile(m)
-    with open(f'/app/ephe/{os.path.basename(m.name)}', 'wb') as out:
-        out.write(f.read())
-print(f'Extracted {len(members)} ephemeris files')
-if not any(f.endswith('.se1') for f in os.listdir('/app/ephe')):
-    sys.exit('ERROR: no .se1 files found in /app/ephe')
-"
+COPY webapp/fetch_ephe.py /tmp/fetch_ephe.py
+RUN python3 /tmp/fetch_ephe.py && rm /tmp/fetch_ephe.py
 
 # Railway injects PORT at runtime.
 ENV PORT=8080
