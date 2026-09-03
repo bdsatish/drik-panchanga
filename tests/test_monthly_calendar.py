@@ -130,8 +130,8 @@ class SunMoonTests(unittest.TestCase):
     location = load_location("Ujjain")
     lines = sun_moon_lines(location, date(2026, 6, 1))
     self.assertEqual(len(lines), 2)
-    self.assertTrue(lines[0].startswith("SUN:"))
-    self.assertTrue(lines[1].startswith("MOON:"))
+    self.assertTrue(lines[0].startswith("Sun:"))
+    self.assertTrue(lines[1].startswith("Moon:"))
 
 
 class CellDrawTests(unittest.TestCase):
@@ -210,7 +210,7 @@ class VarjyamTests(unittest.TestCase):
     lines = varjyam_lines(location, date(2026, 6, 14))
     self.assertEqual(len(lines), 2)
     for line in lines:
-      self.assertTrue(line.startswith("VARJYAM: "))
+      self.assertTrue(line.startswith("Varjyam: "))
 
   def test_varjyam_line_is_drawn_in_cell(self):
     ensure_pdf_fonts()
@@ -231,7 +231,7 @@ class VarjyamTests(unittest.TestCase):
     with mock.patch("generate_monthly_calendar.panchanga.varjyam", return_value=[[[15.22, 13, 0], [16.63, 37, 0]]]):
       draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 14, civil, load_location("Ujjain"), context)
     drawn_text = [c.args[2] for c in pdf.drawString.call_args_list]
-    self.assertIn("VARJYAM: 15:26-17:15", drawn_text)
+    self.assertIn("Varjyam: 15:26-17:15", drawn_text)
 
 
 class YearLabelTests(unittest.TestCase):

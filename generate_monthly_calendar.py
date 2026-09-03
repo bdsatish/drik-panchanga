@@ -195,14 +195,14 @@ def _tithi_prefix(number):
 
 
 def sun_moon_lines(location, civil):
-  """``SUN: rise-set`` and ``MOON: rise-set`` lines for one civil day."""
+  """``Sun: rise-set`` and ``Moon: rise-set`` lines for one civil day."""
   place = place_for_date(location, civil)
   jd = gregorian_to_jd(civil)
   lines = []
   try:
     rise = panchanga.sunrise(jd, place)[1]
     set_ = panchanga.sunset(jd, place)[1]
-    lines.append(f"SUN: {format_hms(rise)}-{format_hms(set_)}")
+    lines.append(f"Sun: {format_hms(rise)}-{format_hms(set_)}")
   except Exception as exc:
     log.debug("sun times unavailable %s: %s", civil, exc)
   try:
@@ -211,7 +211,7 @@ def sun_moon_lines(location, civil):
       if 0 <= event[0] < 48:
         parts.append(format_hms(event))
     if parts:
-      lines.append("MOON: " + "-".join(parts))
+      lines.append("Moon: " + "-".join(parts))
   except Exception as exc:
     log.debug("moon times unavailable %s: %s", civil, exc)
   return lines
@@ -224,7 +224,7 @@ def varjyam_lines(location, civil):
   lines = []
   try:
     for start, end in panchanga.varjyam(jd, place):
-      lines.append(f"VARJYAM: {format_hms(start)}-{format_hms(end)}")
+      lines.append(f"Varjyam: {format_hms(start)}-{format_hms(end)}")
   except Exception as exc:
     log.debug("varjyam unavailable %s: %s", civil, exc)
   return lines
@@ -385,7 +385,7 @@ def draw_cell(pdf, x, y_top, row_h, cell_w, day, civil, location, context):
   bottom_y = y_bottom + 4
   bottom_lines = sun_moon_lines(location, civil) + varjyam_lines(location, civil)
   for i, text in enumerate(bottom_lines):
-    pdf.setFillColor(RED if text.startswith("VARJYAM") else GREY)
+    pdf.setFillColor(RED if text.startswith("Varjyam") else GREY)
     pdf.setFont(PDF_FONT, 5.8)
     pdf.drawString(x + 4, bottom_y + i * 8.0, text)
 
