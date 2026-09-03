@@ -217,6 +217,19 @@ def sun_moon_lines(location, civil):
   return lines
 
 
+def varjyam_lines(location, civil):
+  """Varjyam (Vishaghati) windows for one civil day, sunrise to next sunrise."""
+  place = place_for_date(location, civil)
+  jd = gregorian_to_jd(civil)
+  lines = []
+  try:
+    for start, end in panchanga.varjyam(jd, place):
+      lines.append(f"VARJYAM: {format_hms(start)}-{format_hms(end)}")
+  except Exception as exc:
+    log.debug("varjyam unavailable %s: %s", civil, exc)
+  return lines
+
+
 def _wrap_lines(pdf, text, font, size, max_width):
   words = text.split()
   lines = []
@@ -370,8 +383,9 @@ def draw_cell(pdf, x, y_top, row_h, cell_w, day, civil, location, context):
     line_y -= 8.0
 
   bottom_y = y_bottom + 4
-  for i, text in enumerate(sun_moon_lines(location, civil)):
-    pdf.setFillColor(GREY)
+  bottom_lines = sun_moon_lines(location, civil) + varjyam_lines(location, civil)
+  for i, text in enumerate(bottom_lines):
+    pdf.setFillColor(RED if text.startswith("VARJYAM") else GREY)
     pdf.setFont(PDF_FONT, 6.2)
     pdf.drawString(x + 4, bottom_y + i * 8.0, text)
 

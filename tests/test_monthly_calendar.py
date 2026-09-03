@@ -202,6 +202,38 @@ class CellDrawTests(unittest.TestCase):
     self.assertIn(MASA_START_ROW, fill_colors)
 
 
+class VarjyamTests(unittest.TestCase):
+
+  def test_varjyam_lines_two_windows_on_nakshatra_change_day(self):
+    from generate_monthly_calendar import varjyam_lines
+    location = load_location("Ujjain")
+    lines = varjyam_lines(location, date(2026, 6, 14))
+    self.assertEqual(len(lines), 2)
+    for line in lines:
+      self.assertTrue(line.startswith("VARJYAM: "))
+
+  def test_varjyam_line_is_drawn_in_cell(self):
+    ensure_pdf_fonts()
+    pdf = mock.Mock()
+    from festival_rules import DayRecord
+    civil = date(2026, 6, 14)
+    context = {
+      "records_by_date": {
+        civil: DayRecord(civil, "S30", 1, 1, "5", False, 0.0)
+      },
+      "festival_names_by_date": {},
+      "eclipse_dates": set(),
+      "eclipse_details_by_date": {},
+      "masa_badges": {},
+      "solar_by_date": {},
+      "ekadashi": set(),
+    }
+    with mock.patch("generate_monthly_calendar.panchanga.varjyam", return_value=[[[15.22, 13, 0], [16.63, 37, 0]]]):
+      draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 14, civil, load_location("Ujjain"), context)
+    drawn_text = [c.args[2] for c in pdf.drawString.call_args_list]
+    self.assertIn("VARJYAM: 15:26-17:15", drawn_text)
+
+
 class YearLabelTests(unittest.TestCase):
 
   def test_year_label_matches_webapp_format(self):
