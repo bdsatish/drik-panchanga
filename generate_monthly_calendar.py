@@ -80,6 +80,7 @@ FOOTER_H = 34
 INK = HexColor("#1A1A1A")
 GREY = HexColor("#9A9A9A")
 LIGHT = HexColor("#E3E3E3")
+GRID_LINE = HexColor("#A8A8A8")
 RED = HexColor("#A8321F")
 TEAL = HexColor("#0E6E62")
 SAFFRON = HexColor("#F3D9A9")
@@ -306,7 +307,7 @@ def draw_cell(pdf, x, y_top, row_h, cell_w, day, civil, location, context):
   if is_ekadashi:
     pdf.setFillColor(TEAL)
     pdf.rect(x, y_bottom, 2.2, row_h, stroke=0, fill=1)
-  pdf.setStrokeColor(LIGHT)
+  pdf.setStrokeColor(GRID_LINE)
   pdf.setLineWidth(0.5)
   pdf.rect(x, y_bottom, cell_w, row_h, stroke=1, fill=0)
 
@@ -399,7 +400,7 @@ def draw_grid(pdf, year, month, location, context):
       day = slot + 1
       if day < 1 or day > days:
         other = prev_days + day if day < 1 else day - days
-        pdf.setStrokeColor(LIGHT)
+        pdf.setStrokeColor(GRID_LINE)
         pdf.setLineWidth(0.5)
         pdf.rect(x, y_top - row_h, cell_w, row_h, stroke=1, fill=0)
         pdf.setFillColor(LIGHT)
