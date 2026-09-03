@@ -386,7 +386,7 @@ def draw_cell(pdf, x, y_top, row_h, cell_w, day, civil, location, context):
   bottom_lines = sun_moon_lines(location, civil) + varjyam_lines(location, civil)
   for i, text in enumerate(bottom_lines):
     pdf.setFillColor(RED if text.startswith("VARJYAM") else GREY)
-    pdf.setFont(PDF_FONT, 6.2)
+    pdf.setFont(PDF_FONT, 5.8)
     pdf.drawString(x + 4, bottom_y + i * 8.0, text)
 
 
