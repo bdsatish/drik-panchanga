@@ -405,6 +405,19 @@ def rahu_kala_table_lines(location, year, month):
   return [by_weekday[d] for d in (6, 0, 1, 2, 3, 4, 5)]
 
 
+def draw_tithi_index_cell(pdf, x, y_top, start, stop):
+  pdf.setFillColor(INK)
+  pdf.setFont(PDF_FONT_BOLD, 6.0)
+  pdf.drawString(x + 4, y_top - 14, "S Śukla / K Kṛṣṇa")
+  line_y = y_top - 14 - 8.0
+  pdf.setFillColor(GREY)
+  pdf.setFont(PDF_FONT, 5.8)
+  for number in range(start, stop + 1):
+    label = f"{_TITHI_NAMES[number]} / Amāvāsyā" if number == 15 else _TITHI_NAMES[number]
+    pdf.drawString(x + 4, line_y, f"{number:>2} {label}")
+    line_y -= 8.0
+
+
 def draw_rahu_kala_table(pdf, x, y_top, location, year, month):
   pdf.setFillColor(INK)
   pdf.setFont(PDF_FONT_BOLD, 6.5)
@@ -446,6 +459,10 @@ def draw_grid(pdf, year, month, location, context):
         pdf.rect(x, y_top - row_h, cell_w, row_h, stroke=1, fill=0)
         if row == GRID_ROWS - 1 and col == 6:
           draw_rahu_kala_table(pdf, x, y_top, location, year, month)
+        elif row == GRID_ROWS - 1 and col == 5:
+          draw_tithi_index_cell(pdf, x, y_top, 9, 15)
+        elif row == GRID_ROWS - 1 and col == 4:
+          draw_tithi_index_cell(pdf, x, y_top, 1, 8)
         else:
           pdf.setFillColor(LIGHT)
           pdf.setFont(PDF_FONT, 9)

@@ -259,6 +259,28 @@ class RahuKalaTableTests(unittest.TestCase):
     self.assertEqual(len(drawn), 8)
 
 
+class TithiIndexCellTests(unittest.TestCase):
+
+  def test_first_cell_lists_tithis_one_to_eight(self):
+    from generate_monthly_calendar import draw_tithi_index_cell
+    pdf = mock.Mock()
+    draw_tithi_index_cell(pdf, 20.0, 500.0, 1, 8)
+    drawn = [c.args[2] for c in pdf.drawString.call_args_list]
+    self.assertEqual(drawn[0], "S Śukla / K Kṛṣṇa")
+    self.assertEqual(len(drawn), 9)
+    self.assertIn(" 1 Prātipadā", drawn)
+    self.assertIn(" 8 Aṣṭamī", drawn)
+
+  def test_second_cell_lists_tithis_nine_to_fifteen(self):
+    from generate_monthly_calendar import draw_tithi_index_cell
+    pdf = mock.Mock()
+    draw_tithi_index_cell(pdf, 20.0, 500.0, 9, 15)
+    drawn = [c.args[2] for c in pdf.drawString.call_args_list]
+    self.assertEqual(drawn[0], "S Śukla / K Kṛṣṇa")
+    self.assertEqual(len(drawn), 8)
+    self.assertIn("15 Pūrṇimā / Amāvāsyā", drawn)
+
+
 class YearLabelTests(unittest.TestCase):
 
   def test_year_label_matches_webapp_format(self):
