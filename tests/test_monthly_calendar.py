@@ -112,7 +112,7 @@ class DayDetailsTests(unittest.TestCase):
   def test_day_details_returns_leap_tithi(self):
     location = load_location("Ujjain")
     # 2026-06-15 has a leap tithi (Amāvāsyā + Prātipadā)
-    tithi_lines, naks_lines = day_details(location, date(2026, 6, 15))
+    tithi_lines, _naks_lines, _yoga_names = day_details(location, date(2026, 6, 15))
     self.assertEqual(len(tithi_lines), 2)
     self.assertEqual(tithi_lines[0][1], "Amāvāsyā")
     self.assertEqual(tithi_lines[1][1], "Prātipadā")
@@ -120,8 +120,14 @@ class DayDetailsTests(unittest.TestCase):
   def test_day_details_returns_leap_nakshatra(self):
     location = load_location("Ujjain")
     # 2026-06-12 has a leap nakshatra
-    tithi_lines, naks_lines = day_details(location, date(2026, 6, 12))
+    tithi_lines, naks_lines, _yoga_names = day_details(location, date(2026, 6, 12))
     self.assertEqual(len(naks_lines), 2)
+
+  def test_day_details_returns_skipped_yoga_names(self):
+    location = load_location("Ujjain")
+    # 2026-06-10: Ayushman ends 06:27, Saubhagya is entirely skipped within the day
+    _tithi_lines, _naks_lines, yoga_names = day_details(location, date(2026, 6, 10))
+    self.assertEqual(yoga_names, ["Āyuṣmān", "Saubhāgya"])
 
 
 class SunMoonTests(unittest.TestCase):
@@ -172,8 +178,8 @@ class CellDrawTests(unittest.TestCase):
       "solar_by_date": {},
       "ekadashi": set(),
     }
-    with mock.patch("generate_monthly_calendar.day_details", return_value=([("Kṛ.", "Amāvāsyā", "08:24"),
-                                                                            ("Śu.", "Prātipadā", "28:31")], [])):
+    with mock.patch("generate_monthly_calendar.day_details",
+                    return_value=([("Kṛ.", "Amāvāsyā", "08:24"), ("Śu.", "Prātipadā", "28:31")], [], ["Śūla"])):
       draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 15, date(2026, 6, 15), load_location("Ujjain"), context)
     drawn_text = [c.args[2] for c in pdf.drawString.call_args_list]
     self.assertIn("Kṛ. Amāvāsyā 08:24", drawn_text)

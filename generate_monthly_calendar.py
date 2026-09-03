@@ -167,6 +167,10 @@ def nakshatra_name(number):
   return sanskrit_names().get("nakshatras", {}).get(str(int(number)), str(number))
 
 
+def yoga_name(number):
+  return sanskrit_names().get("yogas", {}).get(str(int(number)), str(number))
+
+
 def format_hms(hms):
   """``[h, m, s]`` local decimal hours to ``HH:MM``; hours may exceed 24."""
   hours, minutes, seconds = hms
@@ -187,7 +191,12 @@ def day_details(location, civil):
   naks_lines.append((nakshatra_name(n[0]), format_hms(n[1])))
   if len(n) >= 4:
     naks_lines.append((nakshatra_name(n[2]), format_hms(n[3])))
-  return tithi_lines, naks_lines
+  yoga_names = []
+  y = panchanga.yoga(jd, place)
+  yoga_names.append(yoga_name(y[0]))
+  if len(y) >= 4:
+    yoga_names.append(yoga_name(y[2]))
+  return tithi_lines, naks_lines, yoga_names
 
 
 def _tithi_prefix(number):
@@ -348,7 +357,7 @@ def draw_cell(pdf, x, y_top, row_h, cell_w, day, civil, location, context):
     pdf.drawString(x + 4, line_y, label)
     line_y -= 8.0
 
-  tithi_lines, naks_lines = day_details(location, civil)
+  tithi_lines, naks_lines, yoga_names = day_details(location, civil)
   for prefix, name, end_hm in tithi_lines:
     pdf.setFillColor(INK)
     pdf.setFont(PDF_FONT, 6.8)
@@ -359,11 +368,10 @@ def draw_cell(pdf, x, y_top, row_h, cell_w, day, civil, location, context):
     pdf.setFont(PDF_FONT, 6.5)
     pdf.drawString(x + 4, line_y, f"{name} {end_hm}")
     line_y -= 8.0
-  yoga_name = sanskrit_names().get("yogas", {}).get(str(record.yoga), "")
-  if yoga_name:
+  for name in yoga_names:
     pdf.setFillColor(YOGA_INK)
     pdf.setFont(PDF_FONT_ITALIC, 6.5)
-    pdf.drawString(x + 4, line_y, yoga_name)
+    pdf.drawString(x + 4, line_y, name)
     line_y -= 8.0
   max_text_w = cell_w - 10
   for name in festivals:
