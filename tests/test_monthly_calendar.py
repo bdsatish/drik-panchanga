@@ -202,6 +202,24 @@ class CellDrawTests(unittest.TestCase):
     self.assertIn(MASA_START_ROW, fill_colors)
 
 
+class YearLabelTests(unittest.TestCase):
+
+  def test_year_label_matches_webapp_format(self):
+    import panchanga
+    from festival_rules import DayRecord
+    from generate_monthly_calendar import year_label_for_month
+
+    panchanga.set_coordinate_selection("citra")
+    civil = date(2026, 6, 15)
+    records_by_date = {civil: DayRecord(civil, "K15", 5, 7, "3", False, 0.0)}
+    label = year_label_for_month(True, 2026, 6, records_by_date)
+    self.assertEqual(label, "Parābhava 1948, Siddhārthī 2083, Kali (elapsed) 5127")
+
+  def test_year_label_is_none_without_record(self):
+    from generate_monthly_calendar import year_label_for_month
+    self.assertIsNone(year_label_for_month(True, 2026, 6, {}))
+
+
 class ContextTests(unittest.TestCase):
 
   def test_collect_context_includes_masa_badges(self):

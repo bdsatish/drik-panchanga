@@ -44,6 +44,7 @@ from generate_panchanga_calendar import (
   RULESET_VERSION,
   coordinate_selection_label,
   daily_records,
+  display_masa,
   embed_pdf_metadata,
   ensure_pdf_fonts,
   format_local_hm,
@@ -60,7 +61,7 @@ from generate_panchanga_calendar import (
   solar_dates_by_date,
 )
 from panchanga import Date as PanDate
-from panchanga import gregorian_to_jd, samvatsara
+from panchanga import gregorian_to_jd
 
 log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
@@ -232,7 +233,24 @@ def _wrap_lines(pdf, text, font, size, max_width):
   return lines if lines else [text]
 
 
-def draw_header(pdf, location, year, month, amanta, coordinate_selection):
+def year_label_for_month(amanta, year, month, records_by_date):
+  """Webapp-style era label for mid-month: ``Parābhava 1948, Siddhārthī 2083, Kali (elapsed) 5127``."""
+  days = calendar.monthrange(year, month)[1]
+  civil = CivilDate(year, month, min(15, days))
+  record = records_by_date.get(civil)
+  if record is None:
+    return None
+  masa_num = int(display_masa(record, amanta=amanta).lstrip("A"))
+  jd = gregorian_to_jd(PanDate(year, month, civil.day))
+  kali_year, saka_year, vikrama_year = panchanga.elapsed_year(jd, masa_num)
+  names = sanskrit_names()["samvats"]
+  saka_name = names[str(panchanga.samvatsara(jd, masa_num))]
+  vikrama_name = names[str(panchanga.samvatsara_north_modern(jd, masa_num))]
+  return (f"{saka_name} {saka_year}, {vikrama_name} {vikrama_year}, "
+          f"Kali (elapsed) {kali_year}")
+
+
+def draw_header(pdf, location, year, month, amanta, coordinate_selection, year_label):
   top = PAGE_H - MARGIN
   pdf.setFillColor(INK)
   pdf.setFont(PDF_FONT_BOLD, 30)
@@ -242,16 +260,15 @@ def draw_header(pdf, location, year, month, amanta, coordinate_selection):
   pdf.setFont(PDF_FONT_ITALIC, 11)
   pdf.drawString(MARGIN, top - 46, location.name)
 
-  jd = gregorian_to_jd(PanDate(year, month, 1))
-  samvatsara_num = samvatsara(jd, 0)
-  samvatsara_name = sanskrit_names().get("samvats", {}).get(str(samvatsara_num), str(samvatsara_num))
-  pdf.setFont(PDF_FONT, 9)
-  info = (f"Saṁvatsara {samvatsara_name}, {month_system_label(amanta)}, "
-          f"{coordinate_selection_label(coordinate_selection)}")
-  pdf.drawRightString(PAGE_W - MARGIN, top - 28, info)
+  if year_label:
+    pdf.setFillColor(INK)
+    pdf.setFont(PDF_FONT, 9)
+    pdf.drawRightString(PAGE_W - MARGIN, top - 28, year_label)
   pdf.setFillColor(GREY)
   pdf.setFont(PDF_FONT, 7)
-  pdf.drawRightString(PAGE_W - MARGIN, top - 42, f"Ruleset {RULESET_VERSION}, layout {MONTHLY_LAYOUT_VERSION}")
+  pdf.drawRightString(
+    PAGE_W - MARGIN, top - 42, f"{month_system_label(amanta)}, {coordinate_selection_label(coordinate_selection)}, "
+    f"Ruleset {RULESET_VERSION}, layout {MONTHLY_LAYOUT_VERSION}")
 
   pdf.setStrokeColor(INK)
   pdf.setLineWidth(1.2)
@@ -470,7 +487,8 @@ def _build_monthly_pdf_unlocked(location, start_year, start_month, output_path, 
   for index, (year, month) in enumerate(months, start=1):
     pdf.setFillColor(white)
     pdf.rect(0, 0, PAGE_W, PAGE_H, stroke=0, fill=1)
-    draw_header(pdf, location, year, month, amanta, coordinate_selection)
+    year_label = year_label_for_month(amanta, year, month, context["records_by_date"])
+    draw_header(pdf, location, year, month, amanta, coordinate_selection, year_label)
     draw_grid(pdf, year, month, location, context)
     draw_footer(pdf, location, coordinate_selection, index, MONTHLY_MONTH_COUNT)
     pdf.showPage()
