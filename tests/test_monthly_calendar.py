@@ -159,7 +159,7 @@ class CellDrawTests(unittest.TestCase):
       },
       "ekadashi": set(),
     }
-    draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 16, date(2026, 6, 16), load_location("Ujjain"), context)
+    draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 16, date(2026, 6, 16), load_location("Ujjain"), context, col=0)
     solar_calls = [c for c in pdf.drawString.call_args_list if "Mithuna" in str(c.args[2])]
     self.assertEqual(len(solar_calls), 1)
 
@@ -180,7 +180,7 @@ class CellDrawTests(unittest.TestCase):
     }
     with mock.patch("generate_monthly_calendar.day_details", return_value=([("K15", "08:24"),
                                                                             ("S1", "28:31")], [], ["Śūla"])):
-      draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 15, date(2026, 6, 15), load_location("Ujjain"), context)
+      draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 15, date(2026, 6, 15), load_location("Ujjain"), context, col=0)
     drawn_text = [c.args[2] for c in pdf.drawString.call_args_list]
     self.assertIn("Śrāvaṇa K15 08:24", drawn_text)
     self.assertIn("Śrāvaṇa S1 28:31", drawn_text)
@@ -202,7 +202,7 @@ class CellDrawTests(unittest.TestCase):
       "solar_by_date": {},
       "ekadashi": set(),
     }
-    draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 16, date(2026, 6, 16), load_location("Ujjain"), context)
+    draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 16, date(2026, 6, 16), load_location("Ujjain"), context, col=0)
     fill_colors = [c.args[0] for c in pdf.setFillColor.call_args_list]
     from generate_panchanga_calendar import MASA_START_ROW
     self.assertIn(MASA_START_ROW, fill_colors)
@@ -235,7 +235,7 @@ class VarjyamTests(unittest.TestCase):
       "ekadashi": set(),
     }
     with mock.patch("generate_monthly_calendar.panchanga.varjyam", return_value=[[[15.22, 13, 0], [16.63, 37, 0]]]):
-      draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 14, civil, load_location("Ujjain"), context)
+      draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 14, civil, load_location("Ujjain"), context, col=0)
     drawn_text = [c.args[2] for c in pdf.drawString.call_args_list]
     self.assertIn("Varjyam: 15:26-17:15", drawn_text)
 

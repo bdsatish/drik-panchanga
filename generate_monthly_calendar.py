@@ -70,7 +70,7 @@ CONTEXT_MONTH_COUNT = MONTHLY_MONTH_COUNT + 2
 
 PAGE_W, PAGE_H = A4
 MARGIN = 34
-HEADER_H = 92
+HEADER_H = 58
 WEEKDAY_ROW_H = 20
 GRID_ROWS = 6
 FOOTER_H = 34
@@ -307,7 +307,7 @@ def draw_weekday_row(pdf, grid_top):
     pdf.drawCentredString(x + cell_w / 2, grid_top + 6, label)
 
 
-def draw_cell(pdf, x, y_top, row_h, cell_w, day, civil, location, context):
+def draw_cell(pdf, x, y_top, row_h, cell_w, day, civil, location, context, col):
   y_bottom = y_top - row_h
   record = context["records_by_date"].get(civil)
   raasi_num, solar_day, is_sankranti = context["solar_by_date"].get(civil, (None, None, False))
@@ -335,6 +335,11 @@ def draw_cell(pdf, x, y_top, row_h, cell_w, day, civil, location, context):
   pdf.setFillColor(RED if is_sunday else INK)
   pdf.setFont(PDF_FONT_BOLD, 15)
   pdf.drawRightString(x + cell_w - 5, y_top - 15, str(day))
+  if col == 0 and 1 <= day <= calendar.monthrange(civil.year, civil.month)[1]:
+    week_num = civil.isocalendar()[1]
+    pdf.setFont(PDF_FONT_BOLD, 10)
+    pdf.setFillColor(RED if is_sunday else INK)
+    pdf.drawString(x + 5, y_top - 12, f"W{week_num}")
 
   if record is None:
     return
@@ -469,7 +474,7 @@ def draw_grid(pdf, year, month, location, context):
           pdf.drawRightString(x + cell_w - 5, y_top - 13, str(other))
         continue
       civil = CivilDate(year, month, day)
-      draw_cell(pdf, x, y_top, row_h, cell_w, day, civil, location, context)
+      draw_cell(pdf, x, y_top, row_h, cell_w, day, civil, location, context, col)
 
 
 def draw_footer(pdf, location, coordinate_selection, page_index, total):
