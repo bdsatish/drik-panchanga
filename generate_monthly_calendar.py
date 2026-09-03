@@ -390,6 +390,31 @@ def draw_cell(pdf, x, y_top, row_h, cell_w, day, civil, location, context):
     pdf.drawString(x + 4, bottom_y + i * 8.0, text)
 
 
+def rahu_kala_table_lines(location, year, month):
+  """Weekday rahu kala sampled from the first seven days of the month, Sunday first."""
+  labels = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
+  by_weekday = {}
+  for day in range(1, 8):
+    civil = CivilDate(year, month, day)
+    place = place_for_date(location, civil)
+    jd = gregorian_to_jd(civil)
+    start, end = panchanga.trikalam(jd, place, option="rahu")
+    by_weekday[civil.weekday()] = f"{labels[civil.weekday()]} {format_hms(start)}-{format_hms(end)}"
+  return [by_weekday[d] for d in (6, 0, 1, 2, 3, 4, 5)]
+
+
+def draw_rahu_kala_table(pdf, x, y_top, location, year, month):
+  pdf.setFillColor(INK)
+  pdf.setFont(PDF_FONT_BOLD, 6.5)
+  pdf.drawString(x + 4, y_top - 14, "Rahu kala")
+  line_y = y_top - 14 - 8.0
+  pdf.setFillColor(GREY)
+  pdf.setFont(PDF_FONT, 5.8)
+  for line in rahu_kala_table_lines(location, year, month):
+    pdf.drawString(x + 4, line_y, line)
+    line_y -= 8.0
+
+
 def draw_grid(pdf, year, month, location, context):
   grid_top = PAGE_H - MARGIN - HEADER_H - WEEKDAY_ROW_H
   grid_bottom = MARGIN + FOOTER_H
@@ -417,9 +442,12 @@ def draw_grid(pdf, year, month, location, context):
         pdf.setStrokeColor(GRID_LINE)
         pdf.setLineWidth(0.5)
         pdf.rect(x, y_top - row_h, cell_w, row_h, stroke=1, fill=0)
-        pdf.setFillColor(LIGHT)
-        pdf.setFont(PDF_FONT, 9)
-        pdf.drawRightString(x + cell_w - 5, y_top - 13, str(other))
+        if row == GRID_ROWS - 1 and col == 6:
+          draw_rahu_kala_table(pdf, x, y_top, location, year, month)
+        else:
+          pdf.setFillColor(LIGHT)
+          pdf.setFont(PDF_FONT, 9)
+          pdf.drawRightString(x + cell_w - 5, y_top - 13, str(other))
         continue
       civil = CivilDate(year, month, day)
       draw_cell(pdf, x, y_top, row_h, cell_w, day, civil, location, context)

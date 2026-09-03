@@ -234,6 +234,25 @@ class VarjyamTests(unittest.TestCase):
     self.assertIn("Varjyam: 15:26-17:15", drawn_text)
 
 
+class RahuKalaTableTests(unittest.TestCase):
+
+  def test_table_lines_cover_all_weekdays_sunday_first(self):
+    from generate_monthly_calendar import rahu_kala_table_lines
+    lines = rahu_kala_table_lines(load_location("Ujjain"), 2026, 6)
+    self.assertEqual([line.split()[0] for line in lines], ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"])
+    import re
+    for line in lines:
+      self.assertRegex(line, r"^(Su|Mo|Tu|We|Th|Fr|Sa) \d{2}:\d{2}-\d{2}:\d{2}$")
+
+  def test_table_is_drawn_with_header_and_seven_rows(self):
+    from generate_monthly_calendar import draw_rahu_kala_table
+    pdf = mock.Mock()
+    draw_rahu_kala_table(pdf, 20.0, 500.0, load_location("Ujjain"), 2026, 6)
+    drawn = [c.args[2] for c in pdf.drawString.call_args_list]
+    self.assertEqual(drawn[0], "Rahu kala")
+    self.assertEqual(len(drawn), 8)
+
+
 class YearLabelTests(unittest.TestCase):
 
   def test_year_label_matches_webapp_format(self):
