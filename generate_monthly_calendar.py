@@ -31,11 +31,9 @@ from festival_rules import (
 import panchanga
 
 from generate_panchanga_calendar import (
-  ADHIKA_INK,
   ADHIKA_ROW,
   DEFAULT_CITIES_PATH,
   DEFAULT_FESTIVALS_PATH,
-  MASA_START_INK,
   MASA_START_ROW,
   PDF_FONT,
   PDF_FONT_BOLD,
@@ -178,14 +176,19 @@ def format_hms(hms):
   return f"{total // 60:02d}:{total % 60:02d}"
 
 
+def tithi_code(number):
+  number = int(number)
+  return f"S{number}" if number <= 15 else f"K{number - 15}"
+
+
 def day_details(location, civil):
   place = place_for_date(location, civil)
   jd = gregorian_to_jd(civil)
   tithi_lines = []
   t = panchanga.tithi(jd, place)
-  tithi_lines.append((_tithi_prefix(t[0]), tithi_name(t[0]), format_hms(t[1])))
+  tithi_lines.append((tithi_code(t[0]), format_hms(t[1])))
   if len(t) >= 4:
-    tithi_lines.append((_tithi_prefix(t[2]), tithi_name(t[2]), format_hms(t[3])))
+    tithi_lines.append((tithi_code(t[2]), format_hms(t[3])))
   naks_lines = []
   n = panchanga.nakshatra(jd, place)
   naks_lines.append((nakshatra_name(n[0]), format_hms(n[1])))
@@ -197,10 +200,6 @@ def day_details(location, civil):
   if len(y) >= 4:
     yoga_names.append(yoga_name(y[2]))
   return tithi_lines, naks_lines, yoga_names
-
-
-def _tithi_prefix(number):
-  return "Śu." if int(number) <= 15 else "Kṛ."
 
 
 def sun_moon_lines(location, civil):
@@ -348,20 +347,15 @@ def draw_cell(pdf, x, y_top, row_h, cell_w, day, civil, location, context):
     pdf.setFont(PDF_FONT, 6.8)
     pdf.drawString(x + 4, line_y, f"{raasi_name} {solar_day}")
     line_y -= 8.0
-  if is_masa_start:
-    masa_num = int(masa_badge.lstrip("A"))
-    masa_name = sanskrit_names().get("masas", {}).get(str(masa_num), str(masa_num))
-    label = f"Adhika {masa_name} māsa" if masa_badge.startswith("A") else f"{masa_name} māsa"
-    pdf.setFillColor(ADHIKA_INK if masa_badge.startswith("A") else MASA_START_INK)
-    pdf.setFont(PDF_FONT_BOLD, 6.5)
-    pdf.drawString(x + 4, line_y, label)
-    line_y -= 8.0
 
+  masa_display = display_masa(record, amanta=context.get("amanta", True))
+  masa_name = sanskrit_names().get("masas", {}).get(masa_display.lstrip("A"), masa_display.lstrip("A"))
+  masa_prefix = f"A.{masa_name}" if masa_display.startswith("A") else masa_name
   tithi_lines, naks_lines, yoga_names = day_details(location, civil)
-  for prefix, name, end_hm in tithi_lines:
+  for code, end_hm in tithi_lines:
     pdf.setFillColor(INK)
     pdf.setFont(PDF_FONT, 6.8)
-    pdf.drawString(x + 4, line_y, f"{prefix} {name} {end_hm}")
+    pdf.drawString(x + 4, line_y, f"{masa_prefix} {code} {end_hm}")
     line_y -= 8.0
   for name, end_hm in naks_lines:
     pdf.setFillColor(NAKS_INK)
@@ -499,6 +493,7 @@ def collect_context(months, location, festivals_path, amanta=True):
     "eclipse_dates": eclipse_dates,
     "eclipse_details_by_date": eclipse_details_by_date,
     "masa_badges": masa_badges_by_date(records, amanta=amanta),
+    "amanta": amanta,
     "solar_by_date": solar_dates_by_date(records),
     "ekadashi": {d
                  for d in ekadashi_dates_from_records(records)},

@@ -111,11 +111,11 @@ class DayDetailsTests(unittest.TestCase):
 
   def test_day_details_returns_leap_tithi(self):
     location = load_location("Ujjain")
-    # 2026-06-15 has a leap tithi (Amāvāsyā + Prātipadā)
+    # 2026-06-15 has a leap tithi (Amavasya + Pratipada)
     tithi_lines, _naks_lines, _yoga_names = day_details(location, date(2026, 6, 15))
     self.assertEqual(len(tithi_lines), 2)
-    self.assertEqual(tithi_lines[0][1], "Amāvāsyā")
-    self.assertEqual(tithi_lines[1][1], "Prātipadā")
+    self.assertEqual(tithi_lines[0][0], "K15")
+    self.assertEqual(tithi_lines[1][0], "S1")
 
   def test_day_details_returns_leap_nakshatra(self):
     location = load_location("Ujjain")
@@ -178,12 +178,12 @@ class CellDrawTests(unittest.TestCase):
       "solar_by_date": {},
       "ekadashi": set(),
     }
-    with mock.patch("generate_monthly_calendar.day_details",
-                    return_value=([("Kṛ.", "Amāvāsyā", "08:24"), ("Śu.", "Prātipadā", "28:31")], [], ["Śūla"])):
+    with mock.patch("generate_monthly_calendar.day_details", return_value=([("K15", "08:24"),
+                                                                            ("S1", "28:31")], [], ["Śūla"])):
       draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 15, date(2026, 6, 15), load_location("Ujjain"), context)
     drawn_text = [c.args[2] for c in pdf.drawString.call_args_list]
-    self.assertIn("Kṛ. Amāvāsyā 08:24", drawn_text)
-    self.assertIn("Śu. Prātipadā 28:31", drawn_text)
+    self.assertIn("Śrāvaṇa K15 08:24", drawn_text)
+    self.assertIn("Śrāvaṇa S1 28:31", drawn_text)
 
   def test_masa_start_fill_is_drawn(self):
     ensure_pdf_fonts()
