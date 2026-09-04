@@ -58,56 +58,8 @@ That installs only `panchanga.py` (plus `pyswisseph`). Swiss Ephemeris still
 needs `.se1` data files; set `SE_EPHE_PATH` or use `~/.local/share/swisseph`
 (see `setup_venv.sh` in this repository).
 
-For the full project (PDF calendar, web UI, GUI), clone the repository.
-Tested with Python 3.12, Swiss Ephemeris 2.10.03 (20230604), wxgtk 4.2.2, wxglade 0.8.1.
-
-To run the GUI (`gui.py`):
-
-```
-apt-get install python3-tz python3-wxgtk4.0 python3-wheel
-pip3 install --user pyswisseph  # or apt-get
-python3 gui.py
-```
-
-If you want to edit the GUI, download
-[wxGlade](https://github.com/wxGlade/wxGlade/releases) and run:
-
-```
-python3 wxglade.py
-```
-
-then open `Gui.wxg`.
-
-How does it look?
-
-[Sample screenshot](screenshot.jpg):
-
-![Sample screenshot](screenshot.jpg "Hindu Panchanga")
-
-
-Using the GUI
--------------
-
-### Location known ###
-
-First, type the Date in DD/MM/YYYY format in the 'Date' field. Negative value for YYYY are
-interpolated as proleptic Gregorian calendar.
-
-Second, type your location (city or district) in the Location field and click 'Search'.  If found,
-then the coordinates and time zone are updated. If not, try the [next method](#location-unknown).
-If your location's population is more than 50,000 then the location should be found.
-
-Third, click 'Compute'. Now the fields like tithi, etc. are computed and shown on the GUI.
-
-### Location unknown ###
-
-First, type the Date in DD/MM/YYYY format in the 'Date' field.
-
-Second, manually enter the coordinates and time zone of your location. You can use
-[Google Maps](http://maps.google.com) or [Time and Date website](http://www.timeanddate.com/) for
-this purpose.
-
-Third, click 'Compute'.  Now the fields like tithi, etc. are computed and shown on the GUI.
+For the full project (PDF calendar, web UI), clone the repository.
+Tested with Python 3.12, Swiss Ephemeris 2.10.03 (20230604).
 
 One-page calendar PDF
 ---------------------
@@ -217,6 +169,10 @@ The same city/month/ayanamsa/festival flags as the one-page script are
 accepted. The web UI offers both layouts via separate buttons (the form field
 `layout` is `one-page` or `monthly`); the monthly filename carries a
 `_monthly` suffix.
+
+#### Example: Ujjain, March 2026
+
+![Ujjain Monthly Panchanga, March 2026](ujjain_monthly_march2026.png)
 
 Run the regression tests with:
 
@@ -394,6 +350,53 @@ semi-analytical model for [planetary positions](http://stjarnhimlen.se/comp/ppco
 This program gives the panchanga for a given _instant_ but doesn't ask for a place's
 coordinates or timezone. This is probably because the program doesn't compute sunrise
 timings at all! The planetary model fails for dates outside the range 1800 CE to 2100 CE.
+
+
+Wx GUI (Deprecated)
+-------------------
+
+**Deprecated:** The wxPython GUI is no longer actively maintained. Use the
+[Web UI](#web-ui-offline-and-online) or the PDF calendar scripts instead.
+
+To run the GUI (`gui.py`):
+
+```
+apt-get install python3-tz python3-wxgtk4.0 python3-wheel
+pip3 install --user pyswisseph  # or apt-get
+python3 gui.py
+```
+
+If you want to edit the GUI, download
+[wxGlade](https://github.com/wxGlade/wxGlade/releases) and run:
+
+```
+python3 wxglade.py
+```
+
+then open `Gui.wxg`.
+
+### Using the GUI
+
+#### Location known
+
+First, type the Date in DD/MM/YYYY format in the 'Date' field. Negative value for YYYY are
+interpolated as proleptic Gregorian calendar.
+
+Second, type your location (city or district) in the Location field and click 'Search'.  If found,
+then the coordinates and time zone are updated. If not, try the [next method](#location-unknown-1).
+If your location's population is more than 50,000 then the location should be found.
+
+Third, click 'Compute'. Now the fields like tithi, etc. are computed and shown on the GUI.
+
+#### Location unknown
+
+First, type the Date in DD/MM/YYYY format in the 'Date' field.
+
+Second, manually enter the coordinates and time zone of your location. You can use
+[Google Maps](http://maps.google.com) or [Time and Date website](http://www.timeanddate.com/) for
+this purpose.
+
+Third, click 'Compute'.  Now the fields like tithi, etc. are computed and shown on the GUI.
 
 
 Licence
