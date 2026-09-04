@@ -296,6 +296,26 @@ def draw_header(pdf, location, year, month, amanta, coordinate_selection, year_l
   pdf.drawRightString(
     PAGE_W - MARGIN, top - 42, f"{month_system_label(amanta)}, {coordinate_selection_label(coordinate_selection)}, "
     f"Ruleset {RULESET_VERSION}, layout {MONTHLY_LAYOUT_VERSION}")
+  # Attribution stamp below ruleset line (dynamic year)
+  from datetime import date as DateType
+  current_year = DateType.today().year
+  stamp_text = f"Drik Panchanga · Copyright © Satish BD {current_year} · AGPL-3.0"
+  link_text = "Drik Panchanga"
+  pdf.setFillColor(HexColor("#AAAAAA"))
+  pdf.setFont(PDF_FONT, 5.5)
+  text_width = pdf.stringWidth(stamp_text, PDF_FONT, 5.5)
+  link_width = pdf.stringWidth(link_text, PDF_FONT, 5.5)
+  x_right = PAGE_W - MARGIN
+  pdf.drawRightString(x_right, top - 52, stamp_text)
+  # Make "Drik Panchanga" a hyperlink to GitHub repo
+  link_x = x_right - text_width
+  pdf.linkURL(
+    "https://github.com/bdsatish/drik-panchanga",
+    (link_x, top - 56, link_x + link_width, top - 47),
+    relative=0,
+    thickness=0,
+    color=HexColor("#AAAAAA"),
+  )
 
   pdf.setStrokeColor(INK)
   pdf.setLineWidth(1.2)

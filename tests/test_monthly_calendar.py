@@ -317,6 +317,7 @@ class MonthlyHeaderTimezoneTests(unittest.TestCase):
   def test_header_includes_timezone(self):
     location = load_location("Ujjain")
     pdf = mock.Mock()
+    pdf.stringWidth = lambda text, font, size: len(text) * size * 0.5
     draw_header(pdf, location, 2026, 3, True, "citra", None)
     place_calls = [c for c in pdf.drawString.call_args_list if "Ujjain" in str(c.args[2])]
     self.assertEqual(len(place_calls), 1)
@@ -325,6 +326,7 @@ class MonthlyHeaderTimezoneTests(unittest.TestCase):
   def test_header_timezone_respects_dst(self):
     location = load_location("Helsinki")
     pdf = mock.Mock()
+    pdf.stringWidth = lambda text, font, size: len(text) * size * 0.5
     draw_header(pdf, location, 2026, 6, True, "citra", None)
     place_calls = [c for c in pdf.drawString.call_args_list if "Helsinki" in str(c.args[2])]
     self.assertEqual(len(place_calls), 1)
@@ -333,6 +335,7 @@ class MonthlyHeaderTimezoneTests(unittest.TestCase):
   def test_header_timezone_winter_no_dst(self):
     location = load_location("Helsinki")
     pdf = mock.Mock()
+    pdf.stringWidth = lambda text, font, size: len(text) * size * 0.5
     draw_header(pdf, location, 2026, 12, True, "citra", None)
     place_calls = [c for c in pdf.drawString.call_args_list if "Helsinki" in str(c.args[2])]
     self.assertEqual(len(place_calls), 1)
