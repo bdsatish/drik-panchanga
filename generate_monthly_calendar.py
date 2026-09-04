@@ -17,6 +17,7 @@ import calendar
 import logging
 import sys
 from datetime import date as CivilDate
+from datetime import timedelta
 from pathlib import Path
 
 from reportlab.lib.colors import HexColor, white
@@ -340,7 +341,10 @@ def draw_cell(pdf, x, y_top, row_h, cell_w, day, civil, location, context, col):
   pdf.setFont(PDF_FONT_BOLD, 15)
   pdf.drawRightString(x + cell_w - 5, y_top - 15, str(day))
   if col == 0 and 1 <= day <= calendar.monthrange(civil.year, civil.month)[1]:
-    week_num = civil.isocalendar()[1]
+    # ISO weeks are defined by the Thursday they contain; use the Thursday
+    # of this displayed week for the week number (always correct per ISO-8601).
+    thursday = civil + timedelta(days=4)
+    week_num = thursday.isocalendar()[1]
     pdf.setFont(PDF_FONT_BOLD, 10)
     pdf.setFillColor(RED if is_sunday else INK)
     pdf.drawString(x + 5, y_top - 12, f"W{week_num}")

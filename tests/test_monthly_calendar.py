@@ -1,6 +1,6 @@
 """Regression tests for the 12-month wall-grid panchanga PDF."""
 
-from datetime import date
+from datetime import date, timedelta
 from io import BytesIO
 from pathlib import Path
 import re
@@ -372,6 +372,85 @@ class DstLabelInjectionTests(unittest.TestCase):
     all_labels = [label for labels in festival_names.values() for label in labels]
     self.assertNotIn("DST starts", all_labels)
     self.assertNotIn("DST ends", all_labels)
+
+
+class IsoWeekNumberTests(unittest.TestCase):
+  """Sunday cell shows the ISO week of the Monday in its row."""
+
+  def test_sunday_shows_monday_week(self):
+    from generate_monthly_calendar import draw_cell, ensure_pdf_fonts
+    ensure_pdf_fonts()
+    location = load_location("Ujjain")
+    # Sunday Jan 4, 2026 is in ISO week 1, but Monday Jan 5 is week 2.
+    # The Sunday cell must show W2 to match Mon–Sat in its row.
+    from festival_rules import DayRecord
+    civil = date(2026, 1, 4)
+    record = DayRecord(civil, "S1", 1, 1, "5", False, 0.0)
+    context = {
+      "records_by_date": {
+        civil: record
+      },
+      "festival_names_by_date": {},
+      "eclipse_dates": set(),
+      "eclipse_details_by_date": {},
+      "masa_badges": {},
+      "solar_by_date": {},
+      "ekadashi": set(),
+    }
+    pdf = mock.Mock()
+    draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 4, civil, location, context, col=0)
+    drawn = [c.args[2] for c in pdf.drawString.call_args_list]
+    self.assertIn("W2", drawn)
+
+  def test_year_boundary_sunday(self):
+    from generate_monthly_calendar import draw_cell, ensure_pdf_fonts
+    ensure_pdf_fonts()
+    location = load_location("Ujjain")
+    # Sunday Dec 28, 2025 is ISO week 52, but Monday Dec 29 is week 1.
+    from festival_rules import DayRecord
+    civil = date(2025, 12, 28)
+    record = DayRecord(civil, "S1", 1, 1, "5", False, 0.0)
+    context = {
+      "records_by_date": {
+        civil: record
+      },
+      "festival_names_by_date": {},
+      "eclipse_dates": set(),
+      "eclipse_details_by_date": {},
+      "masa_badges": {},
+      "solar_by_date": {},
+      "ekadashi": set(),
+    }
+    pdf = mock.Mock()
+    draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 28, civil, location, context, col=0)
+    drawn = [c.args[2] for c in pdf.drawString.call_args_list]
+    self.assertIn("W1", drawn)
+
+  def test_jan_2027_year_boundary(self):
+    from generate_monthly_calendar import draw_cell, ensure_pdf_fonts
+    ensure_pdf_fonts()
+    location = load_location("Ujjain")
+    # Sunday Jan 3, 2027 is ISO week 53 of 2026, but Mon Jan 4 is week 1.
+    # The Sunday cell must show W1 (the week containing the Thursday).
+    from festival_rules import DayRecord
+    civil = date(2027, 1, 3)
+    record = DayRecord(civil, "S1", 1, 1, "5", False, 0.0)
+    context = {
+      "records_by_date": {
+        civil: record
+      },
+      "festival_names_by_date": {},
+      "eclipse_dates": set(),
+      "eclipse_details_by_date": {},
+      "masa_badges": {},
+      "solar_by_date": {},
+      "ekadashi": set(),
+    }
+    pdf = mock.Mock()
+    draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 3, civil, location, context, col=0)
+    drawn = [c.args[2] for c in pdf.drawString.call_args_list]
+    self.assertIn("W1", drawn)
+    self.assertNotIn("W53", drawn)
 
 
 if __name__ == "__main__":
