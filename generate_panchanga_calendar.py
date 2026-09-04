@@ -630,6 +630,23 @@ def timezone_hours(timezone, year, month, day):
   return local_noon.utcoffset().total_seconds() / 3600
 
 
+def format_utc_offset(timezone_name, year, month, day=15):
+  """Return 'UTC+5:30 (IST)' style label for a timezone on a given date."""
+  zone = ZoneInfo(timezone_name)
+  local = datetime(year, month, day, 12, tzinfo=zone)
+  offset = local.utcoffset()
+  if offset is None:
+    return ""
+  total_seconds = int(offset.total_seconds())
+  sign = "+" if total_seconds >= 0 else "-"
+  total_seconds = abs(total_seconds)
+  hours, remainder = divmod(total_seconds, 3600)
+  minutes = remainder // 60
+  offset_str = f"UTC{sign}{hours}" if minutes == 0 else f"UTC{sign}{hours}:{minutes:02d}"
+  abbr = local.strftime("%Z") or timezone_name
+  return f"{offset_str} ({abbr})"
+
+
 def place_for_date(location, civil):
   """Build a ``Place`` with the city's UTC offset on the given civil date."""
   zone = ZoneInfo(location.timezone_name)
@@ -901,7 +918,10 @@ def coordinate_label(value, positive, negative):
 def draw_page_header(pdf, location, months, ruleset_version, amanta=True, coordinate_selection="citra",
                      calendar_years=None, kali_ahargana=None):
   page_width, page_height = landscape(A4)
-  title = f"{location.name} Panchanga: {month_span_label(months)}"
+  start_year, start_month = months[0]
+  tz_label = format_utc_offset(location.timezone_name, start_year, start_month)
+  place_label = f"{location.name}, {tz_label}" if tz_label else location.name
+  title = f"{place_label} Panchanga: {month_span_label(months)}"
   pdf.setFillColor(INK)
   title_size = fitted_font_size(pdf, title, PDF_FONT_BOLD, 11, 8, page_width - 36, "page title")
   pdf.setFont(PDF_FONT_BOLD, title_size)

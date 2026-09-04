@@ -42,6 +42,7 @@ from generate_panchanga_calendar import (
   draw_tithi_underline,
   ensure_pdf_fonts,
   fitted_font_size,
+  format_utc_offset,
   kali_ahargana_range,
   load_location,
   month_range,
@@ -400,6 +401,56 @@ class DailyRecordsCacheHookTests(unittest.TestCase):
       self.assertIsInstance(kwargs["tithi_number"], int)
       self.assertGreaterEqual(kwargs["tithi_number"], 1)
       self.assertLessEqual(kwargs["tithi_number"], 30)
+
+
+class FormatUtcOffsetTests(unittest.TestCase):
+  """``format_utc_offset`` renders UTC offset with timezone abbreviation."""
+
+  def test_ist_no_dst(self):
+    self.assertEqual(format_utc_offset("Asia/Kolkata", 2026, 3), "UTC+5:30 (IST)")
+
+  def test_helsinki_summer_dst(self):
+    self.assertEqual(format_utc_offset("Europe/Helsinki", 2026, 6), "UTC+3 (EEST)")
+
+  def test_helsinki_winter_no_dst(self):
+    self.assertEqual(format_utc_offset("Europe/Helsinki", 2026, 12), "UTC+2 (EET)")
+
+  def test_us_eastern_summer_dst(self):
+    self.assertEqual(format_utc_offset("America/New_York", 2026, 7), "UTC-4 (EDT)")
+
+  def test_us_eastern_winter_no_dst(self):
+    self.assertEqual(format_utc_offset("America/New_York", 2026, 1), "UTC-5 (EST)")
+
+  def test_utc_zero(self):
+    self.assertEqual(format_utc_offset("UTC", 2026, 6), "UTC+0 (UTC)")
+
+  def test_whole_hour_offset(self):
+    self.assertEqual(format_utc_offset("Europe/London", 2026, 1), "UTC+0 (GMT)")
+
+  def test_nepal_unusual_offset(self):
+    self.assertEqual(format_utc_offset("Asia/Kathmandu", 2026, 6), "UTC+5:45 (+0545)")
+
+
+class TimezoneInHeaderTests(unittest.TestCase):
+  """Page header must show UTC offset next to the place name."""
+
+  def test_annual_header_includes_timezone(self):
+    location = load_location("Ujjain")
+    months = list(month_range(2026, 3))
+    pdf = mock.Mock()
+    with mock.patch("generate_panchanga_calendar.fitted_font_size", return_value=10):
+      draw_page_header(pdf, location, months, RULESET_VERSION)
+    title = pdf.drawString.call_args_list[0].args[2]
+    self.assertTrue(title.startswith("Ujjain, IN, UTC+5:30 (IST) Panchanga:"))
+
+  def test_annual_header_timezone_respects_dst(self):
+    location = load_location("Helsinki")
+    months = list(month_range(2026, 6))
+    pdf = mock.Mock()
+    with mock.patch("generate_panchanga_calendar.fitted_font_size", return_value=10):
+      draw_page_header(pdf, location, months, RULESET_VERSION)
+    title = pdf.drawString.call_args_list[0].args[2]
+    self.assertTrue(title.startswith("Helsinki, FI, UTC+3 (EEST) Panchanga:"))
 
 
 if __name__ == "__main__":

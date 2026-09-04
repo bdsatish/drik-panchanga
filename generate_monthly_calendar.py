@@ -46,6 +46,7 @@ from generate_panchanga_calendar import (
   embed_pdf_metadata,
   ensure_pdf_fonts,
   format_local_hm,
+  format_utc_offset,
   load_location,
   location_slug,
   masa_badges_by_date,
@@ -280,7 +281,9 @@ def draw_header(pdf, location, year, month, amanta, coordinate_selection, year_l
 
   pdf.setFillColor(GREY)
   pdf.setFont(PDF_FONT_ITALIC, 11)
-  pdf.drawString(MARGIN, top - 46, location.name)
+  tz_label = format_utc_offset(location.timezone_name, year, month)
+  place_label = f"{location.name}, {tz_label}" if tz_label else location.name
+  pdf.drawString(MARGIN, top - 46, place_label)
 
   if year_label:
     pdf.setFillColor(INK)

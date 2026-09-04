@@ -18,6 +18,7 @@ from generate_monthly_calendar import (
   day_details,
   default_monthly_output_path,
   draw_cell,
+  draw_header,
   ensure_pdf_fonts,
   format_hms,
   load_location,
@@ -308,6 +309,34 @@ class ContextTests(unittest.TestCase):
     self.assertIn("masa_badges", ctx)
     self.assertIn("solar_by_date", ctx)
     self.assertIn("ekadashi", ctx)
+
+
+class MonthlyHeaderTimezoneTests(unittest.TestCase):
+  """Monthly header must show UTC offset next to the place name."""
+
+  def test_header_includes_timezone(self):
+    location = load_location("Ujjain")
+    pdf = mock.Mock()
+    draw_header(pdf, location, 2026, 3, True, "citra", None)
+    place_calls = [c for c in pdf.drawString.call_args_list if "Ujjain" in str(c.args[2])]
+    self.assertEqual(len(place_calls), 1)
+    self.assertIn("UTC+5:30 (IST)", place_calls[0].args[2])
+
+  def test_header_timezone_respects_dst(self):
+    location = load_location("Helsinki")
+    pdf = mock.Mock()
+    draw_header(pdf, location, 2026, 6, True, "citra", None)
+    place_calls = [c for c in pdf.drawString.call_args_list if "Helsinki" in str(c.args[2])]
+    self.assertEqual(len(place_calls), 1)
+    self.assertIn("UTC+3 (EEST)", place_calls[0].args[2])
+
+  def test_header_timezone_winter_no_dst(self):
+    location = load_location("Helsinki")
+    pdf = mock.Mock()
+    draw_header(pdf, location, 2026, 12, True, "citra", None)
+    place_calls = [c for c in pdf.drawString.call_args_list if "Helsinki" in str(c.args[2])]
+    self.assertEqual(len(place_calls), 1)
+    self.assertIn("UTC+2 (EET)", place_calls[0].args[2])
 
 
 if __name__ == "__main__":
