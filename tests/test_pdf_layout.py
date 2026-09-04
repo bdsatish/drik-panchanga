@@ -40,6 +40,7 @@ from generate_panchanga_calendar import (
   draw_sankranti_mark,
   draw_solar_day_mark,
   draw_tithi_underline,
+  dst_transitions,
   ensure_pdf_fonts,
   fitted_font_size,
   format_utc_offset,
@@ -451,6 +452,30 @@ class TimezoneInHeaderTests(unittest.TestCase):
       draw_page_header(pdf, location, months, RULESET_VERSION)
     title = pdf.drawString.call_args_list[0].args[2]
     self.assertTrue(title.startswith("Helsinki, FI, UTC+3 (EEST) Panchanga:"))
+
+
+class DstTransitionsTests(unittest.TestCase):
+  """``dst_transitions`` detects DST start/end dates."""
+
+  def test_helsinki_spring_forward(self):
+    self.assertEqual(dst_transitions("Europe/Helsinki", 2026, 3), {29: "DST starts"})
+
+  def test_helsinki_fall_back(self):
+    self.assertEqual(dst_transitions("Europe/Helsinki", 2026, 10), {25: "DST ends"})
+
+  def test_new_york_spring_forward(self):
+    self.assertEqual(dst_transitions("America/New_York", 2026, 3), {8: "DST starts"})
+
+  def test_new_york_fall_back(self):
+    self.assertEqual(dst_transitions("America/New_York", 2026, 11), {1: "DST ends"})
+
+  def test_no_dst_zone_returns_empty(self):
+    self.assertEqual(dst_transitions("Asia/Kolkata", 2026, 3), {})
+    self.assertEqual(dst_transitions("Asia/Kolkata", 2026, 6), {})
+
+  def test_month_without_transition_returns_empty(self):
+    self.assertEqual(dst_transitions("Europe/Helsinki", 2026, 6), {})
+    self.assertEqual(dst_transitions("America/New_York", 2026, 7), {})
 
 
 if __name__ == "__main__":

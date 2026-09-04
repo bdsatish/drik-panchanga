@@ -647,6 +647,52 @@ def format_utc_offset(timezone_name, year, month, day=15):
   return f"{offset_str} ({abbr})"
 
 
+def _utc_offset_hours(timezone_name, year, month, day):
+  """Return UTC offset in hours for a timezone on a given date."""
+  zone = ZoneInfo(timezone_name)
+  local = datetime(year, month, day, 12, tzinfo=zone)
+  offset = local.utcoffset()
+  if offset is None:
+    return 0
+  return offset.total_seconds() / 3600
+
+
+def _offset_at_noon(timezone_name, year, month, day):
+  """Return UTC offset in hours at noon on a given date, or None."""
+  zone = ZoneInfo(timezone_name)
+  local = datetime(year, month, day, 12, tzinfo=zone)
+  offset = local.utcoffset()
+  if offset is None:
+    return None
+  return offset.total_seconds() / 3600
+
+
+def dst_transitions(timezone_name, year, month):
+  """Return a dict of {day: 'DST starts'|'DST ends'} for transitions in a given month.
+
+  Scans the month day-by-day comparing UTC offset; when the offset changes,
+  the transition day is recorded with the appropriate label. The previous
+  month's last day is used to detect transitions on the 1st of the month.
+  """
+  zone = ZoneInfo(timezone_name)
+  last_day = calendar.monthrange(year, month)[1]
+  # Initialize from the last day of the previous month to catch transitions on the 1st
+  prev_month_year, prev_month = (year, month - 1) if month > 1 else (year - 1, 12)
+  prev_offset = _offset_at_noon(timezone_name, prev_month_year, prev_month,
+                                calendar.monthrange(prev_month_year, prev_month)[1])
+  transitions = {}
+  for day in range(1, last_day + 1):
+    hours = _offset_at_noon(timezone_name, year, month, day)
+    if hours is not None:
+      if prev_offset is not None and hours != prev_offset:
+        if hours > prev_offset:
+          transitions[day] = "DST starts"
+        else:
+          transitions[day] = "DST ends"
+      prev_offset = hours
+  return transitions
+
+
 def place_for_date(location, civil):
   """Build a ``Place`` with the city's UTC offset on the given civil date."""
   zone = ZoneInfo(location.timezone_name)

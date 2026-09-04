@@ -43,6 +43,7 @@ from generate_panchanga_calendar import (
   coordinate_selection_label,
   daily_records,
   display_masa,
+  dst_transitions,
   embed_pdf_metadata,
   ensure_pdf_fonts,
   format_local_hm,
@@ -503,6 +504,11 @@ def collect_context(months, location, festivals_path, amanta=True):
   festival_names_by_date = {}
   for civil, markers in festivals_by_date.items():
     festival_names_by_date[civil] = [lookup.get(m, str(m)) for m in markers]
+  for year, month in months:
+    for day, label in dst_transitions(location.timezone_name, year, month).items():
+      civil = CivilDate(year, month, day)
+      if civil in target_dates:
+        festival_names_by_date.setdefault(civil, []).append(label)
   eclipses = find_local_eclipses(records[0].sunrise_jd, records[-1].sunrise_jd + 1, geopos)
   eclipse_dates = {jd_to_local_civil_date(entry[2], location.timezone_name) for entry in eclipses}
   eclipse_details_by_date = {}
