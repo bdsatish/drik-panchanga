@@ -38,7 +38,6 @@ from generate_panchanga_calendar import (
   MASA_START_ROW,
   PDF_FONT,
   PDF_FONT_BOLD,
-  PDF_FONT_BOLD_ITALIC,
   PDF_FONT_ITALIC,
   RULESET_VERSION,
   coordinate_selection_label,
@@ -138,6 +137,29 @@ _TITHI_NAMES = {
   29: "Caturdaśī",
   30: "Amāvāsyā",
 }
+
+
+def ekadashi_name(record, amanta=True):
+  """Vrat name for a teal-cell record, e.g. ``Kāmikā Ekādaśī``.
+
+  The paksa comes from the sunrise tithi prefix, so kshaya days whose
+  sunrise is already Dvadasi still resolve. Names are stored amanta-based
+  (sukla and krsna of the same lunar month share one entry); purnimanta
+  krsna shifts back by one, adhika uses the ``adhika`` key.
+  """
+  paksha = "S" if record.tithi.startswith("S") else "K"
+  masa = display_masa(record, amanta=amanta)
+  names = sanskrit_names().get("ekadashis", {})
+  if masa.startswith("A"):
+    base = names.get("adhika", {}).get(paksha)
+    return f"{base} Ekādaśī" if base else None
+  month = int(masa)
+  if not amanta and paksha == "K":
+    month = month - 1 if month > 1 else 12
+  base = names.get(str(month), {}).get(paksha)
+  if base is None:
+    return None
+  return f"{base} Ekādaśī"
 
 
 def month_sequence(start_year, start_month, count):
@@ -400,6 +422,15 @@ def draw_cell(pdf, x, y_top, row_h, cell_w, day, civil, location, context, col):
     pdf.setFont(PDF_FONT_ITALIC, 6.5)
     pdf.drawString(x + 4, line_y, name)
     line_y -= 8.0
+  if is_ekadashi:
+    ek_name = ekadashi_name(record, amanta=context.get("amanta", True))
+    if ek_name:
+      pdf.setFillColor(TEAL)
+      pdf.setFont(PDF_FONT_ITALIC, 6.8)
+      max_text_w = cell_w - 10
+      for wrapped in _wrap_lines(pdf, ek_name, PDF_FONT_ITALIC, 6.8, max_text_w):
+        pdf.drawString(x + 4, line_y, wrapped)
+        line_y -= 8.0
   max_text_w = cell_w - 10
   for name in festivals:
     pdf.setFillColor(CRIMSON)

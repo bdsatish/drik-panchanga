@@ -19,6 +19,7 @@ from generate_monthly_calendar import (
   default_monthly_output_path,
   draw_cell,
   draw_header,
+  ekadashi_name,
   ensure_pdf_fonts,
   format_hms,
   load_location,
@@ -454,6 +455,72 @@ class IsoWeekNumberTests(unittest.TestCase):
     drawn = [c.args[2] for c in pdf.drawString.call_args_list]
     self.assertIn("W1", drawn)
     self.assertNotIn("W53", drawn)
+
+
+class EkadashiNameTests(unittest.TestCase):
+
+  def _record(self, civil, tithi, masa, is_adhika=False):
+    from festival_rules import DayRecord
+    return DayRecord(civil, tithi, 1, 1, masa, is_adhika, 0.0)
+
+  def test_amanta_sukla_uses_same_month(self):
+    record = self._record(date(2026, 3, 29), "S11", "1")
+    self.assertEqual(ekadashi_name(record, amanta=True), "Kāmadā Ekādaśī")
+
+  def test_amanta_krsna_names_from_same_month_entry(self):
+    record = self._record(date(2026, 4, 13), "K11", "1")
+    self.assertEqual(ekadashi_name(record, amanta=True), "Varūthinī Ekādaśī")
+
+  def test_purnimanta_krsna_shifts_back_one_month(self):
+    record = self._record(date(2026, 4, 13), "K11", "1")
+    self.assertEqual(ekadashi_name(record, amanta=False), "Varūthinī Ekādaśī")
+
+  def test_year_boundary_krsna_wraps_to_phalguna(self):
+    record = self._record(date(2026, 3, 15), "K11", "12")
+    self.assertEqual(ekadashi_name(record, amanta=False), "Pāpamocanī Ekādaśī")
+
+  def test_adhika_sukla_is_padmini_and_krsna_is_parama(self):
+    sukla = self._record(date(2026, 5, 26), "S11", "A3", True)
+    krsna = self._record(date(2026, 6, 11), "K11", "A3", True)
+    self.assertEqual(ekadashi_name(sukla, amanta=True), "Padminī Ekādaśī")
+    self.assertEqual(ekadashi_name(krsna, amanta=True), "Paramā Ekādaśī")
+
+  def test_kshaya_dvadasi_sunrise_keeps_ekadashi_name(self):
+    record = self._record(date(2026, 7, 11), "K12", "3")
+    self.assertEqual(ekadashi_name(record, amanta=True), "Yoginī Ekādaśī")
+
+  def test_ekadashi_name_drawn_only_in_teal_cells(self):
+    from festival_rules import DayRecord
+    ensure_pdf_fonts()
+    location = load_location("Ujjain")
+    civil = date(2026, 8, 9)
+    record = DayRecord(civil, "K11", 1, 1, "4", False, 0.0)
+    base_context = {
+      "records_by_date": {
+        civil: record
+      },
+      "festival_names_by_date": {},
+      "eclipse_dates": set(),
+      "eclipse_details_by_date": {},
+      "masa_badges": {},
+      "solar_by_date": {},
+      "amanta": True,
+    }
+    teal_context = dict(base_context, ekadashi={civil})
+    pdf = mock.Mock()
+    pdf.stringWidth = lambda text, font, size: len(text) * size * 0.5
+    with mock.patch("generate_monthly_calendar.day_details", return_value=([("K11", "11:05")], [], [])):
+      draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 9, civil, location, teal_context, col=0)
+    drawn = [c.args[2] for c in pdf.drawString.call_args_list]
+    self.assertIn("Kāmikā Ekādaśī", drawn)
+
+    plain_context = dict(base_context, ekadashi=set())
+    pdf = mock.Mock()
+    pdf.stringWidth = lambda text, font, size: len(text) * size * 0.5
+    with mock.patch("generate_monthly_calendar.day_details", return_value=([("K11", "11:05")], [], [])):
+      draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 9, civil, location, plain_context, col=0)
+    drawn = [c.args[2] for c in pdf.drawString.call_args_list]
+    self.assertNotIn("Kāmikā Ekādaśī", drawn)
 
 
 if __name__ == "__main__":

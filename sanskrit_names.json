@@ -13,6 +13,21 @@
            "12":"Phālguṇa"
          },
 
+"ekadashis": { "1": {"S":"Kāmadā", "K":"Varūthinī"},
+               "2": {"S":"Mohinī", "K":"Aparā"},
+               "3": {"S":"Nirjalā", "K":"Yoginī"},
+               "4": {"S":"Devaśayanī", "K":"Kāmikā"},
+               "5": {"S":"Pavitrā", "K":"Ajā"},
+               "6": {"S":"Pārśva", "K":"Indirā"},
+               "7": {"S":"Pāpāṅkuśā", "K":"Ramā"},
+               "8": {"S":"Prabodhinī", "K":"Utpannā"},
+               "9": {"S":"Mokṣadā", "K":"Saphalā"},
+               "10": {"S":"Putradā", "K":"Ṣaṭṭilā"},
+               "11": {"S":"Jayā", "K":"Vijayā"},
+               "12": {"S":"Āmalakī", "K":"Pāpamocanī"},
+               "adhika": {"S":"Padminī", "K":"Paramā"}
+             },
+
 "tithis": { "1":  "Śukla pakṣa prathamā",
             "2":  "Śukla pakṣa dvitīyā",
             "3":  "Śukla pakṣa tṛtīyā",
