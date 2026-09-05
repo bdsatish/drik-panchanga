@@ -20,4 +20,4 @@ scripts/setup_venv.sh
 config/Gui.wxg
 gui.py
 vimsottari.py
-geonames.py
+scripts/geonames.py

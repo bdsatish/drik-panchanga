@@ -72,7 +72,7 @@ def ensure_dump(txt_path: str = TXT_PATH, zip_path: str = ZIP_PATH, url: str = U
 def main() -> None:
   ensure_dump()
   cities = build_cities()
-  out_path = os.path.join(SCRIPT_DIR, "data", "cities.json")
+  out_path = os.path.join(SCRIPT_DIR, "..", "data", "cities.json")
   with open(out_path, "w", encoding="utf-8") as fjson:
     json.dump(cities, fjson, ensure_ascii=False, sort_keys=True)
     fjson.write("\n")
