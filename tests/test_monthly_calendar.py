@@ -27,6 +27,7 @@ from generate_monthly_calendar import (
   sun_moon_lines,
   tithi_name,
 )
+from generate_panchanga_calendar import DEFAULT_FESTIVALS_PATH
 
 
 class MonthSequenceTests(unittest.TestCase):
@@ -306,7 +307,7 @@ class ContextTests(unittest.TestCase):
   def test_collect_context_includes_masa_badges(self):
     location = load_location("Ujjain")
     months = [(2026, 5), (2026, 6)]
-    ctx = collect_context(months, location, "festivals.cfg", amanta=True)
+    ctx = collect_context(months, location, DEFAULT_FESTIVALS_PATH, amanta=True)
     self.assertIn("masa_badges", ctx)
     self.assertIn("solar_by_date", ctx)
     self.assertIn("ekadashi", ctx)
@@ -350,7 +351,7 @@ class DstLabelInjectionTests(unittest.TestCase):
     from generate_monthly_calendar import collect_context
     location = load_location("Helsinki")
     months = [(2026, 3), (2026, 4)]
-    ctx = collect_context(months, location, "festivals.cfg", amanta=True)
+    ctx = collect_context(months, location, DEFAULT_FESTIVALS_PATH, amanta=True)
     festival_names = ctx["festival_names_by_date"]
     # Mar 29, 2026 is DST start for Helsinki
     from datetime import date
@@ -360,7 +361,7 @@ class DstLabelInjectionTests(unittest.TestCase):
     from generate_monthly_calendar import collect_context
     location = load_location("Helsinki")
     months = [(2026, 10), (2026, 11)]
-    ctx = collect_context(months, location, "festivals.cfg", amanta=True)
+    ctx = collect_context(months, location, DEFAULT_FESTIVALS_PATH, amanta=True)
     festival_names = ctx["festival_names_by_date"]
     # Oct 25, 2026 is DST end for Helsinki
     from datetime import date
@@ -370,7 +371,7 @@ class DstLabelInjectionTests(unittest.TestCase):
     from generate_monthly_calendar import collect_context
     location = load_location("Ujjain")
     months = [(2026, 3), (2026, 4)]
-    ctx = collect_context(months, location, "festivals.cfg", amanta=True)
+    ctx = collect_context(months, location, DEFAULT_FESTIVALS_PATH, amanta=True)
     festival_names = ctx["festival_names_by_date"]
     # Ujjain has no DST - no DST labels should appear
     all_labels = [label for labels in festival_names.values() for label in labels]
