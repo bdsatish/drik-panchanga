@@ -15,20 +15,20 @@ Download source: http://download.geonames.org/export/dump/cities15000.zip
 
 import csv
 import json
-import os
 import urllib.request
 import zipfile
+from pathlib import Path
 
 URL = "http://download.geonames.org/export/dump/cities15000.zip"
-ZIP_PATH = "/tmp/cities15000.zip"
-TXT_PATH = "/tmp/cities15000.txt"
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+ZIP_PATH = Path("/tmp/cities15000.zip")
+TXT_PATH = Path("/tmp/cities15000.txt")
+SCRIPT_DIR = Path(__file__).resolve().parent
 MIN_POPULATION = 60000
 
 
-def build_cities(txt_path: str = TXT_PATH, min_population: int = MIN_POPULATION) -> dict[str, dict]:
+def build_cities(txt_path=TXT_PATH, min_population=MIN_POPULATION):
   """Parse the GeoNames dump into ``{Name, ISO}`` record."""
-  cities: dict[str, dict] = {}
+  cities = {}
   with open(txt_path, "r", encoding="utf-8") as fin:
     reader = csv.reader(fin, dialect="excel-tab")
     for record in reader:
@@ -58,24 +58,22 @@ def build_cities(txt_path: str = TXT_PATH, min_population: int = MIN_POPULATION)
   return cities
 
 
-def ensure_dump(txt_path: str = TXT_PATH, zip_path: str = ZIP_PATH, url: str = URL) -> None:
-  if os.path.exists(txt_path):
+def ensure_dump(txt_path=TXT_PATH, zip_path=ZIP_PATH, url=URL):
+  if txt_path.exists():
     return
   print("Downloading cities15000.zip ...")
   urllib.request.urlretrieve(url, zip_path)
   with zipfile.ZipFile(zip_path, "r") as z:
-    z.extractall(os.path.dirname(txt_path) or ".")
-  os.remove(zip_path)
+    z.extractall(txt_path.parent)
+  zip_path.unlink()
   print("Done.")
 
 
-def main() -> None:
+def main():
   ensure_dump()
   cities = build_cities()
-  out_path = os.path.join(SCRIPT_DIR, "..", "data", "cities.json")
-  with open(out_path, "w", encoding="utf-8") as fjson:
-    json.dump(cities, fjson, ensure_ascii=False, sort_keys=True)
-    fjson.write("\n")
+  out_path = SCRIPT_DIR.parent / "data" / "cities.json"
+  out_path.write_text(json.dumps(cities, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8")
 
   print(f"Wrote {len(cities)} cities to {out_path}")
 
