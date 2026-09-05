@@ -223,7 +223,7 @@ class PdfLayoutTests(unittest.TestCase):
     self.assertIn("rolling solar-day count resets", sankranti_key_line())
     self.assertIn("7, 14, 21, and 28", sankranti_key_line())
     self.assertIn("Aśvinī", nakshatra_key_line())
-    self.assertIn("Viṣkumbha", yoga_key_line())
+    self.assertIn("Viṣkambha", yoga_key_line())
     self.assertEqual(PDF_FONT_TTC.name, "IndUni-H.ttc")
     self.assertTrue(PDF_FONT_TTC.is_file())
     ensure_pdf_fonts()
