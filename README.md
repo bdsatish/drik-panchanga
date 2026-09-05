@@ -56,7 +56,7 @@ pip install drik-panchanga
 
 That installs only `panchanga.py` (plus `pyswisseph`). Swiss Ephemeris still
 needs `.se1` data files; set `SE_EPHE_PATH` or use `~/.local/share/swisseph`
-(see `setup_venv.sh` in this repository).
+(see `scripts/setup_venv.sh` in this repository).
 
 For the full project (PDF calendar, web UI), clone the repository.
 Tested with Python 3.12, Swiss Ephemeris 2.10.03 (20230604).
@@ -98,7 +98,7 @@ The PDF generator requires Python 3.9 or newer. Create a local virtual
 environment and install `pyswisseph`, ReportLab, and their dependencies:
 
 ```
-./setup_venv.sh
+./scripts/setup_venv.sh
 source .venv/bin/activate
 ```
 
@@ -113,7 +113,7 @@ The less-accurate Moshier fallback is used until the files are present. To use
 your own copy of ephemeris files:
 
 ```
-SE_EPHE_PATH=/path/to/ephemeris/files ./setup_venv.sh
+SE_EPHE_PATH=/path/to/ephemeris/files ./scripts/setup_venv.sh
 source .venv/bin/activate
 ```
 

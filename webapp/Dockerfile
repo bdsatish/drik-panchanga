@@ -11,7 +11,7 @@ RUN apt-get update \
 WORKDIR /app
 
 # Install Python deps first (better layer cache).
-COPY requirements.txt .
+COPY scripts/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Core calendar library + web package (see root .dockerignore).

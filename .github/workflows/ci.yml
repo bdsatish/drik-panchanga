@@ -38,7 +38,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends build-essential
 
       - name: Install Python dependencies
-        run: pip install -r requirements.txt
+        run: pip install -r scripts/requirements.txt
 
       - name: Fetch Swiss Ephemeris files
         run: |

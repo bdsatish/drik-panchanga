@@ -17,7 +17,7 @@ print(os.path.join(base, "swisseph"))
 PY
 )"
 # Swiss Ephemeris .se1 directory baked into venv activate. Override at setup:
-#   SE_EPHE_PATH=/path/to/ephemeris/files ./setup_venv.sh
+#   SE_EPHE_PATH=/path/to/ephemeris/files ./scripts/setup_venv.sh
 SE_EPHE_PATH="${SE_EPHE_PATH:-$DEFAULT_EPHE_PATH}"
 SWISSEPH_REPO_URL="${SWISSEPH_REPO_URL:-https://github.com/aloistr/swisseph.git}"
 
@@ -161,7 +161,7 @@ configure_se_ephe_path() {
 
 $begin
 # Swiss Ephemeris data directory (.se1 files). Set at venv creation via
-# SE_EPHE_PATH=... ./setup_venv.sh
+# SE_EPHE_PATH=... ./scripts/setup_venv.sh
 export SE_EPHE_PATH=$quoted_path
 $end
 EOF
@@ -175,7 +175,7 @@ configure_se_ephe_path
 source "$VENV_DIR/bin/activate"
 
 python -m pip install --upgrade pip
-python -m pip install -r "$ROOT/requirements.txt" # --force-reinstall --no-cache-dir
+python -m pip install -r "$ROOT/scripts/requirements.txt" # --force-reinstall --no-cache-dir
 
 cat <<EOF
 
