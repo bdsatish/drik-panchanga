@@ -17,7 +17,7 @@ ephe
 *.md
 test_*.py
 setup_venv.sh
-Gui.wxg
+config/Gui.wxg
 gui.py
 vimsottari.py
 geonames.py

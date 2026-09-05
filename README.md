@@ -373,7 +373,7 @@ If you want to edit the GUI, download
 python3 wxglade.py
 ```
 
-then open `Gui.wxg`.
+then open `config/Gui.wxg`.
 
 ### Using the GUI
 
