@@ -1,5 +1,5 @@
 include LICENSE
-include README.pypi.md
+include docs/README.pypi.md
 include panchanga.py
 include pyproject.toml
 exclude README.md

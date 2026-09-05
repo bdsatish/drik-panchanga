@@ -1,7 +1,7 @@
 Festival dates and conventions
 ==============================
 
-How to choose which festivals appear on the PDF is in [README.md](README.md)
+How to choose which festivals appear on the PDF is in [README.md](../README.md)
 (see **Festivals (how to)** and the Ujjain example). This file documents how
 those dates are computed. Lunar-month *display* may be amānta or pūrṇimānta;
 the festival catalog itself is keyed by amānta month numbers so civil dates

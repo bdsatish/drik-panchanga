@@ -35,7 +35,7 @@ Lunar months can be named in either reckoning:
 
 The PDF calendar and day Web UI expose both via `--month` / the month-system
 control. Festival *catalog* entries are still keyed by amānta month numbers
-(see [README.FESTIVALS.md](README.FESTIVALS.md)); only the printed māsa badge
+(see [docs/README.FESTIVALS.md](docs/README.FESTIVALS.md)); only the printed māsa badge
 and day-API māsa label follow the selected system.
 
 NOTE:

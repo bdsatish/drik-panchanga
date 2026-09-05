@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "drik-panchanga"
 version = "0.1.0"
 description = "Observational Indian lunisolar calendar (Drik Panchanga) using Swiss Ephemeris"
-readme = "README.pypi.md"
+readme = "docs/README.pypi.md"
 license = { text = "AGPL-3.0-or-later" }
 requires-python = ">=3.9"
 authors = [
