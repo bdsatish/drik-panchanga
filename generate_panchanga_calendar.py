@@ -23,7 +23,7 @@ import panchanga
 
 MONTH_COUNT = 14
 DEFAULT_CITIES_PATH = Path(__file__).with_name("cities.json")
-DEFAULT_FESTIVALS_PATH = Path(__file__).with_name("festivals.cfg")
+DEFAULT_FESTIVALS_PATH = Path(__file__).parent / "config" / "festivals.cfg"
 DEFAULT_NAMES_PATH = Path(__file__).with_name("sanskrit_names.json")
 FOOTER_FESTIVAL_SLOTS = 30  # 6 columns x 5 rows in draw_page_footer
 FOOTER_KEY_FONT_MAX = 5.5
