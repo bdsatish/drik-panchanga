@@ -261,6 +261,16 @@ class RahuKalaTableTests(unittest.TestCase):
     self.assertEqual(drawn[0], "Rahu kala")
     self.assertEqual(len(drawn), 8)
 
+  def test_table_envelopes_whole_month_not_first_week(self):
+    from generate_monthly_calendar import rahu_kala_table_lines
+    lines = dict(line.split() for line in rahu_kala_table_lines(load_location("Ujjain"), 2026, 6))
+    self.assertEqual(lines["Mo"], "07:25-09:09")
+
+  def test_table_envelope_spans_dst_transition(self):
+    from generate_monthly_calendar import rahu_kala_table_lines
+    lines = dict(line.split() for line in rahu_kala_table_lines(load_location("Helsinki"), 2026, 3))
+    self.assertEqual(lines["Mo"], "07:52-10:12")
+
 
 class TithiIndexCellTests(unittest.TestCase):
 

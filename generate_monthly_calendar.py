@@ -457,16 +457,36 @@ def draw_cell(pdf, x, y_top, row_h, cell_w, day, civil, location, context, col):
 
 
 def rahu_kala_table_lines(location, year, month):
-  """Weekday rahu kala sampled from the first seven days of the month, Sunday first."""
+  """Weekday rahu kala envelopes across the whole month, Sunday first.
+
+  Each line spans the earliest start to the latest end over every
+  occurrence of that weekday (e.g. ``Mo 07:25-09:09``), so the window is
+  never understated when sunrise drifts — or jumps at a DST transition.
+  Days collapse naturally when times agree; a weekday with no computable
+  day (e.g. polar night) renders as ``--``.
+  """
   labels = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
-  by_weekday = {}
-  for day in range(1, 8):
+  windows = {}
+  days = calendar.monthrange(year, month)[1]
+  for day in range(1, days + 1):
     civil = CivilDate(year, month, day)
-    place = place_for_date(location, civil)
-    jd = gregorian_to_jd(civil)
-    start, end = panchanga.trikalam(jd, place, option="rahu")
-    by_weekday[civil.weekday()] = f"{labels[civil.weekday()]} {format_hms(start)}-{format_hms(end)}"
-  return [by_weekday[d] for d in (6, 0, 1, 2, 3, 4, 5)]
+    try:
+      place = place_for_date(location, civil)
+      jd = gregorian_to_jd(civil)
+      start, end = panchanga.trikalam(jd, place, option="rahu")
+    except Exception as exc:
+      log.debug("rahu kala unavailable %s: %s", civil, exc)
+      continue
+    windows.setdefault(civil.weekday(), []).append((format_hms(start), format_hms(end)))
+  lines = []
+  for weekday in (6, 0, 1, 2, 3, 4, 5):
+    if weekday not in windows:
+      lines.append(f"{labels[weekday]} --")
+      continue
+    starts = [start for start, _end in windows[weekday]]
+    ends = [end for _start, end in windows[weekday]]
+    lines.append(f"{labels[weekday]} {min(starts)}-{max(ends)}")
+  return lines
 
 
 def draw_tithi_index_cell(pdf, x, y_top, start, stop):
