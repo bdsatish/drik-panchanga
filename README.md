@@ -117,7 +117,7 @@ SE_EPHE_PATH=/path/to/ephemeris/files ./scripts/setup_venv.sh
 source .venv/bin/activate
 ```
 
-Cities are stored in `cities.json` as ``AsciiName, CC`` (case-insensitive),
+Cities are stored in `data/cities.json` as ``AsciiName, CC`` (case-insensitive),
 e.g. `Bengaluru, IN` (2-letter ISO country code). Pass the country code when the
 city name alone is insufficient for disambiguation.
 
@@ -134,14 +134,13 @@ instead of an ayanamśa label, and the default filename gets a `_tropical` suffi
 
 ### Festivals
 
-Which festivals appear in the PDF is controlled by `festivals.cfg` next to the
-generator. Every catalog name must be listed as `yes` or `no`. Override the path
+Which festivals appear in the PDF is controlled by `config/festivals.cfg`. Every catalog name must be listed as `yes` or `no`. Override the path
 with `--festivals FILE.cfg` if needed. The shipped defaults are a regional
 compromise; edit the cfg to match your locality. At most 30 festivals can be
 enabled (the footer is a fixed 6×5 grid).
 
 Date-selection rules (sunrise, vriddhi/kshaya, non-tithi festivals, and so on)
-are documented in [README.FESTIVALS.md](README.FESTIVALS.md). Festival dates
+are documented in [docs/README.FESTIVALS.md](docs/README.FESTIVALS.md). Festival dates
 themselves do not flip with `--month`: the catalog uses fixed amānta month
 numbers so a named observance stays on the same civil day in both display
 modes.
@@ -199,7 +198,7 @@ python -m webapp.app
 ```
 
 Then open [http://127.0.0.1:8765/](http://127.0.0.1:8765/). Enter a city
-(autocomplete against `cities.json`). Unique bare names work (`Bengaluru`);
+(autocomplete against `data/cities.json`). Unique bare names work (`Bengaluru`);
 ambiguous ones need ``Name, ISO`` (e.g. `Sydney, AU`). Then either:
 
 * look up a single day’s panchanga with a `DD/MM/YYYY` date (negative years

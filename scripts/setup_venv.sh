@@ -2,7 +2,7 @@
 # Create a local virtual environment and install calendar-generator dependencies.
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 VENV_DIR="${VENV_DIR:-$ROOT/.venv}"
 # Same rules as panchanga.default_se_ephe_path() (stdlib only; no import).
 DEFAULT_EPHE_PATH="$(python3 - <<'PY'

@@ -16,7 +16,6 @@ public_html.disabled
 ephe
 *.md
 test_*.py
-scripts/setup_venv.sh
 config/Gui.wxg
 gui.py
 vimsottari.py
