@@ -106,8 +106,8 @@ _MONTH_NAMES_EN = [
 ]
 
 _TITHI_NAMES = {
-  1: "Prātipadā",
-  2: "Dvītīyā",
+  1: "Pratipadā",
+  2: "Dvitīyā",
   3: "Tṛtīyā",
   4: "Caturthī",
   5: "Pañcamī",
@@ -121,8 +121,8 @@ _TITHI_NAMES = {
   13: "Trayodaśī",
   14: "Caturdaśī",
   15: "Pūrṇimā",
-  16: "Prātipadā",
-  17: "Dvītīyā",
+  16: "Pratipadā",
+  17: "Dvitīyā",
   18: "Tṛtīyā",
   19: "Caturthī",
   20: "Pañcamī",

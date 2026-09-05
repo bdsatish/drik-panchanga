@@ -104,7 +104,7 @@ class CliTests(unittest.TestCase):
 class DayDetailsTests(unittest.TestCase):
 
   def test_tithi_name_mapping(self):
-    self.assertEqual(tithi_name(1), "Prātipadā")
+    self.assertEqual(tithi_name(1), "Pratipadā")
     self.assertEqual(tithi_name(15), "Pūrṇimā")
     self.assertEqual(tithi_name(30), "Amāvāsyā")
 
@@ -271,7 +271,7 @@ class TithiIndexCellTests(unittest.TestCase):
     drawn = [c.args[2] for c in pdf.drawString.call_args_list]
     self.assertEqual(drawn[0], "S Śukla / K Kṛṣṇa")
     self.assertEqual(len(drawn), 9)
-    self.assertIn(" 1 Prātipadā", drawn)
+    self.assertIn(" 1 Pratipadā", drawn)
     self.assertIn(" 8 Aṣṭamī", drawn)
 
   def test_second_cell_lists_tithis_nine_to_fifteen(self):
