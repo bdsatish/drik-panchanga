@@ -43,3 +43,10 @@ venv/
 skills-lock.json
 
 *.pdf
+
+# AI tools
+.claude
+.codex
+.commandcode
+.cursor
+.opencode
