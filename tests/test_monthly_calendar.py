@@ -23,11 +23,10 @@ from generate_monthly_calendar import (
   ensure_pdf_fonts,
   format_hms,
   load_location,
-  month_sequence,
   sun_moon_lines,
   tithi_name,
 )
-from generate_panchanga_calendar import DEFAULT_FESTIVALS_PATH
+from generate_panchanga_calendar import DEFAULT_FESTIVALS_PATH, _month_sequence as month_sequence
 
 
 class MonthSequenceTests(unittest.TestCase):

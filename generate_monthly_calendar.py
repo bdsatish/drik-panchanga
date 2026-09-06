@@ -40,6 +40,7 @@ from generate_panchanga_calendar import (
   PDF_FONT_BOLD,
   PDF_FONT_ITALIC,
   RULESET_VERSION,
+  _month_sequence as month_sequence,
   coordinate_selection_label,
   daily_records,
   display_masa,
@@ -59,6 +60,7 @@ from generate_panchanga_calendar import (
   resolve_festivals,
   sanskrit_names,
   solar_dates_by_date,
+  tithi_code,
 )
 from panchanga import Date as PanDate
 from panchanga import gregorian_to_jd
@@ -162,18 +164,6 @@ def ekadashi_name(record, amanta=True):
   return f"{base} Ekādaśī"
 
 
-def month_sequence(start_year, start_month, count):
-  months = []
-  year, month = start_year, start_month
-  for _ in range(count):
-    months.append((year, month))
-    if month == 12:
-      year, month = year + 1, 1
-    else:
-      month += 1
-  return months
-
-
 def context_months(start_year, start_month):
   if start_month == 1:
     year, month = start_year - 1, 12
@@ -199,11 +189,6 @@ def format_hms(hms):
   hours, minutes, seconds = hms
   total = int(round(hours * 60 + minutes + seconds / 60.0))
   return f"{total // 60:02d}:{total % 60:02d}"
-
-
-def tithi_code(number):
-  number = int(number)
-  return f"S{number}" if number <= 15 else f"K{number - 15}"
 
 
 def day_details(location, civil):
