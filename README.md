@@ -171,7 +171,7 @@ accepted. The web UI offers both layouts via separate buttons (the form field
 
 #### Example: Ujjain, March 2026
 
-![Ujjain Monthly Panchanga, March 2026](samples/ujjain_monthly_march2026.png)
+<img src="samples/ujjain_monthly_march2026.png" alt="Ujjain Monthly Panchanga, March 2026" width="600">
 
 Run the regression tests with:
 
