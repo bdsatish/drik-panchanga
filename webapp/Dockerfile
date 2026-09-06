@@ -26,8 +26,8 @@ RUN chmod +x /docker-entrypoint.sh
 # Swiss Ephemeris .se1 data (~100 MB) — downloaded at build time.
 ENV SE_EPHE_PATH=/app/ephe
 ENV PYTHONPATH=/app
-COPY webapp/fetch_ephe.py /tmp/fetch_ephe.py
-RUN python3 /tmp/fetch_ephe.py && rm /tmp/fetch_ephe.py
+COPY scripts/ensure_ephe.sh /tmp/ensure_ephe.sh
+RUN bash /tmp/ensure_ephe.sh && rm /tmp/ensure_ephe.sh
 
 # Railway injects PORT at runtime.
 ENV PORT=8080

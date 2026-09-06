@@ -19,7 +19,6 @@ PY
 # Swiss Ephemeris .se1 directory baked into venv activate. Override at setup:
 #   SE_EPHE_PATH=/path/to/ephemeris/files ./scripts/setup_venv.sh
 SE_EPHE_PATH="${SE_EPHE_PATH:-$DEFAULT_EPHE_PATH}"
-SWISSEPH_REPO_URL="${SWISSEPH_REPO_URL:-https://github.com/aloistr/swisseph.git}"
 
 if ! command -v python3 >/dev/null 2>&1; then
   echo "error: python3 not found in PATH" >&2
@@ -41,40 +40,12 @@ ephe_has_data() {
 
 download_ephemeris() {
   local dest="$1"
-  local tmp
-
-  if ! command -v git >/dev/null 2>&1; then
-    echo "warning: git is required to download Swiss Ephemeris files; skipping download" >&2
-    return 1
-  fi
-
-  mkdir -p "$dest"
-  tmp="$(mktemp -d "${TMPDIR:-/tmp}/swisseph-ephe.XXXXXX")"
 
   echo "Downloading Swiss Ephemeris data into $dest ..."
-  echo "(sparse clone of ${SWISSEPH_REPO_URL} ephe/)"
-  if ! git clone --depth 1 --filter=blob:none --sparse "$SWISSEPH_REPO_URL" "$tmp/swisseph"; then
-    rm -rf "$tmp"
-    echo "warning: failed to clone $SWISSEPH_REPO_URL; skipping download" >&2
+  if ! "$ROOT/scripts/ensure_ephe.sh" "$dest"; then
+    echo "warning: ephemeris download failed; skipping download" >&2
     return 1
   fi
-  if ! git -C "$tmp/swisseph" sparse-checkout set ephe; then
-    rm -rf "$tmp"
-    echo "warning: sparse-checkout of ephe/ failed; skipping download" >&2
-    return 1
-  fi
-
-  # Planet/moon/asteroid .se1 files plus star catalog; skip seasnam.txt and extras.
-  find "$tmp/swisseph/ephe" -maxdepth 1 -type f \( \
-      -name '*.se1' -o -name 'sefstars.txt' -o -name 'seleapsec.txt' \
-    \) -exec cp -t "$dest" {} +
-  rm -rf "$tmp"
-
-  if ! ephe_has_data "$dest"; then
-    echo "warning: download finished but no .se1 files found in $dest" >&2
-    return 1
-  fi
-  echo "Ephemeris files ready in $dest"
 }
 
 warn_missing_ephemeris() {
@@ -89,7 +60,7 @@ Ephemeris (SEFLG_SWIEPH). Planet/moon calls typically error or silently
 fall back to the coarser built-in Moshier ephemeris, so panchanga dates
 and the PDF calendar will be wrong or fail until you place the .se1
 files under SE_EPHE_PATH (then re-run this script, or copy them yourself
-from https://github.com/aloistr/swisseph/tree/master/ephe).
+from the upstream tarball).
 
 EOF
 }
@@ -104,9 +75,9 @@ confirm_ephemeris_download() {
   echo
   echo "Swiss Ephemeris .se1 data files (~100 MB) were not found in:"
   echo "  $SE_EPHE_PATH"
-  echo "They can be downloaded from:"
-  echo "  ${SWISSEPH_REPO_URL%.git}/tree/master/ephe"
-  echo "(sparse git clone of the ephe/ directory)."
+  echo "They can be downloaded with:"
+  echo "  SWISSEPH_TARBALL_URL=<mirror> ./scripts/ensure_ephe.sh $SE_EPHE_PATH"
+  echo "(upstream master tarball, ephe/ files only)."
   read -r -p "Download them now? [y/N] " reply
   case "$reply" in
     [yY]|[yY][eE][sS]) return 0 ;;
