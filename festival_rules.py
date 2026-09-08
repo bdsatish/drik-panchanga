@@ -55,6 +55,28 @@ def _sunset_jd_ut(civil_date, geopos, timezone_name):
   return sunset_jd_local - tz_offset / 24
 
 
+def _moonrise_jd_ut(civil_date, geopos, timezone_name):
+  """Moonrise Julian Day in UT for a civil date at a location.
+
+  ``geopos`` is (lon, lat, altitude). Returns None if the moon does not rise;
+  callers fall back to sunrise-based selection. Swiss Ephemeris returns 0.0
+  for a failed rise lookup, so the result is range-checked against the
+  expected JD window.
+  """
+  tz = ZoneInfo(timezone_name)
+  noon = datetime(civil_date.year, civil_date.month, civil_date.day, 12, 0, tzinfo=tz)
+  tz_offset = noon.utcoffset().total_seconds() / 3600
+  place = (geopos[1], geopos[0], tz_offset)  # (lat, lon, tz) for panchanga.moonrise_jd
+  jd = panchanga.gregorian_to_jd(panchanga.Date(civil_date.year, civil_date.month, civil_date.day))
+  try:
+    moonrise_jd_local = panchanga.moonrise_jd(jd, place)
+  except Exception:
+    return None
+  if not jd - 1 <= moonrise_jd_local <= jd + 2:
+    return None
+  return moonrise_jd_local - tz_offset / 24
+
+
 DayRecord = struct('DayRecord', ['civil_date', 'tithi', 'nakshatra', 'yoga', 'masa', 'is_adhika', 'sunrise_jd'])
 
 FestivalRule = struct('FestivalRule', ['name', 'masa', 'tithi', 'selector', 'allow_adhika', 'location_aware'],
@@ -439,6 +461,66 @@ def select_pradosham_dates(records, geopos=None, timezone_name=None):
   return sorted(set(selected) | set(kshaya_dates))
 
 
+def _moonrise_tithi_skipped(records, geopos, timezone_name, target_tithi):
+  """Detect a tithi skipped between consecutive moonrises.
+
+  When ``target_tithi`` is skipped between two moonrises, return the latter
+  civil day (analogous to ``select_kshaya_dates`` for sunrise).
+  """
+  ordered = sorted(records, key=lambda r: r.civil_date)
+  kshaya_dates = []
+  for record, following in zip(ordered, ordered[1:]):
+    if following.civil_date != record.civil_date + timedelta(days=1):
+      continue
+    moonrise_jd = _moonrise_jd_ut(record.civil_date, geopos, timezone_name)
+    next_moonrise_jd = _moonrise_jd_ut(following.civil_date, geopos, timezone_name)
+    if moonrise_jd is None or next_moonrise_jd is None:
+      continue
+    tithi_1 = int(panchanga.lunar_phase(moonrise_jd) // 12) + 1
+    tithi_2 = int(panchanga.lunar_phase(next_moonrise_jd) // 12) + 1
+    gap = (tithi_2 - tithi_1) % 30
+    skipped = [(tithi_1 + offset - 1) % 30 + 1 for offset in range(1, gap)]
+    if target_tithi in skipped:
+      kshaya_dates.append(following.civil_date)
+  return kshaya_dates
+
+
+SANKASHTI_TITHI = 19  # K4 in 1-30 numbering
+
+
+def select_sankashti_chaturthi_dates(records, geopos=None, timezone_name=None):
+  """Krishna Chaturthi (K4) prevailing at moonrise.
+
+  Sankashti Chaturthi is observed when K4 tithi prevails at moonrise. This
+  occurs once per lunar month during Krishna Paksha.
+
+  Corner cases:
+  - Vriddhi (K4 at moonrise on consecutive days): keep only the earlier
+    civil date.
+  - Kshaya (K4 skipped between two moonrises): pick the latter civil day.
+  - Without location/timezone: falls back to sunrise-based selection.
+  """
+  if geopos is None or timezone_name is None:
+    return select_tithi_dates(records, "K4")
+
+  selected = []
+  for record in records:
+    moonrise_jd = _moonrise_jd_ut(record.civil_date, geopos, timezone_name)
+    if moonrise_jd is None:
+      continue
+    tithi_at_moonrise = int(panchanga.lunar_phase(moonrise_jd) // 12) + 1
+    if tithi_at_moonrise == SANKASHTI_TITHI:
+      selected.append(record.civil_date)
+
+  # Vriddhi: keep only the earlier day when K4 prevails at moonrise
+  # on consecutive days.
+  selected = resolve_vriddhi_dates(selected)
+
+  # Kshaya: if K4 is skipped between two moonrises, pick the latter day.
+  kshaya_dates = _moonrise_tithi_skipped(records, geopos, timezone_name, SANKASHTI_TITHI)
+  return sorted(set(selected) | set(kshaya_dates))
+
+
 def sankranti_raasi_by_date(records):
   """Map civil date → rāśi (1–12) for each first sunrise into a new solar sign.
 
@@ -579,6 +661,7 @@ FESTIVAL_RULES = [
   FestivalRule("VSN Jayanti", masa=11, tithi="S11"),
   FestivalRule("Maha Shivaratri", masa=11, tithi="K14"),
   FestivalRule("Pradosham", selector=select_pradosham_dates, location_aware=True),
+  FestivalRule("Sankashti Chaturthi", selector=select_sankashti_chaturthi_dates, location_aware=True),
   FestivalRule("Kama Dahana (Holi)", masa=12, tithi="S15")
 ]
 

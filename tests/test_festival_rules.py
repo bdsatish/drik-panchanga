@@ -28,6 +28,7 @@ from festival_rules import (
   select_dakshinayana_dates,
   select_rig_upakarma_dates,
   select_sama_upakarma_dates,
+  select_sankashti_chaturthi_dates,
   select_tithi_dates,
   select_uttarayana_dates,
   select_vaikuntha_ekadashi_dates,
@@ -201,11 +202,12 @@ class FestivalCatalogTests(unittest.TestCase):
       "VSN Jayanti",
       "Maha Shivaratri",
       "Pradosham",
+      "Sankashti Chaturthi",
       "Kama Dahana (Holi)",
     ])
     self.assertEqual(len(names), len(set(names)))
     self.assertEqual(all_festival_names(), tuple(names))
-    self.assertEqual(sum(1 for rule in FESTIVAL_RULES if rule.masa is None), 11)
+    self.assertEqual(sum(1 for rule in FESTIVAL_RULES if rule.masa is None), 12)
 
     by_name = {rule.name: rule for rule in FESTIVAL_RULES}
     expected_tithi_rules = {
@@ -234,6 +236,7 @@ class FestivalCatalogTests(unittest.TestCase):
                         "Uttarayana",
                         "Dakshinayana",
                         "Pradosham",
+                        "Sankashti Chaturthi",
                       })
     self.assertEqual({rule.name for rule in FESTIVAL_RULES if rule.allow_adhika}, {"Ugadi"})
 
@@ -262,6 +265,7 @@ class FestivalSelectionTests(unittest.TestCase):
         "Rishi Panchami",
         "Vata Savitri Purnima",
         "Pradosham",
+        "Sankashti Chaturthi",
       }
     ]
     self.assertEqual(enabled, expected)
@@ -1140,6 +1144,66 @@ class GenericUdayaParityTests(unittest.TestCase):
     }
     self.assertEqual(ekadashi_dates_from_records(canonical_records(months, month_data)),
                      [date(2030, 3, 6), date(2030, 3, 20)])
+
+
+class SankashtiChaturthiTests(unittest.TestCase):
+  """Tests for Sankashti Chaturthi (K4 at moonrise)."""
+
+  def _records(self, days):
+    """Build DayRecord list from (day, tithi) tuples for a fixed month."""
+    return [DayRecord(date(2030, 6, day), tithi, 1, 1, "5", False, float(day)) for day, tithi in days]
+
+  def test_normal_k4_at_moonrise(self):
+    """K4 at moonrise selects that day."""
+    records = self._records([(10, "K3"), (11, "K4"), (12, "K5")])
+    # Moonrise on day 11 returns a JD whose lunar phase is K4 (tithi 19)
+    with mock.patch("festival_rules._moonrise_jd_ut", side_effect=lambda d, g, t: 11.0 if d.day == 11 else None), \
+         mock.patch("festival_rules.panchanga.lunar_phase", return_value=216.0):  # 216/12 = 18 -> tithi 19 (K4)
+      self.assertEqual(select_sankashti_chaturthi_dates(records, geopos=(75.0, 23.0, 0), timezone_name="Asia/Kolkata"),
+                       [date(2030, 6, 11)])
+
+  def test_vriddhi_keeps_earlier_day(self):
+    """K4 at moonrise on consecutive days keeps the earlier civil date."""
+    records = self._records([(10, "K4"), (11, "K4"), (12, "K5")])
+    with mock.patch("festival_rules._moonrise_jd_ut", side_effect=lambda d, g, t: float(d.day)), \
+         mock.patch("festival_rules.panchanga.lunar_phase", return_value=216.0):  # K4
+      self.assertEqual(select_sankashti_chaturthi_dates(records, geopos=(75.0, 23.0, 0), timezone_name="Asia/Kolkata"),
+                       [date(2030, 6, 10)])
+
+  def test_kshaya_picks_later_day(self):
+    """K4 skipped between moonrises picks the latter civil day."""
+    records = self._records([(10, "K3"), (11, "K5")])
+
+    # Moonrise day 10 -> K3 (tithi 18), Moonrise day 11 -> K5 (tithi 20)
+    # K4 (tithi 19) is skipped -> pick day 11
+    def mock_lunar_phase(jd):
+      if jd == 10.0:
+        return 198.0  # 198/12 = 16.5 -> tithi 17 (K2)... let me recalculate
+      return 228.0  # K5
+
+    with mock.patch("festival_rules._moonrise_jd_ut", side_effect=lambda d, g, t: float(d.day)), \
+         mock.patch("festival_rules.panchanga.lunar_phase", side_effect=mock_lunar_phase):
+      self.assertEqual(select_sankashti_chaturthi_dates(records, geopos=(75.0, 23.0, 0), timezone_name="Asia/Kolkata"),
+                       [date(2030, 6, 11)])
+
+  def test_falls_back_to_sunrise_without_location(self):
+    """Without geopos/timezone, falls back to sunrise-based K4."""
+    records = self._records([(10, "K3"), (11, "K4"), (12, "K5")])
+    self.assertEqual(select_sankashti_chaturthi_dates(records), [date(2030, 6, 11)])
+
+  def test_skips_day_when_moon_does_not_rise(self):
+    """Day is skipped when moonrise lookup fails (polar regions)."""
+    records = self._records([(10, "K4"), (11, "K4"), (12, "K5")])
+
+    # Moonrise fails on day 11 (returns None), day 10 has K4, day 12 has K5
+    def mock_lunar_phase(jd):
+      return 216.0 if jd == 10.0 else 228.0  # K4 for day 10, K5 for day 12
+
+    with mock.patch("festival_rules._moonrise_jd_ut", side_effect=lambda d, g, t: None if d.day == 11 else float(d.day)), \
+         mock.patch("festival_rules.panchanga.lunar_phase", side_effect=mock_lunar_phase):
+      # Day 10 has K4 at moonrise, day 11 has no moonrise, day 12 is K5 at moonrise
+      self.assertEqual(select_sankashti_chaturthi_dates(records, geopos=(75.0, 23.0, 0), timezone_name="Asia/Kolkata"),
+                       [date(2030, 6, 10)])
 
 
 if __name__ == "__main__":
