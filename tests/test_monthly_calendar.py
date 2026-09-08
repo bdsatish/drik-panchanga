@@ -160,6 +160,7 @@ class CellDrawTests(unittest.TestCase):
         date(2026, 6, 16): (3, 1, True)
       },
       "ekadashi": set(),
+      "pradosham": set(),
     }
     draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 16, date(2026, 6, 16), load_location("Ujjain"), context, col=0)
     solar_calls = [c for c in pdf.drawString.call_args_list if "Mithuna" in str(c.args[2])]
@@ -179,6 +180,7 @@ class CellDrawTests(unittest.TestCase):
       "masa_badges": {},
       "solar_by_date": {},
       "ekadashi": set(),
+      "pradosham": set(),
     }
     with mock.patch("generate_monthly_calendar.day_details", return_value=([("K15", "08:24"),
                                                                             ("S1", "28:31")], [], ["Śūla"])):
@@ -203,6 +205,7 @@ class CellDrawTests(unittest.TestCase):
       },
       "solar_by_date": {},
       "ekadashi": set(),
+      "pradosham": set(),
     }
     draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 16, date(2026, 6, 16), load_location("Ujjain"), context, col=0)
     fill_colors = [c.args[0] for c in pdf.setFillColor.call_args_list]
@@ -235,6 +238,7 @@ class VarjyamTests(unittest.TestCase):
       "masa_badges": {},
       "solar_by_date": {},
       "ekadashi": set(),
+      "pradosham": set(),
     }
     with mock.patch("generate_monthly_calendar.panchanga.varjyam", return_value=[[[15.22, 13, 0], [16.63, 37, 0]]]):
       draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 14, civil, load_location("Ujjain"), context, col=0)
@@ -410,6 +414,7 @@ class IsoWeekNumberTests(unittest.TestCase):
       "masa_badges": {},
       "solar_by_date": {},
       "ekadashi": set(),
+      "pradosham": set(),
     }
     pdf = mock.Mock()
     draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 4, civil, location, context, col=0)
@@ -434,6 +439,7 @@ class IsoWeekNumberTests(unittest.TestCase):
       "masa_badges": {},
       "solar_by_date": {},
       "ekadashi": set(),
+      "pradosham": set(),
     }
     pdf = mock.Mock()
     draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 28, civil, location, context, col=0)
@@ -459,6 +465,7 @@ class IsoWeekNumberTests(unittest.TestCase):
       "masa_badges": {},
       "solar_by_date": {},
       "ekadashi": set(),
+      "pradosham": set(),
     }
     pdf = mock.Mock()
     draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 3, civil, location, context, col=0)
@@ -514,6 +521,8 @@ class EkadashiNameTests(unittest.TestCase):
       "eclipse_details_by_date": {},
       "masa_badges": {},
       "solar_by_date": {},
+      "ekadashi": set(),
+      "pradosham": set(),
       "amanta": True,
     }
     teal_context = dict(base_context, ekadashi={civil})

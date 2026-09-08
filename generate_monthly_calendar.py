@@ -28,6 +28,7 @@ from festival_rules import (
   ekadashi_dates_from_records,
   find_local_eclipses,
   jd_to_local_civil_date,
+  select_pradosham_dates,
 )
 import panchanga
 
@@ -85,6 +86,7 @@ LIGHT = HexColor("#E3E3E3")
 GRID_LINE = HexColor("#A8A8A8")
 RED = HexColor("#A8321F")
 TEAL = HexColor("#0E6E62")
+PURPLE = HexColor("#6A287E")
 SAFFRON = HexColor("#F3D9A9")
 SAFFRON_INK = HexColor("#9A6A1F")
 CRIMSON = HexColor("#8E1F3D")
@@ -344,6 +346,7 @@ def draw_cell(pdf, x, y_top, row_h, cell_w, day, civil, location, context, col):
   record = context["records_by_date"].get(civil)
   raasi_num, solar_day, is_sankranti = context["solar_by_date"].get(civil, (None, None, False))
   is_ekadashi = civil in context["ekadashi"]
+  is_pradosham = civil in context["pradosham"]
   festivals = context["festival_names_by_date"].get(civil, [])
   is_sunday = civil.weekday() == 6
 
@@ -359,6 +362,9 @@ def draw_cell(pdf, x, y_top, row_h, cell_w, day, civil, location, context, col):
     pdf.rect(x, y_bottom, cell_w, row_h, stroke=0, fill=1)
   if is_ekadashi:
     pdf.setFillColor(TEAL)
+    pdf.rect(x, y_bottom, 2.2, row_h, stroke=0, fill=1)
+  if is_pradosham:
+    pdf.setFillColor(PURPLE)
     pdf.rect(x, y_bottom, 2.2, row_h, stroke=0, fill=1)
   pdf.setStrokeColor(GRID_LINE)
   pdf.setLineWidth(0.5)
@@ -543,9 +549,9 @@ def draw_grid(pdf, year, month, location, context):
 
 def draw_footer(pdf, location, coordinate_selection, page_index, total):
   pdf.setFillColor(GREY)
-  pdf.setFont(PDF_FONT_ITALIC, 7.5)
-  note = ("Sunrise-based. Timings above 24:00 are hours past midnight. "
-          "Teal bar = Ekādaśī upavasa. Green = māsa start. "
+  pdf.setFont(PDF_FONT_ITALIC, 7.0)
+  note = ("Timings after 24:00 are hours past midnight. "
+          "Teal bar = Ekādaśī. Purple bar = Pradosham. Green = māsa start. "
           "Gold = adhika māsa. Saffron = saṅkrānti.")
   pdf.drawString(MARGIN, MARGIN + 18, note)
   pdf.setFillColor(GREY)
@@ -588,6 +594,8 @@ def collect_context(months, location, festivals_path, amanta=True):
     "solar_by_date": solar_dates_by_date(records),
     "ekadashi": {d
                  for d in ekadashi_dates_from_records(records)},
+    "pradosham": {d
+                  for d in select_pradosham_dates(records, geopos=geopos, timezone_name=location.timezone_name)},
   }
 
 
