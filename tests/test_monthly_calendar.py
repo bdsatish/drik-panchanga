@@ -329,6 +329,20 @@ class ContextTests(unittest.TestCase):
     self.assertIn("solar_by_date", ctx)
     self.assertIn("ekadashi", ctx)
 
+  def test_collect_context_includes_pradosham_and_sankashti(self):
+    """Context must include pradosham and sankashti sets populated from selectors."""
+    location = load_location("Ujjain")
+    months = [(2026, 1), (2026, 2)]
+    ctx = collect_context(months, location, DEFAULT_FESTIVALS_PATH, amanta=True)
+    self.assertIn("pradosham", ctx)
+    self.assertIn("sankashti", ctx)
+    # Both should be sets of civil dates
+    self.assertIsInstance(ctx["pradosham"], set)
+    self.assertIsInstance(ctx["sankashti"], set)
+    # For a real location, both should be non-empty across two months
+    self.assertGreater(len(ctx["pradosham"]), 0)
+    self.assertGreater(len(ctx["sankashti"]), 0)
+
 
 class MonthlyHeaderTimezoneTests(unittest.TestCase):
   """Monthly header must show UTC offset next to the place name."""
