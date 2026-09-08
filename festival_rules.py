@@ -429,19 +429,17 @@ def select_pradosham_dates(records, geopos=None, timezone_name=None):
 
   Pradosham is observed when Trayodashi tithi prevails at sunset. This
   occurs twice a month -- once in Shukla Paksha (S13) and once in Krishna
-  Paksha (K13).
+  Paksha (K13). Requires location/timezone to compute sunset; returns
+  empty without them.
 
   Corner cases:
   - Vriddhi (Trayodashi at sunset on consecutive days): keep only the
     earlier civil date (same rule as ``resolve_vriddhi_dates``).
   - Kshaya (Trayodashi skipped between two sunsets): pick the latter
     civil day.
-  - Without location/timezone: falls back to sunrise-based selection.
   """
   if geopos is None or timezone_name is None:
-    s13 = select_tithi_dates(records, "S13")
-    k13 = select_tithi_dates(records, "K13")
-    return sorted(set(s13) | set(k13))
+    return []
 
   selected = []
   for record in records:
@@ -492,16 +490,16 @@ def select_sankashti_chaturthi_dates(records, geopos=None, timezone_name=None):
   """Krishna Chaturthi (K4) prevailing at moonrise.
 
   Sankashti Chaturthi is observed when K4 tithi prevails at moonrise. This
-  occurs once per lunar month during Krishna Paksha.
+  occurs once per lunar month during Krishna Paksha. Requires
+  location/timezone to compute moonrise; returns empty without them.
 
   Corner cases:
   - Vriddhi (K4 at moonrise on consecutive days): keep only the earlier
     civil date.
   - Kshaya (K4 skipped between two moonrises): pick the latter civil day.
-  - Without location/timezone: falls back to sunrise-based selection.
   """
   if geopos is None or timezone_name is None:
-    return select_tithi_dates(records, "K4")
+    return []
 
   selected = []
   for record in records:

@@ -76,10 +76,17 @@ These have dedicated selectors (dispatch by catalog name):
   day while the Sun is in Dhanur at sunrise. If none qualify, the PDF prints
   `None`.
 * **Pradosham** -- Trayodashi (`S13` or `K13`) prevailing at sunset. This
-  bimonthly Shiva festival occurs twice per lunar month. Vriddhi keeps the
-  earlier day when Trayodashi prevails at sunset on consecutive days; kshaya
-  picks the latter civil day when Trayodashi is skipped between two sunsets.
-  Without location/timezone, falls back to sunrise-based selection.
+  bimonthly Shiva festival occurs twice per lunar month. Requires
+  location/timezone to compute sunset; returns empty without them. Vriddhi
+  keeps the earlier day when Trayodashi prevails at sunset on consecutive
+  days; kshaya picks the latter civil day when Trayodashi is skipped
+  between two sunsets.
+* **Sankashti Chaturthi** -- Krishna Chaturthi (`K4`) prevailing at moonrise.
+  This monthly Ganesh festival occurs during Krishna Paksha. Requires
+  location/timezone to compute moonrise; returns empty without them. Vriddhi
+  keeps the earlier day when K4 prevails at moonrise on consecutive days;
+  kshaya picks the latter civil day when K4 is skipped between two
+  moonrises.
 * **Mesha Sankranti** / **Makara Sankranti** -- first civil sunrise after the
   Sun enters Mesha (raasi 1) or Makara (raasi 10) respectively. Both use the
   shared sankranti helper (same rule as the twelve solar-month markers on the

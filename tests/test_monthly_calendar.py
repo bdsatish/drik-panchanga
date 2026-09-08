@@ -161,6 +161,7 @@ class CellDrawTests(unittest.TestCase):
       },
       "ekadashi": set(),
       "pradosham": set(),
+      "sankashti": set(),
     }
     draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 16, date(2026, 6, 16), load_location("Ujjain"), context, col=0)
     solar_calls = [c for c in pdf.drawString.call_args_list if "Mithuna" in str(c.args[2])]
@@ -181,6 +182,7 @@ class CellDrawTests(unittest.TestCase):
       "solar_by_date": {},
       "ekadashi": set(),
       "pradosham": set(),
+      "sankashti": set(),
     }
     with mock.patch("generate_monthly_calendar.day_details", return_value=([("K15", "08:24"),
                                                                             ("S1", "28:31")], [], ["Śūla"])):
@@ -206,6 +208,7 @@ class CellDrawTests(unittest.TestCase):
       "solar_by_date": {},
       "ekadashi": set(),
       "pradosham": set(),
+      "sankashti": set(),
     }
     draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 16, date(2026, 6, 16), load_location("Ujjain"), context, col=0)
     fill_colors = [c.args[0] for c in pdf.setFillColor.call_args_list]
@@ -239,6 +242,7 @@ class VarjyamTests(unittest.TestCase):
       "solar_by_date": {},
       "ekadashi": set(),
       "pradosham": set(),
+      "sankashti": set(),
     }
     with mock.patch("generate_monthly_calendar.panchanga.varjyam", return_value=[[[15.22, 13, 0], [16.63, 37, 0]]]):
       draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 14, civil, load_location("Ujjain"), context, col=0)
@@ -415,6 +419,7 @@ class IsoWeekNumberTests(unittest.TestCase):
       "solar_by_date": {},
       "ekadashi": set(),
       "pradosham": set(),
+      "sankashti": set(),
     }
     pdf = mock.Mock()
     draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 4, civil, location, context, col=0)
@@ -440,6 +445,7 @@ class IsoWeekNumberTests(unittest.TestCase):
       "solar_by_date": {},
       "ekadashi": set(),
       "pradosham": set(),
+      "sankashti": set(),
     }
     pdf = mock.Mock()
     draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 28, civil, location, context, col=0)
@@ -466,6 +472,7 @@ class IsoWeekNumberTests(unittest.TestCase):
       "solar_by_date": {},
       "ekadashi": set(),
       "pradosham": set(),
+      "sankashti": set(),
     }
     pdf = mock.Mock()
     draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 3, civil, location, context, col=0)
@@ -523,6 +530,7 @@ class EkadashiNameTests(unittest.TestCase):
       "solar_by_date": {},
       "ekadashi": set(),
       "pradosham": set(),
+      "sankashti": set(),
       "amanta": True,
     }
     teal_context = dict(base_context, ekadashi={civil})
@@ -540,6 +548,77 @@ class EkadashiNameTests(unittest.TestCase):
       draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 9, civil, location, plain_context, col=0)
     drawn = [c.args[2] for c in pdf.drawString.call_args_list]
     self.assertNotIn("Kāmikā Ekādaśī", drawn)
+
+
+class FestivalBarColorTests(unittest.TestCase):
+  """Verify the correct color bars are drawn for each festival."""
+
+  def _base_context(self, **overrides):
+    context = {
+      "records_by_date": {},
+      "festival_names_by_date": {},
+      "eclipse_dates": set(),
+      "eclipse_details_by_date": {},
+      "masa_badges": {},
+      "solar_by_date": {},
+      "ekadashi": set(),
+      "pradosham": set(),
+      "sankashti": set(),
+      "amanta": True,
+    }
+    context.update(overrides)
+    return context
+
+  def _fill_colors(self, pdf):
+    return [c.args[0] for c in pdf.setFillColor.call_args_list]
+
+  def test_pradosham_bar_is_purple(self):
+    from generate_monthly_calendar import PURPLE
+    pdf = mock.Mock()
+    civil = date(2026, 6, 11)
+    context = self._base_context(pradosham={civil})
+    draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 11, civil, load_location("Ujjain"), context, col=0)
+    self.assertIn(PURPLE, self._fill_colors(pdf))
+
+  def test_sankashti_bar_is_indigo(self):
+    from generate_monthly_calendar import INDIGO
+    pdf = mock.Mock()
+    civil = date(2026, 6, 11)
+    context = self._base_context(sankashti={civil})
+    draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 11, civil, load_location("Ujjain"), context, col=0)
+    self.assertIn(INDIGO, self._fill_colors(pdf))
+
+  def test_ekadashi_bar_is_teal(self):
+    from generate_monthly_calendar import TEAL
+    pdf = mock.Mock()
+    civil = date(2026, 6, 11)
+    context = self._base_context(ekadashi={civil})
+    draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 11, civil, load_location("Ujjain"), context, col=0)
+    self.assertIn(TEAL, self._fill_colors(pdf))
+
+
+class FooterLegendTests(unittest.TestCase):
+  """Verify the footer legend includes all festival markers."""
+
+  def test_footer_mentions_sankashti(self):
+    from generate_monthly_calendar import draw_footer
+    pdf = mock.Mock()
+    location = load_location("Ujjain")
+    draw_footer(pdf, location, "citra", 1, 12)
+    drawn_text = [c.args[2] for c in pdf.drawString.call_args_list]
+    footer_note = [t for t in drawn_text if "saṅkaṣṭi" in t]
+    self.assertEqual(len(footer_note), 1)
+    self.assertIn("Indigo bar: saṅkaṣṭi", footer_note[0])
+
+  def test_footer_mentions_pradosham(self):
+    from generate_monthly_calendar import draw_footer
+    pdf = mock.Mock()
+    location = load_location("Ujjain")
+    draw_footer(pdf, location, "citra", 1, 12)
+    drawn_text = [c.args[2] for c in pdf.drawString.call_args_list]
+    footer_note = [t for t in drawn_text if "pradoṣam" in t]
+    self.assertEqual(len(footer_note), 1)
+    self.assertIn("Purple bar: pradoṣam", footer_note[0])
 
 
 if __name__ == "__main__":

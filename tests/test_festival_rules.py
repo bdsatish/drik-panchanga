@@ -450,7 +450,9 @@ class ResolveFestivalsTests(unittest.TestCase):
   def test_resolves_markers_and_footer_entries(self):
     months, month_data = covering_months_and_data()
     records = canonical_records(months, month_data)
-    by_date, entries = resolve_festivals(records, {record.civil_date for record in records})
+    by_date, entries = resolve_festivals(records, {record.civil_date
+                                                   for record in records}, geopos=(75.0, 23.0, 0),
+                                         timezone_name="Asia/Kolkata")
     by_name = entries_by_name(entries)
 
     self.assertEqual([name for _marker, _dates, name in entries], list(all_festival_names()))
@@ -1187,10 +1189,10 @@ class SankashtiChaturthiTests(unittest.TestCase):
       self.assertEqual(select_sankashti_chaturthi_dates(records, geopos=(75.0, 23.0, 0), timezone_name="Asia/Kolkata"),
                        [date(2030, 6, 11)])
 
-  def test_falls_back_to_sunrise_without_location(self):
-    """Without geopos/timezone, falls back to sunrise-based K4."""
+  def test_returns_empty_without_location(self):
+    """Without geopos/timezone, returns empty (cannot compute moonrise)."""
     records = self._records([(10, "K3"), (11, "K4"), (12, "K5")])
-    self.assertEqual(select_sankashti_chaturthi_dates(records), [date(2030, 6, 11)])
+    self.assertEqual(select_sankashti_chaturthi_dates(records), [])
 
   def test_skips_day_when_moon_does_not_rise(self):
     """Day is skipped when moonrise lookup fails (polar regions)."""
@@ -1252,10 +1254,10 @@ class PradoshamTests(unittest.TestCase):
       self.assertEqual(select_pradosham_dates(records, geopos=(75.0, 23.0, 0), timezone_name="Asia/Kolkata"),
                        [date(2030, 6, 11)])
 
-  def test_falls_back_to_sunrise_without_location(self):
-    """Without geopos/timezone, falls back to sunrise-based S13/K13."""
+  def test_returns_empty_without_location(self):
+    """Without geopos/timezone, returns empty (cannot compute sunset)."""
     records = self._records([(10, "K12"), (11, "K13"), (12, "K14")])
-    self.assertEqual(select_pradosham_dates(records), [date(2030, 6, 11)])
+    self.assertEqual(select_pradosham_dates(records), [])
 
   def test_skips_day_when_sun_does_not_set(self):
     """Day is skipped when sunset lookup fails (polar regions)."""
