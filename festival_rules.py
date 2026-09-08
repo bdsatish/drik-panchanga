@@ -33,6 +33,28 @@ def jd_to_local_civil_date(jd, timezone_name):
   return jd_to_local_datetime(jd, timezone_name).date()
 
 
+def _sunset_jd_ut(civil_date, geopos, timezone_name):
+  """Sunset Julian Day in UT for a civil date at a location.
+
+  ``geopos`` is (lon, lat, altitude). Returns None if the sun does not set
+  (polar day/night); callers fall back to sunrise-based selection.
+  """
+  tz = ZoneInfo(timezone_name)
+  noon = datetime(civil_date.year, civil_date.month, civil_date.day, 12, 0, tzinfo=tz)
+  tz_offset = noon.utcoffset().total_seconds() / 3600
+  place = (geopos[1], geopos[0], tz_offset)  # (lat, lon, tz) for panchanga.sunset
+  jd = panchanga.gregorian_to_jd(panchanga.Date(civil_date.year, civil_date.month, civil_date.day))
+  try:
+    sunset_jd_local = panchanga.sunset(jd, place)[0]
+  except Exception:
+    return None
+  # sweph returns 0.0 for a failed rise/set lookup, so the result is range-checked
+  # against the expected JD window (same guard as ``require_local_sunrise``).
+  if not jd - 1 <= sunset_jd_local <= jd + 2:
+    return None
+  return sunset_jd_local - tz_offset / 24
+
+
 DayRecord = struct('DayRecord', ['civil_date', 'tithi', 'nakshatra', 'yoga', 'masa', 'is_adhika', 'sunrise_jd'])
 
 FestivalRule = struct('FestivalRule', ['name', 'masa', 'tithi', 'selector', 'allow_adhika', 'location_aware'],
@@ -353,6 +375,70 @@ def select_vaikuntha_ekadashi_dates(records):
   return selected
 
 
+PRADOSHA_TITHIS = frozenset({13, 28})  # S13 and K13 in 1-30 numbering
+
+
+def _sunset_tithi_skipped(records, geopos, timezone_name):
+  """Detect Trayodashi kshaya between consecutive sunsets.
+
+  When Trayodashi is skipped between two sunsets, return the latter civil
+  day (analogous to ``select_kshaya_dates`` for sunrise).
+  """
+  ordered = sorted(records, key=lambda r: r.civil_date)
+  kshaya_dates = []
+  for record, following in zip(ordered, ordered[1:]):
+    if following.civil_date != record.civil_date + timedelta(days=1):
+      continue
+    sunset_jd = _sunset_jd_ut(record.civil_date, geopos, timezone_name)
+    next_sunset_jd = _sunset_jd_ut(following.civil_date, geopos, timezone_name)
+    if sunset_jd is None or next_sunset_jd is None:
+      continue
+    tithi_1 = int(panchanga.lunar_phase(sunset_jd) // 12) + 1
+    tithi_2 = int(panchanga.lunar_phase(next_sunset_jd) // 12) + 1
+    gap = (tithi_2 - tithi_1) % 30
+    skipped = [(tithi_1 + offset - 1) % 30 + 1 for offset in range(1, gap)]
+    if PRADOSHA_TITHIS & set(skipped):
+      kshaya_dates.append(following.civil_date)
+  return kshaya_dates
+
+
+def select_pradosham_dates(records, geopos=None, timezone_name=None):
+  """Trayodashi (S13/K13) prevailing at sunset.
+
+  Pradosham is observed when Trayodashi tithi prevails at sunset. This
+  occurs twice a month -- once in Shukla Paksha (S13) and once in Krishna
+  Paksha (K13).
+
+  Corner cases:
+  - Vriddhi (Trayodashi at sunset on consecutive days): keep only the
+    earlier civil date (same rule as ``resolve_vriddhi_dates``).
+  - Kshaya (Trayodashi skipped between two sunsets): pick the latter
+    civil day.
+  - Without location/timezone: falls back to sunrise-based selection.
+  """
+  if geopos is None or timezone_name is None:
+    s13 = select_tithi_dates(records, "S13")
+    k13 = select_tithi_dates(records, "K13")
+    return sorted(set(s13) | set(k13))
+
+  selected = []
+  for record in records:
+    sunset_jd = _sunset_jd_ut(record.civil_date, geopos, timezone_name)
+    if sunset_jd is None:
+      continue
+    tithi_at_sunset = int(panchanga.lunar_phase(sunset_jd) // 12) + 1
+    if tithi_at_sunset in PRADOSHA_TITHIS:
+      selected.append(record.civil_date)
+
+  # Vriddhi: keep only the earlier day when Trayodashi prevails at sunset
+  # on consecutive days.
+  selected = resolve_vriddhi_dates(selected)
+
+  # Kshaya: if Trayodashi is skipped between two sunsets, pick the latter day.
+  kshaya_dates = _sunset_tithi_skipped(records, geopos, timezone_name)
+  return sorted(set(selected) | set(kshaya_dates))
+
+
 def sankranti_raasi_by_date(records):
   """Map civil date → rāśi (1–12) for each first sunrise into a new solar sign.
 
@@ -492,6 +578,7 @@ FESTIVAL_RULES = [
   FestivalRule("Ratha Saptami", masa=11, tithi="S7"),
   FestivalRule("VSN Jayanti", masa=11, tithi="S11"),
   FestivalRule("Maha Shivaratri", masa=11, tithi="K14"),
+  FestivalRule("Pradosham", selector=select_pradosham_dates, location_aware=True),
   FestivalRule("Kama Dahana (Holi)", masa=12, tithi="S15")
 ]
 

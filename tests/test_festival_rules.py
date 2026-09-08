@@ -200,11 +200,12 @@ class FestivalCatalogTests(unittest.TestCase):
       "Ratha Saptami",
       "VSN Jayanti",
       "Maha Shivaratri",
+      "Pradosham",
       "Kama Dahana (Holi)",
     ])
     self.assertEqual(len(names), len(set(names)))
     self.assertEqual(all_festival_names(), tuple(names))
-    self.assertEqual(sum(1 for rule in FESTIVAL_RULES if rule.masa is None), 10)
+    self.assertEqual(sum(1 for rule in FESTIVAL_RULES if rule.masa is None), 11)
 
     by_name = {rule.name: rule for rule in FESTIVAL_RULES}
     expected_tithi_rules = {
@@ -232,6 +233,7 @@ class FestivalCatalogTests(unittest.TestCase):
                         "Yajur Upakarma",
                         "Uttarayana",
                         "Dakshinayana",
+                        "Pradosham",
                       })
     self.assertEqual({rule.name for rule in FESTIVAL_RULES if rule.allow_adhika}, {"Ugadi"})
 
@@ -259,6 +261,7 @@ class FestivalSelectionTests(unittest.TestCase):
         "Sama Upakarma",
         "Rishi Panchami",
         "Vata Savitri Purnima",
+        "Pradosham",
       }
     ]
     self.assertEqual(enabled, expected)
