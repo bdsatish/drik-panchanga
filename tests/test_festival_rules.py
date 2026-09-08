@@ -26,6 +26,7 @@ from festival_rules import (
   select_plain_tithi_dates,
   postpone_upakarma_if_eclipse,
   select_dakshinayana_dates,
+  select_pradosham_dates,
   select_rig_upakarma_dates,
   select_sama_upakarma_dates,
   select_sankashti_chaturthi_dates,
@@ -1204,6 +1205,172 @@ class SankashtiChaturthiTests(unittest.TestCase):
       # Day 10 has K4 at moonrise, day 11 has no moonrise, day 12 is K5 at moonrise
       self.assertEqual(select_sankashti_chaturthi_dates(records, geopos=(75.0, 23.0, 0), timezone_name="Asia/Kolkata"),
                        [date(2030, 6, 10)])
+
+
+class PradoshamTests(unittest.TestCase):
+  """Tests for Pradosham (Trayodashi at sunset)."""
+
+  def _records(self, days):
+    """Build DayRecord list from (day, tithi) tuples for a fixed month."""
+    return [DayRecord(date(2030, 6, day), tithi, 1, 1, "5", False, float(day)) for day, tithi in days]
+
+  def test_normal_k13_at_sunset(self):
+    """K13 at sunset selects that day."""
+    records = self._records([(10, "K12"), (11, "K13"), (12, "K14")])
+    with mock.patch("festival_rules._sunset_jd_ut", side_effect=lambda d, g, t: 11.0 if d.day == 11 else None), \
+         mock.patch("festival_rules.panchanga.lunar_phase", return_value=330.0):  # 330//12=27 -> tithi 28 (K13)
+      self.assertEqual(select_pradosham_dates(records, geopos=(75.0, 23.0, 0), timezone_name="Asia/Kolkata"),
+                       [date(2030, 6, 11)])
+
+  def test_normal_s13_at_sunset(self):
+    """S13 at sunset selects that day (Shukla Paksha)."""
+    records = self._records([(10, "S12"), (11, "S13"), (12, "S14")])
+    with mock.patch("festival_rules._sunset_jd_ut", side_effect=lambda d, g, t: 11.0 if d.day == 11 else None), \
+         mock.patch("festival_rules.panchanga.lunar_phase", return_value=150.0):  # 150//12=12 -> tithi 13 (S13)
+      self.assertEqual(select_pradosham_dates(records, geopos=(75.0, 23.0, 0), timezone_name="Asia/Kolkata"),
+                       [date(2030, 6, 11)])
+
+  def test_vriddhi_keeps_earlier_day(self):
+    """K13 at sunset on consecutive days keeps the earlier civil date."""
+    records = self._records([(10, "K13"), (11, "K13"), (12, "K14")])
+    with mock.patch("festival_rules._sunset_jd_ut", side_effect=lambda d, g, t: float(d.day)), \
+         mock.patch("festival_rules.panchanga.lunar_phase", return_value=330.0):  # K13
+      self.assertEqual(select_pradosham_dates(records, geopos=(75.0, 23.0, 0), timezone_name="Asia/Kolkata"),
+                       [date(2030, 6, 10)])
+
+  def test_kshaya_picks_later_day(self):
+    """K13 skipped between sunsets picks the latter civil day."""
+    records = self._records([(10, "K12"), (11, "K14")])
+
+    # Sunset day 10 -> K12 (tithi 27), Sunset day 11 -> K14 (tithi 29)
+    # K13 (tithi 28) is skipped -> pick day 11
+    def mock_lunar_phase(jd):
+      return 318.0 if jd == 10.0 else 348.0  # K12 for day 10, K14 for day 11
+
+    with mock.patch("festival_rules._sunset_jd_ut", side_effect=lambda d, g, t: float(d.day)), \
+         mock.patch("festival_rules.panchanga.lunar_phase", side_effect=mock_lunar_phase):
+      self.assertEqual(select_pradosham_dates(records, geopos=(75.0, 23.0, 0), timezone_name="Asia/Kolkata"),
+                       [date(2030, 6, 11)])
+
+  def test_falls_back_to_sunrise_without_location(self):
+    """Without geopos/timezone, falls back to sunrise-based S13/K13."""
+    records = self._records([(10, "K12"), (11, "K13"), (12, "K14")])
+    self.assertEqual(select_pradosham_dates(records), [date(2030, 6, 11)])
+
+  def test_skips_day_when_sun_does_not_set(self):
+    """Day is skipped when sunset lookup fails (polar regions)."""
+    records = self._records([(10, "K13"), (11, "K13"), (12, "K14")])
+
+    # Sunset fails on day 11 (returns None), day 10 has K13, day 12 has K14
+    def mock_lunar_phase(jd):
+      return 330.0 if jd == 10.0 else 348.0  # K13 for day 10, K14 for day 12
+
+    with mock.patch("festival_rules._sunset_jd_ut", side_effect=lambda d, g, t: None if d.day == 11 else float(d.day)), \
+         mock.patch("festival_rules.panchanga.lunar_phase", side_effect=mock_lunar_phase):
+      self.assertEqual(select_pradosham_dates(records, geopos=(75.0, 23.0, 0), timezone_name="Asia/Kolkata"),
+                       [date(2030, 6, 10)])
+
+
+class PradoshamRealLocationTests(unittest.TestCase):
+  """Real-location tests for Pradosham using actual astronomical calculations."""
+
+  def test_pradosham_twice_monthly_ujjain(self):
+    """Pradosham occurs roughly twice per month in Ujjain (Shukla + Krishna Trayodashi)."""
+    location = load_location("Ujjain")
+    panchanga.set_chosen_ayanamsa("citra")
+    months = list(month_range(2026, 1))
+    records = daily_records(months, location)
+    geopos = (location.longitude, location.latitude, 0.0)
+
+    dates = select_pradosham_dates(records, geopos=geopos, timezone_name=location.timezone_name)
+    # Filter to January 2026 only (month_range returns 14 months)
+    jan_dates = [d for d in dates if d.year == 2026 and d.month == 1]
+    # January 2026 has 2-3 Pradoshams depending on lunar cycle alignment
+    self.assertIn(len(jan_dates), [2, 3])
+
+  def test_pradosham_helsinki_no_crash(self):
+    """Pradosham calculation should not crash for high-latitude locations."""
+    location = load_location("Helsinki")
+    panchanga.set_chosen_ayanamsa("citra")
+    months = list(month_range(2026, 6))
+    records = daily_records(months, location)
+    geopos = (location.longitude, location.latitude, 0.0)
+
+    # Should not raise, even if some days have no sunset (midnight sun)
+    dates = select_pradosham_dates(records, geopos=geopos, timezone_name=location.timezone_name)
+    self.assertIsInstance(dates, list)
+
+
+class SankashtiChaturthiRealLocationTests(unittest.TestCase):
+  """Real-location tests for Sankashti Chaturthi using actual astronomical calculations."""
+
+  def test_sankashti_once_monthly_ujjain(self):
+    """Sankashti Chaturthi occurs roughly once per month in Ujjain (Krishna Paksha)."""
+    location = load_location("Ujjain")
+    panchanga.set_chosen_ayanamsa("citra")
+    months = list(month_range(2026, 1))
+    records = daily_records(months, location)
+    geopos = (location.longitude, location.latitude, 0.0)
+
+    dates = select_sankashti_chaturthi_dates(records, geopos=geopos, timezone_name=location.timezone_name)
+    # Filter to January 2026 only (month_range returns 14 months)
+    jan_dates = [d for d in dates if d.year == 2026 and d.month == 1]
+    # January 2026 should have 1 Sankashti Chaturthi (Krishna Paksha only)
+    self.assertEqual(len(jan_dates), 1)
+
+  def test_sankashti_helsinki_no_crash(self):
+    """Sankashti Chaturthi calculation should not crash for high-latitude locations."""
+    location = load_location("Helsinki")
+    panchanga.set_chosen_ayanamsa("citra")
+    months = list(month_range(2026, 6))
+    records = daily_records(months, location)
+    geopos = (location.longitude, location.latitude, 0.0)
+
+    # Should not raise, even if some days have no moonrise
+    dates = select_sankashti_chaturthi_dates(records, geopos=geopos, timezone_name=location.timezone_name)
+    self.assertIsInstance(dates, list)
+
+  def test_sankashti_us_timezone(self):
+    """Sankashti Chaturthi should work with US timezones."""
+    location = load_location("Los Angeles, US")
+    panchanga.set_chosen_ayanamsa("citra")
+    months = list(month_range(2026, 1))
+    records = daily_records(months, location)
+    geopos = (location.longitude, location.latitude, 0.0)
+
+    dates = select_sankashti_chaturthi_dates(records, geopos=geopos, timezone_name=location.timezone_name)
+    jan_dates = [d for d in dates if d.year == 2026 and d.month == 1]
+    # Should have 1 Sankashti Chaturthi in January
+    self.assertEqual(len(jan_dates), 1)
+
+  def test_pradosham_year_boundary(self):
+    """Pradosham should handle December to January transition."""
+    location = load_location("Ujjain")
+    panchanga.set_chosen_ayanamsa("citra")
+    months = list(month_range(2026, 12))
+    records = daily_records(months, location)
+    geopos = (location.longitude, location.latitude, 0.0)
+
+    dates = select_pradosham_dates(records, geopos=geopos, timezone_name=location.timezone_name)
+    dec_dates = [d for d in dates if d.year == 2026 and d.month == 12]
+    jan_dates = [d for d in dates if d.year == 2027 and d.month == 1]
+    # Both months should have Pradoshams
+    self.assertIn(len(dec_dates), [2, 3])
+    self.assertIn(len(jan_dates), [2, 3])
+
+  def test_sankashti_consecutive_months(self):
+    """Sankashti Chaturthi should occur in consecutive months without gaps."""
+    location = load_location("Ujjain")
+    panchanga.set_chosen_ayanamsa("citra")
+    months = list(month_range(2026, 1))
+    records = daily_records(months, location)
+    geopos = (location.longitude, location.latitude, 0.0)
+
+    dates = select_sankashti_chaturthi_dates(records, geopos=geopos, timezone_name=location.timezone_name)
+    # Should have roughly one per month across the year
+    months_with_sankashti = set((d.year, d.month) for d in dates)
+    # At least 10 different months should have a Sankashti Chaturthi
+    self.assertGreaterEqual(len(months_with_sankashti), 10)
 
 
 if __name__ == "__main__":
