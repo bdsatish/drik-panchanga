@@ -12,12 +12,13 @@ Festival and Ekadashi dates are resolved for the selected location in
 implementation is kept under `experimental/` for reference only. The PDF
 includes only festivals enabled in `festivals.cfg` (or `--festivals`).
 
-Recurring observances vs once-a-year festivals
-----------------------------------------------
+Recurring observances vs annual festivals
+-----------------------------------------
 
-`festivals.cfg` covers once-a-year festivals only. Fortnightly/monthly
+`festivals.cfg` covers annual festivals only. Fortnightly/monthly
 observances are always on and need no cfg keys -- they are painted as
-coloured bars on the monthly grid and explained in its footer legend:
+coloured bars (monthly pdf) or underlines (annual pdf) and explained
+in its footer legend:
 
 * **Ekadashi** -- every `S11` and `K11` at sunrise (teal bar + vrat name).
 * **Pradosham** -- Trayodashi (`S13` or `K13`) prevailing at sunset

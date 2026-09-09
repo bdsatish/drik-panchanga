@@ -470,7 +470,7 @@ class FormatUtcOffsetTests(unittest.TestCase):
 
 
 class TimezoneInHeaderTests(unittest.TestCase):
-  """Page header must show UTC offset next to the place name."""
+  """Page subtitle must show UTC offset; title stays tz-free."""
 
   def test_annual_header_includes_timezone(self):
     location = load_location("Ujjain")
@@ -479,7 +479,10 @@ class TimezoneInHeaderTests(unittest.TestCase):
     with mock.patch("generate_panchanga_calendar.fitted_font_size", return_value=10):
       draw_page_header(pdf, location, months, RULESET_VERSION)
     title = pdf.drawString.call_args_list[0].args[2]
-    self.assertTrue(title.startswith("Ujjain, IN, UTC+5:30 (IST) Panchanga:"))
+    subtitle = pdf.drawString.call_args_list[1].args[2]
+    self.assertTrue(title.startswith("Ujjain, IN Panchanga:"))
+    self.assertNotIn("UTC", title)
+    self.assertIn("UTC+5:30 (IST) civil time", subtitle)
 
   def test_annual_header_timezone_respects_dst(self):
     location = load_location("Helsinki")
@@ -488,7 +491,10 @@ class TimezoneInHeaderTests(unittest.TestCase):
     with mock.patch("generate_panchanga_calendar.fitted_font_size", return_value=10):
       draw_page_header(pdf, location, months, RULESET_VERSION)
     title = pdf.drawString.call_args_list[0].args[2]
-    self.assertTrue(title.startswith("Helsinki, FI, UTC+3 (EEST) Panchanga:"))
+    subtitle = pdf.drawString.call_args_list[1].args[2]
+    self.assertTrue(title.startswith("Helsinki, FI Panchanga:"))
+    self.assertNotIn("UTC", title)
+    self.assertIn("UTC+3 (EEST) civil time", subtitle)
 
 
 class DstTransitionsTests(unittest.TestCase):

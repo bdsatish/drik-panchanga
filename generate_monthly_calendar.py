@@ -557,7 +557,7 @@ def draw_footer(pdf, location, coordinate_selection, page_index, total):
   pdf.setFillColor(GREY)
   pdf.setFont(PDF_FONT_ITALIC, 6.5)
   note = ("Timings after 24:00 are hours past midnight. "
-          "Green cell: lunar māsa. Gold cell: adhika māsa. Saffron cell: solar saṅkrānti. "
+          "Green box: lunar māsa. Gold box: adhika māsa. Saffron box: solar saṅkrānti. "
           "Teal bar: ekādaśī. Purple bar: pradoṣam. Indigo bar: saṅkaṣṭi.")
   pdf.drawString(MARGIN, MARGIN + 18, note)
   pdf.setFillColor(GREY)

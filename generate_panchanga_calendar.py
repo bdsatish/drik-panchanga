@@ -973,8 +973,7 @@ def draw_page_header(pdf, location, months, ruleset_version, amanta=True, coordi
   page_width, page_height = landscape(A4)
   start_year, start_month = months[0]
   tz_label = format_utc_offset(location.timezone_name, start_year, start_month)
-  place_label = f"{location.name}, {tz_label}" if tz_label else location.name
-  title = f"{place_label} Panchanga: {month_span_label(months)}"
+  title = f"{location.name} Panchanga: {month_span_label(months)}"
   pdf.setFillColor(INK)
   title_size = fitted_font_size(pdf, title, PDF_FONT_BOLD, 11, 8, page_width - 36, "page title")
   pdf.setFont(PDF_FONT_BOLD, title_size)
@@ -993,7 +992,7 @@ def draw_page_header(pdf, location, months, ruleset_version, amanta=True, coordi
   lat_label = coordinate_label(location.latitude, "N", "S")
   lon_label = coordinate_label(location.longitude, "E", "W")
   subtitle_parts.append(lat_label + ", " + lon_label)
-  subtitle_parts.append(location.timezone_name + " civil time")
+  subtitle_parts.append((tz_label if tz_label else location.timezone_name) + " civil time")
   if kali_ahargana is not None:
     start_ahargana, end_ahargana = kali_ahargana
     subtitle_parts.append("Kali Ahargana: " + str(start_ahargana) + " - " + str(end_ahargana))
