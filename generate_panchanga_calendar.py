@@ -1007,7 +1007,9 @@ def draw_page_header(pdf, location, months, ruleset_version, amanta=True, coordi
 
 def draw_page_footer(pdf, festival_entries, eclipse_line="Eclipses: None"):
   if len(festival_entries) > FOOTER_FESTIVAL_SLOTS:
-    raise RuntimeError(f"Too many enabled festivals: {len(festival_entries)} > {FOOTER_FESTIVAL_SLOTS} slots")
+    names = ", ".join(name for _number, _dates, name in festival_entries)
+    raise RuntimeError(f"Too many enabled festivals ({len(festival_entries)} > {FOOTER_FESTIVAL_SLOTS} footer slots): "
+                       f"{names}. Disable {len(festival_entries) - FOOTER_FESTIVAL_SLOTS} or more in festivals.cfg.")
   pdf.setFillColor(FESTIVAL_INK)
 
   columns = 6
@@ -1083,6 +1085,10 @@ def build_pdf(location, start_year, start_month, output_path, festivals_path=Non
 
     festivals_path = Path(festivals_path) if festivals_path is not None else DEFAULT_FESTIVALS_PATH
     enabled_names = load_festival_selection(festivals_path)
+    if len(enabled_names) > FOOTER_FESTIVAL_SLOTS:
+      raise RuntimeError(f"Too many enabled festivals ({len(enabled_names)} > {FOOTER_FESTIVAL_SLOTS} footer slots): "
+                         f"{', '.join(enabled_names)}. "
+                         f"Disable {len(enabled_names) - FOOTER_FESTIVAL_SLOTS} or more in {festivals_path}.")
     geopos = (location.longitude, location.latitude, 0.0)
     festivals_by_date, festival_entries = resolve_festivals(
       context_records, target_dates, geopos=geopos, timezone_name=location.timezone_name, enabled_names=enabled_names)

@@ -204,6 +204,13 @@ class PdfLayoutTests(unittest.TestCase):
     entries = [(index, "Jan 01", f"Festival {index}") for index in range(1, FOOTER_FESTIVAL_SLOTS + 1)]
     draw_page_footer(pdf, entries)
 
+  def test_footer_overflow_names_festivals_and_cfg(self):
+    ensure_pdf_fonts()
+    pdf = Canvas(BytesIO())
+    entries = [(index, "Jan 01", f"Festival {index}") for index in range(1, FOOTER_FESTIVAL_SLOTS + 2)]
+    with self.assertRaisesRegex(RuntimeError, "Too many enabled festivals.*Festival 1.*festivals.cfg"):
+      draw_page_footer(pdf, entries)
+
   def test_footer_key_lines_use_iast_names(self):
     from generate_panchanga_calendar import (
       masa_key_line,
