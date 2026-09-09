@@ -1191,10 +1191,10 @@ class SankashtiChaturthiTests(unittest.TestCase):
       self.assertEqual(select_sankashti_chaturthi_dates(records, geopos=(75.0, 23.0, 0), timezone_name="Asia/Kolkata"),
                        [date(2030, 6, 11)])
 
-  def test_returns_empty_without_location(self):
-    """Without geopos/timezone, returns empty (cannot compute moonrise)."""
+  def test_falls_back_to_sunrise_without_location(self):
+    """Without geopos/timezone, falls back to sunrise-based K4."""
     records = self._records([(10, "K3"), (11, "K4"), (12, "K5")])
-    self.assertEqual(select_sankashti_chaturthi_dates(records), [])
+    self.assertEqual(select_sankashti_chaturthi_dates(records), [date(2030, 6, 11)])
 
   def test_skips_day_when_moon_does_not_rise(self):
     """Day is skipped when moonrise lookup fails (polar regions)."""
@@ -1256,10 +1256,10 @@ class PradoshamTests(unittest.TestCase):
       self.assertEqual(select_pradosham_dates(records, geopos=(75.0, 23.0, 0), timezone_name="Asia/Kolkata"),
                        [date(2030, 6, 11)])
 
-  def test_returns_empty_without_location(self):
-    """Without geopos/timezone, returns empty (cannot compute sunset)."""
+  def test_falls_back_to_sunrise_without_location(self):
+    """Without geopos/timezone, falls back to sunrise-based S13/K13."""
     records = self._records([(10, "K12"), (11, "K13"), (12, "K14")])
-    self.assertEqual(select_pradosham_dates(records), [])
+    self.assertEqual(select_pradosham_dates(records), [date(2030, 6, 11)])
 
   def test_skips_day_when_sun_does_not_set(self):
     """Day is skipped when sunset lookup fails (polar regions)."""

@@ -37,7 +37,7 @@ def _sunset_jd_ut(civil_date, geopos, timezone_name):
   """Sunset Julian Day in UT for a civil date at a location.
 
   ``geopos`` is (lon, lat, altitude). Returns None if the sun does not set
-  (polar day/night); callers skip such days.
+  (polar day/night); callers fall back to sunrise-based selection.
   """
   tz = ZoneInfo(timezone_name)
   noon = datetime(civil_date.year, civil_date.month, civil_date.day, 12, 0, tzinfo=tz)
@@ -59,7 +59,7 @@ def _moonrise_jd_ut(civil_date, geopos, timezone_name):
   """Moonrise Julian Day in UT for a civil date at a location.
 
   ``geopos`` is (lon, lat, altitude). Returns None if the moon does not rise;
-  callers skip such days. Swiss Ephemeris returns 0.0
+  callers fall back to sunrise-based selection. Swiss Ephemeris returns 0.0
   for a failed rise lookup, so the result is range-checked against the
   expected JD window.
   """
@@ -429,17 +429,19 @@ def select_pradosham_dates(records, geopos=None, timezone_name=None):
 
   Pradosham is observed when Trayodashi tithi prevails at sunset. This
   occurs twice a month -- once in Shukla Paksha (S13) and once in Krishna
-  Paksha (K13). Requires location/timezone to compute sunset; returns
-  empty without them.
+  Paksha (K13).
 
   Corner cases:
   - Vriddhi (Trayodashi at sunset on consecutive days): keep only the
     earlier civil date (same rule as ``resolve_vriddhi_dates``).
   - Kshaya (Trayodashi skipped between two sunsets): pick the latter
     civil day.
+  - Without location/timezone: falls back to sunrise-based selection.
   """
   if geopos is None or timezone_name is None:
-    return []
+    s13 = select_tithi_dates(records, "S13")
+    k13 = select_tithi_dates(records, "K13")
+    return sorted(set(s13) | set(k13))
 
   selected = []
   for record in records:
@@ -490,16 +492,16 @@ def select_sankashti_chaturthi_dates(records, geopos=None, timezone_name=None):
   """Krishna Chaturthi (K4) prevailing at moonrise.
 
   Sankashti Chaturthi is observed when K4 tithi prevails at moonrise. This
-  occurs once per lunar month during Krishna Paksha. Requires
-  location/timezone to compute moonrise; returns empty without them.
+  occurs once per lunar month during Krishna Paksha.
 
   Corner cases:
   - Vriddhi (K4 at moonrise on consecutive days): keep only the earlier
     civil date.
   - Kshaya (K4 skipped between two moonrises): pick the latter civil day.
+  - Without location/timezone: falls back to sunrise-based selection.
   """
   if geopos is None or timezone_name is None:
-    return []
+    return select_tithi_dates(records, "K4")
 
   selected = []
   for record in records:

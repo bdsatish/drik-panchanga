@@ -22,16 +22,16 @@ coloured bars on the monthly grid and explained in its footer legend:
 * **Ekadashi** -- every `S11` and `K11` at sunrise (teal bar + vrat name).
 * **Pradosham** -- Trayodashi (`S13` or `K13`) prevailing at sunset
   (purple bar). This bimonthly Shiva festival occurs twice per lunar month.
-  Requires location/timezone to compute sunset; no date without them.
   Vriddhi keeps the earlier day when Trayodashi prevails at sunset on
   consecutive days; kshaya picks the latter civil day when Trayodashi is
-  skipped between two sunsets.
+  skipped between two sunsets. Without location/timezone, falls back to
+  sunrise-based selection.
 * **Sankashti Chaturthi** -- Krishna Chaturthi (`K4`) prevailing at moonrise
   (indigo bar). This monthly Ganesh festival occurs during Krishna Paksha.
-  Requires location/timezone to compute moonrise; no date without them.
   Vriddhi keeps the earlier day when K4 prevails at moonrise on consecutive
   days; kshaya picks the latter civil day when K4 is skipped between two
-  moonrises.
+  moonrises. Without location/timezone, falls back to sunrise-based
+  selection.
 
 Selecting festivals
 -------------------
