@@ -202,13 +202,11 @@ class FestivalCatalogTests(unittest.TestCase):
       "Ratha Saptami",
       "VSN Jayanti",
       "Maha Shivaratri",
-      "Pradosham",
-      "Sankashti Chaturthi",
       "Kama Dahana (Holi)",
     ])
     self.assertEqual(len(names), len(set(names)))
     self.assertEqual(all_festival_names(), tuple(names))
-    self.assertEqual(sum(1 for rule in FESTIVAL_RULES if rule.masa is None), 12)
+    self.assertEqual(sum(1 for rule in FESTIVAL_RULES if rule.masa is None), 10)
 
     by_name = {rule.name: rule for rule in FESTIVAL_RULES}
     expected_tithi_rules = {
@@ -236,8 +234,6 @@ class FestivalCatalogTests(unittest.TestCase):
                         "Yajur Upakarma",
                         "Uttarayana",
                         "Dakshinayana",
-                        "Pradosham",
-                        "Sankashti Chaturthi",
                       })
     self.assertEqual({rule.name for rule in FESTIVAL_RULES if rule.allow_adhika}, {"Ugadi"})
 
@@ -245,6 +241,14 @@ class FestivalCatalogTests(unittest.TestCase):
     rule = next(rule for rule in FESTIVAL_RULES if rule.name == "Ugadi")
     self.assertEqual((rule.masa, rule.tithi, rule.allow_adhika), (1, "S1", True))
     self.assertIsNone(rule.selector)
+
+  def test_recurring_festivals_stay_out_of_catalog(self):
+    """Pradosham/Sankashti are always-on monthly bars (like Ekadashi), not cfg festivals."""
+    names = {rule.name for rule in FESTIVAL_RULES}
+    self.assertTrue({"Pradosham", "Sankashti Chaturthi"}.isdisjoint(names))
+    # Selectors remain public API for the monthly calendar.
+    self.assertTrue(callable(select_pradosham_dates))
+    self.assertTrue(callable(select_sankashti_chaturthi_dates))
 
 
 class FestivalSelectionTests(unittest.TestCase):
@@ -265,8 +269,6 @@ class FestivalSelectionTests(unittest.TestCase):
         "Sama Upakarma",
         "Rishi Panchami",
         "Vata Savitri Purnima",
-        "Pradosham",
-        "Sankashti Chaturthi",
       }
     ]
     self.assertEqual(enabled, expected)
@@ -1181,8 +1183,8 @@ class SankashtiChaturthiTests(unittest.TestCase):
     # K4 (tithi 19) is skipped -> pick day 11
     def mock_lunar_phase(jd):
       if jd == 10.0:
-        return 198.0  # 198/12 = 16.5 -> tithi 17 (K2)... let me recalculate
-      return 228.0  # K5
+        return 210.0  # 210/12 = 17.5 -> tithi 18 (K3)
+      return 228.0  # 228/12 = 19 -> tithi 20 (K5)
 
     with mock.patch("festival_rules._moonrise_jd_ut", side_effect=lambda d, g, t: float(d.day)), \
          mock.patch("festival_rules.panchanga.lunar_phase", side_effect=mock_lunar_phase):
@@ -1247,7 +1249,7 @@ class PradoshamTests(unittest.TestCase):
     # Sunset day 10 -> K12 (tithi 27), Sunset day 11 -> K14 (tithi 29)
     # K13 (tithi 28) is skipped -> pick day 11
     def mock_lunar_phase(jd):
-      return 318.0 if jd == 10.0 else 348.0  # K12 for day 10, K14 for day 11
+      return 318.0 if jd == 10.0 else 342.0  # K12 for day 10, K14 for day 11
 
     with mock.patch("festival_rules._sunset_jd_ut", side_effect=lambda d, g, t: float(d.day)), \
          mock.patch("festival_rules.panchanga.lunar_phase", side_effect=mock_lunar_phase):
@@ -1265,7 +1267,7 @@ class PradoshamTests(unittest.TestCase):
 
     # Sunset fails on day 11 (returns None), day 10 has K13, day 12 has K14
     def mock_lunar_phase(jd):
-      return 330.0 if jd == 10.0 else 348.0  # K13 for day 10, K14 for day 12
+      return 330.0 if jd == 10.0 else 342.0  # K13 for day 10, K14 for day 12
 
     with mock.patch("festival_rules._sunset_jd_ut", side_effect=lambda d, g, t: None if d.day == 11 else float(d.day)), \
          mock.patch("festival_rules.panchanga.lunar_phase", side_effect=mock_lunar_phase):
@@ -1301,6 +1303,21 @@ class PradoshamRealLocationTests(unittest.TestCase):
     # Should not raise, even if some days have no sunset (midnight sun)
     dates = select_pradosham_dates(records, geopos=geopos, timezone_name=location.timezone_name)
     self.assertIsInstance(dates, list)
+
+  def test_pradosham_year_boundary(self):
+    """Pradosham should handle December to January transition."""
+    location = load_location("Ujjain")
+    panchanga.set_chosen_ayanamsa("citra")
+    months = list(month_range(2026, 12))
+    records = daily_records(months, location)
+    geopos = (location.longitude, location.latitude, 0.0)
+
+    dates = select_pradosham_dates(records, geopos=geopos, timezone_name=location.timezone_name)
+    dec_dates = [d for d in dates if d.year == 2026 and d.month == 12]
+    jan_dates = [d for d in dates if d.year == 2027 and d.month == 1]
+    # Both months should have Pradoshams
+    self.assertIn(len(dec_dates), [2, 3])
+    self.assertIn(len(jan_dates), [2, 3])
 
 
 class SankashtiChaturthiRealLocationTests(unittest.TestCase):
@@ -1344,21 +1361,6 @@ class SankashtiChaturthiRealLocationTests(unittest.TestCase):
     jan_dates = [d for d in dates if d.year == 2026 and d.month == 1]
     # Should have 1 Sankashti Chaturthi in January
     self.assertEqual(len(jan_dates), 1)
-
-  def test_pradosham_year_boundary(self):
-    """Pradosham should handle December to January transition."""
-    location = load_location("Ujjain")
-    panchanga.set_chosen_ayanamsa("citra")
-    months = list(month_range(2026, 12))
-    records = daily_records(months, location)
-    geopos = (location.longitude, location.latitude, 0.0)
-
-    dates = select_pradosham_dates(records, geopos=geopos, timezone_name=location.timezone_name)
-    dec_dates = [d for d in dates if d.year == 2026 and d.month == 12]
-    jan_dates = [d for d in dates if d.year == 2027 and d.month == 1]
-    # Both months should have Pradoshams
-    self.assertIn(len(dec_dates), [2, 3])
-    self.assertIn(len(jan_dates), [2, 3])
 
   def test_sankashti_consecutive_months(self):
     """Sankashti Chaturthi should occur in consecutive months without gaps."""

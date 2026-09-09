@@ -37,7 +37,7 @@ def _sunset_jd_ut(civil_date, geopos, timezone_name):
   """Sunset Julian Day in UT for a civil date at a location.
 
   ``geopos`` is (lon, lat, altitude). Returns None if the sun does not set
-  (polar day/night); callers fall back to sunrise-based selection.
+  (polar day/night); callers skip such days.
   """
   tz = ZoneInfo(timezone_name)
   noon = datetime(civil_date.year, civil_date.month, civil_date.day, 12, 0, tzinfo=tz)
@@ -59,7 +59,7 @@ def _moonrise_jd_ut(civil_date, geopos, timezone_name):
   """Moonrise Julian Day in UT for a civil date at a location.
 
   ``geopos`` is (lon, lat, altitude). Returns None if the moon does not rise;
-  callers fall back to sunrise-based selection. Swiss Ephemeris returns 0.0
+  callers skip such days. Swiss Ephemeris returns 0.0
   for a failed rise lookup, so the result is range-checked against the
   expected JD window.
   """
@@ -658,8 +658,6 @@ FESTIVAL_RULES = [
   FestivalRule("Ratha Saptami", masa=11, tithi="S7"),
   FestivalRule("VSN Jayanti", masa=11, tithi="S11"),
   FestivalRule("Maha Shivaratri", masa=11, tithi="K14"),
-  FestivalRule("Pradosham", selector=select_pradosham_dates, location_aware=True),
-  FestivalRule("Sankashti Chaturthi", selector=select_sankashti_chaturthi_dates, location_aware=True),
   FestivalRule("Kama Dahana (Holi)", masa=12, tithi="S15")
 ]
 

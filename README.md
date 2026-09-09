@@ -137,7 +137,9 @@ instead of an ayanamśa label, and the default filename gets a `_tropical` suffi
 Which festivals appear in the PDF is controlled by `config/festivals.cfg`. Every catalog name must be listed as `yes` or `no`. Override the path
 with `--festivals FILE.cfg` if needed. The shipped defaults are a regional
 compromise; edit the cfg to match your locality. At most 30 festivals can be
-enabled (the footer is a fixed 6×5 grid).
+enabled (the footer is a fixed 6×5 grid). Fortnightly/monthly observances
+(Ekadashi, Pradosham, Sankashti Chaturthi) are always on and need no cfg keys;
+they are painted as coloured bars on the monthly grid.
 
 Date-selection rules (sunrise, vriddhi/kshaya, non-tithi festivals, and so on)
 are documented in [docs/README.FESTIVALS.md](docs/README.FESTIVALS.md). Festival dates

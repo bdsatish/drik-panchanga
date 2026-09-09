@@ -12,6 +12,27 @@ Festival and Ekadashi dates are resolved for the selected location in
 implementation is kept under `experimental/` for reference only. The PDF
 includes only festivals enabled in `festivals.cfg` (or `--festivals`).
 
+Recurring observances vs once-a-year festivals
+----------------------------------------------
+
+`festivals.cfg` covers once-a-year festivals only. Fortnightly/monthly
+observances are always on and need no cfg keys -- they are painted as
+coloured bars on the monthly grid and explained in its footer legend:
+
+* **Ekadashi** -- every `S11` and `K11` at sunrise (teal bar + vrat name).
+* **Pradosham** -- Trayodashi (`S13` or `K13`) prevailing at sunset
+  (purple bar). This bimonthly Shiva festival occurs twice per lunar month.
+  Requires location/timezone to compute sunset; no date without them.
+  Vriddhi keeps the earlier day when Trayodashi prevails at sunset on
+  consecutive days; kshaya picks the latter civil day when Trayodashi is
+  skipped between two sunsets.
+* **Sankashti Chaturthi** -- Krishna Chaturthi (`K4`) prevailing at moonrise
+  (indigo bar). This monthly Ganesh festival occurs during Krishna Paksha.
+  Requires location/timezone to compute moonrise; no date without them.
+  Vriddhi keeps the earlier day when K4 prevails at moonrise on consecutive
+  days; kshaya picks the latter civil day when K4 is skipped between two
+  moonrises.
+
 Selecting festivals
 -------------------
 
@@ -75,18 +96,6 @@ These have dedicated selectors (dispatch by catalog name):
 * **Vaikuntha Ekadashi** -- a Margashirsha or Pausha Shukla Ekadashi upavasa
   day while the Sun is in Dhanur at sunrise. If none qualify, the PDF prints
   `None`.
-* **Pradosham** -- Trayodashi (`S13` or `K13`) prevailing at sunset. This
-  bimonthly Shiva festival occurs twice per lunar month. Requires
-  location/timezone to compute sunset; returns empty without them. Vriddhi
-  keeps the earlier day when Trayodashi prevails at sunset on consecutive
-  days; kshaya picks the latter civil day when Trayodashi is skipped
-  between two sunsets.
-* **Sankashti Chaturthi** -- Krishna Chaturthi (`K4`) prevailing at moonrise.
-  This monthly Ganesh festival occurs during Krishna Paksha. Requires
-  location/timezone to compute moonrise; returns empty without them. Vriddhi
-  keeps the earlier day when K4 prevails at moonrise on consecutive days;
-  kshaya picks the latter civil day when K4 is skipped between two
-  moonrises.
 * **Mesha Sankranti** / **Makara Sankranti** -- first civil sunrise after the
   Sun enters Mesha (raasi 1) or Makara (raasi 10) respectively. Both use the
   shared sankranti helper (same rule as the twelve solar-month markers on the
