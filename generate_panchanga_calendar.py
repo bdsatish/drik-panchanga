@@ -18,7 +18,8 @@ from reportlab.lib.pagesizes import A4, landscape
 from reportlab.pdfgen import canvas
 
 from festival_rules import (DayRecord, ekadashi_dates_from_records, find_local_eclipses, jd_to_local_civil_date,
-                            jd_to_local_datetime, julian_day_from_datetime, load_festival_selection, resolve_festivals)
+                            jd_to_local_datetime, julian_day_from_datetime, load_festival_selection, resolve_festivals,
+                            select_pradosham_dates, select_sankashti_chaturthi_dates)
 import panchanga
 
 MONTH_COUNT = 14
@@ -80,6 +81,8 @@ SANKRANTI_ROW = HexColor("#FDE8D4")
 SANKRANTI_INK = HexColor("#9A4E12")
 FESTIVAL_INK = HexColor("#9A3154")
 EKADASHI_MARK = HexColor("#168078")
+PRADOSHAM_MARK = HexColor("#6A287E")
+SANKASHTI_MARK = HexColor("#3F51B5")
 ECLIPSE_MARK = HexColor("#8B4518")
 
 
@@ -134,8 +137,8 @@ def _numbered_iast_names(mapping, width=None):
 def tithi_key_line():
   """Footer key for the T column and related T-cell marks."""
   return ("T: 01-15; Sukla = upright bold, Krsna = bold italic. Tiny red numbers "
-          "refer to the festival key. Sundays have a red right edge; Ekadashi "
-          "upavasa has a teal T-cell underline.")
+          "refer to the festival key. Sundays have a red right edge; T-cell underlines: "
+          "teal Ekadashi, purple Pradosham, indigo Sankashti.")
 
 
 def masa_key_line():
@@ -564,7 +567,7 @@ def draw_tithi_underline(pdf, x, row_y, tithi_column_width, color, wavy=False):
   left, underline_width = tithi_underline_bounds(x, tithi_column_width)
   if not wavy:
     pdf.setFillColor(color)
-    pdf.rect(left, row_y + 0.6, underline_width, 1.2, stroke=0, fill=1)
+    pdf.rect(left, row_y + 0.6, underline_width, 1.0, stroke=0, fill=1)
     return
 
   pdf.setStrokeColor(color)
@@ -819,7 +822,7 @@ def draw_day_column(pdf, x, top, width):
 
 
 def draw_month(pdf, year, month, records_by_date, masa_badges, festivals_by_date, ekadashi_dates, eclipse_dates,
-               solar_by_date, x, top, width):
+               solar_by_date, x, top, width, pradosham_dates=(), sankashti_dates=()):
   tithi_column_width = width * TITHI_COLUMN_RATIO
   nakshatra_column_width = width * NAKSHATRA_COLUMN_RATIO
   yoga_column_width = width * YOGA_COLUMN_RATIO
@@ -885,6 +888,10 @@ def draw_month(pdf, year, month, records_by_date, masa_badges, festivals_by_date
       pdf.rect(x + width - 1.6, row_y, 1.6, ROW_HEIGHT, stroke=0, fill=1)
     if civil_date in ekadashi_dates:
       draw_tithi_underline(pdf, x, row_y, tithi_column_width, EKADASHI_MARK)
+    if civil_date in pradosham_dates:
+      draw_tithi_underline(pdf, x, row_y, tithi_column_width, PRADOSHAM_MARK)
+    if civil_date in sankashti_dates:
+      draw_tithi_underline(pdf, x, row_y, tithi_column_width, SANKASHTI_MARK)
     if is_sankranti:
       draw_sankranti_mark(pdf, x + tithi_column_width, row_y, raasi, nakshatra_column_width)
     elif solar_day % 7 == 0:
@@ -1091,6 +1098,14 @@ def build_pdf(location, start_year, start_month, output_path, festivals_path=Non
     for value in ekadashi_dates_from_records(context_records):
       if range_start <= value <= range_end:
         ekadashi_dates.add(value)
+    pradosham_dates = set()
+    for value in select_pradosham_dates(context_records, geopos=geopos, timezone_name=location.timezone_name):
+      if range_start <= value <= range_end:
+        pradosham_dates.add(value)
+    sankashti_dates = set()
+    for value in select_sankashti_chaturthi_dates(context_records, geopos=geopos, timezone_name=location.timezone_name):
+      if range_start <= value <= range_end:
+        sankashti_dates.add(value)
     calendar_years = calendar_year_label(header_records, amanta=amanta)
     kali_ahargana = kali_ahargana_range(months)
     masa_badges = masa_badges_by_date(target_records, amanta=amanta)
@@ -1122,7 +1137,7 @@ def build_pdf(location, start_year, start_month, output_path, festivals_path=Non
     for index, (year, month) in enumerate(months):
       x = margin + day_column_width + index * month_width
       draw_month(pdf, year, month, records_by_date, masa_badges, festivals_by_date, ekadashi_dates, eclipse_dates,
-                 solar_by_date, x, top, month_width)
+                 solar_by_date, x, top, month_width, pradosham_dates, sankashti_dates)
 
     draw_page_footer(pdf, festival_entries, eclipse_line=eclipse_line)
     pdf.showPage()

@@ -82,15 +82,16 @@ vaara, solar date, festivals and eclipses too! Each day shows:
 Calculations use Swiss Ephemeris. Ayanamsa options include Chitra-paksha,
 Revati-paksha, Rohini-paksha, Pushya-paksha (PVRN Rao), Mula-paksha
 (Usha-Shashi), Krishnamurti (KP) and Raman. Adhika months have a gold cell and
-Sundays have a red right edge. The teal underline marks Ekadashi upavasa under
-the same sunrise rule as festivals. The `T` column shows only 01-15; Sukla is
-upright bold and Krsna is bold italic. A brown wavy underline below Tithi marks
-days with a locally visible eclipse. Numbered red superscripts refer to the
-festival key below the calendar. The footer also lists locally visible partial,
-total, and annular eclipses for the printed month range, each with its local
-maximum time and that date's sunrise (`None` when none qualify). Ruleset and
-layout versions are printed at the top right and embedded in the PDF metadata so
-a generated calendar can be reproduced or compared after rule changes.
+Sundays have a red right edge. T-cell underlines mark recurring observances:
+teal Ekadashi upavasa, purple Pradosham, indigo Sankashti Chaturthi. The `T`
+column shows only 01-15; Sukla is upright bold and Krsna is bold italic. A brown
+wavy underline below Tithi marks days with a locally visible eclipse. Numbered
+red superscripts refer to the festival key below the calendar. The footer also
+lists locally visible partial, total, and annular eclipses for the printed month
+range, each with its local maximum time and that date's sunrise (`None` when
+none qualify). Ruleset and layout versions are printed at the top right and
+embedded in the PDF metadata so a generated calendar can be reproduced or
+compared after rule changes.
 
 ### Setup
 
@@ -134,8 +135,9 @@ instead of an ayanamśa label, and the default filename gets a `_tropical` suffi
 
 ### Festivals
 
-Which festivals appear in the PDF is controlled by `config/festivals.cfg`. Every catalog name must be listed as `yes` or `no`. Override the path
-with `--festivals FILE.cfg` if needed. The shipped defaults are a regional
+Which festivals appear in the PDF is controlled by `config/festivals.cfg`. Every
+catalog name must be listed as `yes` or `no`. Override the path with
+`--festivals FILE.cfg` if needed. The shipped defaults are a regional
 compromise; edit the cfg to match your locality. At most 30 festivals can be
 enabled (the footer is a fixed 6×5 grid). Fortnightly/monthly observances
 (Ekadashi, Pradosham, Sankashti Chaturthi) are always on and need no cfg keys;

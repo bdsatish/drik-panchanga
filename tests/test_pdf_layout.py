@@ -213,6 +213,9 @@ class PdfLayoutTests(unittest.TestCase):
       yoga_key_line,
     )
     self.assertTrue(tithi_key_line().startswith("T:"))
+    self.assertIn("teal Ekadashi", tithi_key_line())
+    self.assertIn("purple Pradosham", tithi_key_line())
+    self.assertIn("indigo Sankashti", tithi_key_line())
     self.assertTrue(nakshatra_key_line().startswith("N:"))
     self.assertTrue(yoga_key_line().startswith("Y:"))
     self.assertIn("Vaiśākha", masa_key_line())
@@ -289,6 +292,40 @@ class MasaBadgeTests(unittest.TestCase):
     tithi_width = Canvas(BytesIO()).stringWidth("01", tithi_font(True), 7.4)
     badge_width = Canvas(BytesIO()).stringWidth(wide_text, PDF_FONT_BOLD, wide_size)
     self.assertLessEqual(3.0 + tithi_width + badge_width, cell_width - 1.0)
+
+
+class RecurringUnderlineTests(unittest.TestCase):
+  """Annual T-cell underlines use Ekadashi/Pradosham/Sankashti colours."""
+
+  MONTH_WIDTH = (842.0 - 2 * 18 - 24) / 14
+
+  def underline_colours(self, ekadashi, pradosham, sankashti):
+    from generate_panchanga_calendar import draw_month
+    ensure_pdf_fonts()
+    pdf = Canvas(BytesIO())
+    civil = date(2026, 5, 17)
+    record = DayRecord(civil, "S11", 5, 7, "3", False, 0.0)
+    colours = []
+    original_set_fill = pdf.setFillColor
+    pdf.setFillColor = lambda colour, *rest: (colours.append(colour), original_set_fill(colour, *rest))
+    draw_month(pdf, 2026, 5, {civil: record}, {}, {}, ekadashi, set(), {civil: (2, 10, False)}, 40.0, 500.0,
+               self.MONTH_WIDTH, pradosham, sankashti)
+    return colours
+
+  def test_each_recurring_observance_has_its_own_underline_colour(self):
+    from generate_panchanga_calendar import EKADASHI_MARK, PRADOSHAM_MARK, SANKASHTI_MARK
+    civil = date(2026, 5, 17)
+    colours = self.underline_colours({civil}, {civil}, {civil})
+    self.assertIn(EKADASHI_MARK, colours)
+    self.assertIn(PRADOSHAM_MARK, colours)
+    self.assertIn(SANKASHTI_MARK, colours)
+
+  def test_no_underline_without_observance(self):
+    from generate_panchanga_calendar import EKADASHI_MARK, PRADOSHAM_MARK, SANKASHTI_MARK
+    colours = self.underline_colours(set(), set(), set())
+    self.assertNotIn(EKADASHI_MARK, colours)
+    self.assertNotIn(PRADOSHAM_MARK, colours)
+    self.assertNotIn(SANKASHTI_MARK, colours)
 
 
 class DisplayMasaTests(unittest.TestCase):
@@ -377,7 +414,7 @@ class SolarMarkerTests(unittest.TestCase):
   def test_ekadashi_and_eclipse_underlines_share_geometry(self):
     pdf = mock.Mock()
     draw_tithi_underline(pdf, 20.0, 100.0, 30.0, EKADASHI_MARK)
-    pdf.rect.assert_called_once_with(23.0, 100.6, 15.0, 1.2, stroke=0, fill=1)
+    pdf.rect.assert_called_once_with(23.0, 100.6, 15.0, 1.0, stroke=0, fill=1)
 
     pdf.reset_mock()
     draw_eclipse_mark(pdf, 20.0, 100.0, 30.0)
