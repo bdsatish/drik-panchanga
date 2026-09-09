@@ -134,11 +134,12 @@ def _numbered_iast_names(mapping, width=None):
   return parts
 
 
-def tithi_key_line():
+def tithi_key_line(recurring="specials"):
   """Footer key for the T column and related T-cell marks."""
   return ("T: 01-15; Sukla = upright bold, Krsna = bold italic. Tiny red numbers "
           "refer to the festival key. Sundays have a red right edge; T-cell underlines: "
-          "teal Ekadashi, purple Pradosham, indigo Sankashti.")
+          "teal Ekadashi" + (", purple Soma/Śani Pradosham, indigo Aṅgārakī."
+                             if recurring == "specials" else ", purple Pradosham, indigo Sankashti."))
 
 
 def masa_key_line():
@@ -327,6 +328,26 @@ def require_month_system(text):
   if value in {"purnimanta", "pūrṇimānta", "poornimanta", "false", "0", "no", "off"}:
     return False
   raise ValueError("Month system must be 'amanta' or 'purnimanta'.")
+
+
+def require_recurring(text):
+  """Parse recurring-underline mode or raise ``ValueError``."""
+  value = (text or "specials").strip().casefold()
+  if value in {"specials", "special"}:
+    return "specials"
+  if value == "all":
+    return "all"
+  raise ValueError("Recurring mode must be 'specials' or 'all'.")
+
+
+def special_weekday_dates(pradosham_dates, sankashti_dates):
+  """Keep only weekday specials: Soma/Śani Pradosham, Aṅgārakī Sankashti.
+
+  Monday (0) and Saturday (5) Pradoshams, Tuesday (1) Sankashtis.
+  """
+  soma_shani = {day for day in pradosham_dates if day.weekday() in (0, 5)}
+  angaraki = {day for day in sankashti_dates if day.weekday() == 1}
+  return soma_shani, angaraki
 
 
 def require_start_month(text):
@@ -567,7 +588,7 @@ def draw_tithi_underline(pdf, x, row_y, tithi_column_width, color, wavy=False):
   left, underline_width = tithi_underline_bounds(x, tithi_column_width)
   if not wavy:
     pdf.setFillColor(color)
-    pdf.rect(left, row_y + 0.6, underline_width, 1.0, stroke=0, fill=1)
+    pdf.rect(left, row_y + 0.6, underline_width, 1.2, stroke=0, fill=1)
     return
 
   pdf.setStrokeColor(color)
@@ -1005,7 +1026,7 @@ def draw_page_header(pdf, location, months, ruleset_version, amanta=True, coordi
                       f"SwEph {panchanga.sweph_version()} | Ruleset: {ruleset_version} | Layout: {LAYOUT_VERSION}")
 
 
-def draw_page_footer(pdf, festival_entries, eclipse_line="Eclipses: None"):
+def draw_page_footer(pdf, festival_entries, eclipse_line="Eclipses: None", recurring="specials"):
   if len(festival_entries) > FOOTER_FESTIVAL_SLOTS:
     names = ", ".join(name for _number, _dates, name in festival_entries)
     raise RuntimeError(f"Too many enabled festivals ({len(festival_entries)} > {FOOTER_FESTIVAL_SLOTS} footer slots): "
@@ -1035,7 +1056,7 @@ def draw_page_footer(pdf, festival_entries, eclipse_line="Eclipses: None"):
   pdf.setFillColor(MUTED)
   # Column order matches the grid (T, N, Y), then lunar māsa, then solar saṅkrānti.
   # Eclipse stays first; bold face works with MUTED (colour and weight are independent).
-  key_lines = (tithi_key_line(), nakshatra_key_line(), yoga_key_line(), masa_key_line(), sankranti_key_line())
+  key_lines = (tithi_key_line(recurring), nakshatra_key_line(), yoga_key_line(), masa_key_line(), sankranti_key_line())
   page_width = landscape(A4)[0]
   available_width = page_width - 36
   eclipse_size = fitted_font_size(pdf, eclipse_line, PDF_FONT_BOLD, FOOTER_KEY_FONT_MAX, FOOTER_KEY_FONT_MIN,
@@ -1054,11 +1075,12 @@ def draw_page_footer(pdf, festival_entries, eclipse_line="Eclipses: None"):
 
 
 def build_pdf(location, start_year, start_month, output_path, festivals_path=None, month_system="amanta",
-              coordinate_selection="citra"):
+              coordinate_selection="citra", recurring="specials"):
   """Build a calendar while holding coordinate state for the full document."""
   with panchanga.coordinate_calculation_lock:
     ensure_pdf_fonts()
     amanta = require_month_system(month_system)
+    recurring = require_recurring(recurring)
     panchanga.set_coordinate_selection(coordinate_selection)
     months = month_range(start_year, start_month)
     range_start = CivilDate(start_year, start_month, 1)
@@ -1111,6 +1133,8 @@ def build_pdf(location, start_year, start_month, output_path, festivals_path=Non
     for value in select_sankashti_chaturthi_dates(context_records, geopos=geopos, timezone_name=location.timezone_name):
       if range_start <= value <= range_end:
         sankashti_dates.add(value)
+    if recurring == "specials":
+      pradosham_dates, sankashti_dates = special_weekday_dates(pradosham_dates, sankashti_dates)
     calendar_years = calendar_year_label(header_records, amanta=amanta)
     kali_ahargana = kali_ahargana_range(months)
     masa_badges = masa_badges_by_date(target_records, amanta=amanta)
@@ -1144,7 +1168,7 @@ def build_pdf(location, start_year, start_month, output_path, festivals_path=Non
       draw_month(pdf, year, month, records_by_date, masa_badges, festivals_by_date, ekadashi_dates, eclipse_dates,
                  solar_by_date, x, top, month_width, pradosham_dates, sankashti_dates)
 
-    draw_page_footer(pdf, festival_entries, eclipse_line=eclipse_line)
+    draw_page_footer(pdf, festival_entries, eclipse_line=eclipse_line, recurring=recurring)
     pdf.showPage()
 
     pdf.save()
@@ -1182,6 +1206,9 @@ def argument_parser():
   parser.add_argument(
     "--festivals", type=Path, default=DEFAULT_FESTIVALS_PATH, help=(f"INI file selecting which festivals to include "
                                                                     f"(default: {DEFAULT_FESTIVALS_PATH.name})"))
+  parser.add_argument(
+    "--recurring", default="specials", metavar="MODE",
+    help=("annual T-cell underlines for Pradosham/Sankashti: specials (default, Soma/Śani and Aṅgārakī only) or all"))
   return parser
 
 
@@ -1198,7 +1225,8 @@ def main(argv=None):
     output_path = arguments.output or default_output_path(location, start_year, start_month, month_system=month_system,
                                                           coordinate_selection=coordinate_selection)
     generated = build_pdf(location, start_year, start_month, output_path, festivals_path=arguments.festivals,
-                          month_system=month_system, coordinate_selection=coordinate_selection)
+                          month_system=month_system, coordinate_selection=coordinate_selection,
+                          recurring=arguments.recurring)
   except (OSError, ValueError, RuntimeError) as error:
     parser.error(str(error))
   print(generated.resolve())

@@ -83,7 +83,8 @@ Calculations use Swiss Ephemeris. Ayanamsa options include Chitra-paksha,
 Revati-paksha, Rohini-paksha, Pushya-paksha (PVRN Rao), Mula-paksha
 (Usha-Shashi), Krishnamurti (KP) and Raman. Adhika months have a gold cell and
 Sundays have a red right edge. T-cell underlines mark recurring observances:
-teal Ekadashi upavasa, purple Pradosham, indigo Sankashti Chaturthi. The `T`
+teal Ekadashi upavasa, purple Soma/Śani Pradosham, indigo Aṅgārakī Sankashti
+(weekday specials only; `--recurring all` underlines every occurrence). The `T`
 column shows only 01-15; Sukla is upright bold and Krsna is bold italic. A brown
 wavy underline below Tithi marks days with a locally visible eclipse. Numbered
 red superscripts refer to the festival key below the calendar. The footer also

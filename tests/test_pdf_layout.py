@@ -221,8 +221,9 @@ class PdfLayoutTests(unittest.TestCase):
     )
     self.assertTrue(tithi_key_line().startswith("T:"))
     self.assertIn("teal Ekadashi", tithi_key_line())
-    self.assertIn("purple Pradosham", tithi_key_line())
-    self.assertIn("indigo Sankashti", tithi_key_line())
+    self.assertIn("purple Soma/Śani Pradosham", tithi_key_line())
+    self.assertIn("indigo Aṅgārakī", tithi_key_line())
+    self.assertIn("purple Pradosham, indigo Sankashti", tithi_key_line("all"))
     self.assertTrue(nakshatra_key_line().startswith("N:"))
     self.assertTrue(yoga_key_line().startswith("Y:"))
     self.assertIn("Vaiśākha", masa_key_line())
@@ -301,9 +302,33 @@ class MasaBadgeTests(unittest.TestCase):
     self.assertLessEqual(3.0 + tithi_width + badge_width, cell_width - 1.0)
 
 
+class SpecialWeekdayTests(unittest.TestCase):
+  """Weekday-special split: Soma/Śani Pradosham, Aṅgārakī Sankashti."""
+
+  def test_special_weekday_dates(self):
+    from generate_panchanga_calendar import special_weekday_dates
+    monday = date(2026, 1, 5)
+    tuesday = date(2026, 1, 6)
+    friday = date(2026, 1, 16)
+    saturday = date(2026, 1, 10)
+    self.assertEqual(monday.weekday(), 0)
+    self.assertEqual(tuesday.weekday(), 1)
+    self.assertEqual(friday.weekday(), 4)
+    self.assertEqual(saturday.weekday(), 5)
+    pradosham, sankashti = special_weekday_dates({monday, friday, saturday}, {monday, tuesday})
+    self.assertEqual(pradosham, {monday, saturday})
+    self.assertEqual(sankashti, {tuesday})
+
+  def test_require_recurring(self):
+    from generate_panchanga_calendar import require_recurring
+    self.assertEqual(require_recurring(None), "specials")
+    self.assertEqual(require_recurring("ALL"), "all")
+    with self.assertRaises(ValueError):
+      require_recurring("everything")
+
+
 class RecurringUnderlineTests(unittest.TestCase):
   """Annual T-cell underlines use Ekadashi/Pradosham/Sankashti colours."""
-
   MONTH_WIDTH = (842.0 - 2 * 18 - 24) / 14
 
   def underline_colours(self, ekadashi, pradosham, sankashti):
@@ -421,7 +446,7 @@ class SolarMarkerTests(unittest.TestCase):
   def test_ekadashi_and_eclipse_underlines_share_geometry(self):
     pdf = mock.Mock()
     draw_tithi_underline(pdf, 20.0, 100.0, 30.0, EKADASHI_MARK)
-    pdf.rect.assert_called_once_with(23.0, 100.6, 15.0, 1.0, stroke=0, fill=1)
+    pdf.rect.assert_called_once_with(23.0, 100.6, 15.0, 1.2, stroke=0, fill=1)
 
     pdf.reset_mock()
     draw_eclipse_mark(pdf, 20.0, 100.0, 30.0)

@@ -17,8 +17,10 @@ Recurring observances vs annual festivals
 
 `festivals.cfg` covers annual festivals only. Fortnightly/monthly
 observances are always on and need no cfg keys -- they are painted as
-coloured bars (monthly pdf) or underlines (annual pdf) and explained
-in its footer legend:
+coloured bars on the monthly grid (every occurrence) and as underlines on
+the annual page (weekday specials by default: Soma/Śani Pradosham,
+Aṅgārakī Sankashti; `--recurring all` underlines every occurrence).
+Both are explained in the footer legends:
 
 * **Ekadashi** -- every `S11` and `K11` at sunrise (teal bar + vrat name).
 * **Pradosham** -- Trayodashi (`S13` or `K13`) prevailing at sunset
