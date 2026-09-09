@@ -18,8 +18,8 @@ Recurring observances vs annual festivals
 `festivals.cfg` covers annual festivals only. Fortnightly/monthly
 observances are always on and need no cfg keys -- they are painted as
 coloured bars on the monthly grid (every occurrence) and as underlines on
-the annual page (weekday specials by default: Soma/Śani Pradosham,
-Aṅgārakī Sankashti; `--recurring all` underlines every occurrence).
+the annual page (weekday specials by default: Pradosham (Mon/Sat),
+Sankashtahara (Tue); `--recurring all` underlines every occurrence).
 Both are explained in the footer legends:
 
 * **Ekadashi** -- every `S11` and `K11` at sunrise (teal bar + vrat name).
@@ -29,7 +29,7 @@ Both are explained in the footer legends:
   consecutive days; kshaya picks the latter civil day when Trayodashi is
   skipped between two sunsets. Without location/timezone, falls back to
   sunrise-based selection.
-* **Sankashti Chaturthi** -- Krishna Chaturthi (`K4`) prevailing at moonrise
+* **Sankashtahara Chaturthi** -- Krishna Chaturthi (`K4`) prevailing at moonrise
   (indigo bar). This monthly Ganesh festival occurs during Krishna Paksha.
   Vriddhi keeps the earlier day when K4 prevails at moonrise on consecutive
   days; kshaya picks the latter civil day when K4 is skipped between two

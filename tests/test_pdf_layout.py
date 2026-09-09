@@ -221,9 +221,9 @@ class PdfLayoutTests(unittest.TestCase):
     )
     self.assertTrue(tithi_key_line().startswith("T:"))
     self.assertIn("teal Ekadashi", tithi_key_line())
-    self.assertIn("purple Soma/Śani Pradosham", tithi_key_line())
-    self.assertIn("indigo Aṅgārakī", tithi_key_line())
-    self.assertIn("purple Pradosham, indigo Sankashti", tithi_key_line("all"))
+    self.assertIn("purple Pradosham (Mon/Sat)", tithi_key_line())
+    self.assertIn("indigo Sankashtahara (Tue)", tithi_key_line())
+    self.assertIn("purple Pradosham, indigo Sankashtahara Chaturthi", tithi_key_line("all"))
     self.assertTrue(nakshatra_key_line().startswith("N:"))
     self.assertTrue(yoga_key_line().startswith("Y:"))
     self.assertIn("Vaiśākha", masa_key_line())
@@ -303,7 +303,7 @@ class MasaBadgeTests(unittest.TestCase):
 
 
 class SpecialWeekdayTests(unittest.TestCase):
-  """Weekday-special split: Soma/Śani Pradosham, Aṅgārakī Sankashti."""
+  """Weekday-special split: Pradosham (Mon/Sat), Sankashtahara (Tue)."""
 
   def test_special_weekday_dates(self):
     from generate_panchanga_calendar import special_weekday_dates
@@ -328,7 +328,7 @@ class SpecialWeekdayTests(unittest.TestCase):
 
 
 class RecurringUnderlineTests(unittest.TestCase):
-  """Annual T-cell underlines use Ekadashi/Pradosham/Sankashti colours."""
+  """Annual T-cell underlines use Ekadashi/Pradosham/Sankashtahara Chaturthi colours."""
   MONTH_WIDTH = (842.0 - 2 * 18 - 24) / 14
 
   def underline_colours(self, ekadashi, pradosham, sankashti):

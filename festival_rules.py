@@ -506,7 +506,7 @@ SANKASHTI_TITHI = 19  # K4 in 1-30 numbering
 def select_sankashti_chaturthi_dates(records, geopos=None, timezone_name=None):
   """Krishna Chaturthi (K4) prevailing at moonrise.
 
-  Sankashti Chaturthi is observed when K4 tithi prevails at moonrise. This
+  Sankashtahara Chaturthi is observed when K4 tithi prevails at moonrise. This
   occurs once per lunar month during Krishna Paksha.
 
   Corner cases:

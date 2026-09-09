@@ -555,10 +555,10 @@ def draw_grid(pdf, year, month, location, context):
 
 def draw_footer(pdf, location, coordinate_selection, page_index, total):
   pdf.setFillColor(GREY)
-  pdf.setFont(PDF_FONT_ITALIC, 6.5)
+  pdf.setFont(PDF_FONT_ITALIC, 6.0)
   note = ("Timings after 24:00 are hours past midnight. "
           "Green box: lunar māsa. Gold box: adhika māsa. Saffron box: solar saṅkrānti. "
-          "Teal bar: ekādaśī. Purple bar: pradoṣam. Indigo bar: saṅkaṣṭi.")
+          "Teal bar: ekādaśī. Purple bar: pradoṣam. Indigo bar: saṅkaṣṭahara caturthī.")
   pdf.drawString(MARGIN, MARGIN + 18, note)
   pdf.setFillColor(GREY)
   pdf.drawRightString(PAGE_W - MARGIN, MARGIN + 6, f"page {page_index} of {total}")

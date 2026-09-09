@@ -620,9 +620,9 @@ class FooterLegendTests(unittest.TestCase):
     location = load_location("Ujjain")
     draw_footer(pdf, location, "citra", 1, 12)
     drawn_text = [c.args[2] for c in pdf.drawString.call_args_list]
-    footer_note = [t for t in drawn_text if "saṅkaṣṭi" in t]
+    footer_note = [t for t in drawn_text if "saṅkaṣṭahara" in t]
     self.assertEqual(len(footer_note), 1)
-    self.assertIn("Indigo bar: saṅkaṣṭi", footer_note[0])
+    self.assertIn("Indigo bar: saṅkaṣṭahara caturthī", footer_note[0])
 
   def test_footer_mentions_pradosham(self):
     from generate_monthly_calendar import draw_footer

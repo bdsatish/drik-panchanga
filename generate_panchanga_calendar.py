@@ -138,8 +138,8 @@ def tithi_key_line(recurring="specials"):
   """Footer key for the T column and related T-cell marks."""
   return ("T: 01-15; Sukla = upright bold, Krsna = bold italic. Tiny red numbers "
           "refer to the festival key. Sundays have a red right edge; T-cell underlines: "
-          "teal Ekadashi" + (", purple Soma/Śani Pradosham, indigo Aṅgārakī."
-                             if recurring == "specials" else ", purple Pradosham, indigo Sankashti."))
+          "teal Ekadashi" + (", purple Pradosham (Mon/Sat), indigo Sankashtahara (Tue)."
+                             if recurring == "specials" else ", purple Pradosham, indigo Sankashtahara Chaturthi."))
 
 
 def masa_key_line():
@@ -341,7 +341,7 @@ def require_recurring(text):
 
 
 def special_weekday_dates(pradosham_dates, sankashti_dates):
-  """Keep only weekday specials: Soma/Śani Pradosham, Aṅgārakī Sankashti.
+  """Keep only weekday specials: Pradosham (Mon/Sat), Sankashtahara (Tue).
 
   Monday (0) and Saturday (5) Pradoshams, Tuesday (1) Sankashtis.
   """
@@ -1207,8 +1207,9 @@ def argument_parser():
     "--festivals", type=Path, default=DEFAULT_FESTIVALS_PATH, help=(f"INI file selecting which festivals to include "
                                                                     f"(default: {DEFAULT_FESTIVALS_PATH.name})"))
   parser.add_argument(
-    "--recurring", default="specials", metavar="MODE",
-    help=("annual T-cell underlines for Pradosham/Sankashti: specials (default, Soma/Śani and Aṅgārakī only) or all"))
+    "--recurring", default="specials", metavar="MODE", help=(
+      "annual T-cell underlines for Pradosham/Sankashtahara Chaturthi: specials (default, Mon/Sat and Tue only) or all"
+    ))
   return parser
 
 
