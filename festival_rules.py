@@ -92,10 +92,25 @@ def all_festival_names():
 
 
 def load_festival_selection(path):
-  """Enabled festival names from the ``[festivals]`` section of an INI cfg."""
+  """Enabled festival names from the ``[festivals]`` section of an INI cfg.
+
+  Every catalog name must appear exactly once. Unknown or missing names
+  raise ``ValueError`` so typos fail loudly instead of silently disabling.
+  """
   parser = configparser.ConfigParser(strict=True)
   parser.optionxform = str  # preserve festival name case
   parser.read_string(Path(path).read_text(encoding="utf-8"))
+  catalog = all_festival_names()
+  keys = [name for name, _raw in parser.items("festivals")]
+  unknown = [name for name in keys if name not in set(catalog)]
+  missing = [name for name in catalog if name not in set(keys)]
+  if unknown or missing:
+    problems = []
+    if unknown:
+      problems.append("unknown: " + ", ".join(unknown))
+    if missing:
+      problems.append("missing: " + ", ".join(missing))
+    raise ValueError(f"Bad festival selection in {path} ({'; '.join(problems)})")
   enabled = []
   for name, raw in parser.items("festivals"):
     if raw.strip().casefold() in ("yes", "true", "1", "on"):

@@ -294,6 +294,27 @@ class FestivalSelectionTests(unittest.TestCase):
     self.assertEqual([marker for marker, _dates, _name in entries], list(range(1, len(entries) + 1)))
     self.assertIn(1, [n for nums in by_date.values() for n in nums])
 
+  def test_unknown_festival_name_raises(self):
+    lines = ["[festivals]", "Diwali = yes"]
+    for name in all_festival_names():
+      lines.append(f"{name} = yes")
+    with TemporaryDirectory() as directory:
+      path = Path(directory) / "festivals.cfg"
+      path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+      with self.assertRaisesRegex(ValueError, "unknown: Diwali"):
+        load_festival_selection(path)
+
+  def test_missing_festival_name_raises(self):
+    lines = ["[festivals]"]
+    for name in all_festival_names():
+      if name != "Ugadi":
+        lines.append(f"{name} = yes")
+    with TemporaryDirectory() as directory:
+      path = Path(directory) / "festivals.cfg"
+      path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+      with self.assertRaisesRegex(ValueError, "missing: Ugadi"):
+        load_festival_selection(path)
+
 
 class CanonicalRecordsTests(unittest.TestCase):
 
