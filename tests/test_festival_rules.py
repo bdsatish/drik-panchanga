@@ -1212,6 +1212,18 @@ class SankashtiChaturthiTests(unittest.TestCase):
       self.assertEqual(select_sankashti_chaturthi_dates(records, geopos=(75.0, 23.0, 0), timezone_name="Asia/Kolkata"),
                        [date(2030, 6, 11)])
 
+  def test_triple_vriddhi_keeps_first_day_only(self):
+    """K4 at moonrise on three consecutive days keeps only the first."""
+    records = self._records([(10, "K4"), (11, "K4"), (12, "K4"), (13, "K5")])
+    with mock.patch("festival_rules._moonrise_jd_ut", side_effect=lambda d, g, t: float(d.day)), \
+         mock.patch("festival_rules.panchanga.lunar_phase", return_value=216.0):  # K4
+      self.assertEqual(select_sankashti_chaturthi_dates(records, geopos=(75.0, 23.0, 0), timezone_name="Asia/Kolkata"),
+                       [date(2030, 6, 10)])
+
+  def test_empty_records_returns_empty(self):
+    self.assertEqual(select_sankashti_chaturthi_dates([], geopos=(75.0, 23.0, 0), timezone_name="Asia/Kolkata"), [])
+    self.assertEqual(select_sankashti_chaturthi_dates([]), [])
+
   def test_falls_back_to_sunrise_without_location(self):
     """Without geopos/timezone, falls back to sunrise-based K4."""
     records = self._records([(10, "K3"), (11, "K4"), (12, "K5")])
@@ -1281,6 +1293,18 @@ class PradoshamTests(unittest.TestCase):
     """Without geopos/timezone, falls back to sunrise-based S13/K13."""
     records = self._records([(10, "K12"), (11, "K13"), (12, "K14")])
     self.assertEqual(select_pradosham_dates(records), [date(2030, 6, 11)])
+
+  def test_triple_vriddhi_keeps_first_day_only(self):
+    """K13 at sunset on three consecutive days keeps only the first."""
+    records = self._records([(10, "K13"), (11, "K13"), (12, "K13"), (13, "K14")])
+    with mock.patch("festival_rules._sunset_jd_ut", side_effect=lambda d, g, t: float(d.day)), \
+         mock.patch("festival_rules.panchanga.lunar_phase", return_value=330.0):  # K13
+      self.assertEqual(select_pradosham_dates(records, geopos=(75.0, 23.0, 0), timezone_name="Asia/Kolkata"),
+                       [date(2030, 6, 10)])
+
+  def test_empty_records_returns_empty(self):
+    self.assertEqual(select_pradosham_dates([], geopos=(75.0, 23.0, 0), timezone_name="Asia/Kolkata"), [])
+    self.assertEqual(select_pradosham_dates([]), [])
 
   def test_skips_day_when_sun_does_not_set(self):
     """Day is skipped when sunset lookup fails (polar regions)."""
@@ -1392,10 +1416,15 @@ class SankashtiChaturthiRealLocationTests(unittest.TestCase):
     geopos = (location.longitude, location.latitude, 0.0)
 
     dates = select_sankashti_chaturthi_dates(records, geopos=geopos, timezone_name=location.timezone_name)
-    # Should have roughly one per month across the year
-    months_with_sankashti = set((d.year, d.month) for d in dates)
-    # At least 10 different months should have a Sankashti Chaturthi
-    self.assertGreaterEqual(len(months_with_sankashti), 10)
+    # Tight monthly cadence: every Gregorian month in the 14-month span has
+    # 1-2 Sankashtis (a second one when the lunar cycle straddles a boundary).
+    per_month = {}
+    for value in dates:
+      per_month.setdefault((value.year, value.month), 0)
+      per_month[(value.year, value.month)] += 1
+    self.assertEqual(len(per_month), 14)
+    self.assertTrue(all(count in (1, 2) for count in per_month.values()))
+    self.assertIn(len(dates), [14, 15, 16])
 
 
 if __name__ == "__main__":

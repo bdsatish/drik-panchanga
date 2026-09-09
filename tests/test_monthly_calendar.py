@@ -634,6 +634,19 @@ class FooterLegendTests(unittest.TestCase):
     self.assertEqual(len(footer_note), 1)
     self.assertIn("Purple bar: pradoṣam", footer_note[0])
 
+  def test_footer_uses_box_wording_for_cells(self):
+    from generate_monthly_calendar import draw_footer
+    pdf = mock.Mock()
+    location = load_location("Ujjain")
+    draw_footer(pdf, location, "citra", 1, 12)
+    drawn_text = [c.args[2] for c in pdf.drawString.call_args_list]
+    footer_note = [t for t in drawn_text if "lunar māsa" in t]
+    self.assertEqual(len(footer_note), 1)
+    self.assertIn("Green box: lunar māsa", footer_note[0])
+    self.assertIn("Gold box: adhika māsa", footer_note[0])
+    self.assertIn("Saffron box: solar saṅkrānti", footer_note[0])
+    self.assertNotIn("cell", footer_note[0])
+
 
 if __name__ == "__main__":
   unittest.main()
