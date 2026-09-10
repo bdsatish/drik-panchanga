@@ -1,21 +1,45 @@
 Festival dates and conventions
 ==============================
 
-How to choose which festivals appear on the PDF is in [README.md](../README.md)
-(see **Festivals (how to)** and the Ujjain example). This file documents how
-those dates are computed. Lunar-month *display* may be amānta or pūrṇimānta;
-the festival catalog itself is keyed by amānta month numbers so civil dates
-stay stable across display modes.
+See [README.md](../README.md) for general PDF usage. This file documents
+festival configuration and how festival dates are computed.
+Lunar-month *display* may be amānta or pūrṇimānta; the festival catalog itself
+is keyed by amānta month numbers so civil dates stay stable across display
+modes.
 
 Festival and Ekadashi dates are resolved for the selected location in
 `festival_rules.py` (ruleset `Udaya-Vyapini-1.1`). The older multi-policy
-implementation is kept under `experimental/` for reference only. The PDF
-includes only festivals enabled in `festivals.cfg` (or `--festivals`).
+implementation is kept under `experimental/` for reference only.
+
+Selecting festivals
+-------------------
+
+Which festivals appear in the PDF is controlled by `config/festivals.cfg`.
+The `[festivals]` section is shared by the annual and monthly PDFs; its `yes`
+entries are included in both. The annual PDF supports at most 30 festivals
+because its footer is a fixed 6×5 grid. The optional `[extra]` section is used
+only by the monthly PDF, so its `yes` entries can add festivals beyond that
+annual limit.
+
+Names in `[festivals]` and `[extra]` must not overlap. Festival names are not
+pinned to either section: you may move any catalog name between them. Placement
+controls scope: `yes` in `[festivals]` enables it in both PDFs, while `yes` in
+`[extra]` enables it only in the monthly PDF. Use `no` to disable it in that
+section. Every catalog name must appear in one of the two sections. Values may
+be `yes`/`no` (also `true`/`false`, `1`/`0`, `on`/`off`). Unknown names are
+rejected when the monthly selection is loaded. Override the path with
+`--festivals FILE.cfg` if needed.
+
+The shipped defaults are a regional compromise; edit the cfg to match your
+locality. The `[festivals]` section contains the 30 annual festivals. The
+`[extra]` section contains monthly-only entries and disabled catalog entries,
+including Mesha and Makara Sankranti (which are already marked by the PDF's
+solar saṅkrānti grid), Karwa Chauth, Gita Jayanti, and Chhath.
 
 Recurring observances vs annual festivals
 -----------------------------------------
 
-`festivals.cfg` covers annual festivals only. Fortnightly/monthly
+The festival catalog is configured through `festivals.cfg`. Fortnightly/monthly
 observances are always on and need no cfg keys -- they are painted as
 coloured bars on the monthly grid (every occurrence) and as underlines on
 the annual page (weekday specials by default: Pradosham (Mon/Sat),
@@ -35,20 +59,6 @@ Both are explained in the footer legends:
   days; kshaya picks the latter civil day when K4 is skipped between two
   moonrises. Without location/timezone, falls back to sunrise-based
   selection.
-
-Selecting festivals
--------------------
-
-`festivals.cfg` is an INI file with a `[festivals]` section. Keys must match
-catalog names in `festival_rules.py` exactly; every catalog name must appear
-with `yes`/`no` (also `true`/`false`, `1`/`0`, `on`/`off`). Unknown or missing
-names are rejected at load time.
-
-The shipped defaults are a regional compromise (for example Onam on; Mesha and
-Makara Sankranti off because the PDF already marks all twelve saṅkrāntis; Karwa
-Chauth, Gita Jayanti, and Chhath are also off). Edit the cfg for your locality.
-The footer holds at most 30 enabled festivals (6 columns × 5 rows); enabling
-more fails loudly when drawing the page.
 
 Common sunrise rule (udaya-vyāpinī)
 -----------------------------------
@@ -101,9 +111,8 @@ These have dedicated selectors (dispatch by catalog name):
   `None`.
 * **Mesha Sankranti** / **Makara Sankranti** -- first civil sunrise after the
   Sun enters Mesha (raasi 1) or Makara (raasi 10) respectively. Both use the
-  shared sankranti helper (same rule as the twelve solar-month markers on the
-  PDF). Default off in ``festivals.cfg`` because the grid already paints every
-  saṅkrānti; enable either name to also list it in the festival key.
+  shared sankranti helper, the same rule as the twelve solar-month markers on
+  the PDF.
 * **Uttarayana** / **Dakshinayana** -- first civil sunrise after the tropical
   winter / summer solstice moment, respectively. At or north of the equator,
   Uttarayana uses the December solstice and Dakshinayana the June solstice;
@@ -174,7 +183,9 @@ sometimes on Chaturdashi and sometimes on Amavasya -- the festival name of
 The very name "Bali Padyami" presupposes that the festival occurs on the day of
 Pāḍya, i.e. Pratipadā but Dharma Sindhu's complex rules assigns it to Amavasya
 day. Our Udaya-vyāpinī ruleset restores the consistency, as also followed by the
-[official holiday calendar](https://smarteduguide.com/holiday/official-karnataka-high-court-calendar-2026/).
+[official holiday calendar][holiday-calendar].
+
+[holiday-calendar]: https://smarteduguide.com/holiday/official-karnataka-high-court-calendar-2026/
 
 ### Sane rules
 
