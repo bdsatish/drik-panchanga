@@ -273,6 +273,35 @@ class FestivalSelectionTests(unittest.TestCase):
     ]
     self.assertEqual(enabled, expected)
 
+  def test_extra_festivals_are_monthly_only(self):
+    annual = load_festival_selection(DEFAULT_FESTIVALS_PATH)
+    monthly = load_festival_selection(DEFAULT_FESTIVALS_PATH, include_extra=True)
+    self.assertNotIn("Vasavi Jayanti", annual)
+    self.assertNotIn("Vasavi Atmarpana", annual)
+    self.assertIn("Vasavi Jayanti", monthly)
+    self.assertIn("Vasavi Atmarpana", monthly)
+
+  def test_annual_selection_ignores_extra_section(self):
+    lines = ["[festivals]"]
+    lines.extend(f"{name} = no" for name in all_festival_names())
+    lines.extend(["", "[extra]", "Not A Festival = yes"])
+    with TemporaryDirectory() as directory:
+      path = Path(directory) / "festivals.cfg"
+      path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+      self.assertEqual(load_festival_selection(path), [])
+      with self.assertRaisesRegex(ValueError, "unknown in \\[extra\\]"):
+        load_festival_selection(path, include_extra=True)
+
+  def test_extra_festival_names_must_not_overlap(self):
+    lines = ["[festivals]"]
+    lines.extend(f"{name} = no" for name in all_festival_names())
+    lines.extend(["", "[extra]", "Ugadi = yes"])
+    with TemporaryDirectory() as directory:
+      path = Path(directory) / "festivals.cfg"
+      path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+      with self.assertRaisesRegex(ValueError, "overlap between \\[festivals\\] and \\[extra\\]"):
+        load_festival_selection(path, include_extra=True)
+
   def test_disable_one_festival_uses_dense_markers(self):
     lines = ["[festivals]"]
     for name in all_festival_names():

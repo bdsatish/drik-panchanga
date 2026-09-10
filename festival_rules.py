@@ -91,31 +91,52 @@ def all_festival_names():
   return tuple(rule.name for rule in FESTIVAL_RULES)
 
 
-def load_festival_selection(path):
-  """Enabled festival names from the ``[festivals]`` section of an INI cfg.
+def load_festival_selection(path, include_extra=False):
+  """Load enabled festival names from an INI configuration.
 
-  Every catalog name must appear exactly once. Unknown or missing names
-  raise ``ValueError`` so typos fail loudly instead of silently disabling.
+  The ``[festivals]`` section is shared by both calendar formats.  The
+  optional ``[extra]`` section is considered only when ``include_extra`` is
+  true (the monthly calendar); annual-calendar callers therefore ignore it.
+  Extra names must not overlap with names in ``[festivals]``.
   """
   parser = configparser.ConfigParser(strict=True)
   parser.optionxform = str  # preserve festival name case
   parser.read_string(Path(path).read_text(encoding="utf-8"))
   catalog = all_festival_names()
-  keys = [name for name, _raw in parser.items("festivals")]
-  unknown = [name for name in keys if name not in set(catalog)]
-  missing = [name for name in catalog if name not in set(keys)]
-  if unknown or missing:
-    problems = []
-    if unknown:
-      problems.append("unknown: " + ", ".join(unknown))
-    if missing:
-      problems.append("missing: " + ", ".join(missing))
+  catalog_set = set(catalog)
+  base_items = list(parser.items("festivals"))
+  base_names = [name for name, _raw in base_items]
+  unknown = [name for name in base_names if name not in catalog_set]
+
+  extra_items = []
+  if include_extra and parser.has_section("extra"):
+    extra_items = list(parser.items("extra"))
+  extra_names = [name for name, _raw in extra_items]
+  unknown_extra = [name for name in extra_names if name not in catalog_set]
+  overlap = [name for name in extra_names if name in set(base_names)]
+
+  selected_items = base_items + extra_items
+  selected_names = [name for name, _raw in selected_items]
+  missing = []
+  # Keep the existing complete-catalog validation for configurations without
+  # an [extra] section. With [extra], validate the combined catalogue for the
+  # monthly caller; the annual caller intentionally does not inspect it.
+  if include_extra or not parser.has_section("extra"):
+    missing = [name for name in catalog if name not in set(selected_names)]
+
+  problems = []
+  if unknown:
+    problems.append("unknown: " + ", ".join(unknown))
+  if unknown_extra:
+    problems.append("unknown in [extra]: " + ", ".join(unknown_extra))
+  if overlap:
+    problems.append("overlap between [festivals] and [extra]: " + ", ".join(overlap))
+  if missing:
+    problems.append("missing: " + ", ".join(missing))
+  if problems:
     raise ValueError(f"Bad festival selection in {path} ({'; '.join(problems)})")
-  enabled = []
-  for name, raw in parser.items("festivals"):
-    if raw.strip().casefold() in ("yes", "true", "1", "on"):
-      enabled.append(name)
-  return enabled
+
+  return [name for name, raw in selected_items if raw.strip().casefold() in ("yes", "true", "1", "on")]
 
 
 def format_festival_dates(dates):

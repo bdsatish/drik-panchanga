@@ -568,7 +568,7 @@ def collect_context(months, location, festivals_path, amanta=True):
   records = daily_records(months, location)
   geopos = (location.longitude, location.latitude, 0.0)
   from generate_panchanga_calendar import load_festival_selection
-  enabled_names = load_festival_selection(festivals_path)
+  enabled_names = load_festival_selection(festivals_path, include_extra=True)
   target_dates = {record.civil_date for record in records}
   festivals_by_date, festival_entries = resolve_festivals(
     records, target_dates, geopos=geopos, timezone_name=location.timezone_name, enabled_names=enabled_names)
