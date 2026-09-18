@@ -29,7 +29,7 @@ classifiers = [
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3 :: Only",
   "Topic :: Religion",
-  "Topic :: Scientific/ Engineering :: Astronomy",
+  "Topic :: Scientific/Engineering :: Astronomy",
   "Topic :: Printing",
 ]
 dependencies = [

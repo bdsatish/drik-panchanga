@@ -221,6 +221,10 @@ ambiguous ones need ``Name, ISO`` (e.g. `Sydney, AU`). Then either:
 
 Override the port with `--port 9000` or `PORT` / `PANCHANGA_PORT`.
 
+When the City field is left blank, the app suggests a city from the visitor's
+IP via a third-party GeoIP service (ip-api.com, plain HTTP — their free tier
+has no HTTPS).
+
 Local Docker check (repo root):
 
 ```
