@@ -4,7 +4,6 @@ import calendar
 import configparser
 import logging
 from collections import namedtuple as struct
-from datetime import date as CivilDate
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
