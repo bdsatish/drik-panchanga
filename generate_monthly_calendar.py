@@ -397,9 +397,15 @@ def draw_cell(pdf, x, y_top, row_h, cell_w, day, civil, location, context, col):
   if raasi_num is not None:
     zodiac_index = (int(raasi_num) - 1) % 12
     raasi_name = sanskrit_names().get("zodiac", {}).get(str(zodiac_index), str(raasi_num)).capitalize()
-    pdf.setFillColor(INK)
+    solar_label = f"{raasi_name} {solar_day}"
+    shraddha_tithi = context.get("shraddha_tithis", {}).get(civil)
     pdf.setFont(PDF_FONT, 6.8)
-    pdf.drawString(x + 4, line_y, f"{raasi_name} {solar_day}")
+    pdf.setFillColor(INK)
+    pdf.drawString(x + 4, line_y, solar_label)
+    if shraddha_tithi is not None:
+      pdf.setFillColor(BROWN)
+      solar_label_width = pdf.stringWidth(solar_label, PDF_FONT, 6.8)
+      pdf.drawString(x + 4 + solar_label_width, line_y, f" / [{tithi_code(shraddha_tithi)}]")
     line_y -= 8.0
 
   masa_display = display_masa(record, amanta=context.get("amanta", True))
@@ -430,18 +436,12 @@ def draw_cell(pdf, x, y_top, row_h, cell_w, day, civil, location, context, col):
       for wrapped in _wrap_lines(pdf, ek_name, PDF_FONT_ITALIC, 6.8, max_text_w):
         pdf.drawString(x + 4, line_y, wrapped)
         line_y -= 8.0
-  shraddha_tithi = context.get("shraddha_tithis", {}).get(civil)
-  if shraddha_tithi is not None:
-    pdf.setFillColor(BROWN)
-    pdf.setFont(PDF_FONT_ITALIC, 6.0)
-    pdf.drawString(x + 4, line_y, f"Śrāddha {tithi_code(shraddha_tithi)}")
-    line_y -= 7.5
   parana = context.get("ekadashi_parana", {}).get(civil)
   if parana is not None:
     start_hm = format_local_hm(parana.parana_jd, location.timezone_name)
     end_hm = format_local_hm(parana.parana_end_jd, location.timezone_name)
     pdf.setFillColor(TEAL)
-    pdf.setFont(PDF_FONT, 5.8)
+    pdf.setFont(PDF_FONT_ITALIC, 6.8)
     pdf.drawString(x + 4, line_y, f"Pāraṇā: {start_hm} – {end_hm}")
     line_y -= 7.5
   max_text_w = cell_w - 10
@@ -466,7 +466,7 @@ def draw_cell(pdf, x, y_top, row_h, cell_w, day, civil, location, context, col):
   for i, text in enumerate(bottom_lines):
     pdf.setFillColor(RED if text.startswith("Varjyam") else GREY)
     pdf.setFont(PDF_FONT, 5.8)
-    pdf.drawString(x + 4, bottom_y + i * 8.0, text)
+    pdf.drawString(x + 4, bottom_y + i * 7.0, text)
 
 
 def rahu_kala_table_lines(location, year, month):
@@ -572,11 +572,9 @@ def draw_grid(pdf, year, month, location, context):
 def draw_footer(pdf, location, coordinate_selection, page_index, total):
   pdf.setFillColor(GREY)
   pdf.setFont(PDF_FONT_ITALIC, 6.0)
-  note = ("Timings after 24:00 are hours past midnight. "
-          "Green box: lunar māsa. Gold box: adhika māsa. Saffron box: solar saṅkrānti. "
-          "Teal bar: ekādaśī. Teal Pāraṇā line: 4-ghaṭikā break-fast window. "
-          "Brown line: śrāddha tithi at Aparāhṇa start. "
-          "Purple bar: pradoṣam. Indigo bar: saṅkaṣṭahara caturthī.")
+  note = ("After 24:00: past midnight. Green: māsa; gold: adhika; saffron: saṅkrānti; "
+          "teal: ekādaśī; brown [S/K]: śrāddha tithi (aparāhṇa); purple: pradoṣam; "
+          "indigo: saṅkaṣṭahara caturthī.")
   pdf.drawString(MARGIN, MARGIN + 18, note)
   pdf.setFillColor(GREY)
   pdf.drawRightString(PAGE_W - MARGIN, MARGIN + 6, f"page {page_index} of {total}")

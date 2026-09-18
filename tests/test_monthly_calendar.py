@@ -149,6 +149,7 @@ class CellDrawTests(unittest.TestCase):
   def test_solar_day_line_is_drawn(self):
     ensure_pdf_fonts()
     pdf = mock.Mock()
+    pdf.stringWidth = lambda text, font, size: len(text) * size * 0.5
     from festival_rules import DayRecord
     context = {
       "records_by_date": {
@@ -161,13 +162,18 @@ class CellDrawTests(unittest.TestCase):
       "solar_by_date": {
         date(2026, 6, 16): (3, 1, True)
       },
+      "shraddha_tithis": {
+        date(2026, 6, 16): 7
+      },
       "ekadashi": set(),
       "pradosham": set(),
       "sankashti": set(),
     }
     draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 16, date(2026, 6, 16), load_location("Ujjain"), context, col=0)
-    solar_calls = [c for c in pdf.drawString.call_args_list if "Mithuna" in str(c.args[2])]
-    self.assertEqual(len(solar_calls), 1)
+    solar_calls = [c for c in pdf.drawString.call_args_list if c.args[2] in ("Mithuna 1", " / [S7]")]
+    self.assertEqual(len(solar_calls), 2)
+    self.assertEqual(solar_calls[0].args[2], "Mithuna 1")
+    self.assertEqual(solar_calls[1].args[2], " / [S7]")
 
   def test_tithi_paksha_prefix_is_drawn(self):
     ensure_pdf_fonts()
@@ -579,7 +585,9 @@ class EkadashiNameTests(unittest.TestCase):
       "eclipse_dates": set(),
       "eclipse_details_by_date": {},
       "masa_badges": {},
-      "solar_by_date": {},
+      "solar_by_date": {
+        civil: (3, 1, True)
+      },
       "ekadashi": set(),
       "shraddha_tithis": {
         civil: 7
@@ -593,7 +601,7 @@ class EkadashiNameTests(unittest.TestCase):
     with mock.patch("generate_monthly_calendar.day_details", return_value=([("S12", "20:00")], [], [])):
       draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 26, civil, location, context, col=0)
     drawn = [c.args[2] for c in pdf.drawString.call_args_list]
-    self.assertIn("Śrāddha S7", drawn)
+    self.assertIn(" / [S7]", drawn)
 
   def test_parana_line_drawn_on_parana_day(self):
     from festival_rules import DayRecord, EkadashiParana
@@ -678,12 +686,13 @@ class FestivalBarColorTests(unittest.TestCase):
 class FooterLegendTests(unittest.TestCase):
   """Verify the footer legend includes all festival markers."""
 
-  def test_footer_mentions_parana(self):
+  def test_footer_omits_parana_legend(self):
     from generate_monthly_calendar import draw_footer
     pdf = mock.Mock()
     draw_footer(pdf, load_location("Ujjain"), "citra", 1, 12)
     notes = " ".join(c.args[2] for c in pdf.drawString.call_args_list if len(c.args) >= 3)
-    self.assertIn("Pāraṇā", notes)
+    self.assertNotIn("Pāraṇā", notes)
+    self.assertIn("śrāddha tithi (aparāhṇa)", notes)
 
   def test_footer_mentions_sankashti(self):
     from generate_monthly_calendar import draw_footer
@@ -693,7 +702,7 @@ class FooterLegendTests(unittest.TestCase):
     drawn_text = [c.args[2] for c in pdf.drawString.call_args_list]
     footer_note = [t for t in drawn_text if "saṅkaṣṭahara" in t]
     self.assertEqual(len(footer_note), 1)
-    self.assertIn("Indigo bar: saṅkaṣṭahara caturthī", footer_note[0])
+    self.assertIn("indigo: saṅkaṣṭahara caturthī", footer_note[0])
 
   def test_footer_mentions_pradosham(self):
     from generate_monthly_calendar import draw_footer
@@ -703,20 +712,19 @@ class FooterLegendTests(unittest.TestCase):
     drawn_text = [c.args[2] for c in pdf.drawString.call_args_list]
     footer_note = [t for t in drawn_text if "pradoṣam" in t]
     self.assertEqual(len(footer_note), 1)
-    self.assertIn("Purple bar: pradoṣam", footer_note[0])
+    self.assertIn("purple: pradoṣam", footer_note[0])
 
-  def test_footer_uses_box_wording_for_cells(self):
+  def test_footer_uses_compact_marker_wording(self):
     from generate_monthly_calendar import draw_footer
     pdf = mock.Mock()
     location = load_location("Ujjain")
     draw_footer(pdf, location, "citra", 1, 12)
     drawn_text = [c.args[2] for c in pdf.drawString.call_args_list]
-    footer_note = [t for t in drawn_text if "lunar māsa" in t]
+    footer_note = [t for t in drawn_text if "After 24:00" in t]
     self.assertEqual(len(footer_note), 1)
-    self.assertIn("Green box: lunar māsa", footer_note[0])
-    self.assertIn("Gold box: adhika māsa", footer_note[0])
-    self.assertIn("Saffron box: solar saṅkrānti", footer_note[0])
-    self.assertNotIn("cell", footer_note[0])
+    self.assertIn("Green: māsa", footer_note[0])
+    self.assertIn("brown [S/K]: śrāddha tithi (aparāhṇa)", footer_note[0])
+    self.assertNotIn("Teal Pāraṇā", footer_note[0])
 
 
 if __name__ == "__main__":
