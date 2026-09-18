@@ -47,6 +47,9 @@ Sankashtahara (Tue); `--recurring all` underlines every occurrence).
 Both are explained in the footer legends:
 
 * **Ekadashi** -- every `S11` and `K11` at sunrise (teal bar + vrat name).
+  Pāraṇā uses the next civil day as its operational break-fast day; vṛddhi
+  anchors it after ekādaśī ends. The monthly PDF shows a practical four-ghaṭikā
+  window as ``Pāraṇā: HH:MM – HH:MM``.
 * **Pradosham** -- Trayodashi (`S13` or `K13`) prevailing at sunset
   (purple bar). This bimonthly Shiva festival occurs twice per lunar month.
   Vriddhi keeps the earlier day when Trayodashi prevails at sunset on
@@ -222,9 +225,14 @@ choices:
   the fast), that's alright, but in my opinion, keeping upavāsa is more
   important.
 
-Ekadashi fast is broken (pāraṇa) on the next day after sunrise, for both normal
-and kshaya observances. For the vriddhi case, wait until ekadashi tithi has
-ended completely after sunrise (max 4 hrs after sunrise).
+Ekadashi fast is broken on the next civil day after sunrise for normal and
+kṣaya observances. In the kṣaya case, this is normally Trayodaśī sunrise because
+upavāsa was kept on the Dvādaśī-at-sunrise day. For vṛddhi, the pāraṇā anchor is
+``max(next sunrise, ekādaśī end)``. The operational pāraṇā deadline is four
+ghaṭikās (96 minutes) after that anchor; the rule intentionally does not wait
+for a potentially next-morning Dvādaśī end. The monthly PDF prints
+``Pāraṇā: HH:MM – HH:MM`` using an en dash. This is a simplified practical
+calendar rule, not a sampradāya-specific pāraṇa calculation.
 
 Rules that are not plain masa+tithi markers (Sankranti, Onam, Upakarma,
 Varamahalakshmi, Vaikuntha Ekadashi) keep dedicated selectors, still written

@@ -563,6 +563,38 @@ class EkadashiNameTests(unittest.TestCase):
     drawn = [c.args[2] for c in pdf.drawString.call_args_list]
     self.assertNotIn("Kāmikā Ekādaśī", drawn)
 
+  def test_parana_line_drawn_on_parana_day(self):
+    from festival_rules import DayRecord, EkadashiParana
+    ensure_pdf_fonts()
+    location = load_location("Ujjain")
+    civil = date(2026, 6, 26)
+    record = DayRecord(civil, "S12", 1, 1, "3", False, 2461217.5)
+    parana = EkadashiParana(date(2026, 6, 25), civil, 2461217.5, 2461217.5 + 4 / 60.0, "normal")
+    context = {
+      "records_by_date": {
+        civil: record
+      },
+      "festival_names_by_date": {},
+      "eclipse_dates": set(),
+      "eclipse_details_by_date": {},
+      "masa_badges": {},
+      "solar_by_date": {},
+      "ekadashi": set(),
+      "ekadashi_parana": {
+        civil: parana
+      },
+      "pradosham": set(),
+      "sankashti": set(),
+      "amanta": True,
+    }
+    pdf = mock.Mock()
+    pdf.stringWidth = lambda text, font, size: len(text) * size * 0.5
+    with mock.patch("generate_monthly_calendar.day_details", return_value=([("S12", "20:00")], [], [])), \
+         mock.patch("generate_monthly_calendar.format_local_hm", side_effect=["05:47", "07:23"]):
+      draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 26, civil, location, context, col=0)
+    drawn = [c.args[2] for c in pdf.drawString.call_args_list]
+    self.assertIn("Pāraṇā: 05:47 – 07:23", drawn)
+
 
 class FestivalBarColorTests(unittest.TestCase):
   """Verify the correct color bars are drawn for each festival."""
@@ -613,6 +645,13 @@ class FestivalBarColorTests(unittest.TestCase):
 
 class FooterLegendTests(unittest.TestCase):
   """Verify the footer legend includes all festival markers."""
+
+  def test_footer_mentions_parana(self):
+    from generate_monthly_calendar import draw_footer
+    pdf = mock.Mock()
+    draw_footer(pdf, load_location("Ujjain"), "citra", 1, 12)
+    notes = " ".join(c.args[2] for c in pdf.drawString.call_args_list if len(c.args) >= 3)
+    self.assertIn("Pāraṇā", notes)
 
   def test_footer_mentions_sankashti(self):
     from generate_monthly_calendar import draw_footer

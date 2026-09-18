@@ -79,8 +79,17 @@ def _moonrise_jd_ut(civil_date, geopos, timezone_name):
 
 DayRecord = struct('DayRecord', ['civil_date', 'tithi', 'nakshatra', 'yoga', 'masa', 'is_adhika', 'sunrise_jd'])
 
+# Pāraṇa window for one ekādaśī upavāsa (keyed by parana_date in batch helpers).
+EkadashiParana = struct('EkadashiParana', ['upavasa_date', 'parana_date', 'parana_jd', 'parana_end_jd', 'case'])
+
+# Deliberately simple operational pāraṇa window: four ghaṭikās = 96 minutes.
+PARANA_WINDOW_GHATIS = 4
+PARANA_WINDOW_JD = PARANA_WINDOW_GHATIS / 60.0
+
 FestivalRule = struct('FestivalRule', ['name', 'masa', 'tithi', 'selector', 'allow_adhika', 'location_aware'],
                       defaults=(None, None, None, False, False))
+
+EKADASHI_TITHIS = ('S11', 'K11')
 
 HASTA_NAKSHATRA = 13
 SRAVANA_NAKSHATRA = 22
@@ -741,6 +750,88 @@ def resolve_festivals(records, target_dates, geopos=None, timezone_name=None, en
 def ekadashi_dates_from_records(records):
   """Civil days for S11 and K11 using sunrise, vriddhi, and kshaya rules."""
   selected = set()
-  for tithi in ("S11", "K11"):
+  for tithi in EKADASHI_TITHIS:
     selected.update(select_tithi_dates(records, tithi))
   return sorted(selected)
+
+
+def _place_for_civil(civil_date, geopos, timezone_name):
+  """``panchanga.Place`` for ``civil_date`` at ``geopos`` (lon, lat, alt)."""
+  lon, lat, _alt = geopos
+  tz = ZoneInfo(timezone_name)
+  noon = datetime(civil_date.year, civil_date.month, civil_date.day, 12, 0, tzinfo=tz)
+  tz_offset = noon.utcoffset().total_seconds() / 3600.0
+  return panchanga.Place(lat, lon, tz_offset)
+
+
+def _sunrise_tithi_end_jd_ut(civil_date, place):
+  """UT Julian day when the tithi prevailing at sunrise on ``civil_date`` ends."""
+  jd = panchanga.gregorian_to_jd(panchanga.Date(civil_date.year, civil_date.month, civil_date.day))
+  tithi_info = panchanga.tithi(jd, place)
+  hours, minutes, seconds = tithi_info[1]
+  ends_hours = hours + minutes / 60.0 + seconds / 3600.0
+  return jd + (ends_hours - place.timezone) / 24.0
+
+
+def classify_ekadashi_upavasa(records_by_date, upavasa_date):
+  """Return ``normal``, ``kshaya``, or ``vriddhi`` for an upavāsa civil day.
+
+  ``records_by_date`` maps civil date → DayRecord. Caller must only pass dates
+  from ``ekadashi_dates_from_records``. Vṛddhi means the same S11/K11 also
+  prevails at the next sunrise; kṣaya means sunrise on the upavāsa day is not
+  already tithi 11.
+  """
+  record = records_by_date.get(upavasa_date)
+  if record is None:
+    raise KeyError(f"no DayRecord for upavasa date {upavasa_date}")
+  if record.tithi not in EKADASHI_TITHIS:
+    return "kshaya"
+  following = records_by_date.get(upavasa_date + timedelta(days=1))
+  if following is not None and following.tithi == record.tithi:
+    return "vriddhi"
+  return "normal"
+
+
+def ekadashi_parana_for_upavasa(records_by_date, upavasa_date, geopos, timezone_name):
+  """Return the practical pāraṇa window for one upavāsa day.
+
+  Rules (simplified Udaya-Vyāpinī):
+
+  * normal / kṣaya — anchor at the next civil day's sunrise
+  * vṛddhi — anchor at the later of the next sunrise and Ekādaśī's end
+  * end — four ghaṭikās (96 minutes) after that anchor
+
+  The fixed operational window intentionally does not wait for Dvādaśī's
+  astronomical end.  This keeps the deadline usable for prayer and food
+  preparation when Dvādaśī ends shortly after sunrise, and avoids a deadline
+  on the following morning when Dvādaśī is long.  In the Ekādaśī-kṣaya case,
+  the next sunrise is normally Trayodaśī sunrise, so this gives the practical
+  fallback window on that day.
+
+  Returns ``EkadashiParana``, or ``None`` when the next civil day is missing
+  from ``records_by_date`` (no sunrise / outside the loaded window).
+  """
+  parana_date = upavasa_date + timedelta(days=1)
+  parana_record = records_by_date.get(parana_date)
+  if parana_record is None:
+    return None
+  case = classify_ekadashi_upavasa(records_by_date, upavasa_date)
+  parana_jd = parana_record.sunrise_jd
+  if case == "vriddhi":
+    place = _place_for_civil(upavasa_date, geopos, timezone_name)
+    ekadashi_end_jd = _sunrise_tithi_end_jd_ut(upavasa_date, place)
+    if ekadashi_end_jd > parana_jd:
+      parana_jd = ekadashi_end_jd
+  parana_end_jd = parana_jd + PARANA_WINDOW_JD
+  return EkadashiParana(upavasa_date, parana_date, parana_jd, parana_end_jd, case)
+
+
+def ekadashi_parana_by_parana_date(records, geopos, timezone_name):
+  """Map pāraṇa civil date → ``EkadashiParana`` for every upavāsa in ``records``."""
+  records_by_date = {record.civil_date: record for record in records}
+  result = {}
+  for upavasa_date in ekadashi_dates_from_records(records):
+    entry = ekadashi_parana_for_upavasa(records_by_date, upavasa_date, geopos, timezone_name)
+    if entry is not None:
+      result[entry.parana_date] = entry
+  return result

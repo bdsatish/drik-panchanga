@@ -13,8 +13,12 @@ from festival_rules import (
   DayRecord,
   FESTIVAL_RULES,
   all_festival_names,
+  classify_ekadashi_upavasa,
   ekadashi_dates_from_records,
+  ekadashi_parana_by_parana_date,
+  ekadashi_parana_for_upavasa,
   format_festival_dates,
+  jd_to_local_datetime,
   load_festival_selection,
   plain_tithi_number,
   resolve_festivals,
@@ -1199,6 +1203,140 @@ class GenericUdayaParityTests(unittest.TestCase):
     }
     self.assertEqual(ekadashi_dates_from_records(canonical_records(months, month_data)),
                      [date(2030, 3, 6), date(2030, 3, 20)])
+
+
+class EkadashiParanaTests(unittest.TestCase):
+  """Pāraṇa timing: sunrise/Ekādaśī anchor plus four ghaṭikās."""
+
+  def _by_date(self, days):
+    """Map civil date → DayRecord from (day, tithi, sunrise_jd) tuples in June 2030."""
+    records = [DayRecord(date(2030, 6, day), tithi, 1, 1, "5", False, sunrise_jd) for day, tithi, sunrise_jd in days]
+    return {record.civil_date: record for record in records}, records
+
+  def test_classify_normal_kshaya_vriddhi(self):
+    by_date, _records = self._by_date([
+      (10, "S11", 10.2),
+      (11, "S12", 11.2),
+      (20, "S10", 20.2),
+      (21, "S12", 21.2),  # kshaya upavasa on 21
+      (25, "K11", 25.2),
+      (26, "K11", 26.2),  # vriddhi: upavasa 25
+      (27, "K12", 27.2),
+    ])
+    self.assertEqual(classify_ekadashi_upavasa(by_date, date(2030, 6, 10)), "normal")
+    self.assertEqual(classify_ekadashi_upavasa(by_date, date(2030, 6, 21)), "kshaya")
+    self.assertEqual(classify_ekadashi_upavasa(by_date, date(2030, 6, 25)), "vriddhi")
+
+  def test_normal_parana_is_next_sunrise(self):
+    by_date, _records = self._by_date([
+      (10, "S11", 10.2),
+      (11, "S12", 11.25),
+    ])
+    entry = ekadashi_parana_for_upavasa(by_date, date(2030, 6, 10), geopos=(75.0, 23.0, 0.0),
+                                        timezone_name="Asia/Kolkata")
+    self.assertEqual(entry.case, "normal")
+    self.assertEqual(entry.upavasa_date, date(2030, 6, 10))
+    self.assertEqual(entry.parana_date, date(2030, 6, 11))
+    self.assertEqual(entry.parana_jd, 11.25)
+    self.assertEqual(entry.parana_end_jd, 11.25 + 4 / 60.0)
+
+  def test_kshaya_parana_is_next_sunrise(self):
+    by_date, _records = self._by_date([
+      (20, "S10", 20.2),
+      (21, "S12", 21.2),
+      (22, "S13", 22.3),
+    ])
+    entry = ekadashi_parana_for_upavasa(by_date, date(2030, 6, 21), geopos=(75.0, 23.0, 0.0),
+                                        timezone_name="Asia/Kolkata")
+    self.assertEqual(entry.case, "kshaya")
+    self.assertEqual(entry.parana_date, date(2030, 6, 22))
+    self.assertEqual(entry.parana_jd, 22.3)
+    self.assertEqual(entry.parana_end_jd, 22.3 + 4 / 60.0)
+
+  def test_vriddhi_parana_anchors_at_ekadashi_end(self):
+    by_date, _records = self._by_date([
+      (25, "K11", 25.2),
+      (26, "K11", 26.25),  # sunrise JD UT on parana day
+      (27, "K12", 27.2),
+    ])
+    ek_end = 26.40  # after sunrise 26.25
+    with mock.patch("festival_rules._sunrise_tithi_end_jd_ut", return_value=ek_end):
+      entry = ekadashi_parana_for_upavasa(by_date, date(2030, 6, 25), geopos=(75.0, 23.0, 0.0),
+                                          timezone_name="Asia/Kolkata")
+    self.assertEqual(entry.case, "vriddhi")
+    self.assertEqual(entry.parana_date, date(2030, 6, 26))
+    self.assertEqual(entry.parana_jd, ek_end)
+    self.assertEqual(entry.parana_end_jd, ek_end + 4 / 60.0)
+
+  def test_vriddhi_parana_uses_sunrise_if_ekadashi_already_ended(self):
+    by_date, _records = self._by_date([
+      (25, "K11", 25.2),
+      (26, "K11", 26.25),
+      (27, "K12", 27.2),
+    ])
+    ek_end = 26.10  # before sunrise
+    with mock.patch("festival_rules._sunrise_tithi_end_jd_ut", return_value=ek_end):
+      entry = ekadashi_parana_for_upavasa(by_date, date(2030, 6, 25), geopos=(75.0, 23.0, 0.0),
+                                          timezone_name="Asia/Kolkata")
+    self.assertEqual(entry.parana_jd, 26.25)
+    self.assertEqual(entry.parana_end_jd, 26.25 + 4 / 60.0)
+
+  def test_missing_next_day_returns_none(self):
+    by_date, _records = self._by_date([(10, "S11", 10.2)])
+    entry = ekadashi_parana_for_upavasa(by_date, date(2030, 6, 10), geopos=(75.0, 23.0, 0.0),
+                                        timezone_name="Asia/Kolkata")
+    self.assertIsNone(entry)
+
+  def test_batch_keyed_by_parana_date(self):
+    _by_date, records = self._by_date([
+      (10, "S11", 10.2),
+      (11, "S12", 11.25),
+      (25, "K11", 25.2),
+      (26, "K11", 26.25),
+      (27, "K12", 27.2),
+    ])
+    with mock.patch("festival_rules._sunrise_tithi_end_jd_ut", return_value=26.40):
+      mapping = ekadashi_parana_by_parana_date(records, geopos=(75.0, 23.0, 0.0), timezone_name="Asia/Kolkata")
+    self.assertEqual(sorted(mapping), [date(2030, 6, 11), date(2030, 6, 26)])
+    self.assertEqual(mapping[date(2030, 6, 11)].case, "normal")
+    self.assertEqual(mapping[date(2030, 6, 26)].case, "vriddhi")
+
+  def test_tirupati_vriddhi_live(self):
+    """README example: Tirupati 2027-03-03/04 K11 vṛddhi; pāraṇa after ek end ~07:25."""
+    location = load_location("Tirupati")
+    records = daily_records([(2027, 3)], location)
+    geopos = (location.longitude, location.latitude, 0.0)
+    mapping = ekadashi_parana_by_parana_date(records, geopos, location.timezone_name)
+    upavasa = date(2027, 3, 3)
+    parana_day = date(2027, 3, 4)
+    self.assertIn(parana_day, mapping)
+    entry = mapping[parana_day]
+    self.assertEqual(entry.upavasa_date, upavasa)
+    self.assertEqual(entry.case, "vriddhi")
+    local = jd_to_local_datetime(entry.parana_jd, location.timezone_name)
+    self.assertEqual(local.date(), parana_day)
+    # Ekādaśī ends shortly after sunrise; the four-ghaṭikā window ends around 09:00.
+    self.assertEqual(local.hour, 7)
+    self.assertGreaterEqual(local.minute, 20)
+    end_local = jd_to_local_datetime(entry.parana_end_jd, location.timezone_name)
+    self.assertEqual(end_local.hour, 9)
+    self.assertGreaterEqual(end_local.minute, 0)
+    self.assertLessEqual(end_local.minute, 2)
+
+  def test_ujjain_normal_live(self):
+    location = load_location("Ujjain")
+    records = daily_records([(2026, 6)], location)
+    geopos = (location.longitude, location.latitude, 0.0)
+    mapping = ekadashi_parana_by_parana_date(records, geopos, location.timezone_name)
+    upavasa = date(2026, 6, 25)
+    parana_day = date(2026, 6, 26)
+    self.assertIn(parana_day, mapping)
+    entry = mapping[parana_day]
+    self.assertEqual(entry.upavasa_date, upavasa)
+    self.assertEqual(entry.case, "normal")
+    # Pāraṇa JD is that morning's sunrise UT from the DayRecord.
+    self.assertEqual(entry.parana_jd, {r.civil_date: r for r in records}[parana_day].sunrise_jd)
+    self.assertEqual(entry.parana_end_jd, entry.parana_jd + 4 / 60.0)
 
 
 class SankashtiChaturthiTests(unittest.TestCase):

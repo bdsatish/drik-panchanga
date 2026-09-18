@@ -26,6 +26,7 @@ from reportlab.pdfgen import canvas
 
 from festival_rules import (
   ekadashi_dates_from_records,
+  ekadashi_parana_by_parana_date,
   find_local_eclipses,
   jd_to_local_civil_date,
   select_pradosham_dates,
@@ -428,6 +429,14 @@ def draw_cell(pdf, x, y_top, row_h, cell_w, day, civil, location, context, col):
       for wrapped in _wrap_lines(pdf, ek_name, PDF_FONT_ITALIC, 6.8, max_text_w):
         pdf.drawString(x + 4, line_y, wrapped)
         line_y -= 8.0
+  parana = context.get("ekadashi_parana", {}).get(civil)
+  if parana is not None:
+    start_hm = format_local_hm(parana.parana_jd, location.timezone_name)
+    end_hm = format_local_hm(parana.parana_end_jd, location.timezone_name)
+    pdf.setFillColor(TEAL)
+    pdf.setFont(PDF_FONT, 5.8)
+    pdf.drawString(x + 4, line_y, f"Pāraṇā: {start_hm} – {end_hm}")
+    line_y -= 7.5
   max_text_w = cell_w - 10
   for name in festivals:
     pdf.setFillColor(CRIMSON)
@@ -558,7 +567,8 @@ def draw_footer(pdf, location, coordinate_selection, page_index, total):
   pdf.setFont(PDF_FONT_ITALIC, 6.0)
   note = ("Timings after 24:00 are hours past midnight. "
           "Green box: lunar māsa. Gold box: adhika māsa. Saffron box: solar saṅkrānti. "
-          "Teal bar: ekādaśī. Purple bar: pradoṣam. Indigo bar: saṅkaṣṭahara caturthī.")
+          "Teal bar: ekādaśī. Teal Pāraṇā line: 4-ghaṭikā break-fast window. "
+          "Purple bar: pradoṣam. Indigo bar: saṅkaṣṭahara caturthī.")
   pdf.drawString(MARGIN, MARGIN + 18, note)
   pdf.setFillColor(GREY)
   pdf.drawRightString(PAGE_W - MARGIN, MARGIN + 6, f"page {page_index} of {total}")
@@ -600,6 +610,7 @@ def collect_context(months, location, festivals_path, amanta=True):
     "solar_by_date": solar_dates_by_date(records),
     "ekadashi": {d
                  for d in ekadashi_dates_from_records(records)},
+    "ekadashi_parana": ekadashi_parana_by_parana_date(records, geopos, location.timezone_name),
     "pradosham": {d
                   for d in select_pradosham_dates(records, geopos=geopos, timezone_name=location.timezone_name)},
     "sankashti":
