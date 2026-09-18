@@ -24,6 +24,8 @@ from festival_rules import (
   resolve_festivals,
   resolve_vriddhi_dates,
   select_kshaya_dates,
+  shraddha_tithi_at_aparahna,
+  shraddha_tithis_by_date,
   select_makara_sankranti_dates,
   select_mesha_sankranti_dates,
   select_onam_dates,
@@ -1203,6 +1205,26 @@ class GenericUdayaParityTests(unittest.TestCase):
     }
     self.assertEqual(ekadashi_dates_from_records(canonical_records(months, month_data)),
                      [date(2030, 3, 6), date(2030, 3, 20)])
+
+
+class ShraddhaTithiTests(unittest.TestCase):
+
+  def test_tithi_is_evaluated_at_aparahna_start(self):
+    record = DayRecord(date(2030, 6, 10), "S6", 1, 1, "5", False, 100.0)
+    with mock.patch("festival_rules.panchanga.day_duration", return_value=[12.0, [12, 0, 0]]), \
+         mock.patch("festival_rules.panchanga.lunar_phase", return_value=72.0) as lunar_phase:
+      self.assertEqual(shraddha_tithi_at_aparahna(record, (75.0, 23.0, 0.0), "Asia/Kolkata"), 7)
+    lunar_phase.assert_called_once_with(100.3)
+
+  def test_batch_returns_one_aparahna_tithi_per_date(self):
+    records = [
+      DayRecord(date(2030, 6, 10), "S6", 1, 1, "5", False, 100.0),
+      DayRecord(date(2030, 6, 11), "S7", 1, 1, "5", False, 101.0),
+    ]
+    with mock.patch("festival_rules.panchanga.day_duration", side_effect=[[12.0, [12, 0, 0]], [12.0, [12, 0, 0]]]), \
+         mock.patch("festival_rules.panchanga.lunar_phase", side_effect=[72.0, 84.0]):
+      result = shraddha_tithis_by_date(records, (75.0, 23.0, 0.0), "Asia/Kolkata")
+    self.assertEqual(result, {date(2030, 6, 10): 7, date(2030, 6, 11): 8})
 
 
 class EkadashiParanaTests(unittest.TestCase):

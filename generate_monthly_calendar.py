@@ -31,6 +31,7 @@ from festival_rules import (
   jd_to_local_civil_date,
   select_pradosham_dates,
   select_sankashti_chaturthi_dates,
+  shraddha_tithis_by_date,
 )
 import panchanga
 
@@ -218,14 +219,14 @@ def day_details(location, civil):
 
 
 def sun_moon_lines(location, civil):
-  """``Sun: rise-set`` and ``Moon: rise-set`` lines for one civil day."""
+  """``Sun: rise–set`` and ``Moon: rise–set`` lines for one civil day."""
   place = place_for_date(location, civil)
   jd = gregorian_to_jd(civil)
   lines = []
   try:
     rise = panchanga.sunrise(jd, place)[1]
     set_ = panchanga.sunset(jd, place)[1]
-    lines.append(f"Sun: {format_hms(rise)}-{format_hms(set_)}")
+    lines.append(f"Sun: {format_hms(rise)} – {format_hms(set_)}")
   except Exception as exc:
     log.debug("sun times unavailable %s: %s", civil, exc)
   try:
@@ -234,7 +235,7 @@ def sun_moon_lines(location, civil):
       if 0 <= event[0] < 48:
         parts.append(format_hms(event))
     if parts:
-      lines.append("Moon: " + "-".join(parts))
+      lines.append("Moon: " + " – ".join(parts))
   except Exception as exc:
     log.debug("moon times unavailable %s: %s", civil, exc)
   return lines
@@ -247,7 +248,7 @@ def varjyam_lines(location, civil):
   lines = []
   try:
     for start, end in panchanga.varjyam(jd, place):
-      lines.append(f"Varjyam: {format_hms(start)}-{format_hms(end)}")
+      lines.append(f"Varjyam: {format_hms(start)} – {format_hms(end)}")
   except Exception as exc:
     log.debug("varjyam unavailable %s: %s", civil, exc)
   return lines
@@ -429,6 +430,12 @@ def draw_cell(pdf, x, y_top, row_h, cell_w, day, civil, location, context, col):
       for wrapped in _wrap_lines(pdf, ek_name, PDF_FONT_ITALIC, 6.8, max_text_w):
         pdf.drawString(x + 4, line_y, wrapped)
         line_y -= 8.0
+  shraddha_tithi = context.get("shraddha_tithis", {}).get(civil)
+  if shraddha_tithi is not None:
+    pdf.setFillColor(BROWN)
+    pdf.setFont(PDF_FONT_ITALIC, 6.0)
+    pdf.drawString(x + 4, line_y, f"Śrāddha {tithi_code(shraddha_tithi)}")
+    line_y -= 7.5
   parana = context.get("ekadashi_parana", {}).get(civil)
   if parana is not None:
     start_hm = format_local_hm(parana.parana_jd, location.timezone_name)
@@ -568,6 +575,7 @@ def draw_footer(pdf, location, coordinate_selection, page_index, total):
   note = ("Timings after 24:00 are hours past midnight. "
           "Green box: lunar māsa. Gold box: adhika māsa. Saffron box: solar saṅkrānti. "
           "Teal bar: ekādaśī. Teal Pāraṇā line: 4-ghaṭikā break-fast window. "
+          "Brown line: śrāddha tithi at Aparāhṇa start. "
           "Purple bar: pradoṣam. Indigo bar: saṅkaṣṭahara caturthī.")
   pdf.drawString(MARGIN, MARGIN + 18, note)
   pdf.setFillColor(GREY)
@@ -611,6 +619,7 @@ def collect_context(months, location, festivals_path, amanta=True):
     "ekadashi": {d
                  for d in ekadashi_dates_from_records(records)},
     "ekadashi_parana": ekadashi_parana_by_parana_date(records, geopos, location.timezone_name),
+    "shraddha_tithis": shraddha_tithis_by_date(records, geopos, location.timezone_name),
     "pradosham": {d
                   for d in select_pradosham_dates(records, geopos=geopos, timezone_name=location.timezone_name)},
     "sankashti":

@@ -773,6 +773,35 @@ def _sunrise_tithi_end_jd_ut(civil_date, place):
   return jd + (ends_hours - place.timezone) / 24.0
 
 
+def shraddha_tithi_at_aparahna(record, geopos, timezone_name):
+  """Return the tithi number at Aparāhṇa start for one sunrise record.
+
+  Aparāhṇa starts at three-fifths of the local daylight interval. The
+  daylight duration and lunar phase come from the existing panchāṅga helpers;
+  no sunrise-tithi approximation is used.
+  """
+  jd = panchanga.gregorian_to_jd(panchanga.Date(record.civil_date.year, record.civil_date.month, record.civil_date.day))
+  place = _place_for_civil(record.civil_date, geopos, timezone_name)
+  try:
+    daylight_hours = panchanga.day_duration(jd, place)[0]
+  except Exception:
+    return None
+  if daylight_hours <= 0:
+    return None
+  aparahna_start_jd = record.sunrise_jd + (daylight_hours / 24.0) * 3 / 5
+  return int(panchanga.lunar_phase(aparahna_start_jd) // 12) + 1
+
+
+def shraddha_tithis_by_date(records, geopos, timezone_name):
+  """Map each Gregorian date to its tithi at local Aparāhṇa start."""
+  result = {}
+  for record in records:
+    tithi_number = shraddha_tithi_at_aparahna(record, geopos, timezone_name)
+    if tithi_number is not None:
+      result[record.civil_date] = tithi_number
+  return result
+
+
 def classify_ekadashi_upavasa(records_by_date, upavasa_date):
   """Return ``normal``, ``kshaya``, or ``vriddhi`` for an upavāsa civil day.
 

@@ -140,6 +140,8 @@ class SunMoonTests(unittest.TestCase):
     self.assertEqual(len(lines), 2)
     self.assertTrue(lines[0].startswith("Sun:"))
     self.assertTrue(lines[1].startswith("Moon:"))
+    self.assertIn(" – ", lines[0])
+    self.assertIn(" – ", lines[1])
 
 
 class CellDrawTests(unittest.TestCase):
@@ -247,7 +249,7 @@ class VarjyamTests(unittest.TestCase):
     with mock.patch("generate_monthly_calendar.panchanga.varjyam", return_value=[[[15.22, 13, 0], [16.63, 37, 0]]]):
       draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 14, civil, load_location("Ujjain"), context, col=0)
     drawn_text = [c.args[2] for c in pdf.drawString.call_args_list]
-    self.assertIn("Varjyam: 15:26-17:15", drawn_text)
+    self.assertIn("Varjyam: 15:26 – 17:15", drawn_text)
 
 
 class RahuKalaTableTests(unittest.TestCase):
@@ -562,6 +564,36 @@ class EkadashiNameTests(unittest.TestCase):
       draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 9, civil, location, plain_context, col=0)
     drawn = [c.args[2] for c in pdf.drawString.call_args_list]
     self.assertNotIn("Kāmikā Ekādaśī", drawn)
+
+  def test_shraddha_line_drawn_at_aparahna_tithi(self):
+    from festival_rules import DayRecord
+    ensure_pdf_fonts()
+    location = load_location("Ujjain")
+    civil = date(2026, 6, 26)
+    record = DayRecord(civil, "S12", 1, 1, "3", False, 2461217.5)
+    context = {
+      "records_by_date": {
+        civil: record
+      },
+      "festival_names_by_date": {},
+      "eclipse_dates": set(),
+      "eclipse_details_by_date": {},
+      "masa_badges": {},
+      "solar_by_date": {},
+      "ekadashi": set(),
+      "shraddha_tithis": {
+        civil: 7
+      },
+      "pradosham": set(),
+      "sankashti": set(),
+      "amanta": True,
+    }
+    pdf = mock.Mock()
+    pdf.stringWidth = lambda text, font, size: len(text) * size * 0.5
+    with mock.patch("generate_monthly_calendar.day_details", return_value=([("S12", "20:00")], [], [])):
+      draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 26, civil, location, context, col=0)
+    drawn = [c.args[2] for c in pdf.drawString.call_args_list]
+    self.assertIn("Śrāddha S7", drawn)
 
   def test_parana_line_drawn_on_parana_day(self):
     from festival_rules import DayRecord, EkadashiParana
