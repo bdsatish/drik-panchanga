@@ -6,7 +6,12 @@ IndUni-H (Helvetica-compatible, Indology/IAST)
 
 Source: https://bombay.indology.info/software/fonts/induni/
 Upstream zip: IndUni-H.zip (OpenType/CFF on URW Nimbus Sans L).
-License: GNU GPL v2 — https://www.gnu.org/licenses/old-licenses/gpl-2.0.html
+License: GNU GPL v2 or later (GPL-2.0+) —
+  https://www.gnu.org/licenses/old-licenses/gpl-2.0.html
+  The upstream notice (``README-H``) cites the GPL without naming a
+  version, which under GPLv2 §9 lets the recipient use any version
+  ever published by the FSF; Debian ships the same upstream fonts as
+  GPL-2.0+ (fonts-johnsmith-induni copyright file).
 Upstream notes: ``README-H``.
 
 ReportLab face indices in the collection:
