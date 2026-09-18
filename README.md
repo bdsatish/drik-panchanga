@@ -161,9 +161,9 @@ Monthly calendar PDF (12 pages)
 -------------------------------
 
 `generate_monthly_calendar.py` produces a 12-page A4 **portrait** PDF with one
-month per page. It uses the same computation, colours and markers as the
-one-page landscape calendar but with wider rows suited for reading a full
-month at a glance:
+month per page. It shares the computation and festival/eclipse markers with
+the one-page landscape calendar, with its own palette and wider rows suited
+for reading a full month at a glance:
 
 ```
 python generate_monthly_calendar.py --city Ujjain --start 2026-03
