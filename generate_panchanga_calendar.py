@@ -37,7 +37,7 @@ log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
 FOOTER_KEY_TOP = 44.0  # baseline of first muted key line below festivals
 RULESET_VERSION = "Udaya-Vyapini-1.1"
-LAYOUT_VERSION = "A4-1.20"
+LAYOUT_VERSION = "A4-1.21"
 PDF_AUTHOR = "Satish BD"
 PDF_AUTHOR_EMAIL = "bdsatish@gmail.com"
 PDF_COPYRIGHT = ("Copyright © Satish BD. Licensed under the GNU Affero GPL "
@@ -1034,6 +1034,20 @@ def draw_page_header(pdf, location, months, ruleset_version, amanta=True, coordi
   pdf.setFont(PDF_FONT, 4.7)
   pdf.drawRightString(page_width - 18, page_height - 19,
                       f"SwEph {panchanga.sweph_version()} | Ruleset: {ruleset_version} | Layout: {LAYOUT_VERSION}")
+  # Attribution stamp in the top-right corner, mirroring the monthly calendar:
+  # "Satish BD 2026" doubles as the clickable link to the GitHub repo.
+  stamp_text = "Copyright © "
+  link_text = f"Satish BD {datetime.now().year}"
+  stamp_size = 4.7
+  link_width = pdf.stringWidth(link_text, PDF_FONT, stamp_size)
+  stamp_y = page_height - 31.5
+  pdf.setFillColor(MUTED)
+  pdf.setFont(PDF_FONT, stamp_size)
+  pdf.drawRightString(page_width - 18, stamp_y, stamp_text + link_text)
+  # Clickable hyperlink covering the "Satish BD <year>" text.
+  link_x = page_width - 18 - link_width
+  pdf.linkURL(PDF_SOURCE_URL, (link_x, stamp_y - 1.5, link_x + link_width, stamp_y + stamp_size), relative=0,
+              thickness=0, color=None)
 
 
 def draw_page_footer(pdf, festival_entries, eclipse_line="Eclipses: None", recurring="specials"):

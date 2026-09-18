@@ -181,6 +181,7 @@ class PdfLayoutTests(unittest.TestCase):
     self.assertEqual(kali_ahargana_range(months), (1872727, 1873152))
 
     pdf = mock.Mock()
+    pdf.stringWidth.return_value = 60.0
     with mock.patch("generate_panchanga_calendar.fitted_font_size", return_value=7.5):
       draw_page_header(pdf, load_location("Helsinki"), months, RULESET_VERSION,
                        kali_ahargana=kali_ahargana_range(months))
@@ -508,6 +509,7 @@ class TimezoneInHeaderTests(unittest.TestCase):
     location = load_location("Ujjain")
     months = list(month_range(2026, 3))
     pdf = mock.Mock()
+    pdf.stringWidth.return_value = 60.0
     with mock.patch("generate_panchanga_calendar.fitted_font_size", return_value=10):
       draw_page_header(pdf, location, months, RULESET_VERSION)
     title = pdf.drawString.call_args_list[0].args[2]
@@ -520,6 +522,7 @@ class TimezoneInHeaderTests(unittest.TestCase):
     location = load_location("Helsinki")
     months = list(month_range(2026, 6))
     pdf = mock.Mock()
+    pdf.stringWidth.return_value = 60.0
     with mock.patch("generate_panchanga_calendar.fitted_font_size", return_value=10):
       draw_page_header(pdf, location, months, RULESET_VERSION)
     title = pdf.drawString.call_args_list[0].args[2]
