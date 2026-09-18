@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61", "wheel"]
+requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -7,7 +7,7 @@ name = "drik-panchanga"
 version = "1.0.0"
 description = "Observational Indian lunisolar calendar (Drik Panchanga) using Swiss Ephemeris"
 readme = "docs/README.pypi.md"
-license = { text = "AGPL-3.0-or-later" }
+license = "AGPL-3.0-or-later"
 requires-python = ">=3.9"
 authors = [
   { name = "Satish BD" },
@@ -23,9 +23,8 @@ keywords = [
   "calendar-pdf",
 ]
 classifiers = [
-  "Development Status :: 4 - Beta",
+  "Development Status :: 5 - Production/Stable",
   "Intended Audience :: Developers",
-  "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3 :: Only",
   "Topic :: Religion",
@@ -34,6 +33,7 @@ classifiers = [
 ]
 dependencies = [
   "pyswisseph",
+  "tzdata; platform_system == 'Windows'",
 ]
 
 [project.optional-dependencies]

@@ -54,7 +54,14 @@ The core astronomy library is on PyPI as `drik-panchanga`:
 pip install drik-panchanga
 ```
 
-That installs only `panchanga.py` (plus `pyswisseph`). Swiss Ephemeris still
+That installs `panchanga.py` (plus `pyswisseph`) and, with the `[pdf]` extra,
+the PDF calendar generators:
+
+```
+pip install "drik-panchanga[pdf]"   # adds drik-panchanga-short / -long CLIs
+```
+
+Swiss Ephemeris still
 needs `.se1` data files; set `SE_EPHE_PATH` or use `~/.local/share/swisseph`
 (see `scripts/setup_venv.sh` in this repository).
 
