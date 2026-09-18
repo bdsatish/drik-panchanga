@@ -1,10 +1,14 @@
 include LICENSE
 include docs/README.pypi.md
 include panchanga.py
+include festival_rules.py
+include generate_panchanga_calendar.py
+include generate_monthly_calendar.py
 include pyproject.toml
-exclude README.md
+recursive-include data *
+recursive-include fonts *
+recursive-include config *
 prune tests
 prune webapp
 prune experimental
 prune scripts
-prune Sample*

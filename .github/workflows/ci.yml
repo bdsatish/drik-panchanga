@@ -62,6 +62,79 @@ jobs:
           trap 'kill "$(cat /tmp/panchanga-gunicorn.pid)" 2>/dev/null || true' EXIT
           ./scripts/ci_smoke_http.sh http://127.0.0.1:8765
 
+  package:
+    name: Package build + entry points
+    runs-on: ubuntu-latest
+    env:
+      SE_EPHE_PATH: ${{ github.workspace }}/ephe
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Build sdist and wheel
+        run: |
+          pip install build twine
+          python -m build
+
+      - name: Twine metadata check
+        run: python -m twine check dist/*
+
+      - name: Verify wheel contents
+        run: |
+          python - <<'PY'
+          import glob
+          import zipfile
+
+          wheel = glob.glob("dist/*.whl")[0]
+          names = zipfile.ZipFile(wheel).namelist()
+          required = [
+              "data/cities.json",
+              "data/sanskrit_names.json",
+              "fonts/IndUni-H.ttc",
+              "config/festivals.cfg",
+              "panchanga.py",
+              "festival_rules.py",
+              "generate_panchanga_calendar.py",
+              "generate_monthly_calendar.py",
+          ]
+          missing = [f for f in required if not any(n.endswith(f) for n in names)]
+          assert not missing, f"missing from wheel: {missing}"
+          forbidden = [n for n in names if "/webapp/" in n or n.endswith("webapp/app.py")]
+          assert not forbidden, f"webapp leaked into wheel: {forbidden}"
+          entry = next(n for n in names if n.endswith("entry_points.txt"))
+          text = zipfile.ZipFile(wheel).read(entry).decode()
+          assert "drik-panchanga-short" in text, "missing drik-panchanga-short entry point"
+          assert "drik-panchanga-long" in text, "missing drik-panchanga-long entry point"
+          print("wheel contents OK")
+          PY
+
+      - name: Cache Swiss Ephemeris data
+        uses: actions/cache@v5
+        with:
+          path: ephe
+          key: swisseph-ephe-v1
+
+      - name: Fetch Swiss Ephemeris files
+        run: |
+          chmod +x scripts/ensure_ephe.sh
+          ./scripts/ensure_ephe.sh "${SE_EPHE_PATH}"
+
+      - name: Install wheel with [pdf] extra and smoke-test CLI
+        run: |
+          pip install "drik-panchanga[pdf] @ file://$(ls "$PWD"/dist/*.whl)"
+          cd "$(mktemp -d)"
+          drik-panchanga-short --help
+          drik-panchanga-long --help
+          drik-panchanga-short --city Ujjain --start 2026-03
+          drik-panchanga-long --city Ujjain --start 2026-03
+          test -s ujjain-in_panchanga_2026-03_to_2027-04.pdf
+          test -s ujjain-in_panchanga_wall_2026-03_to_2027-02.pdf
+
   docker:
     name: Docker build + container smoke
     runs-on: ubuntu-latest

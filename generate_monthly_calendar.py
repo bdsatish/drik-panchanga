@@ -20,9 +20,12 @@ from datetime import date as CivilDate
 from datetime import timedelta
 from pathlib import Path
 
-from reportlab.lib.colors import HexColor, white
-from reportlab.lib.pagesizes import A4
-from reportlab.pdfgen import canvas
+try:
+  from reportlab.lib.colors import HexColor, white
+  from reportlab.lib.pagesizes import A4
+  from reportlab.pdfgen import canvas
+except ImportError:
+  HexColor = white = A4 = canvas = None
 
 from festival_rules import (
   ekadashi_dates_from_records,
@@ -76,27 +79,40 @@ MONTHLY_LAYOUT_VERSION = "Wall-Grid-1.0"
 MONTHLY_MONTH_COUNT = 12
 CONTEXT_MONTH_COUNT = MONTHLY_MONTH_COUNT + 2
 
-PAGE_W, PAGE_H = A4
+PAGE_W = PAGE_H = None
 MARGIN = 34
 HEADER_H = 58
 WEEKDAY_ROW_H = 20
 GRID_ROWS = 6
 FOOTER_H = 34
 
-INK = HexColor("#1A1A1A")
-GREY = HexColor("#9A9A9A")
-LIGHT = HexColor("#E3E3E3")
-GRID_LINE = HexColor("#A8A8A8")
-RED = HexColor("#A8321F")
-TEAL = HexColor("#0E6E62")
-PURPLE = HexColor("#6A287E")
-INDIGO = HexColor("#3F51B5")
-SAFFRON = HexColor("#F3D9A9")
-SAFFRON_INK = HexColor("#9A6A1F")
-CRIMSON = HexColor("#8E1F3D")
-BROWN = HexColor("#5C2E1B")
-NAKS_INK = HexColor("#5B3A29")
-YOGA_INK = HexColor("#2F4F4F")
+if HexColor is not None:
+  PAGE_W, PAGE_H = A4
+  INK = HexColor("#1A1A1A")
+  GREY = HexColor("#9A9A9A")
+  LIGHT = HexColor("#E3E3E3")
+  GRID_LINE = HexColor("#A8A8A8")
+  RED = HexColor("#A8321F")
+  TEAL = HexColor("#0E6E62")
+else:
+  INK = GREY = LIGHT = GRID_LINE = RED = TEAL = None
+  PURPLE = INDIGO = SAFFRON = SAFFRON_INK = CRIMSON = BROWN = None
+  NAKS_INK = YOGA_INK = None
+  _GREY_AAAAAA = None
+
+if HexColor is not None:
+  PURPLE = HexColor("#6A287E")
+  INDIGO = HexColor("#3F51B5")
+  SAFFRON = HexColor("#F3D9A9")
+  SAFFRON_INK = HexColor("#9A6A1F")
+  CRIMSON = HexColor("#8E1F3D")
+  BROWN = HexColor("#5C2E1B")
+  NAKS_INK = HexColor("#5B3A29")
+  YOGA_INK = HexColor("#2F4F4F")
+  _GREY_AAAAAA = HexColor("#AAAAAA")
+else:
+  PURPLE = INDIGO = SAFFRON = SAFFRON_INK = CRIMSON = BROWN = None
+  NAKS_INK = YOGA_INK = _GREY_AAAAAA = None
 
 _MONTH_NAMES_EN = [
   "January",
@@ -314,7 +330,7 @@ def draw_header(pdf, location, year, month, amanta, coordinate_selection, year_l
   current_year = DateType.today().year
   stamp_text = f"Drik Panchanga · Copyright © Satish BD {current_year} · AGPL-3.0"
   link_text = "Drik Panchanga"
-  pdf.setFillColor(HexColor("#AAAAAA"))
+  pdf.setFillColor(_GREY_AAAAAA)
   pdf.setFont(PDF_FONT, 5.5)
   text_width = pdf.stringWidth(stamp_text, PDF_FONT, 5.5)
   link_width = pdf.stringWidth(link_text, PDF_FONT, 5.5)
@@ -327,7 +343,7 @@ def draw_header(pdf, location, year, month, amanta, coordinate_selection, year_l
     (link_x, top - 56, link_x + link_width, top - 47),
     relative=0,
     thickness=0,
-    color=HexColor("#AAAAAA"),
+    color=_GREY_AAAAAA,
   )
 
   pdf.setStrokeColor(INK)
@@ -702,7 +718,15 @@ def argument_parser():
   return parser
 
 
+def _check_reportlab():
+  if canvas is None:
+    raise ImportError(
+      "drik-panchanga[pdf] is required for PDF generation. "
+      "Install it with: pip install drik-panchanga[pdf]", )
+
+
 def main(argv=None):
+  _check_reportlab()
   parser = argument_parser()
   args = parser.parse_args(argv)
   coordinate_selection = require_coordinate_selection(args.ayanamsa)

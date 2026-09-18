@@ -13,9 +13,12 @@ from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from reportlab.lib.colors import HexColor, white
-from reportlab.lib.pagesizes import A4, landscape
-from reportlab.pdfgen import canvas
+try:
+  from reportlab.lib.colors import HexColor, white
+  from reportlab.lib.pagesizes import A4, landscape
+  from reportlab.pdfgen import canvas
+except ImportError:
+  HexColor = white = A4 = landscape = canvas = None
 
 from festival_rules import (DayRecord, ekadashi_dates_from_records, find_local_eclipses, jd_to_local_civil_date,
                             jd_to_local_datetime, julian_day_from_datetime, load_festival_selection, resolve_festivals,
@@ -64,26 +67,33 @@ EKADASHI_UNDERLINE_RATIO = TITHI_UNDERLINE_RATIO  # Backward-compatible alias.
 
 Location = struct('Location', ['name', 'latitude', 'longitude', 'timezone_name'])
 
-INK = HexColor("#172033")
-MUTED = HexColor("#465466")
-ACCENT = HexColor("#263F73")
-KRSNA_INK = HexColor("#2A303C")
-GRID = HexColor("#CBD3DF")
-MONTH_DIVIDER = HexColor("#AAB5C4")
-ALT_ROW = HexColor("#F4F7FA")
-SUNDAY_MARK = HexColor("#C94B40")
-MISSING_ROW = HexColor("#ECEFF3")
-ADHIKA_ROW = HexColor("#FFF0C7")
-ADHIKA_INK = HexColor("#875A00")
-MASA_START_ROW = HexColor("#C7E8CF")
-MASA_START_INK = HexColor("#185C2A")
-SANKRANTI_ROW = HexColor("#FDE8D4")
-SANKRANTI_INK = HexColor("#9A4E12")
-FESTIVAL_INK = HexColor("#9A3154")
-EKADASHI_MARK = HexColor("#168078")
-PRADOSHAM_MARK = HexColor("#6A287E")
-SANKASHTI_MARK = HexColor("#3F51B5")
-ECLIPSE_MARK = HexColor("#8B4518")
+if HexColor is not None:
+  INK = HexColor("#172033")
+  MUTED = HexColor("#465466")
+  ACCENT = HexColor("#263F73")
+  KRSNA_INK = HexColor("#2A303C")
+  GRID = HexColor("#CBD3DF")
+  MONTH_DIVIDER = HexColor("#AAB5C4")
+  ALT_ROW = HexColor("#F4F7FA")
+  SUNDAY_MARK = HexColor("#C94B40")
+  MISSING_ROW = HexColor("#ECEFF3")
+  ADHIKA_ROW = HexColor("#FFF0C7")
+  ADHIKA_INK = HexColor("#875A00")
+  MASA_START_ROW = HexColor("#C7E8CF")
+  MASA_START_INK = HexColor("#185C2A")
+  SANKRANTI_ROW = HexColor("#FDE8D4")
+  SANKRANTI_INK = HexColor("#9A4E12")
+  FESTIVAL_INK = HexColor("#9A3154")
+  EKADASHI_MARK = HexColor("#168078")
+  PRADOSHAM_MARK = HexColor("#6A287E")
+  SANKASHTI_MARK = HexColor("#3F51B5")
+  ECLIPSE_MARK = HexColor("#8B4518")
+else:
+  INK = MUTED = ACCENT = KRSNA_INK = GRID = MONTH_DIVIDER = None
+  ALT_ROW = SUNDAY_MARK = MISSING_ROW = ADHIKA_ROW = None
+  ADHIKA_INK = MASA_START_ROW = MASA_START_INK = SANKRANTI_ROW = None
+  SANKRANTI_INK = FESTIVAL_INK = EKADASHI_MARK = PRADOSHAM_MARK = None
+  SANKASHTI_MARK = ECLIPSE_MARK = None
 
 
 def configure_logging():
@@ -1213,10 +1223,18 @@ def argument_parser():
   return parser
 
 
+def _check_reportlab():
+  if canvas is None:
+    raise ImportError(
+      "drik-panchanga[pdf] is required for PDF generation. "
+      "Install it with: pip install drik-panchanga[pdf]", )
+
+
 def main(argv=None):
   configure_logging()
   parser = argument_parser()
   arguments = parser.parse_args(argv)
+  _check_reportlab()
   try:
     start_year, start_month = require_start_month(arguments.start)
     location = load_location(arguments.city)
