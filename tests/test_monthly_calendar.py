@@ -384,36 +384,36 @@ class MonthlyHeaderTimezoneTests(unittest.TestCase):
 
 
 class DstLabelInjectionTests(unittest.TestCase):
-  """DST transition labels must be injected into festival_names_by_date."""
+  """DST transition labels must be injected as dst_labels_by_date."""
 
   def test_collect_context_includes_dst_start(self):
     from generate_monthly_calendar import collect_context
     location = load_location("Helsinki")
     months = [(2026, 3), (2026, 4)]
     ctx = collect_context(months, location, DEFAULT_FESTIVALS_PATH, amanta=True)
-    festival_names = ctx["festival_names_by_date"]
+    dst_labels = ctx["dst_labels_by_date"]
     # Mar 29, 2026 is DST start for Helsinki
     from datetime import date
-    self.assertIn("DST starts", festival_names.get(date(2026, 3, 29), []))
+    self.assertIn("DST starts", dst_labels.get(date(2026, 3, 29), []))
 
   def test_collect_context_includes_dst_end(self):
     from generate_monthly_calendar import collect_context
     location = load_location("Helsinki")
     months = [(2026, 10), (2026, 11)]
     ctx = collect_context(months, location, DEFAULT_FESTIVALS_PATH, amanta=True)
-    festival_names = ctx["festival_names_by_date"]
+    dst_labels = ctx["dst_labels_by_date"]
     # Oct 25, 2026 is DST end for Helsinki
     from datetime import date
-    self.assertIn("DST ends", festival_names.get(date(2026, 10, 25), []))
+    self.assertIn("DST ends", dst_labels.get(date(2026, 10, 25), []))
 
   def test_collect_context_no_dst_for_non_dst_zone(self):
     from generate_monthly_calendar import collect_context
     location = load_location("Ujjain")
     months = [(2026, 3), (2026, 4)]
     ctx = collect_context(months, location, DEFAULT_FESTIVALS_PATH, amanta=True)
-    festival_names = ctx["festival_names_by_date"]
+    dst_labels = ctx["dst_labels_by_date"]
     # Ujjain has no DST - no DST labels should appear
-    all_labels = [label for labels in festival_names.values() for label in labels]
+    all_labels = [label for labels in dst_labels.values() for label in labels]
     self.assertNotIn("DST starts", all_labels)
     self.assertNotIn("DST ends", all_labels)
 

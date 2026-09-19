@@ -467,6 +467,11 @@ def draw_cell(pdf, x, y_top, row_h, cell_w, day, civil, location, context, col):
     for wrapped in _wrap_lines(pdf, name, PDF_FONT_ITALIC, 6.8, max_text_w):
       pdf.drawString(x + 4, line_y, wrapped)
       line_y -= 8.0
+  for label in context.get("dst_labels_by_date", {}).get(civil, []):
+    pdf.setFillColor(GREY)
+    pdf.setFont(PDF_FONT, 5.5)
+    pdf.drawString(x + 4, line_y, label)
+    line_y -= 7.0
 
   for kind, _phase, max_jd in context.get("eclipse_details_by_date", {}).get(civil, []):
     pdf.setFillColor(BROWN)
@@ -608,11 +613,12 @@ def collect_context(months, location, festivals_path, amanta=True):
   festival_names_by_date = {}
   for civil, markers in festivals_by_date.items():
     festival_names_by_date[civil] = [lookup.get(m, str(m)) for m in markers]
+  dst_labels_by_date = {}
   for year, month in months:
     for day, label in dst_transitions(location.timezone_name, year, month).items():
       civil = CivilDate(year, month, day)
       if civil in target_dates:
-        festival_names_by_date.setdefault(civil, []).append(label)
+        dst_labels_by_date.setdefault(civil, []).append(label)
   eclipses = find_local_eclipses(records[0].sunrise_jd, records[-1].sunrise_jd + 1, geopos)
   eclipse_dates = {jd_to_local_civil_date(entry[2], location.timezone_name) for entry in eclipses}
   eclipse_details_by_date = {}
@@ -625,6 +631,7 @@ def collect_context(months, location, festivals_path, amanta=True):
       for record in records
     },
     "festival_names_by_date": festival_names_by_date,
+    "dst_labels_by_date": dst_labels_by_date,
     "eclipse_dates": eclipse_dates,
     "eclipse_details_by_date": eclipse_details_by_date,
     "masa_badges": masa_badges_by_date(records, amanta=amanta),
