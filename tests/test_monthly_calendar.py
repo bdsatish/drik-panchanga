@@ -131,6 +131,22 @@ class DayDetailsTests(unittest.TestCase):
     _tithi_lines, _naks_lines, yoga_names = day_details(location, date(2026, 6, 10))
     self.assertEqual(yoga_names, ["Āyuṣmān", "Saubhāgya"])
 
+  def test_day_details_raises_without_sunrise(self):
+    # Regression: a polar day/night has no sunrise, so every sunrise-based
+    # quantity is undefined. Before the guard this returned garbage end times
+    # such as ('K7', '-59069077:35').
+    location = load_location("Murmansk, RU")
+    with self.assertRaisesRegex(ValueError, "midnight sun"):
+      day_details(location, date(2026, 6, 21))
+    with self.assertRaisesRegex(ValueError, "polar night"):
+      day_details(location, date(2026, 12, 21))
+
+  def test_day_details_still_computes_at_polar_shoulder(self):
+    # Murmansk does see a sunrise outside the polar day/night window.
+    location = load_location("Murmansk, RU")
+    tithi_lines, naks_lines, yoga_names = day_details(location, date(2026, 3, 15))
+    self.assertTrue(tithi_lines and naks_lines and yoga_names)
+
 
 class SunMoonTests(unittest.TestCase):
 
@@ -142,6 +158,16 @@ class SunMoonTests(unittest.TestCase):
     self.assertTrue(lines[1].startswith("Moon:"))
     self.assertIn(" – ", lines[0])
     self.assertIn(" – ", lines[1])
+
+  def test_sun_moon_lines_omit_sun_without_sunrise(self):
+    # Regression: the Sun line used to render the 0.0 rise sentinel as
+    # ``Sun: -59069097:00 – -59069097:00`` at polar locations.
+    location = load_location("Murmansk, RU")
+    for day in (date(2026, 6, 21), date(2026, 12, 21)):
+      with self.subTest(day=day):
+        lines = sun_moon_lines(location, day)
+        self.assertFalse([line for line in lines if line.startswith("Sun:")])
+        self.assertTrue(all("-59" not in line for line in lines))
 
 
 class CellDrawTests(unittest.TestCase):

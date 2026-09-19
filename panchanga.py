@@ -210,10 +210,12 @@ def to_dms(deg):
 
 
 def unwrap_angles(angles):
-  """Add 360 to those elements in the input list so that
-     all elements are sorted in ascending order."""
-  result = angles
-  for i in range(1, len(angles)):
+  """Return a copy of ``angles`` with 360 added where needed so the list is
+     sorted in ascending order. Does not mutate ``angles``: callers that need
+     the raw (wrapped) values as well as the unwrapped ones must not have
+     their input rewritten under them."""
+  result = list(angles)
+  for i in range(1, len(result)):
     if result[i] < result[i - 1]: result[i] += 360
 
   assert (result == sorted(result))
@@ -507,12 +509,15 @@ def nakshatra(jd, place):
   ends = (rise - jd + approx_end) * 24 + tz
   answer = [int(nak), to_dms(ends)]
 
-  # 4. Check for skipped nakshatra
+  # 4. Check for skipped nakshatra. Classify the raw (wrapped) longitude:
+  # ``nakshatra_pada`` expects [0, 360), and ``longitudes`` must stay wrapped
+  # here even though ``y`` above is unwrapped.
   nak_tmrw = nakshatra_pada(longitudes[-1])[0]  # ignore pada
   isSkipped = (nak_tmrw - nak) % 27 > 1
   if isSkipped:
     leap_nak = nak + 1
-    approx_end = inverse_lagrange(offsets, longitudes, nakshatra_end_point(leap_nak))
+    # Interpolate against the unwrapped window, not the raw wrapped values.
+    approx_end = inverse_lagrange(offsets, y, nakshatra_end_point(leap_nak))
     ends = (rise - jd + approx_end) * 24 + tz
     leap_nak = 1 if nak == 27 else leap_nak
     answer += [int(leap_nak), to_dms(ends)]

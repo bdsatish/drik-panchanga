@@ -227,6 +227,20 @@ class NakshatraTests(PanchangaTestCase):
     set_nakshatra_system('equal')
     self.assertEqual(nakshatra_pada(from_dms(23, 0)), [2, 3])
 
+  def test_garga_nakshatra_across_360_degree_wrap(self):
+    # Regression: nakshatra() unwraps its longitude window in place, so the
+    # last sample can exceed 360. The unequal (Garga) classifier asserts
+    # longitude < 360 and used to crash with AssertionError on every day the
+    # Moon crosses 0 Aries inside the sunrise-to-sunrise window (~14 days a
+    # year). Known 2026 crossings: 25 Jan, 21 Feb, 20 Mar, 17 Apr, 14 May.
+    set_nakshatra_system('garga')
+    self.addCleanup(set_nakshatra_system)
+    for year, month, day in [(2026, 1, 25), (2026, 2, 21), (2026, 3, 20), (2026, 4, 17), (2026, 5, 14)]:
+      with self.subTest(date=(year, month, day)):
+        jd = gregorian_to_jd(Date(year, month, day))
+        result = nakshatra(jd, bangalore)
+        self.assertTrue(1 <= result[0] <= 27)
+
 
 class YogaTests(PanchangaTestCase):
   """Yoga computation."""
@@ -426,6 +440,18 @@ class HelperMathTests(PanchangaTestCase):
 
   def test_unwrap_angles(self):
     self.assertEqual(unwrap_angles([350, 10, 20]), [350, 370, 380])
+
+  def test_unwrap_angles_does_not_mutate_input(self):
+    # Regression: unwrap_angles used to rewrite the caller's list in place.
+    # nakshatra() reuses its raw longitudes after unwrapping for skip
+    # detection, so in-place mutation silently fed values >= 360 to
+    # nakshatra_pada (fatal under the Garga unequal system).
+    angles = [350.0, 10.0, 20.0]
+    original = list(angles)
+    result = unwrap_angles(angles)
+    self.assertEqual(angles, original)
+    self.assertIsNot(result, angles)
+    self.assertEqual(result, [350.0, 370.0, 380.0])
 
   def test_lon_relative_to_base(self):
     self.assertEqual(lon_relative_to_base(10, 350), 370)
