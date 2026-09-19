@@ -294,7 +294,7 @@ def year_label_for_month(amanta, year, month, records_by_date):
   record = records_by_date.get(civil)
   if record is None:
     return None
-  masa_num = int(display_masa(record, amanta=amanta).lstrip("A"))
+  masa_num = int(record.masa.lstrip("A"))
   jd = gregorian_to_jd(PanDate(year, month, civil.day))
   kali_year, saka_year, vikrama_year = panchanga.elapsed_year(jd, masa_num)
   names = sanskrit_names()["samvats"]

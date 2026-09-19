@@ -176,10 +176,10 @@ def _compute_day_details_unlocked(location, civil, amanta=None, coordinate_selec
   rtu_num = panchanga.ritu(lunar_num)
   prev_was_adhika = panchanga.previous_masa_was_adhika(last_nm, is_adhika)
   drik_rtu_num = panchanga.drik_ritu(lunar_num, is_adhika, ti_num, prev_was_adhika)
-  samvat_num = panchanga.samvatsara(jd, masa_num)
-  samvat_north_num = panchanga.samvatsara_north_modern(jd, masa_num)
+  samvat_num = panchanga.samvatsara(jd, lunar_num)
+  samvat_north_num = panchanga.samvatsara_north_modern(jd, lunar_num)
   vara_num = panchanga.vaara(jd)
-  kali_year, saka_year, vikrama_year = panchanga.elapsed_year(jd, masa_num)
+  kali_year, saka_year, vikrama_year = panchanga.elapsed_year(jd, lunar_num)
   kali_day = int(panchanga.ahargana(jd))
   sunrise_jd_ut = sunrise[0] - place.timezone / 24.0
   if coordinate_selection == "tropical":

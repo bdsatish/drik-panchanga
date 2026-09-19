@@ -176,6 +176,22 @@ class PdfLayoutTests(unittest.TestCase):
     ]
     self.assertEqual(calendar_year_label(records), "1948 Parābhava | 2083 Siddhārthī | 5127 Kali (elapsed)")
 
+  def test_calendar_year_label_uses_underlying_month_for_purnimanta(self):
+    # Underlying month 1 (Caitra), Krsna paksha -> purnimanta displays as 2 (Vaisakha).
+    # Samvatsara must use the underlying month, not the display month.
+    records = [
+      DayRecord(date(2026, 4, 15), "K20", 1, 1, "1", False, 0.0),
+    ]
+    with mock.patch("generate_panchanga_calendar.panchanga") as mock_panchanga:
+      mock_panchanga.gregorian_to_jd.return_value = 2450000.0
+      mock_panchanga.elapsed_year.return_value = (5127, 1948, 2083)
+      mock_panchanga.samvatsara.return_value = 1
+      mock_panchanga.samvatsara_north_modern.return_value = 1
+      calendar_year_label(records, amanta=False)
+      mock_panchanga.elapsed_year.assert_called_with(2450000.0, 1)
+      mock_panchanga.samvatsara.assert_called_with(2450000.0, 1)
+      mock_panchanga.samvatsara_north_modern.assert_called_with(2450000.0, 1)
+
   def test_pdf_subtitle_has_kali_ahargana_range(self):
     months = list(month_range(2026, 6))
     self.assertEqual(kali_ahargana_range(months), (1872727, 1873152))

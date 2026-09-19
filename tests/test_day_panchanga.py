@@ -120,6 +120,18 @@ class DayPanchangaMasaRituTests(unittest.TestCase):
     self.assertEqual(amanta["drik_ayana"], "Dakṣiṇāyana")
     self.assertEqual(amanta["drik_ayana"], purni["drik_ayana"])
 
+  def test_samvatsara_unchanged_by_purnimanta_label(self):
+    # 10/02/2023 is Krsna paksha of underlying month 11 (Magha).
+    # In purnimanta this displays as 12 (Phalguna), but samvatsara must follow
+    # the underlying lunar month, not the display month.
+    amanta = compute_day_panchanga("Bengaluru", "10/02/2023", month_system="amanta")
+    purni = compute_day_panchanga("Bengaluru", "10/02/2023", month_system="purnimanta")
+    self.assertEqual(amanta["samvatsara"], purni["samvatsara"])
+    self.assertEqual(amanta["samvatsara_north"], purni["samvatsara_north"])
+    self.assertEqual(amanta["kali_year"], purni["kali_year"])
+    self.assertEqual(amanta["saka_year"], purni["saka_year"])
+    self.assertEqual(amanta["vikrama_year"], purni["vikrama_year"])
+
   def test_vedic_and_drik_rtu_both_present(self):
     data = compute_day_panchanga("Bengaluru", "21/04/2023")
     self.assertIn("ṛtu", data["rtu"])

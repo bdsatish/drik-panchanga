@@ -983,7 +983,7 @@ def calendar_year_label(records, amanta=True):
   """Return era and samvatsara labels for a representative calendar month."""
   representative = records[len(records) // 2]
   civil = representative.civil_date
-  masa_num = int(display_masa(representative, amanta=amanta).lstrip("A"))
+  masa_num = int(representative.masa.lstrip("A"))
   jd = panchanga.gregorian_to_jd(panchanga.Date(civil.year, civil.month, civil.day))
   kali_year, saka_year, vikrama_year = panchanga.elapsed_year(jd, masa_num)
   names = sanskrit_names()["samvats"]

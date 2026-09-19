@@ -326,6 +326,22 @@ class YearLabelTests(unittest.TestCase):
     from generate_monthly_calendar import year_label_for_month
     self.assertIsNone(year_label_for_month(True, 2026, 6, {}))
 
+  def test_year_label_uses_underlying_month_for_purnimanta(self):
+    from festival_rules import DayRecord
+    from generate_monthly_calendar import year_label_for_month
+    import panchanga
+    # Underlying month 1 (Caitra), Krsna paksha -> purnimanta displays as 2 (Vaisakha).
+    # Year label must use the underlying month, not the display month.
+    civil = date(2026, 4, 15)
+    records_by_date = {civil: DayRecord(civil, "K20", 1, 1, "1", False, 0.0)}
+    with mock.patch.object(panchanga, "elapsed_year", return_value=(5127, 1948, 2083)) as mock_elapsed, \
+         mock.patch.object(panchanga, "samvatsara", return_value=1) as mock_samvatsara, \
+         mock.patch.object(panchanga, "samvatsara_north_modern", return_value=1) as mock_north:
+      label = year_label_for_month(False, 2026, 4, records_by_date)
+      mock_elapsed.assert_called_with(mock.ANY, 1)
+      mock_samvatsara.assert_called_with(mock.ANY, 1)
+      mock_north.assert_called_with(mock.ANY, 1)
+
 
 class ContextTests(unittest.TestCase):
 
