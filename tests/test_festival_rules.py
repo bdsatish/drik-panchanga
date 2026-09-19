@@ -1,6 +1,7 @@
 """Unit tests for the clean-slate plain-tithi festival rules."""
 
 from datetime import date, timedelta
+from functools import lru_cache
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import calendar
@@ -37,6 +38,7 @@ from festival_rules import (
   select_sama_upakarma_dates,
   select_sankashti_chaturthi_dates,
   select_tithi_dates,
+  select_dates_for_rule,
   select_uttarayana_dates,
   select_vaikuntha_ekadashi_dates,
   select_varamahalakshmi_dates,
@@ -1614,6 +1616,100 @@ class SankashtiChaturthiRealLocationTests(unittest.TestCase):
     self.assertEqual(len(per_month), 14)
     self.assertTrue(all(count in (1, 2) for count in per_month.values()))
     self.assertIn(len(dates), [14, 15, 16])
+
+
+class UjjainFestivalGoldenTests(unittest.TestCase):
+  """Absolute-date golden: the engine's festival dates for Ujjain, 2026-01 to 2027-02.
+
+  These pin the *calendrical output* of the whole rule engine against a
+  real location, not just its shape. They are the regression guard the
+  synthetic/loose tests above are not: an off-by-one in a tithi boundary,
+  a kshaya/vriddhi policy flip, or a wrong maasa lookup changes a date here.
+
+  Conventions the goldens assume (documented, not asserted as universal
+  Hindu-calendar truth):
+    - amanta reckoning, Ujjain (23.18N, 75.79E, IST),
+    - tithi read at sunrise; a *skipped* (kshaya) tithi is marked on the
+      later civil date; a *doubled* (vriddhi) tithi keeps the former date,
+    - the ayanamsa is citra.
+
+  Because tithi boundaries near these modern dates are hours from sunrise,
+  the civil dates are stable whether or not Swiss Ephemeris .se1 files are
+  present (the built-in Moshier fallback lands on the same day), so the
+  golden needs no ephemeris guard. The dates below match the one-page
+  Ujjain calendar shipped at the repository root
+  (ujjain-in_panchanga_2026-03_to_2027-04.pdf) for the months it covers.
+  """
+
+  LOCATION_NAME = "Ujjain"
+
+  @classmethod
+  def setUpClass(cls):
+    panchanga.set_chosen_ayanamsa("citra")
+    cls.location = load_location(cls.LOCATION_NAME)
+    cls.months = list(month_range(2026, 1))
+    cls.records = daily_records(cls.months, cls.location)
+    cls.enabled = load_festival_selection(DEFAULT_FESTIVALS_PATH)
+    cls.geopos = (cls.location.longitude, cls.location.latitude, 0.0)
+
+  @classmethod
+  @lru_cache(maxsize=1)
+  def _festival_dates(cls, name):
+    """Map one enabled festival name -> sorted list of civil dates."""
+    rule = next(rule for rule in FESTIVAL_RULES if rule.name == name)
+    dates = select_dates_for_rule(rule, cls.records, cls.geopos, cls.location.timezone_name)
+    return sorted(dates)
+
+  def _dates_for(self, name):
+    self.assertIn(name, self.enabled, f"{name!r} is no longer enabled in {DEFAULT_FESTIVALS_PATH}")
+    dates = self._festival_dates(name)
+    self.assertTrue(dates, f"festival {name!r} produced no date")
+    return dates
+
+  def test_ugadi_2026(self):
+    self.assertEqual(self._dates_for("Ugadi"), [date(2026, 3, 20)])
+
+  def test_rama_navami_2026(self):
+    self.assertEqual(self._dates_for("Rama Navami"), [date(2026, 3, 27)])
+
+  def test_akshaya_tritiya_2026(self):
+    self.assertEqual(self._dates_for("Akshaya Tritiya"), [date(2026, 4, 20)])
+
+  def test_guru_purnima_2026(self):
+    self.assertEqual(self._dates_for("Guru Purnima"), [date(2026, 7, 29)])
+
+  def test_onam_2026(self):
+    self.assertEqual(self._dates_for("Onam"), [date(2026, 8, 26)])
+
+  def test_janmashtami_2026(self):
+    self.assertEqual(self._dates_for("Janmashtami"), [date(2026, 9, 4)])
+
+  def test_durga_ashtami_2026(self):
+    self.assertEqual(self._dates_for("Durga Ashtami"), [date(2026, 10, 19)])
+
+  def test_vijayadashami_2026(self):
+    self.assertEqual(self._dates_for("Vijayadashami"), [date(2026, 10, 21)])
+
+  def test_deepavali_2026(self):
+    self.assertEqual(self._dates_for("Deepavali"), [date(2026, 11, 9)])
+
+  def test_vaikuntha_ekadashi_2026(self):
+    self.assertEqual(self._dates_for("Vaikuntha Ekadashi"), [date(2026, 12, 20)])
+
+  def test_uttarayana_2026(self):
+    self.assertEqual(self._dates_for("Uttarayana"), [date(2026, 12, 22)])
+
+  def test_holi_2026(self):
+    self.assertEqual(self._dates_for("Kama Dahana (Holi)"), [date(2026, 3, 3)])
+
+  def test_maha_shivaratri_2026(self):
+    self.assertEqual(self._dates_for("Maha Shivaratri"), [date(2026, 2, 16)])
+
+  def test_multi_occurrence_festivals_2026_2027(self):
+    # Vasanta Panchami and Ratha Saptami recur across the 14-month span;
+    # both occurrences are expected, which also guards the multi-month policy.
+    self.assertEqual(self._dates_for("Vasanta Panchami"), [date(2026, 1, 23), date(2027, 2, 11)])
+    self.assertEqual(self._dates_for("Ratha Saptami"), [date(2026, 1, 25), date(2027, 2, 13)])
 
 
 if __name__ == "__main__":
