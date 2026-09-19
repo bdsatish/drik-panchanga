@@ -1,7 +1,7 @@
 Festival dates and conventions
 ==============================
 
-See [README.md](../README.md) for general PDF usage. This file documents
+See [README.CALENDARS.md](README.CALENDARS.md) for general PDF usage. This file documents
 festival configuration and how festival dates are computed.
 Lunar-month *display* may be amānta or pūrṇimānta; the festival catalog itself
 is keyed by amānta month numbers so civil dates stay stable across display
