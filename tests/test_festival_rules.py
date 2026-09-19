@@ -1639,6 +1639,22 @@ class UjjainFestivalGoldenTests(unittest.TestCase):
   golden needs no ephemeris guard. The dates below match the one-page
   Ujjain calendar shipped at the repository root
   (ujjain-in_panchanga_2026-03_to_2027-04.pdf) for the months it covers.
+
+  Known convention divergence -- do not "fix" these goldens to match a
+  website: several of these dates differ by one day from the festival lists
+  published by public panchanga sites (drikpanchang.com, AstroSage, ...).
+  In 2026 the observed offsets are not uniform -- the engine says Ugadi
+  Mar 20, Akshaya Tritiya Apr 20, Deepavali Nov 9, Maha Shivaratri Feb 16,
+  where the lists say Mar 19, Apr 19, Nov 8, Feb 15 respectively, while
+  Guru Purnima (Jul 29), Onam (Aug 26) and Janmashtami (Sep 4) agree with
+  the lists. The engine's own convention is deterministic and
+  documented above (tithi read at sunrise; a tithi skipped at sunrise
+  [kshaya] is marked on the later civil day; a doubled tithi [vriddhi]
+  keeps the former day). How a given public site dates the same tithi is
+  *not* verified here -- it may use a different reference time, place,
+  ayanamsa, or skip-policy -- so the goldens pin this codebase's shipped
+  output, not external sites. If the divergence ever needs reconciling, do
+  it deliberately as a rule change, not by editing these assertions.
   """
 
   LOCATION_NAME = "Ujjain"
