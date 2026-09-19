@@ -728,9 +728,14 @@ def dst_transitions(timezone_name, year, month):
 
 
 def place_for_date(location, civil):
-  """Build a ``Place`` with the city's UTC offset on the given civil date."""
+  """Build a ``Place`` with the city's UTC offset on the given civil date.
+
+  Python ``datetime`` does not support year 0 or negative years. For BCE dates,
+  year 1 is used as a proxy; the tzdb rules for early CE dates preserve the
+  historical local mean time offsets that modern standardized offsets obscure.
+  """
   zone = ZoneInfo(location.timezone_name)
-  year = civil.year if civil.year > 0 else 2000
+  year = civil.year if civil.year > 0 else 1
   offset = timezone_hours(zone, year, civil.month, civil.day)
   return panchanga.Place(location.latitude, location.longitude, offset)
 
