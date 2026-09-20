@@ -171,7 +171,7 @@ def ics_calendar():
                             coordinate_selection=coordinate_selection)
   except (OSError, ValueError, RuntimeError) as error:
     abort(400, description=str(error))
-  name = (f"panchanga-{location_slug(city)}-{coordinate_selection}-{month_key}-"
+  name = (f"panchanga-{location_slug(location.name)}-{coordinate_selection}-{month_key}-"
           f"{start_year:04d}-{start_month:02d}.ics")
   return send_file(io.BytesIO(ics_text.encode("utf-8")), mimetype="text/calendar; charset=utf-8", as_attachment=True,
                    download_name=name, max_age=0)

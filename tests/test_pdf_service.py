@@ -198,6 +198,32 @@ class IcsServiceTests(unittest.TestCase):
     self.assertIn("tropical", disposition)
     self.assertIn("amanta", disposition)
 
+  def test_ics_flask_filename_uses_the_resolved_city(self):
+    # Regression: the filename slugged the raw ``city`` argument, so the same
+    # calendar downloaded under different names -- and an un-normalised input
+    # like "helsinki,fi" kept a literal comma, because location_slug only
+    # rewrites the canonical ", " form.
+    client = app.test_client()
+    spellings = ["Helsinki", "Helsinki, FI", "helsinki,fi", " Helsinki , fi "]
+    names = set()
+    for spelling in spellings:
+      with self.subTest(city=spelling):
+        response = client.get(f"/api/panchanga.ics?city={spelling}&start=2026-03")
+        self.assertEqual(response.status_code, 200)
+        disposition = response.headers["Content-Disposition"]
+        self.assertIn("panchanga-helsinki-fi-citra-amanta-2026-03.ics", disposition)
+        self.assertNotIn(",", disposition.split("filename=")[-1])  # no raw comma
+        names.add(disposition)
+    self.assertEqual(len(names), 1)
+
+  def test_ics_flask_filename_matches_the_uid_slug(self):
+    # The download name and the calendar's own UID must agree.
+    import re
+    response = app.test_client().get("/api/panchanga.ics?city=helsinki,fi&start=2026-03")
+    disposition = response.headers["Content-Disposition"]
+    uid = re.search(r"@([A-Za-z0-9._-]+)", response.data.decode())
+    self.assertIn(f"-{uid.group(1)}-", disposition)
+
   def test_ics_flask_endpoint_returns_calendar(self):
     response = app.test_client().get("/api/panchanga.ics?city=Helsinki&start=2026-03")
     self.assertEqual(response.status_code, 200)
