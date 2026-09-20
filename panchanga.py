@@ -206,6 +206,8 @@ def to_dms_prec(deg):
 
 def to_dms(deg):
   d, m, s = to_dms_prec(deg)
+  # Truncate, do not round: rounding can hit s == 60 and would then need a
+  # seconds -> minutes -> degrees carry cascade. Costs < 1s and keeps 0 <= s < 60.
   return [d, m, int(s)]
 
 
