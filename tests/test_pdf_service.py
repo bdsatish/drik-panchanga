@@ -82,6 +82,50 @@ class CgiGenerationTests(unittest.TestCase):
     self.assertIn(b'filename="calendar.pdf"', output)
     self.assertTrue(output.endswith(b"%PDF-cgi"))
     self.assertEqual(generate.call_args.args[0]["city"], "Helsinki")
+    self.assertEqual(output.count(b"Content-Type:"), 1)
+
+  def test_emits_no_partial_header_block_when_a_write_fails(self):
+    # Regression: the body write happened inside the same try as the headers,
+    # so a failed write re-entered the error path and emitted a second header
+    # block after the first. The whole response is now built and written in
+    # one call, so a failed write emits nothing rather than a duplicate.
+    class FailingBody(io.BytesIO):
+
+      def write(self, data):
+        if b"%PDF" in data:
+          raise OSError("client disconnected")
+        return super().write(data)
+
+    stdout = mock.Mock(buffer=FailingBody())
+    with mock.patch.dict(os.environ, {"REQUEST_METHOD": "POST"}, clear=True), \
+            mock.patch.object(
+                cgi_handlers, "_parse_urlencoded_post",
+                return_value={"city": "Helsinki", "start": "2026-03"}), \
+            mock.patch.object(
+                cgi_handlers, "generate_pdf",
+                return_value=(b"%PDF-cgi", "calendar.pdf")), \
+            mock.patch.object(sys, "stdout", stdout):
+      with self.assertRaises(OSError):
+        cgi_handlers.handle_generate()
+
+    output = stdout.buffer.getvalue()
+    self.assertEqual(output.count(b"Content-Type:"), 0)
+    self.assertNotIn(b"Status:", output)
+
+  def test_error_response_carries_a_single_header_block(self):
+    stdout = mock.Mock(buffer=io.BytesIO())
+    with mock.patch.dict(os.environ, {"REQUEST_METHOD": "POST"}, clear=True), \
+            mock.patch.object(cgi_handlers, "_parse_urlencoded_post", return_value={}), \
+            mock.patch.object(
+                cgi_handlers, "generate_pdf",
+                side_effect=ValueError("City is required.")), \
+            mock.patch.object(sys, "stdout", stdout):
+      cgi_handlers.handle_generate()
+
+    output = stdout.buffer.getvalue()
+    self.assertEqual(output.count(b"Content-Type:"), 1)
+    self.assertEqual(output.count(b"Status:"), 1)
+    self.assertIn(b"City is required.", output)
 
 
 class DurmuhurtaRenderingTests(unittest.TestCase):

@@ -56,34 +56,43 @@ def _parse_urlencoded_post():
   return fields
 
 
-def write_headers(headers, status=None):
-  out = sys.stdout.buffer
+def _emit(headers, body=b"", status=None):
+  """Write a complete CGI response in a single call.
+
+  Building the header block and body together means a partial write cannot
+  leave headers without a body, or a body after a failed header write.
+  """
+  chunks = []
   if status:
     # CGI status header (Apache converts this to the HTTP status line).
-    out.write(f"Status: {status}\r\n".encode("ascii", errors="replace"))
+    chunks.append(f"Status: {status}\r\n".encode("ascii", errors="replace"))
   for name, value in headers:
-    out.write(f"{name}: {value}\r\n".encode("utf-8", errors="replace"))
-  out.write(b"\r\n")
+    chunks.append(f"{name}: {value}\r\n".encode("utf-8", errors="replace"))
+  chunks.append(b"\r\n")
+  chunks.append(body)
+  sys.stdout.buffer.write(b"".join(chunks))
+
+
+def write_headers(headers, status=None):
+  _emit(headers, status=status)
 
 
 def write_text(body, content_type="text/plain; charset=utf-8", status=None):
   data = body.encode("utf-8")
-  write_headers([
+  _emit([
     ("Content-Type", content_type),
     ("Content-Length", str(len(data))),
     ("Cache-Control", "no-store"),
-  ], status=status)
-  sys.stdout.buffer.write(data)
+  ], body=data, status=status)
 
 
 def write_json(payload, status=None):
   data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
-  write_headers([
+  _emit([
     ("Content-Type", "application/json; charset=utf-8"),
     ("Content-Length", str(len(data))),
     ("Cache-Control", "no-store"),
-  ], status=status)
-  sys.stdout.buffer.write(data)
+  ], body=data, status=status)
 
 
 def write_error(message, status="400 Bad Request", as_json=False):
@@ -103,20 +112,24 @@ def handle_cities():
     params = _query_params()
     query = (params.get("q") or [""])[0]
     limit = city_search_limit((params.get("limit") or ["20"])[0])
-    write_json({"cities": search_cities(query, limit=limit)})
+    payload = {"cities": search_cities(query, limit=limit)}
   except Exception as error:  # catch-all so CGI still returns a response
     log.error("CGI cities failed: %s", error)
     write_error(str(error) or traceback.format_exc(), status="500 Internal Server Error", as_json=True)
+    return
+  write_json(payload)
 
 
 def handle_suggest_city():
   """GET suggest_city.py → JSON ``{\"city\": ...}`` from client IP."""
   try:
     ip = client_ip(os.environ.get("HTTP_X_FORWARDED_FOR", ""), os.environ.get("REMOTE_ADDR"))
-    write_json({"city": suggest_city_for_ip(ip)})
+    payload = {"city": suggest_city_for_ip(ip)}
   except Exception as error:  # catch-all so CGI still returns a response
     log.error("CGI suggest_city failed: %s", error)
     write_error(str(error) or traceback.format_exc(), status="500 Internal Server Error", as_json=True)
+    return
+  write_json(payload)
 
 
 def handle_panchanga():
@@ -132,12 +145,15 @@ def handle_panchanga():
     else:
       ayanamsa = None
     coordinate_selection = require_coordinate_selection(ayanamsa)
-    write_json(compute_day_panchanga(city, date, month_system=month, coordinate_selection=coordinate_selection))
+    payload = compute_day_panchanga(city, date, month_system=month, coordinate_selection=coordinate_selection)
   except ValueError as error:
     write_error(str(error), as_json=True)
+    return
   except Exception as error:  # catch-all so CGI still returns a response
     log.error("CGI panchanga failed: %s", error)
     write_error(str(error) or traceback.format_exc(), status="500 Internal Server Error", as_json=True)
+    return
+  write_json(payload)
 
 
 def handle_generate():
@@ -147,33 +163,39 @@ def handle_generate():
     write_error("Use POST with form fields city and start (YYYY-MM).", status="405 Method Not Allowed")
     return
 
+  # Build the whole response before emitting anything: once headers are on the
+  # wire a later failure cannot replace them, so the error path must never run
+  # after output has started (that emitted a second header block).
   try:
     form = _parse_urlencoded_post()
     pdf_bytes, filename = generate_pdf(form)
-
-    write_headers([
-      ("Content-Type", "application/pdf"),
-      ("Content-Disposition", f'attachment; filename="{filename}"'),
-      ("Content-Length", str(len(pdf_bytes))),
-      ("Cache-Control", "no-store"),
-    ])
-    sys.stdout.buffer.write(pdf_bytes)
   except (OSError, ValueError, RuntimeError) as error:
     write_error(str(error))
+    return
   except Exception as error:  # catch-all so CGI still returns a response
     log.error("CGI generate failed: %s", error)
     write_error(f"Internal error: {error}", status="500 Internal Server Error")
+    return
+
+  _emit([
+    ("Content-Type", "application/pdf"),
+    ("Content-Disposition", f'attachment; filename="{filename}"'),
+    ("Content-Length", str(len(pdf_bytes))),
+    ("Cache-Control", "no-store"),
+  ], body=pdf_bytes)
 
 
 def handle_status():
   """GET status.py — tiny health / version probe."""
   try:
     n_cities = len(city_names())
-    write_json({
+    payload = {
       "ok": True,
       "cities": n_cities,
       "project": str(PROJECT_ROOT),
-    })
+    }
   except Exception as error:  # catch-all so CGI still returns a response
     log.error("CGI status failed: %s", error)
     write_error(str(error), status="500 Internal Server Error", as_json=True)
+    return
+  write_json(payload)
