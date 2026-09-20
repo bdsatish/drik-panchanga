@@ -123,7 +123,7 @@ def generate_ics(location, start_year, start_month, month_system="amanta", coord
 
         durmuhurta_parts = []
         for start, end in _valid_durmuhurta_intervals(details["durmuhurta"]):
-          durmuhurta_parts.append(_fmt_interval(panchanga.to_dms(start), panchanga.to_dms(end)))
+          durmuhurta_parts.append(_fmt_interval(start, end))
         durmuhurta_text = ", ".join(durmuhurta_parts) if durmuhurta_parts else "—"
 
         varjyam_parts = []

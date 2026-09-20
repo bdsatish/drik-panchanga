@@ -837,9 +837,21 @@ class MuhurtaTests(PanchangaTestCase):
     starts, ends = durmuhurtam(date2, bangalore)
     self.assertEqual(len(starts), 2)
     self.assertEqual(len(ends), 2)
+    for value in starts + ends:
+      self.assertEqual(len(value), 3)  # [h, m, s]
     abhijit = abhijit_muhurta(date2, bangalore)
     self.assertEqual(len(abhijit), 2)
+    self.assertEqual(len(abhijit[0]), 3)
     self.assertLess(abhijit[0], abhijit[1])
+
+  def test_durmuhurtam_unused_slot_is_zero_hms(self):
+    # Sunday (2026-01-18) has a single durmuhurtam; the unused slot must be
+    # a uniform [0, 0, 0] rather than a bare int, so callers can compare
+    # every entry as [h, m, s].
+    starts, ends = durmuhurtam(gregorian_to_jd(Date(2026, 1, 18)), bangalore)
+    self.assertIn([0, 0, 0], starts)
+    self.assertIn([0, 0, 0], ends)
+    self.assertTrue(all(len(value) == 3 for value in starts + ends))
 
 
 class PlanetaryPositionTests(PanchangaTestCase):

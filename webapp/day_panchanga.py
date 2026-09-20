@@ -110,11 +110,11 @@ def _interval_from_hms(start_hms, end_hms):
 
 
 def _valid_durmuhurta_intervals(values):
-  """Return Durmuhūrta interval values without unused ``(0, 0)`` slots."""
+  """Return Durmuhūrta ``[h, m, s]`` intervals without unused ``[0, 0, 0]`` slots."""
   starts, ends = values
   intervals = []
   for start, end in zip(starts, ends):
-    if start != 0 or end != 0:
+    if start != [0, 0, 0] or end != [0, 0, 0]:
       intervals.append((start, end))
   return intervals
 
@@ -267,7 +267,7 @@ def compute_day_panchanga(city, date_text, month_system="amanta", coordinate_sel
 
     durmuhurta_intervals = []
     for start, end in _valid_durmuhurta_intervals(details["durmuhurta"]):
-      durmuhurta_intervals.append(_interval_from_hms(panchanga.to_dms(start), panchanga.to_dms(end)))
+      durmuhurta_intervals.append(_interval_from_hms(start, end))
 
     varjyam_intervals = []
     for start, end in details["varjyam"]:

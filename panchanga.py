@@ -943,19 +943,21 @@ def durmuhurtam(jd, place):
     base[1] = sset
 
   # compute start and end timings
-  start_times = [0, 0]
-  end_times = [0, 0]
+  start_times = [[0, 0, 0], [0, 0, 0]]
+  end_times = [[0, 0, 0], [0, 0, 0]]
   for i in range(0, 2):
     offset = offsets[weekday][i]
     if offset != 0.0:
-      start_times[i] = base[i] + dur[i] * offsets[weekday][i] / 12
-      end_times[i] = start_times[i] + day_dur * 0.8 / 12
+      start = base[i] + dur[i] * offsets[weekday][i] / 12
+      end = start + day_dur * 0.8 / 12
 
       # convert to local time
-      start_times[i] = (start_times[i] - jd) * 24 + tz
-      end_times[i] = (end_times[i] - jd) * 24 + tz
+      start_times[i] = to_dms((start - jd) * 24 + tz)
+      end_times[i] = to_dms((end - jd) * 24 + tz)
 
-  return [start_times, end_times]  # in decimal hours
+  # ``[0, 0, 0]`` marks an unused slot: there is only one durmuhurtam on
+  # Sunday, Wednesday, and Saturday.
+  return [start_times, end_times]
 
 
 def abhijit_muhurta(jd, place):
@@ -969,7 +971,7 @@ def abhijit_muhurta(jd, place):
   end_time = srise + 8 / 15 * day_dur
 
   # to local time
-  return [(start_time - jd) * 24 + tz, (end_time - jd) * 24 + tz]
+  return [to_dms((start_time - jd) * 24 + tz), to_dms((end_time - jd) * 24 + tz)]
 
 
 def varjyam(jd, place):

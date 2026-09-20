@@ -87,24 +87,24 @@ class CgiGenerationTests(unittest.TestCase):
 class DurmuhurtaRenderingTests(unittest.TestCase):
 
   def test_filters_unused_slots_for_json_and_ics(self):
-    values = ([0, 10.5], [0, 11.25])
+    values = ([[0, 0, 0], [10, 30, 0]], [[0, 0, 0], [11, 15, 0]])
     intervals = _valid_durmuhurta_intervals(values)
-    self.assertEqual(intervals, [(10.5, 11.25)])
+    self.assertEqual(intervals, [([10, 30, 0], [11, 15, 0])])
     json_intervals = []
     for start, end in intervals:
-      json_intervals.append(_interval_from_hms(panchanga.to_dms(start), panchanga.to_dms(end)))
+      json_intervals.append(_interval_from_hms(start, end))
     self.assertEqual(json_intervals, [{"start": "10:30:00", "end": "11:15:00"}])
     ics_parts = []
     for start, end in intervals:
-      ics_parts.append(_fmt_interval(panchanga.to_dms(start), panchanga.to_dms(end)))
+      ics_parts.append(_fmt_interval(start, end))
     self.assertEqual(", ".join(ics_parts), "10:30:00–11:15:00")
 
   def test_preserves_two_intervals_and_empty_fallback(self):
     self.assertEqual(
-      _valid_durmuhurta_intervals(([1.0, 3.0], [2.0, 4.0])),
-      [(1.0, 2.0), (3.0, 4.0)],
+      _valid_durmuhurta_intervals(([[1, 0, 0], [3, 0, 0]], [[2, 0, 0], [4, 0, 0]])),
+      [([1, 0, 0], [2, 0, 0]), ([3, 0, 0], [4, 0, 0])],
     )
-    self.assertEqual(_valid_durmuhurta_intervals(([0, 0], [0, 0])), [])
+    self.assertEqual(_valid_durmuhurta_intervals(([[0, 0, 0], [0, 0, 0]], [[0, 0, 0], [0, 0, 0]])), [])
 
 
 def unfold_ics(text):
