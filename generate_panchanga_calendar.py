@@ -548,10 +548,16 @@ def load_location(city):
 
 
 def format_local_hm(jd, timezone_name):
-  """Format a UT Julian day as local ``HH:MM``, rounded to the nearest minute."""
+  """Format a UT Julian day as local ``HH:MM``, rounded to the nearest minute.
+
+  Follows the library's hours-past-midnight convention (README: "times beyond
+  24:00 are hours past midnight"): a time of 23:59:30 or later rounds up to
+  ``24:00`` rather than wrapping to ``00:00``. That matches
+  ``format_hms`` in the monthly generator and ``format_time`` in the web app,
+  both of which are documented to allow hours >= 24.
+  """
   local = jd_to_local_datetime(jd, timezone_name)
   total_minutes = int(round(local.hour * 60 + local.minute + local.second / 60.0))
-  total_minutes %= 24 * 60
   return f"{total_minutes // 60:02d}:{total_minutes % 60:02d}"
 
 
