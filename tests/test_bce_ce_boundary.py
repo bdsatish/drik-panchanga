@@ -139,27 +139,49 @@ class TithiNakshatraBceTests(BoundaryTestCase):
 to come from the JD/celestial pipeline itself, not from civil-date code.
   These goldens still matter: they lock the whole chain (JD -> rise_trans
   -> longitudes -> interpolation) at negative-year JDNs.
+
+  The tithi/nakshatra NUMBER is asserted exactly; the end TIME is asserted
+  within ``TIME_TOLERANCE_SECONDS``. Delta-T is a model, and its coefficient
+  tables differ between ephemeris file sets (a fresh ``ensure_ephe.sh``
+  download carries 185 .se1 files against a stale local 150), which shifts
+  these BCE end times by a few seconds. At year 1 CE delta-T is ~10550 s, so
+  a small model difference moves the interpolated end time directly. A
+  tolerance well under a minute still catches a real regression, which would
+  move minutes or change the number.
   """
+
+  TIME_TOLERANCE_SECONDS = 30
+
+  def assertTiming(self, actual, expected_number, expected_hms, label):
+    """Assert a ``[number, [h, m, s]]`` answer: number exact, time within tolerance."""
+    self.assertEqual(actual[0], expected_number, f"{label} number changed")
+    actual_seconds = actual[1][0] * 3600 + actual[1][1] * 60 + actual[1][2]
+    expected_seconds = expected_hms[0] * 3600 + expected_hms[1] * 60 + expected_hms[2]
+    self.assertLessEqual(abs(actual_seconds - expected_seconds), self.TIME_TOLERANCE_SECONDS,
+                         f"{label} end time moved: {actual[1]} vs {expected_hms} (>{self.TIME_TOLERANCE_SECONDS}s)")
 
   def test_nakshatra_at_june_15_100_bce(self):
     jd = gregorian_to_jd(Date(-100, 6, 15))
     require_swieph(jd)
-    # Krittika, ends 15:09:38 local.
-    self.assertEqual(panchanga.nakshatra(jd, UJJAIN), [8, [15, 9, 38]])
+    # Krittika, ends ~15:09:38 local.
+    self.assertTiming(panchanga.nakshatra(jd, UJJAIN), 8, [15, 9, 38], "100 BCE nakshatra")
 
   def test_tithi_at_june_15_1_ce(self):
     jd = gregorian_to_jd(Date(-1, 6, 15))
     require_swieph(jd)
-    # Pournima (15), ends 21:21:56 local.
-    self.assertEqual(panchanga.tithi(jd, UJJAIN), [15, [21, 21, 56]])
+    # Pournima (15), ends ~21:21:56 local.
+    self.assertTiming(panchanga.tithi(jd, UJJAIN), 15, [21, 21, 56], "1 BCE tithi")
 
   def test_skipped_tithi_on_boundary_day(self):
-    # 15 Jun 1 BCE (year 0): tithi 26 ends 05:59:42 and the skipped
-    # tithi 27 ends 26:59:49 (past midnight) the same day, so the answer
+    # 15 Jun 1 BCE (year 0): tithi 26 ends ~05:59:42 and the skipped
+    # tithi 27 ends ~26:59:49 (past midnight) the same day, so the answer
     # carries the leap tithi. A one-day JD jump would land on another tithi.
     jd = gregorian_to_jd(Date(0, 6, 15))
     require_swieph(jd)
-    self.assertEqual(panchanga.tithi(jd, UJJAIN), [26, [5, 59, 42], 27, [26, 59, 49]])
+    answer = panchanga.tithi(jd, UJJAIN)
+    self.assertEqual(len(answer), 4, f"expected a skipped tithi, got {answer}")
+    self.assertTiming(answer[:2], 26, [5, 59, 42], "1 BCE tithi 26")
+    self.assertTiming([answer[2], answer[3]], 27, [26, 59, 49], "1 BCE skipped tithi 27")
 
   def test_deep_bce_sanity(self):
     # Range/shape checks only (no minute-precision goldens this far back,
