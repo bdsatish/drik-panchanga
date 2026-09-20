@@ -46,7 +46,24 @@ jobs:
           ./scripts/ensure_ephe.sh "${SE_EPHE_PATH}"
 
       - name: Run unit tests
-        run: python -m unittest discover -s tests -t . -p 'test_*.py' -v
+        run: |
+          # No -v: 442 "ok" lines bury the failures. Record the log so the
+          # annotation step below can name the failing tests, and keep tee's
+          # status so a failing run still fails the step.
+          set -o pipefail
+          python -m unittest discover -s tests -t . -p 'test_*.py' 2>&1 | tee /tmp/unit-tests.log
+
+      - name: Annotate test failures
+        # Always run: on success this writes the pass summary, and on failure it
+        # emits ::error annotations plus a job summary. unittest writes plain
+        # stderr, which never reaches the checks API, so without this the Checks
+        # tab and PR gutter show only "Process completed with exit code 1".
+        if: always()
+        run: |
+          # stdout carries ::error commands (Actions parses those); the script
+          # writes the Markdown summary to $GITHUB_STEP_SUMMARY itself. Do not
+          # redirect stdout, or the annotations end up inside the summary file.
+          python scripts/ci_test_summary.py /tmp/unit-tests.log
 
       - name: Start gunicorn and smoke-test HTTP
         run: |
