@@ -267,6 +267,35 @@ swe.set_ephe_path(os.environ.get('SE_EPHE_PATH') or default_se_ephe_path())
 init_swisseph = lambda: None
 
 
+def ephemeris_fingerprint():
+  """Identify the ephemeris data in use, for diagnosing value drift.
+
+  Swiss Ephemeris outcomes depend on two independently versioned things: the C
+  library plus Python binding (``sweph_version``), and the ``.se1`` data files,
+  which upstream re-cuts from time to time (a 2026-05 revision changed every
+  shipped file and moved a year-1 CE longitude by 0.0004 degrees). A stale
+  local set therefore yields different seconds from CI for the same code and
+  library, which is invisible unless recorded.
+
+  Returns the library version, the data directory in use, the ``.se1`` count,
+  and delta-T at a fixed epoch (year 1 CE), which tracks the data set without
+  needing a reference value.
+  """
+  data_dir = os.environ.get('SE_EPHE_PATH') or default_se_ephe_path()
+  try:
+    se1_count = len([f for f in os.listdir(data_dir) if f.endswith('.se1')])
+  except OSError:
+    se1_count = 0
+  # 1 Jan 1 CE at noon UT; delta-T here is ~10546 s and shifts with the data set.
+  reference_jd = swe.julday(1, 1, 1, 12.0)
+  return {
+    'version': sweph_version(),
+    'data_dir': data_dir,
+    'se1_files': se1_count,
+    'deltat_seconds_year_1_ce': round(swe.deltat(reference_jd) * 86400.0, 3),
+  }
+
+
 def sweph_version():
   """Swiss Ephemeris version string, e.g. ``'2.10.03 (20230604)'``.
 

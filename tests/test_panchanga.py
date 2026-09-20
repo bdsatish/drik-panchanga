@@ -16,10 +16,10 @@ from panchanga import (
   navamsa_from_long, planetary_positions, day_duration, gauri_chogadiya, trikalam, rahu_kalam, yamaganda_kalam,
   gulika_kalam, durmuhurtam, abhijit_muhurta, elapsed_year, samvatsara, samvatsara_north, samvatsara_north_modern, ritu,
   drik_ritu, drik_ritu_at, lunar_masa, raasi, lunar_phase, new_moon, full_moon, local_time_to_jdut1, sweph_version,
-  default_se_ephe_path, get_planet_name, to_dms, to_dms_prec, unwrap_angles, lon_relative_to_base, inverse_lagrange,
-  mean_longitude, norm360, bisection_search, sidereal_saptarshi_nakshatra, saptarshi_nakshatra_traditional,
-  set_nakshatra_system, set_chosen_ayanamsa, set_ayanamsa_mode, set_coordinate_mode, set_coordinate_selection,
-  reset_ayanamsa_mode, solar_longitude)
+  ephemeris_fingerprint, default_se_ephe_path, get_planet_name, to_dms, to_dms_prec, unwrap_angles,
+  lon_relative_to_base, inverse_lagrange, mean_longitude, norm360, bisection_search, sidereal_saptarshi_nakshatra,
+  saptarshi_nakshatra_traditional, set_nakshatra_system, set_chosen_ayanamsa, set_ayanamsa_mode, set_coordinate_mode,
+  set_coordinate_selection, reset_ayanamsa_mode, solar_longitude)
 
 bangalore = Place(12.972, 77.594, +5.5)
 shillong = Place(25.569, 91.883, +5.5)
@@ -509,6 +509,18 @@ class HelperMathTests(PanchangaTestCase):
   def test_sweph_version_format(self):
     version = sweph_version()
     self.assertRegex(version, r"^\d+\.\d+\.\d+ \(\d{8}\)$")
+
+  def test_ephemeris_fingerprint(self):
+    # Records which data set produced a run. Upstream re-cuts the .se1 files,
+    # which shifts BCE values by seconds even at a fixed library version, so
+    # this is what makes such drift diagnosable.
+    fingerprint = ephemeris_fingerprint()
+    self.assertRegex(fingerprint["version"], r"^\d+\.\d+\.\d+ \(\d{8}\)$")
+    self.assertIsInstance(fingerprint["data_dir"], str)
+    self.assertGreaterEqual(fingerprint["se1_files"], 0)
+    # delta-T at year 1 CE is ~10500 s for every known data set.
+    self.assertGreater(fingerprint["deltat_seconds_year_1_ce"], 9000)
+    self.assertLess(fingerprint["deltat_seconds_year_1_ce"], 12000)
 
   def test_ritu(self):
     self.assertEqual(ritu(1), 0)
