@@ -346,12 +346,12 @@ class Panchanga(wx.Frame):
   def compute_timezone_offset(self):
     date = self.parse_date()
     timezone = self.tzone
-    if date.year > 0:
-      dt = datetime(date.year, date.month, date.day)
-    else:
-      # Nobody knows timezones for year <= 0
-      # Get timezone as of Jan 1, 2000 CE
-      dt = datetime(2000, 1, 1)
+    # Python datetime has no year <= 0, and early CE dates are clamped to year
+    # 4, as in place_for_date: the tzdb rules there preserve the historical
+    # local-mean-time offset (+5:53 for India) that the modern year-2000 offset
+    # (+5:30) obscures. Year 4 is the earliest leap year, so 29 February is
+    # safe. pytz also raises OverflowError for years before 2.
+    dt = datetime(max(4, date.year), date.month, date.day)
     # offset from UTC (in hours). Needed especially for DST countries
     tz_offset = timezone.utcoffset(dt, is_dst=True).total_seconds() / 3600.
     return tz_offset

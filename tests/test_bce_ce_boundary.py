@@ -178,23 +178,55 @@ to come from the JD/celestial pipeline itself, not from civil-date code.
 
 
 class PlaceForDateProxyTests(BoundaryTestCase):
-  """BCE dates reuse the year-1 tzdb offset (historical LMT), not a modern one."""
+  """BCE dates reuse the year-4 tzdb offset (historical LMT), not a modern one."""
 
-  def test_bce_proxy_matches_year_one(self):
+  def test_bce_proxy_matches_year_four(self):
     bce = place_for_date(KOLKATA, Date(0, 6, 15))
-    ce = place_for_date(KOLKATA, Date(1, 6, 15))
+    ce = place_for_date(KOLKATA, Date(4, 6, 15))
     self.assertEqual(bce.latitude, ce.latitude)
     self.assertEqual(bce.longitude, ce.longitude)
     self.assertAlmostEqual(bce.timezone, ce.timezone, places=9)
 
   def test_bce_proxy_is_not_modern_offset(self):
-    # Year 1 Asia/Kolkata keeps the pre-standardisation local mean time
+    # Year 4 Asia/Kolkata keeps the pre-standardisation local mean time
     # offset (~+5:53); the year-2000 proxy would give standard-time +5:30.
     self.assertNotAlmostEqual(place_for_date(KOLKATA, Date(0, 6, 15)).timezone, 5.5, places=2)
 
   def test_negative_year_does_not_raise(self):
     place = place_for_date(KOLKATA, Date(-100, 6, 15))
-    self.assertAlmostEqual(place.timezone, place_for_date(KOLKATA, Date(1, 6, 15)).timezone, places=9)
+    self.assertAlmostEqual(place.timezone, place_for_date(KOLKATA, Date(4, 6, 15)).timezone, places=9)
+
+  def test_bce_leap_day_does_not_raise(self):
+    # Regression: the proxy year was 1, which is not a leap year, so any BCE
+    # 29 February hit datetime(1, 2, 29) -> ValueError. Proleptic-Gregorian
+    # BCE leap years (year 0 = 1 BCE, -4, -8, -400, ...) are valid dates that
+    # swe.julday accepts. Year 4 is the earliest leap year and fixes this.
+    for year in (0, -4, -8, -400):
+      with self.subTest(year=year):
+        place = place_for_date(KOLKATA, Date(year, 2, 29))
+        self.assertAlmostEqual(place.timezone, place_for_date(KOLKATA, Date(4, 6, 15)).timezone, places=9)
+        self.assertGreater(place.timezone, 5.5)  # LMT, not modern +5:30
+
+  def test_bce_leap_day_matches_its_own_year_offset(self):
+    # The proxy year shifts the tz lookup date, but within early-CE tzdb rules
+    # the offset is flat, so a BCE leap day gets the same LMT as any other day.
+    feb = place_for_date(KOLKATA, Date(-4, 2, 29))
+    jun = place_for_date(KOLKATA, Date(-4, 6, 15))
+    self.assertAlmostEqual(feb.timezone, jun.timezone, places=9)
+
+  def test_early_ce_years_are_clamped_to_year_four(self):
+    # The clamp is max(4, year), not a year > 0 branch, so whatever the reason
+    # for the floor it applies uniformly. Years 1-3 give the same tzdb offset
+    # as year 4 in every zone, so this changes no output, but it pins the
+    # intent: no year is special-cased.
+    reference = place_for_date(KOLKATA, Date(4, 6, 15)).timezone
+    for year in (1, 2, 3, 4):
+      with self.subTest(year=year):
+        self.assertAlmostEqual(place_for_date(KOLKATA, Date(year, 6, 15)).timezone, reference, places=9)
+
+  def test_ce_years_after_the_floor_are_not_clamped(self):
+    # Year 5 onwards uses its own year, so real tz history is still honoured.
+    self.assertEqual(place_for_date(KOLKATA, Date(2026, 6, 15)).timezone, 5.5)
 
 
 if __name__ == "__main__":
