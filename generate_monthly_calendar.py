@@ -55,7 +55,6 @@ from generate_panchanga_calendar import (
   embed_pdf_metadata,
   ensure_pdf_fonts,
   format_local_hm,
-  format_sunrise_unavailable_message,
   format_utc_offset,
   load_location,
   location_slug,
@@ -216,18 +215,19 @@ def format_hms(hms):
 
 
 def day_details(location, civil):
-  """Tithi / nakshatra / yoga lines at sunrise for one civil day.
+  """Tithi / nakshatra / yoga lines at sunrise for one civil day, or ``None``.
 
-  Raises ``ValueError`` when sunrise is unavailable (polar day or night).
-  Every one of these quantities is defined *at sunrise*: with no sunrise,
-  Swiss Ephemeris returns a 0.0 rise sentinel and the derived end times come
-  out as garbage (e.g. ``-59069077:35``), so refusing to compute is the only
-  correct answer. Mirrors ``require_local_sunrise`` in the annual generator.
+  Returns ``None`` when sunrise is unavailable (polar day or night). Every one
+  of these quantities is defined *at sunrise*: with no sunrise, Swiss Ephemeris
+  returns a 0.0 rise sentinel and the derived end times come out as garbage
+  (e.g. ``-59069077:35``), so there is nothing meaningful to report. Callers
+  test for ``None`` rather than catching an exception; the annual generator's
+  ``require_local_sunrise`` returns ``None`` the same way.
   """
   place = place_for_date(location, civil)
   jd = gregorian_to_jd(civil)
   if require_local_sunrise(jd, place, location.name, civil.year, civil.month, civil.day) is None:
-    raise ValueError(format_sunrise_unavailable_message(location.name, civil.year, civil.month, civil.day, place))
+    return None
   tithi_lines = []
   t = panchanga.tithi(jd, place)
   tithi_lines.append((tithi_code(t[0]), format_hms(t[1])))
@@ -247,18 +247,25 @@ def day_details(location, civil):
 
 
 def sun_moon_lines(location, civil):
-  """``Sun: rise–set`` and ``Moon: rise–set`` lines for one civil day."""
+  """``Sun: rise–set`` and ``Moon: rise–set`` lines for one civil day.
+
+  Sunrise and sunset are checked independently: near the polar circle one can
+  exist while the other does not, and the available half is still worth
+  printing. A missing end shows as ``--``.
+  """
   place = place_for_date(location, civil)
   jd = gregorian_to_jd(civil)
   lines = []
   try:
-    rise_jd = panchanga.sunrise(jd, place)[0]
-    set_jd = panchanga.sunset(jd, place)[0]
     # Swiss Ephemeris returns a 0.0 sentinel for a failed rise/set lookup
-    # (polar day/night); range-check before formatting, else the cell shows a
-    # nonsense time like ``-59069097:00``.
-    if jd - 1 <= rise_jd <= jd + 2 and jd - 1 <= set_jd <= jd + 2:
-      lines.append(f"Sun: {format_hms(panchanga.sunrise(jd, place)[1])} – {format_hms(panchanga.sunset(jd, place)[1])}")
+    # (polar day/night); range-check each event separately before formatting,
+    # else a missing one prints a nonsense time like ``-59069097:00``.
+    rise = panchanga.sunrise(jd, place)
+    set_ = panchanga.sunset(jd, place)
+    rise_text = format_hms(rise[1]) if jd - 1 <= rise[0] <= jd + 2 else "--"
+    set_text = format_hms(set_[1]) if jd - 1 <= set_[0] <= jd + 2 else "--"
+    if rise_text != "--" or set_text != "--":
+      lines.append(f"Sun: {rise_text} – {set_text}")
   except Exception as exc:
     log.debug("sun times unavailable %s: %s", civil, exc)
   try:
@@ -443,19 +450,17 @@ def draw_cell(pdf, x, y_top, row_h, cell_w, day, civil, location, context, col):
   masa_display = display_masa(record, amanta=context.get("amanta", True))
   masa_name = sanskrit_names().get("masas", {}).get(masa_display.lstrip("A"), masa_display.lstrip("A"))
   masa_prefix = f"A.{masa_name}" if masa_display.startswith("A") else masa_name
-  try:
-    tithi_lines, naks_lines, yoga_names = day_details(location, civil)
-    sunrise_unavailable = False
-  except ValueError:
+  details = day_details(location, civil)
+  if details is None:
     # Polar day/night: no sunrise means no sunrise-based panchanga. Render the
     # cell as unavailable rather than printing garbage end times.
     tithi_lines, naks_lines, yoga_names = [], [], []
-    sunrise_unavailable = True
-  if sunrise_unavailable:
     pdf.setFillColor(GREY)
     pdf.setFont(PDF_FONT_ITALIC, 6.8)
     pdf.drawString(x + 4, line_y, "no sunrise")
     line_y -= 8.0
+  else:
+    tithi_lines, naks_lines, yoga_names = details
   for code, end_hm in tithi_lines:
     pdf.setFillColor(INK)
     pdf.setFont(PDF_FONT, 6.8)

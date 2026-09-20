@@ -131,15 +131,13 @@ class DayDetailsTests(unittest.TestCase):
     _tithi_lines, _naks_lines, yoga_names = day_details(location, date(2026, 6, 10))
     self.assertEqual(yoga_names, ["Āyuṣmān", "Saubhāgya"])
 
-  def test_day_details_raises_without_sunrise(self):
+  def test_day_details_returns_none_without_sunrise(self):
     # Regression: a polar day/night has no sunrise, so every sunrise-based
     # quantity is undefined. Before the guard this returned garbage end times
     # such as ('K7', '-59069077:35').
     location = load_location("Murmansk, RU")
-    with self.assertRaisesRegex(ValueError, "midnight sun"):
-      day_details(location, date(2026, 6, 21))
-    with self.assertRaisesRegex(ValueError, "polar night"):
-      day_details(location, date(2026, 12, 21))
+    self.assertIsNone(day_details(location, date(2026, 6, 21)))
+    self.assertIsNone(day_details(location, date(2026, 12, 21)))
 
   def test_day_details_still_computes_at_polar_shoulder(self):
     # Murmansk does see a sunrise outside the polar day/night window.
@@ -168,6 +166,32 @@ class SunMoonTests(unittest.TestCase):
         lines = sun_moon_lines(location, day)
         self.assertFalse([line for line in lines if line.startswith("Sun:")])
         self.assertTrue(all("-59" not in line for line in lines))
+
+  def test_sun_moon_lines_keep_the_half_that_exists(self):
+    # Regression: sunrise and sunset were range-checked with a single ``and``,
+    # so one missing event dropped the whole line. Near the polar circle the
+    # two go missing on different days; Norilsk on 20 May 2026 has a sunrise
+    # but no sunset (and the reverse before/after).
+    location = load_location("Norilsk, RU")
+    lines = sun_moon_lines(location, date(2026, 5, 20))
+    sun_lines = [line for line in lines if line.startswith("Sun:")]
+    self.assertEqual(len(sun_lines), 1)
+    self.assertRegex(sun_lines[0], r"^Sun: \d\d:\d\d – --$")
+    self.assertTrue(all("-59" not in line for line in lines))
+
+  def test_sun_moon_lines_render_sunset_only(self):
+    # The mirror case: no sunrise, but a sunset worth printing.
+    with mock.patch("generate_monthly_calendar.panchanga.sunrise", return_value=[0.0, [-59069097, 0, 0]]):
+      lines = sun_moon_lines(load_location("Ujjain"), date(2026, 6, 1))
+    sun_lines = [line for line in lines if line.startswith("Sun:")]
+    self.assertEqual(len(sun_lines), 1)
+    self.assertRegex(sun_lines[0], r"^Sun: -- – \d\d:\d\d$")
+
+  def test_sun_moon_lines_omit_sun_when_both_are_missing(self):
+    with mock.patch("generate_monthly_calendar.panchanga.sunrise", return_value=[0.0, [-1, 0, 0]]), mock.patch(
+        "generate_monthly_calendar.panchanga.sunset", return_value=[0.0, [-1, 0, 0]]):
+      lines = sun_moon_lines(load_location("Ujjain"), date(2026, 6, 1))
+    self.assertFalse([line for line in lines if line.startswith("Sun:")])
 
 
 class CellDrawTests(unittest.TestCase):
@@ -224,6 +248,31 @@ class CellDrawTests(unittest.TestCase):
     drawn_text = [c.args[2] for c in pdf.drawString.call_args_list]
     self.assertIn("Śrāvaṇa K15 08:24", drawn_text)
     self.assertIn("Śrāvaṇa S1 28:31", drawn_text)
+
+  def test_no_sunrise_cell_renders_marker_and_no_end_times(self):
+    # day_details returns None at a polar day/night; the cell must show a
+    # marker instead of garbage end times like '-59069077:35'.
+    ensure_pdf_fonts()
+    pdf = mock.Mock()
+    from festival_rules import DayRecord
+    context = {
+      "records_by_date": {
+        date(2026, 6, 21): DayRecord(date(2026, 6, 21), "K7", 1, 1, "5", False, 0.0)
+      },
+      "festival_names_by_date": {},
+      "eclipse_dates": set(),
+      "eclipse_details_by_date": {},
+      "masa_badges": {},
+      "solar_by_date": {},
+      "ekadashi": set(),
+      "pradosham": set(),
+      "sankashti": set(),
+    }
+    with mock.patch("generate_monthly_calendar.day_details", return_value=None):
+      draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 21, date(2026, 6, 21), load_location("Ujjain"), context, col=0)
+    drawn_text = [c.args[2] for c in pdf.drawString.call_args_list]
+    self.assertIn("no sunrise", drawn_text)
+    self.assertFalse([text for text in drawn_text if "-59" in text])
 
   def test_masa_start_fill_is_drawn(self):
     ensure_pdf_fonts()
