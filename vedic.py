@@ -200,7 +200,7 @@ def tropical_saptarshi_nakshatra(jd):
     nak, nak_end = tropical_long_fixed_stars(jd, longi)
     individual.append([star, longi, nak, nak_end])
 
-  mean_long = sum(longitudes) / len(longitudes)
+  mean_long = mean_longitude(longitudes)
   mean_nak, mean_nak_end = tropical_long_fixed_stars(jd, mean_long)
 
   return {

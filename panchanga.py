@@ -234,8 +234,26 @@ def lon_relative_to_base(lon, base_lon):
 # Make angle lie between [-180, 180) instead of [0, 360)
 norm180 = lambda angle: (angle - 360) if angle >= 180 else angle
 
-# Make angle lie between [0, 360)
-norm360 = lambda angle: angle % 360
+# Make angle lie between [0, 360). The outer ``% 360`` matters: for a tiny
+# negative angle the first modulo can round up to exactly 360.0 in double
+# precision, which would violate the [0, 360) contract (and make
+# ``nakshatra_pada`` return 28).
+norm360 = lambda angle: (angle % 360) % 360
+
+
+def mean_longitude(longitudes):
+  """Mean of a cluster of longitudes, tolerant of a 0°/360° wrap.
+
+  Plain ``sum/len`` is wrong when the set straddles the 0°/360° branch cut:
+  the mean of 350° and 10° is 0°, not 180°. Re-basing on ±180° puts the cut
+  on the far side of a cluster that straddles Aries 0° (the Saptarṣi stars
+  do; they never straddle 180°), so the arithmetic mean is then correct.
+
+  Equivalent to a circular mean while the cluster spans less than 180°, which
+  holds for a tight star group; it is not a general circular mean.
+  """
+  return norm360(sum(norm180(lon) for lon in longitudes) / len(longitudes))
+
 
 # Ketu is always 180° after Rahu, so same coordinates but different constellations
 # i.e if Rahu is in Pisces, Ketu is in Virgo etc
@@ -1177,7 +1195,7 @@ def sidereal_saptarshi_nakshatra(jd):
     nak, pada = nakshatra_pada(longi)
     individual.append([star, longi, nak, pada])
 
-  mean_long = sum(longitudes) / len(longitudes)
+  mean_long = mean_longitude(longitudes)
   mean_nak, mean_pada = nakshatra_pada(mean_long)
 
   reset_ayanamsa_mode()

@@ -17,9 +17,9 @@ from panchanga import (
   gulika_kalam, durmuhurtam, abhijit_muhurta, elapsed_year, samvatsara, samvatsara_north, samvatsara_north_modern, ritu,
   drik_ritu, drik_ritu_at, lunar_masa, raasi, lunar_phase, new_moon, full_moon, local_time_to_jdut1, sweph_version,
   default_se_ephe_path, get_planet_name, to_dms, to_dms_prec, unwrap_angles, lon_relative_to_base, inverse_lagrange,
-  bisection_search, sidereal_saptarshi_nakshatra, saptarshi_nakshatra_traditional, set_nakshatra_system,
-  set_chosen_ayanamsa, set_ayanamsa_mode, set_coordinate_mode, set_coordinate_selection, reset_ayanamsa_mode,
-  solar_longitude)
+  mean_longitude, norm360, bisection_search, sidereal_saptarshi_nakshatra, saptarshi_nakshatra_traditional,
+  set_nakshatra_system, set_chosen_ayanamsa, set_ayanamsa_mode, set_coordinate_mode, set_coordinate_selection,
+  reset_ayanamsa_mode, solar_longitude)
 
 bangalore = Place(12.972, 77.594, +5.5)
 shillong = Place(25.569, 91.883, +5.5)
@@ -456,6 +456,42 @@ class HelperMathTests(PanchangaTestCase):
   def test_lon_relative_to_base(self):
     self.assertEqual(lon_relative_to_base(10, 350), 370)
     self.assertEqual(lon_relative_to_base(350, 10), -10)
+
+  def test_mean_longitude_handles_aries_wrap(self):
+    # Regression: a plain sum/len gave 207.5 for this set, ~206 deg off. The
+    # Saptarsi stars straddle Aries 0 deg in the tropical frame, never 180 deg,
+    # so re-basing on +-180 puts the whole cluster on one side of the cut.
+    # Circular truth for these values is ~1.72.
+    lons = [344.1, 347.7, 358.3, 358.7, 6.2, 12.6, 24.7]
+    self.assertAlmostEqual(mean_longitude(lons), 1.72, places=1)
+
+  def test_mean_longitude_is_plain_mean_without_a_wrap(self):
+    # No wrap: identical to the naive arithmetic mean.
+    self.assertAlmostEqual(mean_longitude([111.2, 115.3, 126.3, 126.8, 134.6, 141.3, 152.8]), 129.757, places=3)
+
+  def test_mean_longitude_stays_in_range(self):
+    for lons in ([350.0, 10.0], [0.0], [359.9, 0.1], [200.0, 340.0]):
+      with self.subTest(lons=lons):
+        value = mean_longitude(lons)
+        self.assertGreaterEqual(value, 0)
+        self.assertLess(value, 360)
+
+  def test_mean_longitude_narrow_wrap_around_zero(self):
+    # 350 and 10 average to 0, not 180.
+    self.assertAlmostEqual(mean_longitude([350.0, 10.0]), 0.0, places=6)
+
+  def test_norm360_stays_below_360(self):
+    # Regression: for a tiny negative angle, ``angle % 360`` can round up to
+    # exactly 360.0 in double precision, breaking the documented [0, 360)
+    # contract. That leaked into nakshatra_pada, which then returned a
+    # nonexistent nakshatra 28 (and the Garga classifier asserts).
+    for angle in (-1e-14, -1e-9, -1e-13, -360.0, 0.0, -0.0, 359.9, 720.0):
+      with self.subTest(angle=angle):
+        value = norm360(angle)
+        self.assertGreaterEqual(value, 0)
+        self.assertLess(value, 360)
+    self.assertEqual(norm360(-1e-14), 0.0)
+    self.assertEqual(nakshatra_pada(norm360(-1e-14)), [1, 1])
 
   def test_inverse_lagrange_linear(self):
     self.assertAlmostEqual(inverse_lagrange([0, 1], [0, 10], 5), 0.5)
