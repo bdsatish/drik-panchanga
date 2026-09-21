@@ -270,9 +270,9 @@ def sun_moon_lines(location, civil):
     log.debug("sun times unavailable %s: %s", civil, exc)
   try:
     parts = []
-    for event in (panchanga.moonrise(jd, place), panchanga.moonset(jd, place)):
-      if 0 <= event[0] < 48:
-        parts.append(format_hms(event))
+    for local_jd, hms in (panchanga.moonrise(jd, place), panchanga.moonset(jd, place)):
+      if jd - 1 <= local_jd <= jd + 2 and 0 <= hms[0] < 48:
+        parts.append(format_hms(hms))
     if parts:
       lines.append("Moon: " + " – ".join(parts))
   except Exception as exc:

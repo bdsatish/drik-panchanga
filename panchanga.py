@@ -469,29 +469,41 @@ def sunset(jd, place):
   return [setting + tz / 24., to_dms((setting - jd) * 24 + tz)]
 
 
-def moonrise(jd, place):
-  """Moonrise when centre of disc is at horizon for given date and place"""
-  rise = moonrise_jd(jd, place)
-  return to_dms((rise - jd) * 24)
-
-
 @lru_cache(maxsize=4096)  # memoize expensive Swiss Ephemeris moonrise lookup
 def moonrise_jd(jd, place):
   """Local Julian day of the first moonrise after local midnight."""
   lat, lon, tz = place
   result = swe.rise_trans(jd - tz / 24, swe.MOON, geopos=(lon, lat, 0), rsmi=_rise_flags + swe.CALC_RISE)
-  rise = result[1][0]  # julian-day number
-  # Convert to local time
+  rise = result[1][0]  # julian-day number (UT)
   return rise + tz / 24.
 
 
-def moonset(jd, place):
-  """Moonset when centre of disc is at horizon for given date and place"""
+@lru_cache(maxsize=4096)  # memoize expensive Swiss Ephemeris moonset lookup
+def moonset_jd(jd, place):
+  """Local Julian day of the first moonset after local midnight."""
   lat, lon, tz = place
   result = swe.rise_trans(jd - tz / 24, swe.MOON, geopos=(lon, lat, 0), rsmi=_rise_flags + swe.CALC_SET)
-  setting = result[1][0]  # julian-day number
-  # Convert to local time
-  return to_dms((setting - jd) * 24 + tz)
+  setting = result[1][0]  # julian-day number (UT)
+  return setting + tz / 24.
+
+
+def moonrise(jd, place):
+  """Moonrise when centre of disc is at horizon for given date and place
+
+  Returns [local_jd, [h, m, s]] like sunrise(), sunset(). [h, m, s] is
+  local civil time hours past jd (may be >= 24 for next-day events).
+  """
+  local = moonrise_jd(jd, place)
+  return [local, to_dms((local - jd) * 24)]
+
+
+def moonset(jd, place):
+  """Moonset when centre of disc is at horizon for given date and place
+
+  Returns [local_jd, [h, m, s]] like sunrise(), sunset().
+  """
+  local = moonset_jd(jd, place)
+  return [local, to_dms((local - jd) * 24)]
 
 
 # Tithi doesn't depend on Ayanamsa

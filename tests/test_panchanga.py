@@ -11,8 +11,8 @@ import swisseph as swe
 
 import panchanga
 from panchanga import (
-  Date, Place, gregorian_to_jd, from_dms, sunrise, sunset, solar_times_utc, moonrise, moonrise_jd, moonset, tithi,
-  nakshatra, nakshatra_pada, nakshatra_end_point, yoga, karana, vaara, masa, varjyam, ascendant, navamsa,
+  Date, Place, gregorian_to_jd, from_dms, sunrise, sunset, solar_times_utc, moonrise, moonrise_jd, moonset, moonset_jd,
+  tithi, nakshatra, nakshatra_pada, nakshatra_end_point, yoga, karana, vaara, masa, varjyam, ascendant, navamsa,
   navamsa_from_long, planetary_positions, day_duration, gauri_chogadiya, trikalam, rahu_kalam, yamaganda_kalam,
   gulika_kalam, durmuhurtam, abhijit_muhurta, elapsed_year, samvatsara, samvatsara_north, samvatsara_north_modern, ritu,
   drik_ritu, drik_ritu_at, lunar_masa, raasi, lunar_phase, new_moon, full_moon, local_time_to_jdut1, sweph_version,
@@ -47,10 +47,14 @@ class SunriseSetTests(PanchangaTestCase):
   """Sunrise, sunset, moonrise, moonset, vaara, karana."""
 
   def test_moonrise(self):
-    self.assertEqual(moonrise(date2, bangalore), [11, 35, 6])
+    local, hms = moonrise(date2, bangalore)
+    self.assertEqual(hms, [11, 35, 6])
+    self.assertAlmostEqual(local, moonrise_jd(date2, bangalore))
 
   def test_moonset(self):
-    self.assertEqual(moonset(date2, bangalore), [24, 14, 11])
+    local, hms = moonset(date2, bangalore)
+    self.assertEqual(hms, [24, 14, 11])
+    self.assertAlmostEqual(local, moonset_jd(date2, bangalore))
 
   def test_sunrise(self):
     self.assertEqual(sunrise(date2, bangalore)[1], [6, 49, 46])
@@ -784,7 +788,13 @@ class CalendarUtilityTests(PanchangaTestCase):
 
   def test_moonrise_jd_matches_moonrise(self):
     rise_jd = moonrise_jd(date2, bangalore)
-    self.assertEqual(moonrise(date2, bangalore), to_dms((rise_jd - date2) * 24))
+    self.assertEqual(moonrise(date2, bangalore)[1], to_dms((rise_jd - date2) * 24))
+    self.assertEqual(moonrise(date2, bangalore)[0], rise_jd)
+
+  def test_moonset_jd_matches_moonset(self):
+    set_jd = moonset_jd(date2, bangalore)
+    self.assertEqual(moonset(date2, bangalore)[1], to_dms((set_jd - date2) * 24))
+    self.assertEqual(moonset(date2, bangalore)[0], set_jd)
 
   def test_nakshatra_end_point_equal_and_unequal(self):
     self.assertAlmostEqual(nakshatra_end_point(1), 360 / 27)
@@ -803,6 +813,7 @@ class EphemerisCacheTests(PanchangaTestCase):
     sunrise.cache_clear()
     sunset.cache_clear()
     moonrise_jd.cache_clear()
+    moonset_jd.cache_clear()
 
   def test_planet_longitude_cache_is_ayanamsa_aware(self):
     jd = gregorian_to_jd(Date(2023, 7, 25))
@@ -838,6 +849,12 @@ class EphemerisCacheTests(PanchangaTestCase):
     hits = moonrise_jd.cache_info().hits
     self.assertEqual(moonrise_jd(date2, bangalore), first)
     self.assertEqual(moonrise_jd.cache_info().hits, hits + 1)
+
+  def test_moonset_jd_cache_hit_on_repeat(self):
+    first = moonset_jd(date2, bangalore)
+    hits = moonset_jd.cache_info().hits
+    self.assertEqual(moonset_jd(date2, bangalore), first)
+    self.assertEqual(moonset_jd.cache_info().hits, hits + 1)
 
   def test_new_moon_day_bucket_shared_across_adjacent_days(self):
     """Nearest-day search centres must collide within one synodic span."""
