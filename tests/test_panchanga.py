@@ -13,22 +13,25 @@ import panchanga
 from panchanga import (
   Date, Place, gregorian_to_jd, from_dms, sunrise, sunset, solar_times_utc, moonrise, moonrise_jd, moonset, moonset_jd,
   tithi, nakshatra, nakshatra_pada, nakshatra_end_point, yoga, karana, vaara, masa, varjyam, ascendant, navamsa,
-  navamsa_from_long, planetary_positions, day_duration, gauri_chogadiya, trikalam, rahu_kalam, yamaganda_kalam,
-  gulika_kalam, durmuhurtam, abhijit_muhurta, elapsed_year, samvatsara, samvatsara_north, samvatsara_north_modern, ritu,
-  drik_ritu, drik_ritu_at, lunar_masa, raasi, lunar_phase, new_moon, full_moon, local_time_to_jdut1, sweph_version,
-  ephemeris_fingerprint, default_se_ephe_path, get_planet_name, to_dms, to_dms_prec, unwrap_angles,
-  lon_relative_to_base, inverse_lagrange, mean_longitude, norm360, bisection_search, sidereal_saptarshi_nakshatra,
-  saptarshi_nakshatra_traditional, set_nakshatra_system, set_chosen_ayanamsa, set_ayanamsa_mode, set_coordinate_mode,
-  set_coordinate_selection, reset_ayanamsa_mode, solar_longitude)
+  navamsa_from_long, planetary_positions, day_duration, night_duration, gauri_chogadiya, trikalam, rahu_kalam,
+  yamaganda_kalam, gulika_kalam, durmuhurtam, abhijit_muhurta, pratah_sandhya, elapsed_year, samvatsara,
+  samvatsara_north, samvatsara_north_modern, ritu, drik_ritu, drik_ritu_at, lunar_masa, raasi, lunar_phase, new_moon,
+  full_moon, local_time_to_jdut1, sweph_version, ephemeris_fingerprint, default_se_ephe_path, get_planet_name, to_dms,
+  to_dms_prec, unwrap_angles, lon_relative_to_base, inverse_lagrange, mean_longitude, norm360, bisection_search,
+  sidereal_saptarshi_nakshatra, saptarshi_nakshatra_traditional, set_nakshatra_system, set_chosen_ayanamsa,
+  set_ayanamsa_mode, set_coordinate_mode, set_coordinate_selection, reset_ayanamsa_mode, solar_longitude)
 
 bangalore = Place(12.972, 77.594, +5.5)
 shillong = Place(25.569, 91.883, +5.5)
 helsinki = Place(60.17, 24.935, +2.0)
+ujjain = Place(23.1765, 75.7885, +5.5)
+london = Place(51.507, -0.128, +0.0)
 
 date1 = gregorian_to_jd(Date(2009, 7, 15))
 date2 = gregorian_to_jd(Date(2013, 1, 18))
 date3 = gregorian_to_jd(Date(1985, 6, 9))
 date4 = gregorian_to_jd(Date(2009, 6, 21))
+date_summer = gregorian_to_jd(Date(2013, 6, 21))
 
 
 class PanchangaTestCase(unittest.TestCase):
@@ -893,13 +896,81 @@ class EphemerisCacheTests(PanchangaTestCase):
 
 
 class MuhurtaTests(PanchangaTestCase):
-  """Day parts: duration, chogadiya, trikalam, durmuhurtam, abhijit."""
+  """Day parts: duration, chogadiya, trikalam, durmuhurtam, abhijit, sandhya."""
 
   def test_day_duration(self):
     hours, as_dms = day_duration(date2, bangalore)
     self.assertGreater(hours, 10)
     self.assertLess(hours, 14)
     self.assertEqual(as_dms, to_dms(hours))
+
+  def test_night_duration(self):
+    hours, as_dms = night_duration(date2, bangalore)
+    self.assertGreater(hours, 10)
+    self.assertLess(hours, 14)
+    self.assertEqual(as_dms, to_dms(hours))
+    # Day + following night ≈ sunrise-to-sunrise span (~24 h).
+    day_h, _ = day_duration(date2, bangalore)
+    self.assertAlmostEqual(day_h + hours, 24.0, delta=0.01)
+
+  def test_night_duration_multi_location(self):
+    cases = (
+      (bangalore, date2, [12, 39, 26]),
+      (bangalore, date_summer, [11, 14, 15]),
+      (shillong, date2, [13, 22, 8]),
+      (ujjain, date2, [13, 13, 23]),
+      (helsinki, date2, [17, 22, 44]),  # long winter night
+      (helsinki, date_summer, [5, 27, 12]),  # short summer night
+      (london, date2, [15, 42, 28]),
+    )
+    for place, jd, expected_hms in cases:
+      hours, as_dms = night_duration(jd, place)
+      self.assertEqual(as_dms, expected_hms, msg=place)
+      self.assertEqual(as_dms, to_dms(hours))
+      day_h, _ = day_duration(jd, place)
+      self.assertAlmostEqual(day_h + hours, 24.0, delta=0.05, msg=place)
+
+  def test_pratah_sandhya_ends_at_sunrise(self):
+    start, end = pratah_sandhya(date2, bangalore)
+    self.assertEqual(end, sunrise(date2, bangalore)[1])
+    self.assertLess(start, end)
+
+  def test_pratah_sandhya_is_last_night_muhurta(self):
+    # Window length must be night_duration(jd-1) / 15.
+    for place, jd in (
+      (bangalore, date2),
+      (bangalore, date_summer),
+      (shillong, date2),
+      (ujjain, date_summer),
+      (helsinki, date2),
+      (london, date_summer),
+    ):
+      start, end = pratah_sandhya(jd, place)
+      self.assertEqual(end, sunrise(jd, place)[1], msg=place)
+      night_h, _ = night_duration(jd - 1, place)
+      muhurta_h = night_h / 15.0
+      # Convert HMS back to decimal hours (allow >24 wrap not expected here).
+      start_h = from_dms(*start)
+      end_h = from_dms(*end)
+      # HMS rounding can shift the printed window by up to ~1 s.
+      self.assertAlmostEqual(end_h - start_h, muhurta_h, delta=1.5 / 3600, msg=place)
+
+  def test_pratah_sandhya_multi_location_pins(self):
+    # Geometric (no-refraction) sunrise end; start = sunrise - previous_night/15.
+    cases = (
+      (bangalore, date2, [5, 59, 7], [6, 49, 46]),
+      (bangalore, date_summer, [5, 13, 27], [5, 58, 24]),
+      (shillong, date2, [5, 20, 35], [6, 14, 7]),
+      (shillong, date_summer, [3, 54, 39], [4, 36, 16]),
+      (ujjain, date2, [6, 21, 9], [7, 14, 6]),
+      (ujjain, date_summer, [5, 3, 27], [5, 45, 46]),
+      (helsinki, date2, [8, 3, 31], [9, 13, 19]),
+      (helsinki, date_summer, [2, 43, 42], [3, 5, 31]),
+      (london, date2, [6, 59, 59], [8, 2, 59]),
+      (london, date_summer, [3, 19, 44], [3, 50, 7]),
+    )
+    for place, jd, start_hms, end_hms in cases:
+      self.assertEqual(pratah_sandhya(jd, place), [start_hms, end_hms], msg=place)
 
   def test_gauri_chogadiya(self):
     ends = gauri_chogadiya(date2, bangalore)

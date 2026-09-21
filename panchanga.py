@@ -934,6 +934,19 @@ def day_duration(jd, place):
   return [diff, to_dms(diff)]
 
 
+def night_duration(jd, place):
+  """Night length from today's sunset to tomorrow's sunrise.
+
+  Same return shape as ``day_duration``: ``[hours, [h, m, s]]``. Together,
+  ``day_duration(jd) + night_duration(jd)`` spans sunrise today to sunrise
+  tomorrow (~24 h).
+  """
+  sset = sunset(jd, place)[0]  # julian day num (local-adjusted)
+  next_srise = sunrise(jd + 1, place)[0]
+  diff = (next_srise - sset) * 24  # In hours
+  return [diff, to_dms(diff)]
+
+
 def solar_times_utc(jd, place):
   """Today's sunrise/sunset and tomorrow's sunrise as UTC Julian days."""
   timezone = place.timezone / 24
@@ -1049,6 +1062,22 @@ def abhijit_muhurta(jd, place):
 
   # to local time
   return [to_dms((start_time - jd) * 24 + tz), to_dms((end_time - jd) * 24 + tz)]
+
+
+def pratah_sandhya(jd, place):
+  """Prātaḥ sandhyā: last night-muhūrta before sunrise (start, end).
+
+  Smṛti-muktāphalam: morning sandhyā is two ghaṭīs before udaya. One night
+  muhūrta = night/15 = two ghaṭīs, using the night that *ends* at today's
+  sunrise (yesterday sunset → today sunrise = ``night_duration(jd - 1)``).
+
+  Returns ``[start_hms, end_hms]`` in local civil time; end is sunrise.
+  """
+  srise, srise_hms = sunrise(jd, place)
+  night_hours, _ = night_duration(jd - 1, place)
+  start = srise - (night_hours / 15.0) / 24.0
+  # srise already includes +tz/24, so (start - jd)*24 is local hours.
+  return [to_dms((start - jd) * 24), srise_hms]
 
 
 def varjyam(jd, place):
