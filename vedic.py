@@ -74,6 +74,10 @@ def tropical_long_fixed_stars(jd, longi):
   return nak, nak_end
 
 
+# Classical equal-width nakshatra names, for the seasonal-ṛtu helpers.
+ritu_names = ['Vasanta', 'Grīṣma', 'Varṣā', 'Śarad', 'Hemanta', 'Śiśira']
+
+
 def find_nakshatra_garga(longi):
   """Given longitude of any celestial object, determine which lunar mansion
     it falls under, as per Garga system (unequal nakshatra division)
@@ -89,9 +93,11 @@ def find_nakshatra_garga(longi):
     20 / 60, 126 + 40 / 60, 140, 160, 173 + 20 / 60, 186 + 40 / 60, 193 + 20 / 60, 213 + 20 / 60, 226 + 40 / 60, 233 +
     20 / 60, 246 + 40 / 60, 260, 280, 293 + 20 / 60, 306 + 40 / 60, 313 + 20 / 60, 326 + 40 / 60, 346 + 40 / 60, 360
   ]
-  for i in range(0, len(spacing) + 1):
-    if norm360(longi) < spacing[i]:
-      return i % 27, spacing[i % 27]
+  longi = norm360(longi)
+  for i in range(0, len(spacing)):
+    if longi < spacing[i]:
+      return i + 1, spacing[i]
+  return 27, spacing[-1]  # longi == 360 cannot happen after norm360, kept as a guard
 
 
 def tropical_lunar_longitude(jd):
