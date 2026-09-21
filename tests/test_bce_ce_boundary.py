@@ -23,7 +23,7 @@ import unittest
 import swisseph as swe
 
 import panchanga
-from panchanga import (Date, Place, elapsed_year, gregorian_to_jd, local_time_to_jdut1, lunar_longitude,
+from panchanga import (Date, Place, ahargana, elapsed_year, gregorian_to_jd, local_time_to_jdut1, lunar_longitude,
                        reset_ayanamsa_mode, set_ayanamsa_mode, set_chosen_ayanamsa, set_nakshatra_system,
                        solar_longitude, vaara)
 from generate_panchanga_calendar import Location, place_for_date
@@ -111,6 +111,28 @@ class ElapsedYearTests(BoundaryTestCase):
       elapsed_year(gregorian_to_jd(Date(y, m, d)), 1)[0] for y, m, d in [(0, 12, 30), (0, 12, 31), (1, 1, 1), (1, 1, 2)]
     ]
     self.assertEqual(sorted(kalis), kalis)
+
+  def test_pre_epoch_uses_floor_not_truncation(self):
+    # Regression for int() truncation toward zero: before the epoch
+    # (-0.5 < x < 0) must be -1, not 0. 588465.5 is the Kali epoch
+    # (ahar == 0); a half-day before it, ahar == -0.5 and with
+    # maasa 12 the fractional year x is in (-1, 0).
+    jd_before = 588465.0
+    jd_epoch = 588465.5
+    # Raw elapsed-year fraction with a late-year masa is negative just
+    # before the epoch; floor and int differ exactly there.
+    self.assertEqual(elapsed_year(jd_before, 12)[0], -1)
+    self.assertEqual(elapsed_year(jd_epoch, 1)[0], 0)
+    self.assertLess(elapsed_year(jd_before, 12)[0], elapsed_year(jd_epoch, 1)[0])
+    # Ahargana day count is the same expired-day idea; -0.5 days is
+    # day -1, not day 0, so floor is required as well.
+    import math
+    self.assertEqual(math.floor(ahargana(jd_before)), -1)
+    self.assertEqual(math.floor(ahargana(jd_epoch)), 0)
+    self.assertEqual(math.floor(ahargana(jd_epoch + 1.0)), 1)
+    # Sanity: deep-BCE rows from the sweep must also use floor.
+    self.assertEqual(elapsed_year(gregorian_to_jd(Date(-3102, 3, 22)), 2)[0], -1)
+    self.assertEqual(elapsed_year(gregorian_to_jd(Date(-3104, 4, 1)), 3)[0], -3)
 
 
 class Se1GoldenTests(BoundaryTestCase):

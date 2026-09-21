@@ -25,7 +25,7 @@
 Use Swiss ephemeris to calculate tithi, nakshatra, etc.
 """
 
-from math import ceil
+from math import ceil, floor
 from collections import namedtuple as struct
 from functools import lru_cache
 import os
@@ -722,7 +722,7 @@ ahargana = lambda jd: jd - 588465.5
 
 def elapsed_year(jd, maasa_num):
   ahar = ahargana(jd)  # or (jd + sunrise(jd, place)[0])
-  kali = int((ahar + (4 - maasa_num) * 30) / sidereal_year)
+  kali = floor((ahar + (4 - maasa_num) * 30) / sidereal_year)
   saka = kali - 3179
   vikrama = saka + 135
   return kali, saka, vikrama

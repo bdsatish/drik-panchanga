@@ -7,6 +7,7 @@ request so ayanāṃśa / tropical mode stays stable under concurrent web use.
 
 import calendar
 import logging
+import math
 
 import panchanga
 from generate_panchanga_calendar import (
@@ -195,7 +196,7 @@ def _compute_day_details_unlocked(location, civil, amanta=None, coordinate_selec
   samvat_north_num = panchanga.samvatsara_north_modern(jd, lunar_num)
   vara_num = panchanga.vaara(jd)
   kali_year, saka_year, vikrama_year = panchanga.elapsed_year(jd, lunar_num)
-  kali_day = int(panchanga.ahargana(jd))
+  kali_day = math.floor(panchanga.ahargana(jd))
   sunrise_jd_ut = sunrise[0] - place.timezone / 24.0
   if coordinate_selection == "tropical":
     ayanamsa_degrees = None
