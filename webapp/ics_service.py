@@ -150,6 +150,7 @@ def generate_ics(location, start_year, start_month, month_system="amanta", coord
         desc_lines.append("Rāhukāla: " + _fmt_interval(*details["rahu_kala"]))
         desc_lines.append("Durmuhūrta: " + durmuhurta_text)
         desc_lines.append("Varjyam: " + varjyam_text)
+        desc_lines.append("Prātaḥ Sandhyā: " + _fmt_interval(*details["pratah_sandhya"]))
         desc_lines.append("Kali Day: " + str(details["kali_day"]))
         desc_lines.append("Julian day: " + f"{details['jd']:.1f}")
         desc_lines.append("Sunrise JD (UT): " + f"{details['sunrise_jd_ut']:.6f}")

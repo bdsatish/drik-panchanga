@@ -212,6 +212,7 @@ def _compute_day_details_unlocked(location, civil, amanta=None, coordinate_selec
   rahu_kala = panchanga.rahu_kalam(jd, place)
   durmuhurta = panchanga.durmuhurtam(jd, place)
   varjyam = panchanga.varjyam(jd, place)
+  pratah_sandhya = panchanga.pratah_sandhya(jd, place)
 
   return {
     "civil": civil,
@@ -248,6 +249,7 @@ def _compute_day_details_unlocked(location, civil, amanta=None, coordinate_selec
     "rahu_kala": rahu_kala,
     "durmuhurta": durmuhurta,
     "varjyam": varjyam,
+    "pratah_sandhya": pratah_sandhya,
   }
 
 
@@ -326,6 +328,7 @@ def compute_day_panchanga(city, date_text, month_system="amanta", coordinate_sel
       "rahu_kala": _interval_from_hms(*details["rahu_kala"]),
       "durmuhurta": durmuhurta_intervals,
       "varjyam": varjyam_intervals,
+      "pratah_sandhya": _interval_from_hms(*details["pratah_sandhya"]),
       "tithi": _named_segments(details["ti"], names["tithis"]),
       "nakshatra": _named_segments(details["nak"], names["nakshatras"]),
       "yoga": _named_segments(details["yog"], names["yogas"]),

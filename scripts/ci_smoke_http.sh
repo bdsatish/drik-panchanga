@@ -57,6 +57,7 @@ for key in (
     "jd", "sunrise_jd", "ayanamsa_degrees",
     "sunrise", "sunset", "day_duration",
     "rahu_kala", "durmuhurta",
+    "pratah_sandhya",
     "tithi", "nakshatra", "yoga", "karana",
 ):
     assert key in data and data[key] not in (None, ""), (key, data)
@@ -67,6 +68,7 @@ assert data.get("ayanamsa") == "Chitra-paksha", data.get("ayanamsa")
 assert data.get("ayanamsa_key", "citra") == "citra", data.get("ayanamsa_key")
 assert isinstance(data["tithi"], list) and data["tithi"], data["tithi"]
 assert data["rahu_kala"].get("start") and data["rahu_kala"].get("end"), data["rahu_kala"]
+assert data["pratah_sandhya"].get("start") and data["pratah_sandhya"].get("end"), data["pratah_sandhya"]
 assert isinstance(data["durmuhurta"], list) and data["durmuhurta"], data["durmuhurta"]
 assert float(data["jd"]) > 0 and float(data["ayanamsa_degrees"]) > 0
 print("panchanga ok:", data["vaara"], data["masa"], f"JD {data['jd']}", f"ayan {data['ayanamsa_degrees']}°")
