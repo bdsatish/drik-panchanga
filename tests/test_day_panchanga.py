@@ -148,3 +148,16 @@ class DayPanchangaMasaRituTests(unittest.TestCase):
       self.assertEqual(drik_ayana_label(ritu_num), "Uttarāyaṇa")
     for ritu_num in (2, 3, 4):
       self.assertEqual(drik_ayana_label(ritu_num), "Dakṣiṇāyana")
+
+  def test_parse_civil_date_rejects_impossible_days(self):
+    # swe.julday silently rolls 31/4 or 30/2 into the next month; the API
+    # must reject them instead of answering a different date.
+    from webapp.day_panchanga import parse_civil_date
+    for bad in ("31/04/2026", "30/02/2026", "29/02/2023", "00/01/2026", "32/01/2026", "01/13/2026"):
+      with self.assertRaises(ValueError):
+        parse_civil_date(bad)
+    self.assertEqual(parse_civil_date("29/02/2024"), panchanga.Date(2024, 2, 29))
+    self.assertEqual(parse_civil_date("18/01/-3101"), panchanga.Date(-3101, 1, 18))
+    # Year 0 stays rejected (astronomical numbering: use -1 for 1 BCE).
+    with self.assertRaises(ValueError):
+      parse_civil_date("18/01/0")
