@@ -1016,7 +1016,7 @@ def durmuhurtam(jd, place):
     offset = offsets[weekday][i]
     if offset != 0.0:
       start = base[i] + dur[i] * offsets[weekday][i] / 12
-      end = start + day_dur * 0.8 / 12
+      end = start + dur[i] * 0.8 / 12
 
       # convert to local time
       start_times[i] = to_dms((start - jd) * 24 + tz)
