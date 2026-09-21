@@ -671,7 +671,17 @@ def karana(jd, place):
 
 
 def vaara(jd):
-  """Weekday for given Julian day. 0 = Sunday, 1 = Monday,..., 6 = Saturday"""
+  """Weekday for given Julian day. 0 = Sunday, 1 = Monday,..., 6 = Saturday
+
+  Note: Hindu v\u0101ra canonically changes at local sunrise, not at
+  civil midnight. This helper is midnight-based by design: ``jd`` is the
+  civil-midnight JD from ``gregorian_to_jd(Date)`` (= 00:00 UTC, *.5),
+  so ``ceil(jd + 1) % 7`` maps Sunday=0 correctly. A sunrise-based
+  v\u0101ra would need a ``Place`` and a defined sunrise, which fails at
+  polar night; all callers use the midnight convention intentionally.
+  Passing an integer (noon) JD collapses ``ceil`` to a no-op and yields
+  the next weekday.
+  """
   return int(ceil(jd + 1) % 7)
 
 
