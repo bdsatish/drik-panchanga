@@ -625,10 +625,17 @@ def yoga(jd, place):
 
 
 def karana(jd, place):
-  """Returns the karana and their ending times. (from 1 to 60)"""
+  """Returns the karana and their ending times. (from 1 to 60)
+
+  Karana n ends exactly when the lunar phase reaches n*6 degrees, so even
+  karanas end with their parent tithi. Even-karana skips are astronomically
+  impossible; an odd (first-half) karana can cross midnight and end after
+  the next sunrise, which is reported as hours past local midnight.
+  """
   tz = place.timezone
-  # 1. Find time of sunrise
-  rise = sunrise(jd, place)[0]
+  # 1. Find time of sunrise, in UT like tithi()/nakshatra()/yoga():
+  # sunrise()[0] is local hours past jd, so subtract tz/24 for the UT JD.
+  rise = sunrise(jd, place)[0] - tz / 24.
 
   # 2. Find karana at this JDN
   moon_phase = lunar_phase(rise)

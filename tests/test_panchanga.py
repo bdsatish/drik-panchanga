@@ -62,7 +62,25 @@ class SunriseSetTests(PanchangaTestCase):
     self.assertEqual(vaara(date2), 5)
 
   def test_karana_helsinki(self):
-    self.assertEqual(karana(date2, helsinki), [14, [12, 54, 20]])
+    # Karana 14 is the 2nd half of tithi 7 (ends 12:54:19 above), matching
+    # tithi(date2, helsinki). The old pin [12, 54, 20] came from evaluating
+    # the phase at the local-valued sunrise JD (tz off by 2 h) instead of UT.
+    self.assertEqual(karana(date2, helsinki), [14, [12, 54, 19]])
+
+  def test_karana_number_matches_tithi(self):
+    # Karana n spans phase [(n-1)*6, n*6); tithi m spans [(m-1)*12, m*12).
+    # So the karana at sunrise is always 2m-1 or 2m for tithi m, and an even
+    # karana must end exactly when its parent tithi ends. Catches a sunrise
+    # JD used in local instead of UT time, which shifts the phase by tz hours
+    # and can report the wrong karana number.
+    for jd in (date1, date2, date3):
+      for place in (bangalore, helsinki, shillong):
+        with self.subTest(jd=jd, place=place):
+          tithi_number = tithi(jd, place)[0]
+          karana_result = karana(jd, place)
+          self.assertIn(karana_result[0], (2 * tithi_number - 1, 2 * tithi_number))
+          if karana_result[0] % 2 == 0:
+            self.assertEqual(karana_result[1], tithi(jd, place)[1])
 
   def test_sunrise_shillong(self):
     sunrise(date4, shillong)
