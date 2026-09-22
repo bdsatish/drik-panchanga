@@ -176,7 +176,7 @@ class SunMoonTests(unittest.TestCase):
     lines = sun_moon_lines(location, date(2026, 5, 20))
     sun_lines = [line for line in lines if line.startswith("Sun:")]
     self.assertEqual(len(sun_lines), 1)
-    self.assertRegex(sun_lines[0], r"^Sun: \d\d:\d\d – --$")
+    self.assertRegex(sun_lines[0], r"^Sun: \(\d\d:\d\d –\) \d\d:\d\d – --$")
     self.assertTrue(all("-59" not in line for line in lines))
 
   def test_sun_moon_lines_render_sunset_only(self):
@@ -360,35 +360,6 @@ class RahuKalaTableTests(unittest.TestCase):
     from generate_monthly_calendar import rahu_kala_table_lines
     lines = dict(line.split() for line in rahu_kala_table_lines(load_location("Helsinki"), 2026, 3))
     self.assertEqual(lines["Mo"], "07:52-10:12")
-
-
-class PratahSandhyaTableTests(unittest.TestCase):
-
-  def test_table_lines_cover_all_weekdays_sunday_first(self):
-    from generate_monthly_calendar import pratah_sandhya_table_lines
-    lines = pratah_sandhya_table_lines(load_location("Ujjain"), 2026, 6)
-    self.assertEqual([line.split()[0] for line in lines], ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"])
-    import re
-    for line in lines:
-      self.assertRegex(line, r"^(Su|Mo|Tu|We|Th|Fr|Sa) \d{2}:\d{2}-\d{2}:\d{2}$")
-
-  def test_table_is_drawn_with_header_and_seven_rows(self):
-    from generate_monthly_calendar import draw_pratah_sandhya_table
-    pdf = mock.Mock()
-    draw_pratah_sandhya_table(pdf, 20.0, 500.0, load_location("Ujjain"), 2026, 6)
-    drawn = [c.args[2] for c in pdf.drawString.call_args_list]
-    self.assertEqual(drawn[0], "Pratah sandhya")
-    self.assertEqual(len(drawn), 8)
-
-  def test_table_envelopes_whole_month_not_first_week(self):
-    from generate_monthly_calendar import pratah_sandhya_table_lines
-    lines = dict(line.split() for line in pratah_sandhya_table_lines(load_location("Ujjain"), 2026, 6))
-    self.assertEqual(lines["Mo"], "05:02-05:48")
-
-  def test_table_envelope_spans_dst_transition(self):
-    from generate_monthly_calendar import pratah_sandhya_table_lines
-    lines = dict(line.split() for line in pratah_sandhya_table_lines(load_location("Helsinki"), 2026, 3))
-    self.assertEqual(lines["Mo"], "05:33-07:23")
 
 
 class TithiIndexCellTests(unittest.TestCase):

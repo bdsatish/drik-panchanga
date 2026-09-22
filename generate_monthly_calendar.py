@@ -252,6 +252,11 @@ def sun_moon_lines(location, civil):
   Sunrise and sunset are checked independently: near the polar circle one can
   exist while the other does not, and the available half is still worth
   printing. A missing end shows as ``--``.
+
+  The Sun line prefixes the pratah sandhya start in brackets —
+  ``Sun: (05:12 –) 06:07 – 18:29`` — sandhya runs from that moment to the
+  sunrise that follows. IndUni-H has no arrow glyph, so the en-dash stands in
+  for ``→``; if sandhya cannot be computed the bracket is dropped.
   """
   place = place_for_date(location, civil)
   jd = gregorian_to_jd(civil)
@@ -265,7 +270,15 @@ def sun_moon_lines(location, civil):
     rise_text = format_hms(rise[1]) if jd - 1 <= rise[0] <= jd + 2 else "--"
     set_text = format_hms(set_[1]) if jd - 1 <= set_[0] <= jd + 2 else "--"
     if rise_text != "--" or set_text != "--":
-      lines.append(f"Sun: {rise_text} – {set_text}")
+      sandhya_prefix = ""
+      if rise_text != "--":
+        try:
+          ps_start, _ps_end = panchanga.pratah_sandhya(jd, place)
+          if 0 <= ps_start[0] < 48:
+            sandhya_prefix = f"({format_hms(ps_start)} –) "
+        except Exception as sandhya_exc:
+          log.debug("pratah sandhya unavailable %s: %s", civil, sandhya_exc)
+      lines.append(f"Sun: {sandhya_prefix}{rise_text} – {set_text}")
   except Exception as exc:
     log.debug("sun times unavailable %s: %s", civil, exc)
   try:
@@ -519,7 +532,9 @@ def draw_cell(pdf, x, y_top, row_h, cell_w, day, civil, location, context, col):
   bottom_lines = sun_moon_lines(location, civil) + varjyam_lines(location, civil)
   for i, text in enumerate(bottom_lines):
     pdf.setFillColor(RED if text.startswith("Varjyam") else GREY)
-    pdf.setFont(PDF_FONT, 5.8)
+    # 5.5 (not 5.8): the Sun line now carries the pratah sandhya bracket and
+    # would overrun the cell border at 5.8.
+    pdf.setFont(PDF_FONT, 5.5)
     pdf.drawString(x + 4, bottom_y + i * 7.0, text)
 
 
@@ -543,39 +558,6 @@ def rahu_kala_table_lines(location, year, month):
       start, end = panchanga.trikalam(jd, place, option="rahu")
     except Exception as exc:
       log.debug("rahu kala unavailable %s: %s", civil, exc)
-      continue
-    windows.setdefault(civil.weekday(), []).append((format_hms(start), format_hms(end)))
-  lines = []
-  for weekday in (6, 0, 1, 2, 3, 4, 5):
-    if weekday not in windows:
-      lines.append(f"{labels[weekday]} --")
-      continue
-    starts = [start for start, _end in windows[weekday]]
-    ends = [end for _start, end in windows[weekday]]
-    lines.append(f"{labels[weekday]} {min(starts)}-{max(ends)}")
-  return lines
-
-
-def pratah_sandhya_table_lines(location, year, month):
-  """Weekday pratah sandhya envelopes across the whole month, Sunday first.
-
-  Each line spans the earliest start to the latest end (always that day's
-  sunrise) over every occurrence of that weekday, so the window is never
-  understated when sunrise drifts — or jumps at a DST transition. Days
-  collapse naturally when times agree; a weekday with no computable day
-  (e.g. polar night) renders as ``--``.
-  """
-  labels = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
-  windows = {}
-  days = calendar.monthrange(year, month)[1]
-  for day in range(1, days + 1):
-    civil = CivilDate(year, month, day)
-    try:
-      place = place_for_date(location, civil)
-      jd = gregorian_to_jd(civil)
-      start, end = panchanga.pratah_sandhya(jd, place)
-    except Exception as exc:
-      log.debug("pratah sandhya unavailable %s: %s", civil, exc)
       continue
     windows.setdefault(civil.weekday(), []).append((format_hms(start), format_hms(end)))
   lines = []
@@ -614,18 +596,6 @@ def draw_rahu_kala_table(pdf, x, y_top, location, year, month):
     line_y -= 8.0
 
 
-def draw_pratah_sandhya_table(pdf, x, y_top, location, year, month):
-  pdf.setFillColor(INK)
-  pdf.setFont(PDF_FONT_BOLD, 6.5)
-  pdf.drawString(x + 4, y_top - 14, "Pratah sandhya")
-  line_y = y_top - 14 - 8.0
-  pdf.setFillColor(GREY)
-  pdf.setFont(PDF_FONT, 5.8)
-  for line in pratah_sandhya_table_lines(location, year, month):
-    pdf.drawString(x + 4, line_y, line)
-    line_y -= 8.0
-
-
 def draw_grid(pdf, year, month, location, context):
   grid_top = PAGE_H - MARGIN - HEADER_H - WEEKDAY_ROW_H
   grid_bottom = MARGIN + FOOTER_H
@@ -659,8 +629,6 @@ def draw_grid(pdf, year, month, location, context):
           draw_tithi_index_cell(pdf, x, y_top, 9, 15)
         elif row == GRID_ROWS - 1 and col == 4:
           draw_tithi_index_cell(pdf, x, y_top, 1, 8)
-        elif row == GRID_ROWS - 1 and col == 3:
-          draw_pratah_sandhya_table(pdf, x, y_top, location, year, month)
         else:
           pdf.setFillColor(LIGHT)
           pdf.setFont(PDF_FONT, 9)
