@@ -12,7 +12,7 @@ concurrency:
 jobs:
   test:
     name: Unit tests + app smoke
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     env:
       SE_EPHE_PATH: ${{ github.workspace }}/ephe
       PYTHONUNBUFFERED: "1"
@@ -81,7 +81,7 @@ jobs:
 
   style:
     name: Formatting (yapf)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
@@ -103,7 +103,7 @@ jobs:
 
   package:
     name: Package build + entry points
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     env:
       SE_EPHE_PATH: ${{ github.workspace }}/ephe
     steps:
@@ -176,7 +176,7 @@ jobs:
 
   docker:
     name: Docker build + container smoke
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     env:
       IMAGE: panchanga:ci
       PORT: "8080"
