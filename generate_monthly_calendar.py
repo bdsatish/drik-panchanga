@@ -556,6 +556,39 @@ def rahu_kala_table_lines(location, year, month):
   return lines
 
 
+def pratah_sandhya_table_lines(location, year, month):
+  """Weekday pratah sandhya envelopes across the whole month, Sunday first.
+
+  Each line spans the earliest start to the latest end (always that day's
+  sunrise) over every occurrence of that weekday, so the window is never
+  understated when sunrise drifts — or jumps at a DST transition. Days
+  collapse naturally when times agree; a weekday with no computable day
+  (e.g. polar night) renders as ``--``.
+  """
+  labels = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
+  windows = {}
+  days = calendar.monthrange(year, month)[1]
+  for day in range(1, days + 1):
+    civil = CivilDate(year, month, day)
+    try:
+      place = place_for_date(location, civil)
+      jd = gregorian_to_jd(civil)
+      start, end = panchanga.pratah_sandhya(jd, place)
+    except Exception as exc:
+      log.debug("pratah sandhya unavailable %s: %s", civil, exc)
+      continue
+    windows.setdefault(civil.weekday(), []).append((format_hms(start), format_hms(end)))
+  lines = []
+  for weekday in (6, 0, 1, 2, 3, 4, 5):
+    if weekday not in windows:
+      lines.append(f"{labels[weekday]} --")
+      continue
+    starts = [start for start, _end in windows[weekday]]
+    ends = [end for _start, end in windows[weekday]]
+    lines.append(f"{labels[weekday]} {min(starts)}-{max(ends)}")
+  return lines
+
+
 def draw_tithi_index_cell(pdf, x, y_top, start, stop):
   pdf.setFillColor(INK)
   pdf.setFont(PDF_FONT_BOLD, 6.0)
@@ -577,6 +610,18 @@ def draw_rahu_kala_table(pdf, x, y_top, location, year, month):
   pdf.setFillColor(GREY)
   pdf.setFont(PDF_FONT, 5.8)
   for line in rahu_kala_table_lines(location, year, month):
+    pdf.drawString(x + 4, line_y, line)
+    line_y -= 8.0
+
+
+def draw_pratah_sandhya_table(pdf, x, y_top, location, year, month):
+  pdf.setFillColor(INK)
+  pdf.setFont(PDF_FONT_BOLD, 6.5)
+  pdf.drawString(x + 4, y_top - 14, "Pratah sandhya")
+  line_y = y_top - 14 - 8.0
+  pdf.setFillColor(GREY)
+  pdf.setFont(PDF_FONT, 5.8)
+  for line in pratah_sandhya_table_lines(location, year, month):
     pdf.drawString(x + 4, line_y, line)
     line_y -= 8.0
 
@@ -614,6 +659,8 @@ def draw_grid(pdf, year, month, location, context):
           draw_tithi_index_cell(pdf, x, y_top, 9, 15)
         elif row == GRID_ROWS - 1 and col == 4:
           draw_tithi_index_cell(pdf, x, y_top, 1, 8)
+        elif row == GRID_ROWS - 1 and col == 3:
+          draw_pratah_sandhya_table(pdf, x, y_top, location, year, month)
         else:
           pdf.setFillColor(LIGHT)
           pdf.setFont(PDF_FONT, 9)
