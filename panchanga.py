@@ -526,16 +526,24 @@ def sunset(jd, place):
   """
   lat, lon, tz = place
   srise = sunrise(jd, place)[0]  # local-frame JD: UT + tz/24
-  # Start the sweep just after the sunrise anchor (real or virtual). All
-  # comparisons stay in one frame: rise_trans() returns UT instants, so the
-  # sunrise is converted to UT before comparing — mixing frames made the
-  # guard depend on the timezone offset and wrongly trigger the circumpolar
-  # fallback on ordinary short winter days east of UTC.
-  result = swe.rise_trans(
-    max(jd, srise + 0.02) - tz / 24, swe.SUN, geopos=(lon, lat, 0), rsmi=_rise_flags + swe.CALC_SET)
-  setting = result[1][0]  # julian-day number (UT)
   srise_ut = srise - tz / 24
-  if result[0] != 0 or not srise_ut < setting < srise_ut + 1.5:
+  # Sweep for the first set after the sunrise anchor. Starting exactly at
+  # sunrise is safe (CALC_SET never returns the rise event): on midwinter
+  # days just inside the polar circle the whole day can be shorter than
+  # half an hour, so any epsilon offset would skip the real set.
+  # Comparisons stay in one frame: rise_trans() returns UT instants, so the
+  # sunrise is converted to UT — mixing frames made the guard depend on
+  # the timezone offset and wrongly trigger the circumpolar fallback on
+  # ordinary short winter days east of UTC.
+  result = swe.rise_trans(srise_ut, swe.SUN, geopos=(lon, lat, 0), rsmi=_rise_flags + swe.CALC_SET)
+  setting = result[1][0]  # julian-day number (UT)
+  # A real set always falls within 24 h of its sunrise (strictly, at the
+  # circumpolar boundary it converges to 24 h). The virtual midnight-sun
+  # set is the next day's lower transit, ~24 h + seconds after the anchor.
+  # The +7 min margin covers that while rejecting Swe's habit of returning
+  # the NEXT day's set (e.g. Murmansk 2026-01-15, day length 0 but a set
+  # 24.5 h later on Jan 16) — that set belongs to Jan 16's own day.
+  if result[0] != 0 or not srise_ut < setting < srise_ut + 1.005:
     if _is_midnight_sun(jd, place):
       setting = _transit_jd(jd, place, lower=True, next_day=True)
     else:
