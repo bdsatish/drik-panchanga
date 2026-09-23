@@ -448,23 +448,84 @@ solar_longitude = lambda jd: planet_longitude(jd, swe.SUN)
 lunar_longitude = lambda jd: planet_longitude(jd, swe.MOON)
 
 
+def _sun_altitude(jd_ut, latitude, longitude):
+  """True (geometric) solar altitude in degrees at a UT instant."""
+  xx, _retflags = swe.calc_ut(jd_ut, swe.SUN)
+  _azimuth, true_altitude, _apparent = swe.azalt(jd_ut, swe.ECL2HOR, (longitude, latitude, 0.0), 0, 0,
+                                                 [xx[0], xx[1], xx[2]])
+  return true_altitude
+
+
+def _is_midnight_sun(jd, place):
+  """True when the Sun culminates above the horizon on ``jd``'s civil date.
+
+  Only consulted when the Sun is circumpolar (no local rise/set), where the
+  sign of the noon altitude splits polar night from midnight sun.
+  """
+  lat, lon, tz = place
+  return _sun_altitude(jd - tz / 24. + 0.5, lat, lon) > 0.0
+
+
+def _transit_jd(jd, place, lower=False, next_day=False):
+  """UT Julian day of the first meridian transit after local midnight.
+
+  ``lower=True`` gives the lower transit (solar midnight); ``next_day=True``
+  starts the search one civil day later. Meridian transits exist at every
+  latitude on every day, even when the Sun is circumpolar.
+  """
+  lat, lon, tz = place
+  rsmi = swe.CALC_ITRANSIT if lower else swe.CALC_MTRANSIT
+  result = swe.rise_trans(jd - tz / 24. + (1.0 if next_day else 0.0), swe.SUN, geopos=(lon, lat, 0), rsmi=rsmi)
+  return result[1][0]
+
+
 @lru_cache(maxsize=4096)  # memoize expensive Swiss Ephemeris rise lookup
 def sunrise(jd, place):
-  """Sunrise when centre of disc is at horizon for given date and place"""
+  """Sunrise when centre of disc is at horizon for given date and place
+
+  Circumpolar fallback — when there is no local sunrise (polar night or
+  midnight sun), the Hindu day is anchored at the matching meridian
+  transit instead, which exists at every latitude on every day:
+
+  * polar night: the upper transit (the noon glow) — sits ~30 min after
+    the real sunrises of the days just outside the polar period, so the
+    anchor series stays nearly continuous across both edges;
+  * midnight sun: the lower transit (solar midnight) — likewise adjacent
+    to the real sunrises, which drift toward solar midnight before the
+    sun stops setting.
+  """
   lat, lon, tz = place
   result = swe.rise_trans(jd - tz / 24, swe.SUN, geopos=(lon, lat, 0), rsmi=_rise_flags + swe.CALC_RISE)
-  rise = result[1][0]  # julian-day number
+  rise = result[1][0]  # julian-day number (UT)
+  if result[0] != 0 or not jd <= rise + tz / 24. < jd + 1.0:
+    # No horizon crossing today: anchor at the same-phase transit.
+    rise = (_transit_jd(jd, place, lower=True) if _is_midnight_sun(jd, place) else _transit_jd(jd, place))
   # Convert to local time
   return [rise + tz / 24., to_dms((rise - jd) * 24 + tz)]
 
 
 @lru_cache(maxsize=4096)  # memoize expensive Swiss Ephemeris set lookup
 def sunset(jd, place):
-  """Sunset when centre of disc is at horizon for given date and place"""
+  """Sunset when centre of disc is at horizon for given date and place
+
+  Circumpolar fallback:
+
+  * polar night: sunset coincides with the day's upper transit, the same
+    instant as the fallback sunrise — day length 0, night 24 h, as
+    observed;
+  * midnight sun: sunset is the *next* day's lower transit — day length
+    24 h, night 0 h, as observed. The preceding real sunsets (which drift
+    just past local midnight before the sun stops setting) continue into
+    this series almost without a jump.
+  """
   lat, lon, tz = place
   result = swe.rise_trans(jd - tz / 24, swe.SUN, geopos=(lon, lat, 0), rsmi=_rise_flags + swe.CALC_SET)
-  setting = result[1][0]  # julian-day number
-  # Convert to local time
+  setting = result[1][0]  # julian-day number (UT)
+  if result[0] != 0 or not jd <= setting + tz / 24. < jd + 1.5:
+    if _is_midnight_sun(jd, place):
+      setting = _transit_jd(jd, place, lower=True, next_day=True)
+    else:
+      setting = _transit_jd(jd, place)
   return [setting + tz / 24., to_dms((setting - jd) * 24 + tz)]
 
 
