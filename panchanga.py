@@ -508,6 +508,12 @@ def sunrise(jd, place):
 def sunset(jd, place):
   """Sunset when centre of disc is at horizon for given date and place
 
+  The search starts after today's sunrise, not at local midnight: near the
+  polar circles the previous evening's set can land shortly after 00:00
+  (before today's late sunrise), and searching from midnight would return
+  that spill set — making day lengths negative and sunset-anchored rules
+  (Pradosham, Aparāhṇa) use the previous day's event.
+
   Circumpolar fallback:
 
   * polar night: sunset coincides with the day's upper transit, the same
@@ -519,9 +525,12 @@ def sunset(jd, place):
     this series almost without a jump.
   """
   lat, lon, tz = place
-  result = swe.rise_trans(jd - tz / 24, swe.SUN, geopos=(lon, lat, 0), rsmi=_rise_flags + swe.CALC_SET)
+  srise = sunrise(jd, place)[0]
+  # Start the sweep just after the sunrise anchor (real or virtual).
+  result = swe.rise_trans(
+    max(jd, srise + 0.02) - tz / 24, swe.SUN, geopos=(lon, lat, 0), rsmi=_rise_flags + swe.CALC_SET)
   setting = result[1][0]  # julian-day number (UT)
-  if result[0] != 0 or not jd <= setting + tz / 24. < jd + 1.5:
+  if result[0] != 0 or not srise < setting < jd + 2.0:
     if _is_midnight_sun(jd, place):
       setting = _transit_jd(jd, place, lower=True, next_day=True)
     else:
