@@ -1,51 +1,37 @@
-"""Tests for polar / no-sunrise user-facing messages and moon event gaps."""
+"""Tests for polar-region behaviour and moon event gaps."""
 
 import unittest
 
-from generate_panchanga_calendar import (
-  classify_missing_sunrise,
-  format_sunrise_unavailable_message,
-  load_location,
-  require_local_sunrise,
-)
+from generate_panchanga_calendar import load_location
 from webapp.day_panchanga import compute_day_panchanga, place_for_date, parse_civil_date, probe_moon_event
 import panchanga
 
 
-class SunriseUnavailableTests(unittest.TestCase):
+class PolarDayTests(unittest.TestCase):
 
   @classmethod
   def setUpClass(cls):
     cls.murmansk = load_location("Murmansk")
 
-  def test_classifies_polar_night_and_midnight_sun(self):
-    place_winter = place_for_date(self.murmansk, parse_civil_date("01/01/2025"))
-    place_summer = place_for_date(self.murmansk, parse_civil_date("01/07/2025"))
-    self.assertEqual(classify_missing_sunrise(2025, 1, 1, place_winter), "polar_night")
-    self.assertEqual(classify_missing_sunrise(2025, 7, 1, place_summer), "polar_day")
-
-  def test_message_mentions_polar_night(self):
-    place = place_for_date(self.murmansk, parse_civil_date("01/01/2025"))
-    message = format_sunrise_unavailable_message("Murmansk", 2025, 1, 1, place)
-    self.assertIn("polar night", message)
-    self.assertIn("01/01/2025", message)
-    self.assertIn("sunrise", message.casefold())
-
-  def test_message_mentions_midnight_sun(self):
-    place = place_for_date(self.murmansk, parse_civil_date("01/07/2025"))
-    message = format_sunrise_unavailable_message("Murmansk", 2025, 7, 1, place)
-    self.assertIn("midnight sun", message)
-    self.assertIn("01/07/2025", message)
-
-  def test_require_local_sunrise_uses_transit_fallback(self):
-    """The legacy gate no longer trips: the core sunrise() fallback always
-    supplies an anchor (upper/lower transit) at circumpolar latitudes."""
+  def test_sunrise_falls_back_to_upper_transit_in_polar_night(self):
+    """Murmansk Jan 1 has no real rise: anchor = solar noon, rise == set."""
     civil = parse_civil_date("01/01/2025")
     place = place_for_date(self.murmansk, civil)
     jd = panchanga.gregorian_to_jd(civil)
-    sunrise = require_local_sunrise(jd, place, "Murmansk", 2025, 1, 1)
-    self.assertIsNotNone(sunrise)
-    self.assertTrue(jd - 1 <= sunrise[0] <= jd + 2)
+    sunrise = panchanga.sunrise(jd, place)
+    sunset = panchanga.sunset(jd, place)
+    self.assertEqual(sunrise[0], sunset[0])  # day length 0
+    self.assertTrue(jd <= sunrise[0] < jd + 1)
+
+  def test_sunrise_falls_back_to_lower_transit_in_midnight_sun(self):
+    """Murmansk Jul 1 has no real rise: day length 24 h (anchor at solar
+    midnight, sunset at the next day's lower transit)."""
+    civil = parse_civil_date("01/07/2025")
+    place = place_for_date(self.murmansk, civil)
+    jd = panchanga.gregorian_to_jd(civil)
+    sunrise = panchanga.sunrise(jd, place)
+    sunset = panchanga.sunset(jd, place)
+    self.assertAlmostEqual((sunset[0] - sunrise[0]) * 24, 24.0, delta=0.01)
 
   def test_day_api_serves_polar_night(self):
     """Polar night no longer errors: sunrise/sunset anchor at solar noon."""

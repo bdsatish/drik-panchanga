@@ -62,7 +62,6 @@ from generate_panchanga_calendar import (
   month_system_label,
   place_for_date,
   require_coordinate_selection,
-  require_local_sunrise,
   require_month_system,
   require_start_month,
   resolve_festivals,
@@ -215,17 +214,14 @@ def format_hms(hms):
 
 
 def day_details(location, civil):
-  """Tithi / nakshatra / yoga lines at sunrise for one civil day, or ``None``.
+  """Tithi / nakshatra / yoga lines at the day's sunrise anchor.
 
-  Returns tithi/nakshatra/yoga lines at the day's sunrise anchor. At polar
-  day/night the anchor comes from the sunrise()/sunset() transit fallback
-  (solar noon / solar midnight), so lines are always available; Swiss
-  Ephemeris sentinel garbage is never rendered.
+  The anchor comes from ``panchanga.sunrise()``, which falls back to the
+  matching meridian transit at polar day/night, so lines are available for
+  every place and date; Swiss Ephemeris sentinel garbage is never rendered.
   """
   place = place_for_date(location, civil)
   jd = gregorian_to_jd(civil)
-  if require_local_sunrise(jd, place, location.name, civil.year, civil.month, civil.day) is None:
-    return None
   tithi_lines = []
   t = panchanga.tithi(jd, place)
   tithi_lines.append((tithi_code(t[0]), format_hms(t[1])))
@@ -463,9 +459,9 @@ def draw_cell(pdf, x, y_top, row_h, cell_w, day, civil, location, context, col):
   masa_prefix = f"A.{masa_name}" if masa_display.startswith("A") else masa_name
   details = day_details(location, civil)
   if details is None:
-    # Defensive: the sunrise()/sunset() transit fallback anchors every day,
-    # even polar night/midnight sun, so this branch is not expected to fire.
-    # Render the cell as unavailable rather than printing garbage end times.
+    # Unreachable in practice: day_details always computes now. Kept as a
+    # guard so a future regression degrades to a marked cell, never to
+    # garbage end times.
     tithi_lines, naks_lines, yoga_names = [], [], []
     pdf.setFillColor(GREY)
     pdf.setFont(PDF_FONT_ITALIC, 6.8)

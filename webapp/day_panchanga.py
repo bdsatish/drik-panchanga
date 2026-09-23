@@ -14,11 +14,9 @@ from generate_panchanga_calendar import (
   ayanamsa_label,
   body_altitude_at_local_noon,
   coordinate_selection_label,
-  format_sunrise_unavailable_message,
   load_location,
   month_system_label,
   place_for_date,
-  require_local_sunrise,
   require_month_system,
   sanskrit_names,
 )
@@ -172,15 +170,8 @@ def _compute_day_details_unlocked(location, civil, amanta=None, coordinate_selec
   place = place_for_date(location, civil)
   jd = panchanga.gregorian_to_jd(civil)
 
-  sunrise = require_local_sunrise(jd, place, location.name, civil.year, civil.month, civil.day)
-  if sunrise is None:
-    raise ValueError(format_sunrise_unavailable_message(location.name, civil.year, civil.month, civil.day, place))
+  sunrise = panchanga.sunrise(jd, place)
   sunset = panchanga.sunset(jd, place)
-  sunset_jd = sunset[0]
-  if not jd - 1 <= sunset_jd <= jd + 2:
-    message = format_sunrise_unavailable_message(location.name, civil.year, civil.month, civil.day, place)
-    log.error("%s (no local sunset)", message)
-    raise ValueError(message)
   day_dur = panchanga.day_duration(jd, place)
 
   names = sanskrit_names()

@@ -1185,15 +1185,15 @@ def varjyam(jd, place):
   varjyam periods that overlap with the day (sunrise to next sunrise).
   Times past 24:00 (e.g. 26:21:48) belong to the next civil day.
 
-  Returns an empty list when sunrise is unavailable (high latitudes during
-  polar day or night), mirroring the calendar's ``require_local_sunrise``
-  guard.
+  Returns an empty list if either sunrise anchor is not within the expected
+  day window (cannot happen with the current transit fallback, but guards
+  against Swiss Ephemeris sentinel garbage).
   """
   tz = place.timezone
   today_sunrise = sunrise(jd, place)[0]
   tomorrow_sunrise = sunrise(jd + 1, place)[0]
-  # Swiss Ephemeris returns 0.0 on failed rise/set lookups (polar day/night).
-  # Detect that like the calendar layer so we never interpolate on bogus data.
+  # Never interpolate on out-of-window garbage (a 0.0 sentinel or a JD from
+  # the wrong day).
   if today_sunrise < jd - 1 or today_sunrise > jd + 2 or tomorrow_sunrise < jd - 1 or tomorrow_sunrise > jd + 2:
     return []
   srise1 = today_sunrise - tz / 24.

@@ -48,7 +48,7 @@ def _sunset_jd_ut(civil_date, geopos, timezone_name):
   except Exception:
     return None
   # sweph returns 0.0 for a failed rise/set lookup, so the result is range-checked
-  # against the expected JD window (same guard as ``require_local_sunrise``).
+  # against the expected JD window before use.
   if not jd - 1 <= sunset_jd_local <= jd + 2:
     return None
   return sunset_jd_local - tz_offset / 24

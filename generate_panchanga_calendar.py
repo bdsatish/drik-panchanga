@@ -405,59 +405,6 @@ def body_altitude_at_local_noon(body, year, month, day, place):
   return true_altitude
 
 
-def sun_altitude_at_local_noon(year, month, day, place):
-  """True solar altitude in degrees at local civil noon."""
-  return body_altitude_at_local_noon(panchanga.swe.SUN, year, month, day, place)
-
-
-def classify_missing_sunrise(year, month, day, place):
-  """Why local sunrise is unavailable: ``polar_night``, ``polar_day``, or ``no_sunrise``."""
-  altitude = sun_altitude_at_local_noon(year, month, day, place)
-  if altitude > 0.5:
-    kind = "polar_day"
-  elif altitude < -0.5:
-    kind = "polar_night"
-  else:
-    kind = "no_sunrise"
-  return kind
-
-
-def format_sunrise_unavailable_message(location_name, year, month, day, place):
-  """Human-readable error when Hindu sunrise-day reckoning cannot start."""
-  kind = classify_missing_sunrise(year, month, day, place)
-  date_label = f"{day:02d}/{month:02d}/{year}"
-  lat = abs(place.latitude)
-  hemisphere = "N" if place.latitude >= 0 else "S"
-  if kind == "polar_night":
-    detail = (f"polar night — the Sun stays below the horizon "
-              f"(about {lat:.1f}°{hemisphere})")
-  elif kind == "polar_day":
-    detail = (f"midnight sun — the Sun stays above the horizon "
-              f"(about {lat:.1f}°{hemisphere})")
-  else:
-    detail = (f"no local sunrise/sunset "
-              f"(about {lat:.1f}°{hemisphere}; common near the polar circles)")
-  return (f"Cannot compute sunrise panchanga for {location_name} on {date_label}: "
-          f"{detail}. Hindu civil days begin at local sunrise — choose a date with a "
-          f"sunrise, or a city at lower latitude.")
-
-
-def require_local_sunrise(jd, place, location_name, year, month, day):
-  """Return ``panchanga.sunrise`` result, or ``None`` when sunrise is unavailable."""
-  try:
-    sunrise = panchanga.sunrise(jd, place)
-    sunrise_jd = sunrise[0]
-    if not jd - 1 <= sunrise_jd <= jd + 2:
-      message = format_sunrise_unavailable_message(location_name, year, month, day, place)
-      log.error("%s", message)
-      return None
-    return sunrise
-  except Exception as error:
-    message = format_sunrise_unavailable_message(location_name, year, month, day, place)
-    log.error("%s (%s)", message, error)
-    return None
-
-
 def city_base_name(key):
   """Return the place name from a ``Name, ISO`` cities.json key.
 
@@ -787,10 +734,7 @@ def daily_records(months, location):
       date = panchanga.Date(year, month, day)
       place = place_for_date(location, date)
       jd = panchanga.gregorian_to_jd(date)
-      sunrise = require_local_sunrise(jd, place, location.name, year, month, day)
-      if sunrise is None:
-        raise RuntimeError(format_sunrise_unavailable_message(location.name, year, month, day, place))
-      sunrise_jd = sunrise[0]
+      sunrise_jd = panchanga.sunrise(jd, place)[0]
       tithi_number = panchanga.tithi(jd, place)[0]
       nakshatra_number = panchanga.nakshatra(jd, place)[0]
       yoga_number = panchanga.yoga(jd, place)[0]
