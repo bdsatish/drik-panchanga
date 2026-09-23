@@ -525,12 +525,17 @@ def sunset(jd, place):
     this series almost without a jump.
   """
   lat, lon, tz = place
-  srise = sunrise(jd, place)[0]
-  # Start the sweep just after the sunrise anchor (real or virtual).
+  srise = sunrise(jd, place)[0]  # local-frame JD: UT + tz/24
+  # Start the sweep just after the sunrise anchor (real or virtual). All
+  # comparisons stay in one frame: rise_trans() returns UT instants, so the
+  # sunrise is converted to UT before comparing — mixing frames made the
+  # guard depend on the timezone offset and wrongly trigger the circumpolar
+  # fallback on ordinary short winter days east of UTC.
   result = swe.rise_trans(
     max(jd, srise + 0.02) - tz / 24, swe.SUN, geopos=(lon, lat, 0), rsmi=_rise_flags + swe.CALC_SET)
   setting = result[1][0]  # julian-day number (UT)
-  if result[0] != 0 or not srise < setting < jd + 2.0:
+  srise_ut = srise - tz / 24
+  if result[0] != 0 or not srise_ut < setting < srise_ut + 1.5:
     if _is_midnight_sun(jd, place):
       setting = _transit_jd(jd, place, lower=True, next_day=True)
     else:
