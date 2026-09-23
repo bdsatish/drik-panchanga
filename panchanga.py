@@ -1132,11 +1132,19 @@ def pratah_sandhya(jd, place):
   muhūrta = night/15 = two ghaṭīs, using the night that *ends* at today's
   sunrise (yesterday sunset → today sunrise = ``night_duration(jd - 1)``).
 
+  At high latitudes the sunset search can return the early-morning set that
+  belongs to the *previous* evening (it lands just after local midnight),
+  inflating the night beyond 24 h and pushing the start negative — so the
+  night here is anchored at the latest real sunset strictly before today's
+  sunrise, and the start is clamped at civil midnight.
+
   Returns ``[start_hms, end_hms]`` in local civil time; end is sunrise.
   """
   srise, srise_hms = sunrise(jd, place)
-  night_hours, _ = night_duration(jd - 1, place)
+  prev_sunset = max((c for c in (sunset(jd - 1, place)[0], sunset(jd, place)[0]) if c < srise), default=srise)
+  night_hours = max((srise - prev_sunset) * 24, 0.0)
   start = srise - (night_hours / 15.0) / 24.0
+  start = max(start, jd)
   # srise already includes +tz/24, so (start - jd)*24 is local hours.
   return [to_dms((start - jd) * 24), srise_hms]
 
