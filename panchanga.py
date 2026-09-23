@@ -466,17 +466,34 @@ def _is_midnight_sun(jd, place):
   return _sun_altitude(jd - tz / 24. + 0.5, lat, lon) > 0.0
 
 
-def _transit_jd(jd, place, lower=False, next_day=False):
-  """UT Julian day of the first meridian transit after local midnight.
+def _transit_jd(jd, place, lower=False):
+  """UT Julian day of the meridian transit in the civil day starting at ``jd``.
 
-  ``lower=True`` gives the lower transit (solar midnight); ``next_day=True``
-  starts the search one civil day later. Meridian transits exist at every
-  latitude on every day, even when the Sun is circumpolar.
+  ``lower=True`` gives the lower transit (solar midnight), searched in the
+  window (previous local noon, local noon); ``lower=False`` the upper
+  transit in (local midnight, next local midnight). Exactly one transit of
+  each kind exists in its window, so the result is well-defined regardless
+  of where the transit falls on the clock — which matters east of a time
+  zone meridian, where solar midnight sits before 00:00. Meridian transits
+  exist at every latitude on every day, even when the Sun is circumpolar.
   """
   lat, lon, tz = place
-  rsmi = swe.CALC_ITRANSIT if lower else swe.CALC_MTRANSIT
-  result = swe.rise_trans(jd - tz / 24. + (1.0 if next_day else 0.0), swe.SUN, geopos=(lon, lat, 0), rsmi=rsmi)
-  return result[1][0]
+  if lower:
+    # Search from the previous local noon: the window (prev noon, noon)
+    # contains exactly one lower transit, wherever it falls on the clock.
+    result = swe.rise_trans(jd - tz / 24. - 0.5, swe.SUN, geopos=(lon, lat, 0), rsmi=swe.CALC_ITRANSIT)
+    transit = result[1][0]
+    # Guard against a transit landing exactly on a window edge.
+    if not jd - tz / 24. - 0.5 < transit < jd - tz / 24.:
+      result = swe.rise_trans(jd - tz / 24., swe.SUN, geopos=(lon, lat, 0), rsmi=swe.CALC_ITRANSIT)
+      transit = result[1][0]
+  else:
+    result = swe.rise_trans(jd - tz / 24., swe.SUN, geopos=(lon, lat, 0), rsmi=swe.CALC_MTRANSIT)
+    transit = result[1][0]
+    if not jd - tz / 24. < transit < jd - tz / 24. + 1.0:
+      result = swe.rise_trans(jd - tz / 24. + 1.0, swe.SUN, geopos=(lon, lat, 0), rsmi=swe.CALC_MTRANSIT)
+      transit = result[1][0]
+  return transit
 
 
 @lru_cache(maxsize=4096)  # memoize expensive Swiss Ephemeris rise lookup
@@ -500,8 +517,12 @@ def sunrise(jd, place):
   if result[0] != 0 or not jd <= rise + tz / 24. < jd + 1.0:
     # No horizon crossing today: anchor at the same-phase transit.
     rise = (_transit_jd(jd, place, lower=True) if _is_midnight_sun(jd, place) else _transit_jd(jd, place))
-  # Convert to local time
-  return [rise + tz / 24., to_dms((rise - jd) * 24 + tz)]
+  # Convert to local time. East of a time-zone meridian the midnight-sun
+  # anchor (the lower transit of the day's window) can land a few minutes
+  # before civil midnight; display it as 00:00:00 — the exact instant is
+  # in the returned JD and all computations use that.
+  hours = max(0.0, (rise - jd) * 24 + tz)
+  return [rise + tz / 24., to_dms(hours)]
 
 
 @lru_cache(maxsize=4096)  # memoize expensive Swiss Ephemeris set lookup
@@ -545,7 +566,9 @@ def sunset(jd, place):
   # 24.5 h later on Jan 16) — that set belongs to Jan 16's own day.
   if result[0] != 0 or not srise_ut < setting < srise_ut + 1.005:
     if _is_midnight_sun(jd, place):
-      setting = _transit_jd(jd, place, lower=True, next_day=True)
+      # The next day's lower transit: the transit inside (local noon,
+      # next noon) — the window adjacent to the sunrise anchor's window.
+      setting = _transit_jd(jd + 1, place, lower=True)
     else:
       setting = _transit_jd(jd, place)
   return [setting + tz / 24., to_dms((setting - jd) * 24 + tz)]

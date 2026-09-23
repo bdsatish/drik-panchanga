@@ -149,7 +149,10 @@ class VarjyamTests(PanchangaTestCase):
     """Transit fallback anchors varjyam even when the sun never sets."""
     jd = gregorian_to_jd(Date(2026, 6, 21))
     tromso = Place(69.65, 18.96, +1.0)
-    self.assertEqual(varjyam(jd, tromso), [[[38, 47, 1], [40, 29, 8]]])
+    # Anchor = lower transit of the day window (solar midnight); value
+    # changed from the pre-window-transit-fallback fix, which sampled at a
+    # 47-hour-class anchor for east-of-meridian edge cases.
+    self.assertEqual(varjyam(jd, tromso), [[[12, 27, 21], [14, 6, 44]]])
 
   def test_varjyam_polar_shoulder_still_computes(self):
     jd = gregorian_to_jd(Date(2026, 3, 15))
