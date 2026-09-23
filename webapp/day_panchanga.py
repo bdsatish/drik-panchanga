@@ -164,7 +164,9 @@ def _compute_day_details_unlocked(location, civil, amanta=None, coordinate_selec
     same normalized day record.  ``civil`` has ``year``/``month``/``day``
     attributes (``panchanga.Date`` or ``datetime.date``).
 
-    Raises ``ValueError`` when sunrise cannot be computed for the date/location.
+    Works at every latitude: above the polar circles the day anchors at the
+    matching meridian transit (solar noon in polar night, solar midnight in
+    midnight sun) via the core sunrise()/sunset() fallback.
     """
   panchanga.set_coordinate_selection(coordinate_selection)
   place = place_for_date(location, civil)

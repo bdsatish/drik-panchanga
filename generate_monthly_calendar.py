@@ -217,12 +217,10 @@ def format_hms(hms):
 def day_details(location, civil):
   """Tithi / nakshatra / yoga lines at sunrise for one civil day, or ``None``.
 
-  Returns ``None`` when sunrise is unavailable (polar day or night). Every one
-  of these quantities is defined *at sunrise*: with no sunrise, Swiss Ephemeris
-  returns a 0.0 rise sentinel and the derived end times come out as garbage
-  (e.g. ``-59069077:35``), so there is nothing meaningful to report. Callers
-  test for ``None`` rather than catching an exception; the annual generator's
-  ``require_local_sunrise`` returns ``None`` the same way.
+  Returns tithi/nakshatra/yoga lines at the day's sunrise anchor. At polar
+  day/night the anchor comes from the sunrise()/sunset() transit fallback
+  (solar noon / solar midnight), so lines are always available; Swiss
+  Ephemeris sentinel garbage is never rendered.
   """
   place = place_for_date(location, civil)
   jd = gregorian_to_jd(civil)
@@ -465,8 +463,9 @@ def draw_cell(pdf, x, y_top, row_h, cell_w, day, civil, location, context, col):
   masa_prefix = f"A.{masa_name}" if masa_display.startswith("A") else masa_name
   details = day_details(location, civil)
   if details is None:
-    # Polar day/night: no sunrise means no sunrise-based panchanga. Render the
-    # cell as unavailable rather than printing garbage end times.
+    # Defensive: the sunrise()/sunset() transit fallback anchors every day,
+    # even polar night/midnight sun, so this branch is not expected to fire.
+    # Render the cell as unavailable rather than printing garbage end times.
     tithi_lines, naks_lines, yoga_names = [], [], []
     pdf.setFillColor(GREY)
     pdf.setFont(PDF_FONT_ITALIC, 6.8)
@@ -544,8 +543,10 @@ def rahu_kala_table_lines(location, year, month):
   Each line spans the earliest start to the latest end over every
   occurrence of that weekday (e.g. ``Mo 07:25-09:09``), so the window is
   never understated when sunrise drifts — or jumps at a DST transition.
-  Days collapse naturally when times agree; a weekday with no computable
-  day (e.g. polar night) renders as ``--``.
+  Days collapse naturally when times agree. Transit-anchored days (polar
+  night / midnight sun) contribute their virtual sunrise/sunset windows like
+  any other day; a weekday never renders as ``--`` unless day_details
+  returns nothing.
   """
   labels = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
   windows = {}

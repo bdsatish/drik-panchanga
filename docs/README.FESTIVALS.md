@@ -127,9 +127,11 @@ Location dependence
 -------------------
 
 Dates are sunrise- and location-dependent, so the same festival can fall on
-different Gregorian days in different cities. A city inside a polar-night or
-midnight-sun period cannot be generated for dates on which Swiss Ephemeris
-cannot provide a local sunrise.
+different Gregorian days in different cities. Above the polar circles, where
+the Sun goes days or months without rising or setting, `panchanga.sunrise()`
+and `panchanga.sunset()` fall back to the matching meridian transit (solar
+noon in polar night, solar midnight in midnight sun), so festivals resolve
+for any city on any date. See "Polar regions" in the top-level README.
 
 Rationale
 ---------

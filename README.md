@@ -42,6 +42,8 @@ panchanga.yoga(jd, place)         # [11, [20, 34, 38]]
 panchanga.vaara(jd)               # 4 (Thursday, 0 = Sunday)
 panchanga.masa(jd, place)         # [10, False]        -> Pausha, not adhika
 panchanga.sunrise(jd, place)      # [jd, [6, 49, 18]]  -> local sunrise 06:49:18
+panchanga.sunset(jd, place)       # [jd, [18, 8, 40]]  -> local sunset
+panchanga.pratah_sandhya(jd, place)  # [[5, 10, 59], [5, 56, 18]]  start, end
 panchanga.trikalam(jd, place, option="rahu")   # Rahu Kala interval
 panchanga.durmuhurtam(jd, place)               # Durmuhurta intervals
 panchanga.planetary_positions(jd, place)       # all grahas, sidereal
@@ -53,6 +55,28 @@ are sidereal longitudes in `[degrees, minutes, seconds]`. Negative years in
 `Date` are proleptic Gregorian (works back to 5000 BCE). Available ayanamsas:
 `citra`, `revati`, `rohini`, `pushya`, `mula`, `krishnamurti`, `raman` — or
 `panchanga.set_coordinate_mode("tropical")` for sāyana positions.
+
+Polar regions
+-------------
+
+Above the polar circles the Sun can go days or months without rising or
+setting. `sunrise()`/`sunset()` still return an anchor on every such day by
+falling back to the matching meridian transit, which exists at every latitude
+on every day:
+
+- **Polar night** — sunrise and sunset both anchor at the upper transit (the
+  noon glow): day length 0, night 24 h, as observed.
+- **Midnight sun** — sunrise anchors at the lower transit (solar midnight) and
+  sunset at the next day's lower transit: day length 24 h, night 0 h.
+
+Both transits sit within ~30 minutes of the real sunrises on the days just
+outside the polar period, so tithi, nakshatra, yoga, karaṇa and the derived
+kalas (Rahu Kala, Abhijit, Durmuhurta, Varjyam, sandhya) stay continuous
+across the polar edges. Solar-dependent intervals degrade truthfully: in
+polar night, Rahu Kala etc. collapse to the transit instant (there is no
+daylight to divide); in midnight sun they stretch to 1/8 of 24 h. Calendar
+PDFs and the web UI therefore generate for any city on any date; no visual
+marker distinguishes transit-anchored days from real sunrise days.
 
 Calendar PDFs
 -------------
