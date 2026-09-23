@@ -37,21 +37,32 @@ class SunriseUnavailableTests(unittest.TestCase):
     self.assertIn("midnight sun", message)
     self.assertIn("01/07/2025", message)
 
-  def test_require_local_sunrise_returns_none(self):
+  def test_require_local_sunrise_uses_transit_fallback(self):
+    """The legacy gate no longer trips: the core sunrise() fallback always
+    supplies an anchor (upper/lower transit) at circumpolar latitudes."""
     civil = parse_civil_date("01/01/2025")
     place = place_for_date(self.murmansk, civil)
     jd = panchanga.gregorian_to_jd(civil)
-    self.assertIsNone(require_local_sunrise(jd, place, "Murmansk", 2025, 1, 1))
+    sunrise = require_local_sunrise(jd, place, "Murmansk", 2025, 1, 1)
+    self.assertIsNotNone(sunrise)
+    self.assertTrue(jd - 1 <= sunrise[0] <= jd + 2)
 
-  def test_day_api_surfaces_polar_night(self):
-    with self.assertRaises(ValueError) as raised:
-      compute_day_panchanga("Murmansk", "01/01/2025")
-    self.assertIn("polar night", str(raised.exception))
+  def test_day_api_serves_polar_night(self):
+    """Polar night no longer errors: sunrise/sunset anchor at solar noon."""
+    data = compute_day_panchanga("Murmansk", "01/01/2025")
+    self.assertEqual(data["sunrise"], data["sunset"])  # day length 0
+    self.assertTrue(data["tithi"])
 
-  def test_day_api_surfaces_midnight_sun(self):
-    with self.assertRaises(ValueError) as raised:
-      compute_day_panchanga("Murmansk", "01/07/2025")
-    self.assertIn("midnight sun", str(raised.exception))
+  def test_day_api_serves_midnight_sun(self):
+    """Midnight sun no longer errors: day length 24 h (sunset next midnight)."""
+    data = compute_day_panchanga("Murmansk", "01/07/2025")
+    self.assertTrue(data["tithi"])
+    sunrise_hour = int(data["sunrise"].split(":")[0])
+    sunset_hour = int(data["sunset"].split(":")[0])
+    # virtual sunrise just past local midnight, virtual sunset ~24 h later
+    self.assertGreaterEqual(sunrise_hour, 0)
+    self.assertLess(sunrise_hour, 2)
+    self.assertGreater(sunset_hour, 22)
 
 
 class MoonEventGapTests(unittest.TestCase):

@@ -131,13 +131,19 @@ class DayDetailsTests(unittest.TestCase):
     _tithi_lines, _naks_lines, yoga_names = day_details(location, date(2026, 6, 10))
     self.assertEqual(yoga_names, ["Āyuṣmān", "Saubhāgya"])
 
-  def test_day_details_returns_none_without_sunrise(self):
-    # Regression: a polar day/night has no sunrise, so every sunrise-based
-    # quantity is undefined. Before the guard this returned garbage end times
-    # such as ('K7', '-59069077:35').
+  def test_day_details_computes_at_polar_day_and_night(self):
+    # Regression (old contract): a polar day/night used to return None because
+    # every sunrise-based quantity was undefined. The core sunrise() transit
+    # fallback now anchors these days, so real end times render instead.
     location = load_location("Murmansk, RU")
-    self.assertIsNone(day_details(location, date(2026, 6, 21)))
-    self.assertIsNone(day_details(location, date(2026, 12, 21)))
+    for day in (date(2026, 6, 21), date(2026, 12, 21)):
+      with self.subTest(day=day):
+        details = day_details(location, day)
+        self.assertIsNotNone(details)
+        tithi_lines, naks_lines, _yoga_names = details
+        self.assertTrue(tithi_lines and naks_lines)
+        rendered = f"{tithi_lines}{naks_lines}"
+        self.assertNotIn("-59", rendered)  # no Swe failure sentinel
 
   def test_day_details_still_computes_at_polar_shoulder(self):
     # Murmansk does see a sunrise outside the polar day/night window.
@@ -157,26 +163,32 @@ class SunMoonTests(unittest.TestCase):
     self.assertIn(" – ", lines[0])
     self.assertIn(" – ", lines[1])
 
-  def test_sun_moon_lines_omit_sun_without_sunrise(self):
-    # Regression: the Sun line used to render the 0.0 rise sentinel as
-    # ``Sun: -59069097:00 – -59069097:00`` at polar locations.
+  def test_sun_moon_lines_render_transit_anchors_at_polar_days(self):
+    # Regression (old contract): the Sun line used to be omitted entirely at
+    # polar locations. The sunrise()/sunset() transit fallback now supplies
+    # anchors: solar-noon pair in polar night (day length 0), solar-midnight
+    # pair in midnight sun (day length 24 h).
     location = load_location("Murmansk, RU")
-    for day in (date(2026, 6, 21), date(2026, 12, 21)):
+    for day, expected_set_hour in ((date(2026, 12, 21), 12), (date(2026, 6, 21), 24)):
       with self.subTest(day=day):
         lines = sun_moon_lines(location, day)
-        self.assertFalse([line for line in lines if line.startswith("Sun:")])
+        sun_lines = [line for line in lines if line.startswith("Sun:")]
+        self.assertEqual(len(sun_lines), 1)
+        match = re.search(r"Sun: (?:\(\d\d:\d\d –\) )?\d\d:\d\d – (\d\d):\d\d$", sun_lines[0])
+        self.assertIsNotNone(match)
+        self.assertEqual(int(match.group(1)), expected_set_hour)
         self.assertTrue(all("-59" not in line for line in lines))
 
-  def test_sun_moon_lines_keep_the_half_that_exists(self):
-    # Regression: sunrise and sunset were range-checked with a single ``and``,
-    # so one missing event dropped the whole line. Near the polar circle the
-    # two go missing on different days; Norilsk on 20 May 2026 has a sunrise
-    # but no sunset (and the reverse before/after).
+  def test_sun_moon_lines_render_both_ends_at_polar_shoulder(self):
+    # Regression (old contract): near the polar circle sunrise and sunset used
+    # to go missing on different days (Norilsk, 20 May 2026, had a sunrise but
+    # no sunset, rendered as ``--``). The transit fallback now supplies both,
+    # so the full ``rise – set`` line renders.
     location = load_location("Norilsk, RU")
     lines = sun_moon_lines(location, date(2026, 5, 20))
     sun_lines = [line for line in lines if line.startswith("Sun:")]
     self.assertEqual(len(sun_lines), 1)
-    self.assertRegex(sun_lines[0], r"^Sun: \(\d\d:\d\d –\) \d\d:\d\d – --$")
+    self.assertRegex(sun_lines[0], r"^Sun: \(\d\d:\d\d –\) \d\d:\d\d – \d\d:\d\d$")
     self.assertTrue(all("-59" not in line for line in lines))
 
   def test_sun_moon_lines_render_sunset_only(self):

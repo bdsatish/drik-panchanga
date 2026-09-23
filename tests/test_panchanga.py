@@ -139,15 +139,17 @@ class VarjyamTests(PanchangaTestCase):
     for start, end in v:
       self.assertGreaterEqual(start[0], 24)
 
-  def test_varjyam_empty_at_polar_night(self):
+  def test_varjyam_computes_at_polar_night(self):
+    """Transit fallback anchors varjyam even when the sun never rises."""
     jd = gregorian_to_jd(Date(2026, 12, 21))
     tromso = Place(69.65, 18.96, +1.0)
-    self.assertEqual(varjyam(jd, tromso), [])
+    self.assertEqual(varjyam(jd, tromso), [[[19, 25, 38], [20, 52, 5]]])
 
-  def test_varjyam_empty_at_polar_day(self):
+  def test_varjyam_computes_at_polar_day(self):
+    """Transit fallback anchors varjyam even when the sun never sets."""
     jd = gregorian_to_jd(Date(2026, 6, 21))
     tromso = Place(69.65, 18.96, +1.0)
-    self.assertEqual(varjyam(jd, tromso), [])
+    self.assertEqual(varjyam(jd, tromso), [[[38, 47, 1], [40, 29, 8]]])
 
   def test_varjyam_polar_shoulder_still_computes(self):
     jd = gregorian_to_jd(Date(2026, 3, 15))
