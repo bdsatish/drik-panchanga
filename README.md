@@ -7,8 +7,10 @@ the Swiss Ephemeris.
 Computes the five essentials — tithi, nakshatra, yoga, karana, vaara — with
 end times, plus sunrise, sunset, moonrise and moonset. Lunar months can be
 named in either amānta or pūrṇimānta reckoning. Accurate from 5000 BCE to
-5000 CE. All timings are end timings; times beyond 24:00 are hours past
-midnight (the Hindu day runs sunrise to sunrise).
+5000 CE. All timings are end timings. Times use a hours-past-midnight clock that
+may run past 24:00 (e.g. ``26:15`` = 02:15 next civil morning); ``23:59:30``
+rounds to ``24:00``, never wraps to ``00:00``. The Hindu day itself runs
+sunrise to sunrise. Format with ``panchanga.format_hms`` / ``format_hms_from_jd``.
 
 Requirements
 ------------
