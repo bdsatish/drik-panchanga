@@ -513,10 +513,15 @@ class HelperMathTests(PanchangaTestCase):
     self.assertEqual(format_hms([24, 0, 0]), "24:00")
     self.assertEqual(format_hms([25, 30, 0]), "25:30")
     self.assertEqual(format_hms(26.0), "26:00")
-    self.assertEqual(format_hms([5, 44, 30]), "05:44")
+    self.assertEqual(format_hms([5, 44, 30]), "05:45")
     self.assertEqual(format_hms([5, 44, 30], show_seconds=True), "05:44:30")
     self.assertEqual(format_hms([24, 0, 0], show_seconds=True), "24:00:00")
     self.assertEqual(format_hms(0.0), "00:00")  # zero duration / start-of-day
+
+  def test_format_hms_rounds_decimal_hours_once(self):
+    self.assertEqual(format_hms(12 + 35 / 60 + 29.6 / 3600), "12:35")
+    self.assertEqual(format_hms(12 + 34 / 60 + 30.4 / 3600), "12:35")
+    self.assertEqual(format_hms(12 + 34 / 60 + 29.6 / 3600, show_seconds=True), "12:34:30")
 
   def test_format_hms_from_jd_keeps_24_00(self):
     # civil_jd = UTC midnight of the local civil day; local = civil + tz/24.

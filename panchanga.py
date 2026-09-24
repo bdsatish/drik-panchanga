@@ -242,16 +242,19 @@ def format_hms(hms, *, show_seconds=False):
 
   ``show_seconds`` false -> ``HH:MM`` (grid endpoints); true -> ``HH:MM:SS``
   (day view, sunrise/sunset columns).
+
+  Halves round up. Decimal hours are rounded once, straight to the shown
+  unit: rounding to whole seconds first would turn 12:35:29.6 into 12:36.
   """
   if isinstance(hms, (int, float)):  # convenience: decimal hours
-    hms = to_hms(float(hms))
+    hms = [float(hms), 0, 0]
   hours, minutes, seconds = hms
   if show_seconds:
-    total_seconds = int(round(hours * 3600 + minutes * 60 + seconds))
+    total_seconds = floor(hours * 3600 + minutes * 60 + seconds + 0.5)
     h, rem = divmod(total_seconds, 3600)
     m, s = divmod(rem, 60)
     return f"{h:02d}:{m:02d}:{s:02d}"
-  total_minutes = int(round(hours * 60 + minutes + seconds / 60.0))
+  total_minutes = floor(hours * 60 + minutes + seconds / 60.0 + 0.5)
   return f"{total_minutes // 60:02d}:{total_minutes % 60:02d}"
 
 
