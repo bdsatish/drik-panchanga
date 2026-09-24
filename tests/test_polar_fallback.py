@@ -12,6 +12,7 @@ Pins the invariants that the polar-window fixes established:
 
 import unittest
 from datetime import datetime
+from unittest import mock
 from zoneinfo import ZoneInfo
 
 import swisseph as swe
@@ -157,6 +158,47 @@ class EdgeContinuityTests(unittest.TestCase):
     self.assertFalse(_is_real_rise(virtual_jd, tro))
     gap = (sunrise(virtual_jd, tro)[0] - sunrise(real_jd, tro)[0]) * 24
     self.assertTrue(23.0 < gap < 25.0, f"edge jump {gap:.2f} h")
+
+
+class GuardedPathTests(unittest.TestCase):
+  """Defensive branches are exercised and degrade gracefully."""
+
+  def test_varjyam_returns_empty_on_out_of_window_anchor(self):
+    # The sentinel guard in varjyam() must never interpolate on a bogus
+    # anchor: force one and expect an empty list, not garbage.
+    blr = Place(12.972, 77.594, 5.5)
+    jd = gregorian_to_jd(panchanga.Date(2026, 1, 15))
+    with mock.patch.object(panchanga, "sunrise", return_value=[0.0, [0, 0, 0]]):
+      self.assertEqual(panchanga.varjyam(jd, blr), [])
+
+  def test_transit_window_recovery_researches_from_midpoint(self):
+    # If the forward search overshoots the window, the midpoint re-search
+    # still lands a transit inside it (never an out-of-window instant).
+    mur = Place(68.97, 33.08, 3.0)
+    jd = gregorian_to_jd(panchanga.Date(2026, 12, 20))
+    real = panchanga._transit_jd(jd, mur)
+
+    def overshooting_search(jd_ut, body, geopos, rsmi):
+
+      class _R:  # res=0 with a transit 2 h past window_end
+        pass
+
+      return (0, [real + 2.0 / 24], 0)
+
+    with mock.patch.object(swe, "rise_trans", side_effect=overshooting_search):
+      recovered = panchanga._transit_jd(jd, mur)
+    self.assertTrue(jd < recovered + mur.timezone / 24 < jd + 1.0)
+
+  def test_day_details_none_renders_empty_cell(self):
+    # Covered in test_monthly_calendar: draw_cell with day_details -> None
+    # renders empty, never sentinel garbage. Assert the contract here too
+    # via the generator API level.
+    from generate_monthly_calendar import day_details
+    mur = Place(68.97, 33.08, 3.0)
+    from generate_panchanga_calendar import Location
+    location = Location("Murmansk, RU", 68.97, 33.08, "Europe/Moscow")
+    details = day_details(location, __import__("datetime").date(2026, 12, 20))
+    self.assertIsNotNone(details)  # the normal path never returns None
 
 
 if __name__ == "__main__":

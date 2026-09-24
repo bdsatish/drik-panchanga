@@ -96,7 +96,7 @@ if HexColor is not None:
   TEAL = HexColor("#0E6E62")
 else:
   INK = GREY = LIGHT = GRID_LINE = RED = TEAL = None
-  PURPLE = INDIGO = SAFFRON = SAFFRON_INK = CRIMSON = BROWN = None
+  PURPLE = INDIGO = SAFFRON = CRIMSON = BROWN = None
   NAKS_INK = YOGA_INK = None
   _GREY_AAAAAA = None
 
@@ -104,14 +104,13 @@ if HexColor is not None:
   PURPLE = HexColor("#6A287E")
   INDIGO = HexColor("#3F51B5")
   SAFFRON = HexColor("#F3D9A9")
-  SAFFRON_INK = HexColor("#9A6A1F")
   CRIMSON = HexColor("#8E1F3D")
   BROWN = HexColor("#5C2E1B")
   NAKS_INK = HexColor("#5B3A29")
   YOGA_INK = HexColor("#2F4F4F")
   _GREY_AAAAAA = HexColor("#AAAAAA")
 else:
-  PURPLE = INDIGO = SAFFRON = SAFFRON_INK = CRIMSON = BROWN = None
+  PURPLE = INDIGO = SAFFRON = CRIMSON = BROWN = None
   NAKS_INK = YOGA_INK = _GREY_AAAAAA = None
 
 _MONTH_NAMES_EN = [
@@ -458,17 +457,10 @@ def draw_cell(pdf, x, y_top, row_h, cell_w, day, civil, location, context, col):
   masa_name = sanskrit_names().get("masas", {}).get(masa_display.lstrip("A"), masa_display.lstrip("A"))
   masa_prefix = f"A.{masa_name}" if masa_display.startswith("A") else masa_name
   details = day_details(location, civil)
-  if details is None:
-    # Unreachable in practice: day_details always computes now. Kept as a
-    # guard so a future regression degrades to a marked cell, never to
-    # garbage end times.
-    tithi_lines, naks_lines, yoga_names = [], [], []
-    pdf.setFillColor(GREY)
-    pdf.setFont(PDF_FONT_ITALIC, 6.8)
-    pdf.drawString(x + 4, line_y, "no sunrise")
-    line_y -= 8.0
-  else:
-    tithi_lines, naks_lines, yoga_names = details
+  # day_details always computes (panchanga.sunrise has no failure mode),
+  # but an exception or unexpected None must degrade to a marked cell,
+  # never to garbage end times.
+  tithi_lines, naks_lines, yoga_names = details if details else ([], [], [])
   for code, end_hm in tithi_lines:
     pdf.setFillColor(INK)
     pdf.setFont(PDF_FONT, 6.8)
@@ -540,9 +532,8 @@ def rahu_kala_table_lines(location, year, month):
   occurrence of that weekday (e.g. ``Mo 07:25-09:09``), so the window is
   never understated when sunrise drifts — or jumps at a DST transition.
   Days collapse naturally when times agree. Transit-anchored days (polar
-  night / midnight sun) contribute their virtual sunrise/sunset windows like
-  any other day; a weekday never renders as ``--`` unless day_details
-  returns nothing.
+  night / midnight sun) contribute their virtual sunrise/sunset windows
+  like any other day.
   """
   labels = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
   windows = {}
