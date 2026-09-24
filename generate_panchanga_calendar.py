@@ -8,7 +8,7 @@ import logging
 import re
 import sys
 from collections import namedtuple as struct
-from datetime import date as CivilDate
+from datetime import date as CivilDate, timedelta
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -493,31 +493,57 @@ def load_location(city):
   return Location(name, record["latitude"], record["longitude"], record["timezone"])
 
 
-def format_local_hm(jd, timezone_name):  # backward compat: UT JD -> HH:MM
-  civil_date = jd_to_local_civil_date(jd, timezone_name)
-  civil_jd = panchanga.gregorian_to_jd(panchanga.Date(civil_date.year, civil_date.month, civil_date.day))
+def format_local_hm(jd, timezone_name, anchor_civil=None, show_seconds=False):
+  """Format UT ``jd`` as local ``HH:MM`` (or ``HH:MM:SS``) on the 24:00+ scale.
+
+  Hours are past local midnight of ``anchor_civil`` (a ``date``). Default anchor
+  is the event's own local civil date. Pass the calendar cell's civil date so
+  an event on the next civil morning still renders as ``24:00+`` on that row.
+
+  Never wraps with ``% 24``: ``23:59:30`` -> ``24:00``.
+  """
+  if anchor_civil is None:
+    anchor_civil = jd_to_local_civil_date(jd, timezone_name)
+  civil_jd = panchanga.gregorian_to_jd(panchanga.Date(anchor_civil.year, anchor_civil.month, anchor_civil.day))
   local = jd_to_local_datetime(jd, timezone_name)
   tz_hours = local.utcoffset().total_seconds() / 3600.0 if local.utcoffset() else 0.0
-  return panchanga.format_hms_from_jd(jd, civil_jd, tz_hours, show_seconds=False)
+  return panchanga.format_hms_from_jd(jd, civil_jd, tz_hours, show_seconds=show_seconds)
+
+
+def hindu_day_civil(jd, timezone_name, sunrise_jd=None):
+  """Civil date whose midnight is the 24:00+ origin for ``jd``.
+
+  When ``sunrise_jd`` is the sunrise of the event's civil morning and ``jd``
+  falls before it, the instant still belongs to the previous Hindu day, so
+  the previous civil date is returned (``00:05`` formats as ``24:05``).
+  Without a sunrise, returns the event's own local civil date.
+  """
+  civil = jd_to_local_civil_date(jd, timezone_name)
+  if sunrise_jd is not None and jd < sunrise_jd:
+    return civil - timedelta(days=1)
+  return civil
 
 
 def format_eclipse_line(eclipses, timezone_name, sunrise_by_date=None):
   """Compact footer line for eclipses at maximum time.
 
-    Optional ``sunrise_by_date`` adds that date's local sunrise to each entry.
-    """
+  Optional ``sunrise_by_date`` (civil date -> sunrise UT jd) selects the
+  Hindu-day civil label and 24:00+ clock, and appends that morning's sunrise.
+  """
   if eclipses:
     sunrise_by_date = sunrise_by_date or {}
     parts = []
     for kind, phase, maximum_jd in eclipses:
-      civil = jd_to_local_civil_date(maximum_jd, timezone_name)
+      event_civil = jd_to_local_civil_date(maximum_jd, timezone_name)
+      sunrise_jd = sunrise_by_date.get(event_civil)
+      civil = hindu_day_civil(maximum_jd, timezone_name, sunrise_jd)
       month_name = calendar.month_abbr[civil.month]
       day = f"{civil.day:02d}"
-      maximum_hm = format_local_hm(maximum_jd, timezone_name)
+      maximum_hm = format_local_hm(maximum_jd, timezone_name, anchor_civil=civil)
       part = kind + " " + month_name + " " + day + " (" + phase + ") maximum phase at " + maximum_hm
-      sunrise_jd = sunrise_by_date.get(civil)
+      # Sunrise label stays on the event morning's civil day (wall clock of that day).
       if sunrise_jd is not None:
-        part = part + ", sunrise " + format_local_hm(sunrise_jd, timezone_name)
+        part = part + ", sunrise " + format_local_hm(sunrise_jd, timezone_name, anchor_civil=event_civil)
       parts.append(part)
     line = "Eclipses: " + "; ".join(parts) + ". Eclipses have a brown wavy underline below Tithi."
   else:
@@ -525,11 +551,13 @@ def format_eclipse_line(eclipses, timezone_name, sunrise_by_date=None):
   return line
 
 
-def eclipse_civil_dates(eclipses, timezone_name):
-  """Local civil date of each eclipse maximum."""
+def eclipse_civil_dates(eclipses, timezone_name, sunrise_by_date=None):
+  """Local civil date of each eclipse maximum (Hindu-day when sunrise given)."""
+  sunrise_by_date = sunrise_by_date or {}
   dates = set()
   for _kind, _phase, maximum_jd in eclipses:
-    dates.add(jd_to_local_civil_date(maximum_jd, timezone_name))
+    event_civil = jd_to_local_civil_date(maximum_jd, timezone_name)
+    dates.add(hindu_day_civil(maximum_jd, timezone_name, sunrise_by_date.get(event_civil)))
   return dates
 
 
@@ -1082,7 +1110,7 @@ def build_pdf(location, start_year, start_month, output_path, festivals_path=Non
                                                        location.timezone_name)
     eclipses = find_local_eclipses(eclipse_start_jd, eclipse_end_jd, geopos)
     eclipse_line = format_eclipse_line(eclipses, location.timezone_name, sunrise_by_date=sunrise_by_date)
-    eclipse_dates = eclipse_civil_dates(eclipses, location.timezone_name)
+    eclipse_dates = eclipse_civil_dates(eclipses, location.timezone_name, sunrise_by_date=sunrise_by_date)
     solar_by_date = solar_dates_by_date(context_records)
     ekadashi_dates = set()
     for value in ekadashi_dates_from_records(context_records):

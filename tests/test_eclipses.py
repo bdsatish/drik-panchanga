@@ -11,7 +11,7 @@ from festival_rules import (
   jd_to_local_civil_date,
   julian_day_from_datetime,
 )
-from generate_panchanga_calendar import eclipse_civil_dates, format_eclipse_line, format_local_hm
+from generate_panchanga_calendar import (eclipse_civil_dates, format_eclipse_line, format_local_hm, hindu_day_civil)
 
 
 def _times(maximum):
@@ -118,12 +118,28 @@ class FormatEclipseLineTests(unittest.TestCase):
       "Eclipses have a brown wavy underline below Tithi.",
     )
 
+  def test_pre_sunrise_maximum_uses_24_plus_on_previous_civil_day(self):
+    from datetime import date, datetime
+    from zoneinfo import ZoneInfo
+
+    ist = ZoneInfo("Asia/Kolkata")
+    # 00:05 on Mar 4 is still the previous Hindu day when sunrise is 06:30.
+    maximum = julian_day_from_datetime(datetime(2026, 3, 4, 0, 5, tzinfo=ist))
+    sunrise = julian_day_from_datetime(datetime(2026, 3, 4, 6, 30, tzinfo=ist))
+    line = format_eclipse_line([("Lunar", "Partial", maximum)], "Asia/Kolkata",
+                               sunrise_by_date={date(2026, 3, 4): sunrise})
+    self.assertEqual(
+      line,
+      "Eclipses: Lunar Mar 03 (Partial) maximum phase at 24:05, sunrise 06:30. "
+      "Eclipses have a brown wavy underline below Tithi.",
+    )
+
 
 class FormatLocalHmTests(unittest.TestCase):
   """``format_local_hm`` rounds to the nearest minute, without wrapping 24:00.
 
-  The library convention (README) is that times past midnight are hours past
-  24:00, matching ``panchanga.format_hms`` (grids and day view).
+  Hours are past the anchor civil midnight (default: event's own civil day).
+  With a previous-day anchor (Hindu-day pre-sunrise), ``00:05`` becomes ``24:05``.
   """
 
   TZ = "Asia/Kolkata"
@@ -138,7 +154,23 @@ class FormatLocalHmTests(unittest.TestCase):
 
   def test_ordinary_times(self):
     self.assertEqual(format_local_hm(self._jd(6, 45), self.TZ), "06:45")
+    # Default anchor = event civil day: early morning stays 00:xx.
     self.assertEqual(format_local_hm(self._jd(0, 5), self.TZ), "00:05")
+
+  def test_anchor_civil_past_midnight_is_24_plus(self):
+    from datetime import date
+    jd = self._jd(0, 5, day=4)
+    # Hours past Mar 3 midnight -> 24:05 (Hindu-day scale).
+    self.assertEqual(format_local_hm(jd, self.TZ, anchor_civil=date(2026, 3, 3)), "24:05")
+    self.assertEqual(format_local_hm(jd, self.TZ, anchor_civil=date(2026, 3, 4)), "00:05")
+
+  def test_hindu_day_civil_rolls_before_sunrise(self):
+    from datetime import date
+    jd = self._jd(0, 5, day=4)
+    sunrise = self._jd(6, 30, day=4)
+    self.assertEqual(hindu_day_civil(jd, self.TZ, sunrise), date(2026, 3, 3))
+    self.assertEqual(hindu_day_civil(sunrise, self.TZ, sunrise), date(2026, 3, 4))
+    self.assertEqual(format_local_hm(jd, self.TZ, anchor_civil=hindu_day_civil(jd, self.TZ, sunrise)), "24:05")
 
   def test_rounds_up_to_24_00_not_00_00(self):
     # Regression: a modulo by 24h used to wrap 23:59:30+ back to 00:00, which
@@ -148,8 +180,9 @@ class FormatLocalHmTests(unittest.TestCase):
     self.assertEqual(format_local_hm(self._jd(23, 59, 50), self.TZ), "24:00")
     self.assertEqual(format_local_hm(self._jd(23, 59, 59), self.TZ), "24:00")
 
-  def test_never_exceeds_24_00(self):
-    # hour is 0-23, so the largest raw value is 1439.999..., i.e. 24:00 at most.
+  def test_never_exceeds_24_00_on_event_civil_day(self):
+    # With the default event-day anchor, hour is 0-23 so the largest rounded
+    # value is 24:00.
     for second in (0, 30, 59):
       with self.subTest(second=second):
         hours, minutes = format_local_hm(self._jd(23, 59, second), self.TZ).split(":")
@@ -174,8 +207,13 @@ class EclipseCivilDatesTests(unittest.TestCase):
 
     maximum = julian_day_from_datetime(datetime(2026, 3, 4, 0, 5, tzinfo=ist))
     eclipse = ("Lunar", "Partial", maximum)
+    # Without sunrise: civil date of the maximum itself.
     dates = eclipse_civil_dates([eclipse], "Asia/Kolkata")
     self.assertEqual(dates, {date(2026, 3, 4)})
+    # With sunrise after the maximum: previous Hindu day.
+    sunrise = julian_day_from_datetime(datetime(2026, 3, 4, 6, 30, tzinfo=ist))
+    dates = eclipse_civil_dates([eclipse], "Asia/Kolkata", sunrise_by_date={date(2026, 3, 4): sunrise})
+    self.assertEqual(dates, {date(2026, 3, 3)})
 
     with mock.patch("festival_rules.panchanga.swe.lun_eclipse_when_loc", return_value=(
         panchanga.swe.ECL_PARTIAL | panchanga.swe.ECL_VISIBLE,

@@ -55,6 +55,7 @@ from generate_panchanga_calendar import (
   embed_pdf_metadata,
   ensure_pdf_fonts,
   format_local_hm,
+  hindu_day_civil,
   format_utc_offset,
   load_location,
   location_slug,
@@ -480,8 +481,9 @@ def draw_cell(pdf, x, y_top, row_h, cell_w, day, civil, location, context, col):
         line_y -= 8.0
   parana = context.get("ekadashi_parana", {}).get(civil)
   if parana is not None:
-    start_hm = format_local_hm(parana.parana_jd, location.timezone_name)
-    end_hm = format_local_hm(parana.parana_end_jd, location.timezone_name)
+    # Hours past this cell's midnight (24:00+ if the window spills past it).
+    start_hm = format_local_hm(parana.parana_jd, location.timezone_name, anchor_civil=civil)
+    end_hm = format_local_hm(parana.parana_end_jd, location.timezone_name, anchor_civil=civil)
     pdf.setFillColor(TEAL)
     pdf.setFont(PDF_FONT_ITALIC, 6.8)
     pdf.drawString(x + 4, line_y, f"Pāraṇā: {start_hm} – {end_hm}")
@@ -502,7 +504,7 @@ def draw_cell(pdf, x, y_top, row_h, cell_w, day, civil, location, context, col):
   for kind, _phase, max_jd in context.get("eclipse_details_by_date", {}).get(civil, []):
     pdf.setFillColor(BROWN)
     pdf.setFont(PDF_FONT_ITALIC, 6.5)
-    hm = format_local_hm(max_jd, location.timezone_name)
+    hm = format_local_hm(max_jd, location.timezone_name, anchor_civil=civil)
     pdf.drawString(x + 4, line_y, f"{kind} eclipse")
     line_y -= 8.0
     pdf.drawString(x + 4, line_y, f"max {hm}")
@@ -649,11 +651,13 @@ def collect_context(months, location, festivals_path, amanta=True):
       if civil in target_dates:
         dst_labels_by_date.setdefault(civil, []).append(label)
   eclipses = find_local_eclipses(records[0].sunrise_jd, records[-1].sunrise_jd + 1, geopos)
-  eclipse_dates = {jd_to_local_civil_date(entry[2], location.timezone_name) for entry in eclipses}
+  sunrise_by_date = {record.civil_date: record.sunrise_jd for record in records}
   eclipse_details_by_date = {}
   for kind, phase, max_jd in eclipses:
-    civil = jd_to_local_civil_date(max_jd, location.timezone_name)
+    event_civil = jd_to_local_civil_date(max_jd, location.timezone_name)
+    civil = hindu_day_civil(max_jd, location.timezone_name, sunrise_by_date.get(event_civil))
     eclipse_details_by_date.setdefault(civil, []).append((kind, phase, max_jd))
+  eclipse_dates = set(eclipse_details_by_date)
   return {
     "records_by_date": {
       record.civil_date: record
