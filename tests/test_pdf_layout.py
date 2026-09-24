@@ -95,6 +95,28 @@ class PdfLayoutTests(unittest.TestCase):
     self.assertNotIn(b"/BaseFont /Helvetica", document)
     self.assertIn(b"IndUni-H", document)
 
+  def test_eclipses_before_sunrise_follow_the_printed_hindu_days(self):
+    import generate_panchanga_calendar as calendar_module
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    from festival_rules import julian_day_from_datetime
+
+    helsinki = ZoneInfo("Europe/Helsinki")
+    # Printed span is Jun 2026 - Jul 2027; both maxima are at 02:00, before sunrise.
+    before_first_day = julian_day_from_datetime(datetime(2026, 6, 1, 2, 0, tzinfo=helsinki))
+    after_last_day = julian_day_from_datetime(datetime(2027, 8, 1, 2, 0, tzinfo=helsinki))
+    with TemporaryDirectory() as directory:
+      with mock.patch("generate_panchanga_calendar.find_local_eclipses",
+                      return_value=[("Lunar", "Partial", before_first_day), ("Lunar", "Total", after_last_day)]), \
+           mock.patch("generate_panchanga_calendar.draw_page_footer",
+                      wraps=calendar_module.draw_page_footer) as footer:
+        build_pdf(load_location("Helsinki"), 2026, 6, Path(directory) / "calendar.pdf")
+    eclipse_line = footer.call_args.kwargs["eclipse_line"]
+    self.assertIn("Lunar Jul 31 (Total) maximum phase at 26:00", eclipse_line)
+    self.assertNotIn("May 31", eclipse_line)
+    self.assertNotIn("Partial", eclipse_line)
+
   def test_cli_defaults_festivals_path(self):
     parser = argument_parser()
     arguments = parser.parse_args(["--city", "Helsinki", "--start", "2026-03"])

@@ -526,14 +526,15 @@ def format_eclipse_line(eclipses, timezone_name, sunrise_by_date=None):
   return line
 
 
+def eclipse_hindu_date(maximum_jd, timezone_name, sunrise_by_date=None):
+  """Local civil date of an eclipse maximum (Hindu-day when that morning's sunrise is given)."""
+  event_civil = jd_to_local_civil_date(maximum_jd, timezone_name)
+  return hindu_day_civil(maximum_jd, timezone_name, (sunrise_by_date or {}).get(event_civil))
+
+
 def eclipse_civil_dates(eclipses, timezone_name, sunrise_by_date=None):
   """Local civil date of each eclipse maximum (Hindu-day when sunrise given)."""
-  sunrise_by_date = sunrise_by_date or {}
-  dates = set()
-  for _kind, _phase, maximum_jd in eclipses:
-    event_civil = jd_to_local_civil_date(maximum_jd, timezone_name)
-    dates.add(hindu_day_civil(maximum_jd, timezone_name, sunrise_by_date.get(event_civil)))
-  return dates
+  return {eclipse_hindu_date(maximum_jd, timezone_name, sunrise_by_date) for _kind, _phase, maximum_jd in eclipses}
 
 
 def tithi_underline_bounds(x, tithi_column_width):
@@ -1036,10 +1037,10 @@ def build_pdf(location, start_year, start_month, output_path, festivals_path=Non
     for record in context_records:
       civil_date = record.civil_date
       records_by_date[civil_date] = record
+      sunrise_by_date[civil_date] = record.sunrise_jd
       if range_start <= civil_date <= range_end:
         target_records.append(record)
         target_dates.add(civil_date)
-        sunrise_by_date[civil_date] = record.sunrise_jd
         if (civil_date.year, civil_date.month) == (header_year, header_month):
           header_records.append(record)
 
@@ -1055,7 +1056,12 @@ def build_pdf(location, start_year, start_month, output_path, festivals_path=Non
 
     eclipse_start_jd, eclipse_end_jd = local_range_jds(start_year, start_month, end_year, end_month,
                                                        location.timezone_name)
-    eclipses = find_local_eclipses(eclipse_start_jd, eclipse_end_jd, geopos)
+    # A maximum before sunrise belongs to the previous day: search one more
+    # morning, and drop maxima before the first printed sunrise.
+    eclipses = [
+      eclipse for eclipse in find_local_eclipses(eclipse_start_jd, eclipse_end_jd + 1, geopos)
+      if eclipse_hindu_date(eclipse[2], location.timezone_name, sunrise_by_date) in target_dates
+    ]
     eclipse_line = format_eclipse_line(eclipses, location.timezone_name, sunrise_by_date=sunrise_by_date)
     eclipse_dates = eclipse_civil_dates(eclipses, location.timezone_name, sunrise_by_date=sunrise_by_date)
     solar_by_date = solar_dates_by_date(context_records)
