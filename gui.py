@@ -30,13 +30,12 @@ import re
 from time import strptime
 from pytz import timezone
 from datetime import datetime
+import panchanga
 from panchanga import *
 import difflib
 
 # begin wxGlade: extracode
 # end wxGlade
-
-format_time = lambda t: panchanga.format_hms(t, show_seconds=True)  # deprecated gui — keep as shim
 
 
 class Panchanga(wx.Frame):
@@ -221,14 +220,14 @@ class Panchanga(wx.Frame):
 
     # Update GUI one by one. First the easy ones
     self.varaTxt.SetLabel("%s" % self.vaaras[str(vara)])
-    self.sunriseTxt.SetLabel(format_time(srise))
-    self.sunsetTxt.SetLabel(format_time(sset))
+    self.sunriseTxt.SetLabel(panchanga.format_hms(srise, show_seconds=True))
+    self.sunsetTxt.SetLabel(panchanga.format_hms(sset, show_seconds=True))
     self.sakaTxt.SetLabel(u"\u015a\u0101liv\u0101hana \u015baka %d" % (sakayr))
     self.kaliTxt.SetLabel("GataKali %d" % (kyear))
     self.aharTxt.SetLabel("KaliDay %d" % (kday))
     self.rituTxt.SetLabel(u"%s \u1e5btu" % (self.ritus[str(rtu)]))
     self.samvatTxt.SetLabel("%s samvatsara" % (self.samvats[str(samvat)]))
-    self.duraTxt.SetLabel(format_time(day_dur))
+    self.duraTxt.SetLabel(panchanga.format_hms(day_dur, show_seconds=True))
 
     # Next update the complex ones
     month_name = self.masas[str(mas[0])]
@@ -392,10 +391,10 @@ def load_json_file(filename):
 # Converts list [12, [23, 45, 50]] to lookup[12] and 23:45:50
 def format_name_hms(nhms, lookup):
   name_txt = lookup[str(nhms[0])]
-  time_txt = format_time(nhms[1])
+  time_txt = panchanga.format_hms(nhms[1], show_seconds=True)
   if len(nhms) == 4:
     name_txt += "\n" + lookup[str(nhms[2])]
-    time_txt += "\n" + format_time(nhms[3])
+    time_txt += "\n" + panchanga.format_hms(nhms[3], show_seconds=True)
 
   return name_txt, time_txt
 

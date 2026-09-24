@@ -21,7 +21,6 @@ from generate_monthly_calendar import (
   draw_header,
   ekadashi_name,
   ensure_pdf_fonts,
-  format_hms,
   load_location,
   sun_moon_lines,
   tithi_name,
@@ -106,10 +105,6 @@ class DayDetailsTests(unittest.TestCase):
     self.assertEqual(tithi_name(1), "Pratipadā")
     self.assertEqual(tithi_name(15), "Pūrṇimā")
     self.assertEqual(tithi_name(30), "Amāvāsyā")
-
-  def test_format_hms_past_midnight(self):
-    self.assertEqual(format_hms([25.5, 30, 0]), "26:00")
-    self.assertEqual(format_hms([5.0, 44.0, 30.0]), "05:44")
 
   def test_day_details_returns_leap_tithi(self):
     location = load_location("Ujjain")

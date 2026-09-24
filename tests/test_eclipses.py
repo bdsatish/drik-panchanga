@@ -123,7 +123,7 @@ class FormatLocalHmTests(unittest.TestCase):
   """``format_local_hm`` rounds to the nearest minute, without wrapping 24:00.
 
   The library convention (README) is that times past midnight are hours past
-  24:00, matching ``format_hms`` (monthly) and ``format_time`` (web app).
+  24:00, matching ``panchanga.format_hms`` (grids and day view).
   """
 
   TZ = "Asia/Kolkata"

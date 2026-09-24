@@ -58,22 +58,18 @@ def _day_in_proleptic_gregorian_year(year, month, day):
   return 1 <= day <= calendar.monthrange(2001, month)[1]
 
 
-def format_time(hms):  # backward compat: [h,m,s] -> HH:MM:SS
-  return panchanga.format_hms(hms, show_seconds=True)
-
-
 def _named_segments(nhms, lookup):
   """Map ``[index, [h,m,s]]`` or skipped ``[..., next_index, next_hms]`` to names."""
   segments = [{
     "number": int(nhms[0]),
     "name": lookup[str(nhms[0])],
-    "ends": format_time(nhms[1]),
+    "ends": panchanga.format_hms(nhms[1], show_seconds=True),
   }]
   if len(nhms) == 4:
     segments.append({
       "number": int(nhms[2]),
       "name": lookup[str(nhms[2])],
-      "ends": format_time(nhms[3]),
+      "ends": panchanga.format_hms(nhms[3], show_seconds=True),
     })
   return segments
 
@@ -115,11 +111,14 @@ def probe_moon_event(jd, place, civil, rise=True):
   local_hours = (times[0] - t0) * 24.0
   if not 0.0 <= local_hours < 24.0:
     return None, "none_today"
-  return format_time(panchanga.to_hms(local_hours)), "ok"
+  return panchanga.format_hms(panchanga.to_hms(local_hours), show_seconds=True), "ok"
 
 
 def _interval_from_hms(start_hms, end_hms):
-  return {"start": format_time(start_hms), "end": format_time(end_hms)}
+  return {
+    "start": panchanga.format_hms(start_hms, show_seconds=True),
+    "end": panchanga.format_hms(end_hms, show_seconds=True)
+  }
 
 
 def _valid_durmuhurta_intervals(values):
@@ -310,13 +309,13 @@ def compute_day_panchanga(city, date_text, month_system="amanta", coordinate_sel
       "saka_year": details["saka_year"],
       "kali_year": details["kali_year"],
       "vikrama_year": details["vikrama_year"],
-      "sunrise": format_time(details["sunrise"][1]),
-      "sunset": format_time(details["sunset"][1]),
+      "sunrise": panchanga.format_hms(details["sunrise"][1], show_seconds=True),
+      "sunset": panchanga.format_hms(details["sunset"][1], show_seconds=True),
       "moonrise": details["moonrise"],
       "moonrise_status": details["moonrise_status"],
       "moonset": details["moonset"],
       "moonset_status": details["moonset_status"],
-      "day_duration": format_time(details["day_dur"][1]),
+      "day_duration": panchanga.format_hms(details["day_dur"][1], show_seconds=True),
       "rahu_kala": _interval_from_hms(*details["rahu_kala"]),
       "durmuhurta": durmuhurta_intervals,
       "varjyam": varjyam_intervals,
