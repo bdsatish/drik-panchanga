@@ -11,7 +11,8 @@ from festival_rules import (
   jd_to_local_civil_date,
   julian_day_from_datetime,
 )
-from generate_panchanga_calendar import (eclipse_civil_dates, format_eclipse_line, format_local_hm, hindu_day_civil)
+from generate_panchanga_calendar import eclipse_civil_dates, format_eclipse_line
+from panchanga import format_local_hm, hindu_day_civil
 
 
 def _times(maximum):

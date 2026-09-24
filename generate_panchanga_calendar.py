@@ -8,8 +8,7 @@ import logging
 import re
 import sys
 from collections import namedtuple as struct
-from datetime import date as CivilDate, timedelta
-from datetime import datetime
+from datetime import date as CivilDate, datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -20,14 +19,10 @@ try:
 except ImportError:
   HexColor = white = A4 = landscape = canvas = None
 
-from festival_rules import (DayRecord, ekadashi_dates_from_records, find_local_eclipses, jd_to_local_civil_date,
-                            jd_to_local_datetime, julian_day_from_datetime, load_festival_selection, resolve_festivals,
-                            select_pradosham_dates, select_sankashti_chaturthi_dates)
+from festival_rules import (DayRecord, ekadashi_dates_from_records, find_local_eclipses, load_festival_selection,
+                            resolve_festivals, select_pradosham_dates, select_sankashti_chaturthi_dates)
 import panchanga
-
-# Time display helpers (defined in panchanga; re-exported for calendars/tests).
-format_local_hm = panchanga.format_local_hm
-hindu_day_civil = panchanga.hindu_day_civil
+from panchanga import format_local_hm, hindu_day_civil, jd_to_local_civil_date, julian_day_from_datetime
 
 MONTH_COUNT = 14
 DEFAULT_CITIES_PATH = Path(__file__).parent / "data" / "cities.json"

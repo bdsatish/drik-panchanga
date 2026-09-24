@@ -4,67 +4,41 @@ import calendar
 import configparser
 import logging
 from collections import namedtuple as struct
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import panchanga
+from panchanga import julian_day_from_datetime, jd_to_local_civil_date, jd_to_local_datetime
 
-# JD/local helpers live in panchanga; re-export for existing imports/mocks.
-SECONDS_PER_DAY = 24 * 60 * 60
-JULIAN_DAY_AT_UNIX_EPOCH = 2440587.5
-julian_day_from_datetime = panchanga.julian_day_from_datetime
-jd_to_local_datetime = panchanga.jd_to_local_datetime
-jd_to_local_civil_date = panchanga.jd_to_local_civil_date
 log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
 
 
-def _sunset_jd_ut(civil_date, geopos, timezone_name):
-  """Sunset Julian Day in UT for a civil date at a location.
-
-  ``geopos`` is (lon, lat, altitude). Returns None if the sun does not set
-  (polar day/night); callers fall back to sunrise-based selection.
-  """
-  tz = ZoneInfo(timezone_name)
-  noon = datetime(civil_date.year, civil_date.month, civil_date.day, 12, 0, tzinfo=tz)
-  tz_offset = noon.utcoffset().total_seconds() / 3600
-  place = (geopos[1], geopos[0], tz_offset)  # (lat, lon, tz) for panchanga.sunset
+def _event_jd_ut(civil_date, geopos, timezone_name, getter):
+  """UT JD of a local event, or None if missing / sentinel."""
+  place = _place_for_civil(civil_date, geopos, timezone_name)
   jd = panchanga.gregorian_to_jd(panchanga.Date(civil_date.year, civil_date.month, civil_date.day))
   try:
-    sunset_jd_local = panchanga.sunset(jd, place)[0]
-  except Exception:
-    return None
-  # sweph returns 0.0 for a failed rise/set lookup, so the result is range-checked
-  # against the expected JD window before use.
-  if not jd - 1 <= sunset_jd_local <= jd + 2:
-    return None
-  return sunset_jd_local - tz_offset / 24
-
-
-def _moonrise_jd_ut(civil_date, geopos, timezone_name):
-  """Moonrise Julian Day in UT for the Hindu day of ``civil_date``.
-
-  Uses the first moonrise in ``[sunrise, next sunrise)`` (same window as
-  calendar Moon lines). A rise after civil midnight but before sunrise
-  belongs to the previous civil date. ``geopos`` is (lon, lat, altitude).
-  Returns None if no moonrise falls in the window.
-  """
-  tz = ZoneInfo(timezone_name)
-  noon = datetime(civil_date.year, civil_date.month, civil_date.day, 12, 0, tzinfo=tz)
-  tz_offset = noon.utcoffset().total_seconds() / 3600
-  place = (geopos[1], geopos[0], tz_offset)  # (lat, lon, tz)
-  jd = panchanga.gregorian_to_jd(panchanga.Date(civil_date.year, civil_date.month, civil_date.day))
-  try:
-    event = panchanga.moonrise(jd, place)
+    event = getter(jd, place)
   except Exception:
     return None
   if event is None:
     return None
-  moonrise_jd_local = event[0]
-  if not jd - 1 <= moonrise_jd_local <= jd + 2:
+  local_jd = event[0]
+  if not jd - 1 <= local_jd <= jd + 2:
     return None
-  return moonrise_jd_local - tz_offset / 24
+  return local_jd - place.timezone / 24
+
+
+def _sunset_jd_ut(civil_date, geopos, timezone_name):
+  """Sunset as UT JD, or None if the sun does not set (polar day/night)."""
+  return _event_jd_ut(civil_date, geopos, timezone_name, panchanga.sunset)
+
+
+def _moonrise_jd_ut(civil_date, geopos, timezone_name):
+  """Hindu-day moonrise as UT JD, or None if none in ``[sunrise, next sunrise)``."""
+  return _event_jd_ut(civil_date, geopos, timezone_name, panchanga.moonrise)
 
 
 DayRecord = struct('DayRecord', ['civil_date', 'tithi', 'nakshatra', 'yoga', 'masa', 'is_adhika', 'sunrise_jd'])

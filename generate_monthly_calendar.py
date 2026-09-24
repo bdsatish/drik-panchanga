@@ -33,7 +33,6 @@ from festival_rules import (
   ekadashi_dates_from_records,
   ekadashi_parana_by_parana_date,
   find_local_eclipses,
-  jd_to_local_civil_date,
   select_pradosham_dates,
   select_sankashti_chaturthi_dates,
   shraddha_tithis_by_date,
@@ -56,8 +55,6 @@ from generate_panchanga_calendar import (
   dst_transitions,
   embed_pdf_metadata,
   ensure_pdf_fonts,
-  format_local_hm,
-  hindu_day_civil,
   format_utc_offset,
   load_location,
   location_slug,
@@ -70,10 +67,10 @@ from generate_panchanga_calendar import (
   resolve_festivals,
   sanskrit_names,
   solar_dates_by_date,
+  timing_key_line,
   tithi_code,
 )
-from panchanga import Date as PanDate
-from panchanga import gregorian_to_jd
+from panchanga import Date as PanDate, format_local_hm, gregorian_to_jd, hindu_day_civil, jd_to_local_civil_date
 
 log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
@@ -271,8 +268,6 @@ def sun_moon_lines(location, civil):
   except Exception as exc:
     log.debug("sun times unavailable %s: %s", civil, exc)
   try:
-    # Hindu day [sunrise, next sunrise): hours past this civil midnight (24:00+).
-    # Same window Sankashti uses for K4-at-moonrise.
     parts = []
     for event in (panchanga.moonrise(jd, place), panchanga.moonset(jd, place)):
       if event is None:
@@ -631,12 +626,10 @@ def draw_grid(pdf, year, month, location, context):
 def draw_footer(pdf, location, coordinate_selection, page_index, total):
   pdf.setFillColor(GREY)
   pdf.setFont(PDF_FONT_ITALIC, 6.0)
-  note_time = ("Times: hours past civil midnight (Hindu day). After 24:00 = past "
-               "midnight; 00:xx only if that day's sunrise is after midnight (polar).")
   note_marks = ("Green: māsa; gold: adhika; saffron: saṅkrānti; teal: ekādaśī; "
                 "brown [S/K]: śrāddha tithi (aparāhṇa); purple: pradoṣam; "
                 "indigo: saṅkaṣṭahara caturthī.")
-  pdf.drawString(MARGIN, MARGIN + 22, note_time)
+  pdf.drawString(MARGIN, MARGIN + 22, timing_key_line())
   pdf.drawString(MARGIN, MARGIN + 14, note_marks)
   pdf.setFillColor(GREY)
   pdf.drawRightString(PAGE_W - MARGIN, MARGIN + 6, f"page {page_index} of {total}")

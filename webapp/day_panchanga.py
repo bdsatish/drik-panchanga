@@ -87,14 +87,10 @@ def format_masa_label(names, masa_num, is_adhika):
 
 
 def probe_moon_event(jd, place, civil, rise=True):
-  """Return ``(time_or_None, status)`` for moonrise/moonset on the Hindu day.
+  """Moonrise/moonset on the Hindu day: ``(HH:MM:SS or None, status)``.
 
-  Window is ``[sunrise, next sunrise)``; times are hours past this civil
-  midnight (``24:00+`` allowed). Status is ``ok``, ``none_today`` (no event
-  in the window), ``always_below``, ``always_above``, or ``unavailable``.
-
-  Festival rules (Sankashti) use the same Hindu-day moonrise window via
-  ``festival_rules._moonrise_jd_ut``.
+  Status is ``ok``, ``none_today``, ``always_below``, ``always_above``, or
+  ``unavailable``.
   """
   event = panchanga.moonrise(jd, place) if rise else panchanga.moonset(jd, place)
   if event is not None:
