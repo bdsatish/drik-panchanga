@@ -12,15 +12,15 @@ import swisseph as swe
 import panchanga
 from panchanga import (
   Date, Place, gregorian_to_jd, from_dms, sunrise, sunset, solar_times_utc, moonrise, moonrise_jd, moonset, moonset_jd,
-  tithi, nakshatra, nakshatra_pada, nakshatra_end_point, yoga, karana, vaara, masa, varjyam, ascendant, navamsa,
-  navamsa_from_long, planetary_positions, day_duration, night_duration, gauri_chogadiya, trikalam, rahu_kalam,
-  yamaganda_kalam, gulika_kalam, durmuhurtam, abhijit_muhurta, pratah_sandhya, elapsed_year, samvatsara,
-  samvatsara_north, samvatsara_north_modern, ritu, drik_ritu, drik_ritu_at, lunar_masa, raasi, lunar_phase, new_moon,
-  full_moon, local_time_to_jdut1, sweph_version, ephemeris_fingerprint, default_se_ephe_path, get_planet_name, to_dms,
-  to_hms, format_hms, format_hms_from_jd, to_dms_prec, unwrap_angles, lon_relative_to_base, inverse_lagrange,
-  mean_longitude, norm360, bisection_search, sidereal_saptarshi_nakshatra, saptarshi_nakshatra_traditional,
-  set_nakshatra_system, set_chosen_ayanamsa, set_ayanamsa_mode, set_coordinate_mode, set_coordinate_selection,
-  reset_ayanamsa_mode, solar_longitude)
+  moonrise_hindu_day, moonset_hindu_day, tithi, nakshatra, nakshatra_pada, nakshatra_end_point, yoga, karana, vaara,
+  masa, varjyam, ascendant, navamsa, navamsa_from_long, planetary_positions, day_duration, night_duration,
+  gauri_chogadiya, trikalam, rahu_kalam, yamaganda_kalam, gulika_kalam, durmuhurtam, abhijit_muhurta, pratah_sandhya,
+  elapsed_year, samvatsara, samvatsara_north, samvatsara_north_modern, ritu, drik_ritu, drik_ritu_at, lunar_masa, raasi,
+  lunar_phase, new_moon, full_moon, local_time_to_jdut1, sweph_version, ephemeris_fingerprint, default_se_ephe_path,
+  get_planet_name, to_dms, to_hms, format_hms, format_hms_from_jd, to_dms_prec, unwrap_angles, lon_relative_to_base,
+  inverse_lagrange, mean_longitude, norm360, bisection_search, sidereal_saptarshi_nakshatra,
+  saptarshi_nakshatra_traditional, set_nakshatra_system, set_chosen_ayanamsa, set_ayanamsa_mode, set_coordinate_mode,
+  set_coordinate_selection, reset_ayanamsa_mode, solar_longitude)
 
 bangalore = Place(12.972, 77.594, +5.5)
 shillong = Place(25.569, 91.883, +5.5)
@@ -59,6 +59,37 @@ class SunriseSetTests(PanchangaTestCase):
     local, hms = moonset(date2, bangalore)
     self.assertEqual(hms, [24, 14, 12])
     self.assertAlmostEqual(local, moonset_jd(date2, bangalore))
+
+  def test_moon_hindu_day_no_adjacent_00_24_duplicate(self):
+    # Civil-midnight moonrise can list the same event as 24:xx on day D and
+    # 00:xx on D+1. Hindu-day window keeps it only on the row whose sunrise
+    # started before the event.
+    from datetime import date, timedelta
+    place = bangalore
+    # mid-March 2026: known 24/00 pairing under civil-midnight search
+    d0 = date(2026, 3, 10)
+    d1 = date(2026, 3, 11)
+    jd0 = gregorian_to_jd(Date(d0.year, d0.month, d0.day))
+    jd1 = gregorian_to_jd(Date(d1.year, d1.month, d1.day))
+    civil_pair = (moonrise(jd0, place), moonrise(jd1, place))
+    # Sanity: civil search still shows the dual form on these dates.
+    self.assertGreaterEqual(civil_pair[0][1][0], 24)
+    self.assertEqual(civil_pair[1][1][0], 0)
+    self.assertAlmostEqual(civil_pair[0][0], civil_pair[1][0], places=5)
+
+    h0 = moonrise_hindu_day(jd0, place)
+    h1 = moonrise_hindu_day(jd1, place)
+    # Exactly one of the two Hindu-day rows carries this physical rise.
+    carried = [x for x in (h0, h1) if x is not None and abs(x[0] - civil_pair[0][0]) < 1e-6]
+    self.assertEqual(len(carried), 1)
+    # And it is printed on the 24:00+ scale relative to that row's midnight.
+    local_jd, hms = carried[0]
+    owner_jd = jd0 if h0 is carried[0] else jd1
+    self.assertEqual(hms, to_hms((local_jd - owner_jd) * 24))
+    if owner_jd == jd0:
+      self.assertGreaterEqual(hms[0], 24)
+    else:
+      self.assertLess(hms[0], 24)
 
   def test_sunrise(self):
     self.assertEqual(sunrise(date2, bangalore)[1], [6, 49, 47])

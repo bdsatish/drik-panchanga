@@ -635,6 +635,52 @@ def moonset(jd, place):
   return [local, to_hms((local - jd) * 24)]
 
 
+def _moon_event_in_window(jd, place, rise=True):
+  """First moonrise/moonset in ``[sunrise(jd), sunrise(jd+1))``, Hindu-day window.
+
+  ``moonrise_jd`` / ``moonset_jd`` stay "first after local midnight" for
+  callers such as Sankashti (K4 at that civil-midnight moonrise). Calendar
+  rows and day-view use this helper so a pre-sunrise event is shown on the
+  previous civil row as ``24:xx``, not again next morning as ``00:xx``.
+
+  Returns ``[local_jd, [h, m, s]]`` with hours past civil midnight of ``jd``,
+  or ``None`` if none falls in the window (or the ephemeris lookup fails).
+  """
+  try:
+    window_start = sunrise(jd, place)[0]
+    window_end = sunrise(jd + 1, place)[0]
+  except Exception:
+    return None
+  if window_end <= window_start:
+    window_end = window_start + 1.0
+  finder = moonrise_jd if rise else moonset_jd
+  candidates = []
+  for day_jd in (jd - 1, jd, jd + 1):
+    try:
+      local = finder(day_jd, place)
+    except Exception:
+      continue
+    # Reject SE failed-lookup sentinels (same band as monthly sun/moon lines).
+    if not (day_jd - 1 <= local <= day_jd + 2):
+      continue
+    if window_start <= local < window_end:
+      candidates.append(local)
+  if not candidates:
+    return None
+  local = min(candidates)
+  return [local, to_hms((local - jd) * 24)]
+
+
+def moonrise_hindu_day(jd, place):
+  """Moonrise in the Hindu day starting at ``sunrise(jd)``, or ``None``."""
+  return _moon_event_in_window(jd, place, rise=True)
+
+
+def moonset_hindu_day(jd, place):
+  """Moonset in the Hindu day starting at ``sunrise(jd)``, or ``None``."""
+  return _moon_event_in_window(jd, place, rise=False)
+
+
 # Tithi doesn't depend on Ayanamsa
 def tithi(jd, place):
   """Tithi at sunrise for given date and place. Also returns tithi's end time."""

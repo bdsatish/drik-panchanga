@@ -269,8 +269,13 @@ def sun_moon_lines(location, civil):
   except Exception as exc:
     log.debug("sun times unavailable %s: %s", civil, exc)
   try:
+    # Hindu day [sunrise, next sunrise): hours past this civil midnight (24:00+).
+    # Leaves panchanga.moonrise_jd (after civil midnight) for Sankashti selection.
     parts = []
-    for local_jd, hms in (panchanga.moonrise(jd, place), panchanga.moonset(jd, place)):
+    for event in (panchanga.moonrise_hindu_day(jd, place), panchanga.moonset_hindu_day(jd, place)):
+      if event is None:
+        continue
+      local_jd, hms = event
       if jd - 1 <= local_jd <= jd + 2 and 0 <= hms[0] < 48:
         parts.append(panchanga.format_hms(hms))
     if parts:

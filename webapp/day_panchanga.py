@@ -87,11 +87,20 @@ def format_masa_label(names, masa_num, is_adhika):
 
 
 def probe_moon_event(jd, place, civil, rise=True):
-  """Return ``(time_or_None, status)`` for moonrise/moonset on a civil day.
+  """Return ``(time_or_None, status)`` for moonrise/moonset on the Hindu day.
 
-    Status is ``ok``, ``none_today`` (next event is after local midnight+24h),
-    ``always_below``, ``always_above``, or ``unavailable``.
-    """
+  Window is ``[sunrise, next sunrise)``; times are hours past this civil
+  midnight (``24:00+`` allowed). Status is ``ok``, ``none_today`` (no event
+  in the window), ``always_below``, ``always_above``, or ``unavailable``.
+
+  Festival rules (Sankashti) still use first-after-civil-midnight moonrise
+  via ``festival_rules._moonrise_jd_ut`` — not this probe.
+  """
+  event = panchanga.moonrise_hindu_day(jd, place) if rise else panchanga.moonset_hindu_day(jd, place)
+  if event is not None:
+    _local_jd, hms = event
+    return panchanga.format_hms(hms, show_seconds=True), "ok"
+  # No event in the Hindu-day window: distinguish circumpolar vs none today.
   swe = panchanga.swe
   t0 = jd - place.timezone / 24.0
   flag = swe.CALC_RISE if rise else swe.CALC_SET
@@ -108,10 +117,7 @@ def probe_moon_event(jd, place, civil, rise=True):
     if altitude < -0.5:
       return None, "always_below"
     return None, "unavailable"
-  local_hours = (times[0] - t0) * 24.0
-  if not 0.0 <= local_hours < 24.0:
-    return None, "none_today"
-  return panchanga.format_hms(panchanga.to_hms(local_hours), show_seconds=True), "ok"
+  return None, "none_today"
 
 
 def _interval_from_hms(start_hms, end_hms):
