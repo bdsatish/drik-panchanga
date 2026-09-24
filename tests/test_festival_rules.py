@@ -1434,6 +1434,24 @@ class SankashtiChaturthiTests(unittest.TestCase):
       self.assertEqual(select_sankashti_chaturthi_dates(records, geopos=(75.0, 23.0, 0), timezone_name="Asia/Kolkata"),
                        [date(2030, 6, 10)])
 
+  def test_hindu_day_moonrise_can_shift_observance_by_one_day(self):
+    """Live ephemeris: K4 at a pre-sunrise rise lands on the previous civil day.
+
+    Helsinki 2026-06: civil-midnight search put Sankashti on 4 Jun; the
+    Hindu-day window attributes that moonrise to 3 Jun (same as Moon line).
+    """
+    from generate_panchanga_calendar import load_location, daily_records, _month_sequence
+    import panchanga
+    loc = load_location("Helsinki, FI")
+    months = _month_sequence(2026, 5, 3)
+    with panchanga.coordinate_calculation_lock:
+      panchanga.set_coordinate_selection("citra")
+      records = daily_records(months, loc)
+    geopos = (loc.longitude, loc.latitude, 0.0)
+    dates = select_sankashti_chaturthi_dates(records, geopos=geopos, timezone_name=loc.timezone_name)
+    self.assertIn(date(2026, 6, 3), dates)
+    self.assertNotIn(date(2026, 6, 4), dates)
+
 
 class PradoshamTests(unittest.TestCase):
   """Tests for Pradosham (Trayodashi at sunset)."""

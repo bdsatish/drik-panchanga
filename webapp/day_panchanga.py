@@ -93,8 +93,8 @@ def probe_moon_event(jd, place, civil, rise=True):
   midnight (``24:00+`` allowed). Status is ``ok``, ``none_today`` (no event
   in the window), ``always_below``, ``always_above``, or ``unavailable``.
 
-  Festival rules (Sankashti) still use first-after-civil-midnight moonrise
-  via ``festival_rules._moonrise_jd_ut`` — not this probe.
+  Festival rules (Sankashti) use the same Hindu-day moonrise window via
+  ``festival_rules._moonrise_jd_ut``.
   """
   event = panchanga.moonrise_hindu_day(jd, place) if rise else panchanga.moonset_hindu_day(jd, place)
   if event is not None:

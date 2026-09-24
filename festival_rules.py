@@ -55,22 +55,25 @@ def _sunset_jd_ut(civil_date, geopos, timezone_name):
 
 
 def _moonrise_jd_ut(civil_date, geopos, timezone_name):
-  """Moonrise Julian Day in UT for a civil date at a location.
+  """Moonrise Julian Day in UT for the Hindu day of ``civil_date``.
 
-  ``geopos`` is (lon, lat, altitude). Returns None if the moon does not rise;
-  callers fall back to sunrise-based selection. Swiss Ephemeris returns 0.0
-  for a failed rise lookup, so the result is range-checked against the
-  expected JD window.
+  Uses the first moonrise in ``[sunrise, next sunrise)`` (same window as
+  calendar Moon lines). A rise after civil midnight but before sunrise
+  belongs to the previous civil date. ``geopos`` is (lon, lat, altitude).
+  Returns None if no moonrise falls in the window.
   """
   tz = ZoneInfo(timezone_name)
   noon = datetime(civil_date.year, civil_date.month, civil_date.day, 12, 0, tzinfo=tz)
   tz_offset = noon.utcoffset().total_seconds() / 3600
-  place = (geopos[1], geopos[0], tz_offset)  # (lat, lon, tz) for panchanga.moonrise_jd
+  place = (geopos[1], geopos[0], tz_offset)  # (lat, lon, tz)
   jd = panchanga.gregorian_to_jd(panchanga.Date(civil_date.year, civil_date.month, civil_date.day))
   try:
-    moonrise_jd_local = panchanga.moonrise_jd(jd, place)
+    event = panchanga.moonrise_hindu_day(jd, place)
   except Exception:
     return None
+  if event is None:
+    return None
+  moonrise_jd_local = event[0]
   if not jd - 1 <= moonrise_jd_local <= jd + 2:
     return None
   return moonrise_jd_local - tz_offset / 24
@@ -506,10 +509,10 @@ def select_pradosham_dates(records, geopos=None, timezone_name=None):
 
 
 def _moonrise_tithi_skipped(records, geopos, timezone_name, target_tithi):
-  """Detect a tithi skipped between consecutive moonrises.
+  """Detect a tithi skipped between consecutive Hindu-day moonrises.
 
-  When ``target_tithi`` is skipped between two moonrises, return the latter
-  civil day (analogous to ``select_kshaya_dates`` for sunrise).
+  When ``target_tithi`` is skipped between two moonrises (each in that day's
+  ``[sunrise, next sunrise)`` window), return the latter civil day.
   """
   ordered = sorted(records, key=lambda r: r.civil_date)
   kshaya_dates = []
@@ -533,15 +536,17 @@ SANKASHTI_TITHI = 19  # K4 in 1-30 numbering
 
 
 def select_sankashti_chaturthi_dates(records, geopos=None, timezone_name=None):
-  """Krishna Chaturthi (K4) prevailing at moonrise.
+  """Krishna Chaturthi (K4) prevailing at Hindu-day moonrise.
 
-  Sankashtahara Chaturthi is observed when K4 tithi prevails at moonrise. This
-  occurs once per lunar month during Krishna Paksha.
+  Sankashtahara Chaturthi is observed when K4 tithi prevails at the moonrise
+  in ``[sunrise, next sunrise)`` for that civil date (same Hindu-day window
+  as the calendar Moon line). Occurs once per lunar month in Krishna Paksha.
 
   Corner cases:
   - Vriddhi (K4 at moonrise on consecutive days): keep only the earlier
     civil date.
-  - Kshaya (K4 skipped between two moonrises): pick the latter civil day.
+  - Kshaya (K4 skipped between two Hindu-day moonrises): pick the latter
+    civil day.
   - Without location/timezone: falls back to sunrise-based selection.
   """
   if geopos is None or timezone_name is None:

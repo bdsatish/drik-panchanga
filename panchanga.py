@@ -638,10 +638,10 @@ def moonset(jd, place):
 def _moon_event_in_window(jd, place, rise=True):
   """First moonrise/moonset in ``[sunrise(jd), sunrise(jd+1))``, Hindu-day window.
 
-  ``moonrise_jd`` / ``moonset_jd`` stay "first after local midnight" for
-  callers such as Sankashti (K4 at that civil-midnight moonrise). Calendar
-  rows and day-view use this helper so a pre-sunrise event is shown on the
-  previous civil row as ``24:xx``, not again next morning as ``00:xx``.
+  ``moonrise_jd`` / ``moonset_jd`` remain "first after local midnight" as
+  low-level SE wrappers. Sankashti and calendar Moon lines use this Hindu-day
+  window so a pre-sunrise rise is attributed to the previous civil row
+  (``24:xx``), not repeated next morning as ``00:xx``.
 
   Returns ``[local_jd, [h, m, s]]`` with hours past civil midnight of ``jd``,
   or ``None`` if none falls in the window (or the ephemeris lookup fails).

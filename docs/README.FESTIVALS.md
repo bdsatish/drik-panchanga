@@ -56,12 +56,13 @@ Both are explained in the footer legends:
   consecutive days; kshaya picks the latter civil day when Trayodashi is
   skipped between two sunsets. Without location/timezone, falls back to
   sunrise-based selection.
-* **Sankashtahara Chaturthi** -- Krishna Chaturthi (`K4`) prevailing at moonrise
-  (indigo bar). This monthly Ganesh festival occurs during Krishna Paksha.
-  Vriddhi keeps the earlier day when K4 prevails at moonrise on consecutive
-  days; kshaya picks the latter civil day when K4 is skipped between two
-  moonrises. Without location/timezone, falls back to sunrise-based
-  selection.
+* **Sankashtahara Chaturthi** -- Krishna Chaturthi (`K4`) prevailing at the
+  Hindu-day moonrise in ``[sunrise, next sunrise)`` (indigo bar). Same window
+  as the calendar Moon line, so a pre-sunrise rise is attributed to the
+  previous civil date. Occurs during Krishna Paksha. Vriddhi keeps the earlier
+  day when K4 prevails at moonrise on consecutive days; kshaya picks the
+  latter civil day when K4 is skipped between two moonrises. Without
+  location/timezone, falls back to sunrise-based selection.
 
 Common sunrise rule (udaya-vyāpinī)
 -----------------------------------
