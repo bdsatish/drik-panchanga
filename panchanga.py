@@ -679,10 +679,22 @@ def moonset_jd(jd, place):
   return _moon_jd_after_midnight(jd, place, False)
 
 
+def _next_moon_event_jd(local_jd, place, rise=True):
+  """Local-adjusted JD of the first moon rise/set after ``local_jd``, or ``None``."""
+  lat, lon, tz = place
+  flag = _rise_flags + (swe.CALC_RISE if rise else swe.CALC_SET)
+  result = swe.rise_trans(local_jd - tz / 24 + 1 / 1440, swe.MOON, geopos=(lon, lat, 0), rsmi=flag)
+  if result[0] != 0 or not result[1][0]:
+    return None
+  return result[1][0] + tz / 24.
+
+
 def _moon_event_in_window(jd, place, rise=True):
   """First moonrise/moonset in ``[sunrise(jd), sunrise(jd+1))``, or ``None``.
 
   Hours in the result are past civil midnight of ``jd`` (``24:xx`` if after it).
+  At high latitudes the Moon can rise (or set) twice in one civil day; when
+  the first falls before sunrise, the second is looked up too.
   """
   try:
     window_start = sunrise(jd, place)[0]
@@ -703,6 +715,13 @@ def _moon_event_in_window(jd, place, rise=True):
       continue
     if window_start <= local < window_end:
       candidates.append(local)
+    elif day_jd == jd and local < window_start:
+      try:
+        later = _next_moon_event_jd(local, place, rise)
+      except Exception:
+        continue
+      if later is not None and later < jd + 1 and window_start <= later < window_end:
+        candidates.append(later)
   if not candidates:
     return None
   local = min(candidates)

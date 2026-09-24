@@ -160,6 +160,22 @@ class EdgeContinuityTests(unittest.TestCase):
     self.assertTrue(23.0 < gap < 25.0, f"edge jump {gap:.2f} h")
 
 
+class MoonWindowTests(unittest.TestCase):
+  """Hindu-day moon events when the Moon rises or sets twice in a civil day."""
+
+  def test_second_event_of_the_civil_day_is_found(self):
+    # Murmansk midsummer: the first event after midnight (00:14 set, 00:07
+    # rise) precedes the 00:50 sunrise and belongs to the previous Hindu day;
+    # the same civil day has a second one just before midnight.
+    mur = Place(68.97, 33.08, 3.0)
+    moonset = panchanga.moonset(gregorian_to_jd(panchanga.Date(2026, 6, 25)), mur)
+    moonrise = panchanga.moonrise(gregorian_to_jd(panchanga.Date(2026, 7, 5)), mur)
+    self.assertIsNotNone(moonset)
+    self.assertEqual(moonset[1], [23, 57, 46])
+    self.assertIsNotNone(moonrise)
+    self.assertEqual(moonrise[1], [23, 56, 51])
+
+
 class GuardedPathTests(unittest.TestCase):
   """Defensive branches are exercised and degrade gracefully."""
 
