@@ -497,6 +497,15 @@ def _transit_jd(jd, place, lower=False):
   if not window_start < transit < window_end:
     result = swe.rise_trans((window_start + window_end) / 2, swe.SUN, geopos=(lon, lat, 0), rsmi=rsmi)
     transit = result[1][0]
+  if lower:
+    # East of a time-zone meridian the lower transit can land a few minutes
+    # before the civil midnight that opens the day's window half. Clamp the
+    # stored instant at civil midnight: every consumer — sunrise/sunset
+    # anchors, parana windows, eclipse lines, day-length arithmetic — then
+    # stays inside the civil day, and day/night lengths stay 24/0 h under
+    # the midnight sun. The anchor may sit up to ~8 min after true solar
+    # midnight.
+    transit = max(transit, jd - tz / 24.)
   return transit
 
 
@@ -519,15 +528,10 @@ def sunrise(jd, place):
   result = swe.rise_trans(jd - tz / 24, swe.SUN, geopos=(lon, lat, 0), rsmi=_rise_flags + swe.CALC_RISE)
   rise = result[1][0]  # julian-day number (UT)
   if result[0] != 0 or not jd <= rise + tz / 24. < jd + 1.0:
-    # No horizon crossing today: anchor at the same-phase transit.
+    # No horizon crossing today: anchor at the same-phase transit. The
+    # lower-transit window rule (see _transit_jd) already clamps at civil
+    # midnight, so consumers formatting the JD stay inside the day.
     rise = (_transit_jd(jd, place, lower=True) if _is_midnight_sun(jd, place) else _transit_jd(jd, place))
-    # East of a time-zone meridian the midnight-sun anchor (the day's lower
-    # transit) can land a few minutes before civil midnight. Clamp the
-    # stored anchor at civil midnight: every consumer that formats the JD
-    # directly (parana windows, eclipse lines, day-length arithmetic) then
-    # stays inside the civil day. The anchor may sit up to ~8 min after
-    # true solar midnight.
-    rise = max(rise, jd - tz / 24.)
   # Convert to local time
   return [rise + tz / 24., to_dms((rise - jd) * 24 + tz)]
 

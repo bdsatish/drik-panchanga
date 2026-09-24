@@ -504,7 +504,16 @@ def format_local_hm(jd, timezone_name):
   both of which are documented to allow hours >= 24.
   """
   local = jd_to_local_datetime(jd, timezone_name)
-  total_minutes = int(round(local.hour * 60 + local.minute + local.second / 60.0))
+  secs_of_day = local.hour * 3600 + local.minute * 60 + local.second + local.microsecond / 1e6
+  if secs_of_day >= 86400.0 - 0.001:
+    # Within a millisecond of midnight: a midnight-exact clamped anchor
+    # picks up sub-microsecond float noise in the JD -> datetime conversion
+    # (e.g. 23:59:59.999987 on the previous day). Render as 00:00 of its
+    # own civil day, not as 24:00 of the previous one. Genuine 23:59:59 is
+    # a full second away and still rounds up to 24:00 below, per the
+    # hours-past-midnight convention.
+    return "00:00"
+  total_minutes = int(round(secs_of_day / 60.0))
   return f"{total_minutes // 60:02d}:{total_minutes % 60:02d}"
 
 
