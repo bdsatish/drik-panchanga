@@ -36,10 +36,10 @@ DEFAULT_NAMES_PATH = Path(__file__).parent / "data" / "sanskrit_names.json"
 FOOTER_FESTIVAL_SLOTS = 30  # 6 columns x 5 rows in draw_page_footer
 FOOTER_KEY_FONT_MAX = 5.5
 FOOTER_KEY_FONT_MIN = 3.8
-FOOTER_KEY_LINE_HEIGHT = 6.5  # line spacing
+FOOTER_KEY_LINE_HEIGHT = 6.0  # line spacing
 log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
-FOOTER_KEY_TOP = 44.0  # baseline of first muted key line below festivals
+FOOTER_KEY_TOP = 48.0  # baseline of first muted key line below festivals
 RULESET_VERSION = "Udaya-Vyapini-1.1"
 LAYOUT_VERSION = "A4-1.21"
 PDF_AUTHOR = "Satish BD"
@@ -145,6 +145,13 @@ def _numbered_iast_names(mapping, width=None):
       label = str(int(key)).zfill(width)
     parts.append(label + " " + name)
   return parts
+
+
+def timing_key_line():
+  """Footer key for the 24:00+ clock (shared by T/N/Y end times)."""
+  return ("Times: hours past civil midnight on the Hindu day (sunrise–sunrise). "
+          "After 24:00 = past midnight; 00:xx only if that day's sunrise anchor "
+          "is after midnight (polar), never a wrap of 24:00.")
 
 
 def tithi_key_line(recurring="specials"):
@@ -1020,7 +1027,8 @@ def draw_page_footer(pdf, festival_entries, eclipse_line="Eclipses: None", recur
   pdf.setFillColor(MUTED)
   # Column order matches the grid (T, N, Y), then lunar māsa, then solar saṅkrānti.
   # Eclipse stays first; bold face works with MUTED (colour and weight are independent).
-  key_lines = (tithi_key_line(recurring), nakshatra_key_line(), yoga_key_line(), masa_key_line(), sankranti_key_line())
+  key_lines = (timing_key_line(), tithi_key_line(recurring), nakshatra_key_line(), yoga_key_line(), masa_key_line(),
+               sankranti_key_line())
   page_width = landscape(A4)[0]
   available_width = page_width - 36
   eclipse_size = fitted_font_size(pdf, eclipse_line, PDF_FONT_BOLD, FOOTER_KEY_FONT_MAX, FOOTER_KEY_FONT_MIN,

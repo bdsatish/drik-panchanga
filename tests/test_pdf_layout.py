@@ -233,9 +233,13 @@ class PdfLayoutTests(unittest.TestCase):
       masa_key_line,
       nakshatra_key_line,
       sankranti_key_line,
+      timing_key_line,
       tithi_key_line,
       yoga_key_line,
     )
+    self.assertIn("After 24:00", timing_key_line())
+    self.assertIn("00:xx only if", timing_key_line())
+    self.assertIn("polar", timing_key_line())
     self.assertTrue(tithi_key_line().startswith("T:"))
     self.assertIn("teal Ekadashi", tithi_key_line())
     self.assertIn("purple Pradosham (Mon/Sat)", tithi_key_line())

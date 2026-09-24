@@ -819,11 +819,14 @@ class FooterLegendTests(unittest.TestCase):
     location = load_location("Ujjain")
     draw_footer(pdf, location, "citra", 1, 12)
     drawn_text = [c.args[2] for c in pdf.drawString.call_args_list]
-    footer_note = [t for t in drawn_text if "After 24:00" in t]
-    self.assertEqual(len(footer_note), 1)
-    self.assertIn("Green: māsa", footer_note[0])
-    self.assertIn("brown [S/K]: śrāddha tithi (aparāhṇa)", footer_note[0])
-    self.assertNotIn("Teal Pāraṇā", footer_note[0])
+    time_note = [t for t in drawn_text if "After 24:00" in t]
+    mark_note = [t for t in drawn_text if "Green: māsa" in t]
+    self.assertEqual(len(time_note), 1)
+    self.assertEqual(len(mark_note), 1)
+    self.assertIn("00:xx only if", time_note[0])
+    self.assertIn("polar", time_note[0])
+    self.assertIn("brown [S/K]: śrāddha tithi (aparāhṇa)", mark_note[0])
+    self.assertNotIn("Teal Pāraṇā", mark_note[0])
 
 
 if __name__ == "__main__":

@@ -8,8 +8,10 @@ when a tithi or nakshatra is skipped (leap), both names and both end
 times are printed. Saṅkrānti days carry the rāśi name, festivals are
 listed inline, and locally visible eclipses get a wavy underline.
 
-Timings above 24:00 denote hours past midnight (the Hindu day runs
-sunrise to sunrise).
+Timings use hours past civil midnight on the Hindu day (sunrise to
+sunrise). Values at or after 24:00 are past midnight; ``00:xx`` appears
+only when that day's sunrise anchor itself sits after midnight (polar
+midnight sun), not as a wrap of 24:00.
 """
 
 import argparse
@@ -629,10 +631,13 @@ def draw_grid(pdf, year, month, location, context):
 def draw_footer(pdf, location, coordinate_selection, page_index, total):
   pdf.setFillColor(GREY)
   pdf.setFont(PDF_FONT_ITALIC, 6.0)
-  note = ("After 24:00: past midnight. Green: māsa; gold: adhika; saffron: saṅkrānti; "
-          "teal: ekādaśī; brown [S/K]: śrāddha tithi (aparāhṇa); purple: pradoṣam; "
-          "indigo: saṅkaṣṭahara caturthī.")
-  pdf.drawString(MARGIN, MARGIN + 18, note)
+  note_time = ("Times: hours past civil midnight (Hindu day). After 24:00 = past "
+               "midnight; 00:xx only if that day's sunrise is after midnight (polar).")
+  note_marks = ("Green: māsa; gold: adhika; saffron: saṅkrānti; teal: ekādaśī; "
+                "brown [S/K]: śrāddha tithi (aparāhṇa); purple: pradoṣam; "
+                "indigo: saṅkaṣṭahara caturthī.")
+  pdf.drawString(MARGIN, MARGIN + 22, note_time)
+  pdf.drawString(MARGIN, MARGIN + 14, note_marks)
   pdf.setFillColor(GREY)
   pdf.drawRightString(PAGE_W - MARGIN, MARGIN + 6, f"page {page_index} of {total}")
 
