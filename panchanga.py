@@ -286,6 +286,18 @@ def jd_to_local_civil_date(jd, timezone_name):
   return jd_to_local_datetime(jd, timezone_name).date()
 
 
+def utc_offset_hours(timezone_name, civil):
+  """UTC offset in hours (DST included) at local noon of ``civil``, for the whole civil day.
+
+  Python ``datetime`` does not support year 0 or negative years, and early CE
+  dates are clamped to year 4: the tzdb rules there preserve the historical
+  local mean time offsets that modern standardized offsets obscure, and year 4
+  is the earliest leap year, so a 29 February needs no special case.
+  """
+  noon = datetime(max(4, civil.year), civil.month, civil.day, 12, tzinfo=ZoneInfo(timezone_name))
+  return noon.utcoffset().total_seconds() / 3600
+
+
 def format_local_hm(jd, timezone_name, anchor_civil=None, show_seconds=False):
   """Format UT ``jd`` as local ``HH:MM`` / ``HH:MM:SS`` past ``anchor_civil`` midnight.
 

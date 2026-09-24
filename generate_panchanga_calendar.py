@@ -607,12 +607,6 @@ def local_range_jds(start_year, start_month, end_year, end_month, timezone_name)
   return julian_day_from_datetime(start_local), julian_day_from_datetime(end_local)
 
 
-def timezone_hours(timezone, year, month, day):
-  """Return the location's UTC offset, including daylight-saving time."""
-  local_noon = datetime(year, month, day, 12, tzinfo=timezone)
-  return local_noon.utcoffset().total_seconds() / 3600
-
-
 def format_utc_offset(timezone_name, year, month, day=15):
   """Return 'UTC+5:30 (IST)' style label for a timezone on a given date."""
   zone = ZoneInfo(timezone_name)
@@ -630,16 +624,6 @@ def format_utc_offset(timezone_name, year, month, day=15):
   return f"{offset_str} ({abbr})"
 
 
-def _offset_at_noon(timezone_name, year, month, day):
-  """Return UTC offset in hours at noon on a given date, or None."""
-  zone = ZoneInfo(timezone_name)
-  local = datetime(year, month, day, 12, tzinfo=zone)
-  offset = local.utcoffset()
-  if offset is None:
-    return None
-  return offset.total_seconds() / 3600
-
-
 def dst_transitions(timezone_name, year, month):
   """Return a dict of {day: 'DST starts'|'DST ends'} for transitions in a given month.
 
@@ -647,36 +631,23 @@ def dst_transitions(timezone_name, year, month):
   the transition day is recorded with the appropriate label. The previous
   month's last day is used to detect transitions on the 1st of the month.
   """
-  zone = ZoneInfo(timezone_name)
   last_day = calendar.monthrange(year, month)[1]
   # Initialize from the last day of the previous month to catch transitions on the 1st
   prev_month_year, prev_month = (year, month - 1) if month > 1 else (year - 1, 12)
-  prev_offset = _offset_at_noon(timezone_name, prev_month_year, prev_month,
-                                calendar.monthrange(prev_month_year, prev_month)[1])
+  prev_day = calendar.monthrange(prev_month_year, prev_month)[1]
+  prev_offset = panchanga.utc_offset_hours(timezone_name, CivilDate(prev_month_year, prev_month, prev_day))
   transitions = {}
   for day in range(1, last_day + 1):
-    hours = _offset_at_noon(timezone_name, year, month, day)
-    if hours is not None:
-      if prev_offset is not None and hours != prev_offset:
-        if hours > prev_offset:
-          transitions[day] = "DST starts"
-        else:
-          transitions[day] = "DST ends"
-      prev_offset = hours
+    hours = panchanga.utc_offset_hours(timezone_name, CivilDate(year, month, day))
+    if hours != prev_offset:
+      transitions[day] = "DST starts" if hours > prev_offset else "DST ends"
+    prev_offset = hours
   return transitions
 
 
 def place_for_date(location, civil):
-  """Build a ``Place`` with the city's UTC offset on the given civil date.
-
-  Python ``datetime`` does not support year 0 or negative years, and early CE
-  dates are clamped to year 4: the tzdb rules there preserve the historical
-  local mean time offsets that modern standardized offsets obscure, and year 4
-  is the earliest leap year, so a 29 February needs no special case.
-  """
-  zone = ZoneInfo(location.timezone_name)
-  year = max(4, civil.year)
-  offset = timezone_hours(zone, year, civil.month, civil.day)
+  """Build a ``Place`` with the city's UTC offset on the given civil date."""
+  offset = panchanga.utc_offset_hours(location.timezone_name, civil)
   return panchanga.Place(location.latitude, location.longitude, offset)
 
 

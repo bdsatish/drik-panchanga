@@ -724,10 +724,7 @@ def ekadashi_dates_from_records(records):
 def _place_for_civil(civil_date, geopos, timezone_name):
   """``panchanga.Place`` for ``civil_date`` at ``geopos`` (lon, lat, alt)."""
   lon, lat, _alt = geopos
-  tz = ZoneInfo(timezone_name)
-  noon = datetime(civil_date.year, civil_date.month, civil_date.day, 12, 0, tzinfo=tz)
-  tz_offset = noon.utcoffset().total_seconds() / 3600.0
-  return panchanga.Place(lat, lon, tz_offset)
+  return panchanga.Place(lat, lon, panchanga.utc_offset_hours(timezone_name, civil_date))
 
 
 def _sunrise_tithi_end_jd_ut(civil_date, place):
