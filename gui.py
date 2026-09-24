@@ -36,7 +36,7 @@ import difflib
 # begin wxGlade: extracode
 # end wxGlade
 
-format_time = lambda t: "%02d:%02d:%02d" % (t[0], t[1], t[2])
+format_time = lambda t: panchanga.format_hms(t, show_seconds=True)  # deprecated gui — keep as shim
 
 
 class Panchanga(wx.Frame):

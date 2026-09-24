@@ -205,11 +205,8 @@ def yoga_name(number):
   return sanskrit_names().get("yogas", {}).get(str(int(number)), str(number))
 
 
-def format_hms(hms):
-  """``[h, m, s]`` local decimal hours to ``HH:MM``; hours may exceed 24."""
-  hours, minutes, seconds = hms
-  total = int(round(hours * 60 + minutes + seconds / 60.0))
-  return f"{total // 60:02d}:{total % 60:02d}"
+def format_hms(hms):  # backward compat: local decimal hours to HH:MM
+  return panchanga.format_hms(hms, show_seconds=False)
 
 
 def day_details(location, civil):

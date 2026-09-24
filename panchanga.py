@@ -205,10 +205,62 @@ def to_dms_prec(deg):
 
 
 def to_dms(deg):
+  """For angles (e.g. ``long % 30``): split decimal degrees to ``[deg, min, sec]``.
+
+  Truncates seconds — angles want the start of the enclosing minute.
+  """
   d, m, s = to_dms_prec(deg)
   # Truncate, do not round: rounding can hit s == 60 and would then need a
   # seconds -> minutes -> degrees carry cascade. Costs < 1s and keeps 0 <= s < 60.
   return [d, m, int(s)]
+
+
+def to_hms(decimal_hours):
+  """For durations and local civil times: split decimal hours to ``[h, m, s]``.
+
+  Rounds to the nearest second with a full carry cascade: the result always
+  satisfies ``0 <= m < 60`` and ``0 <= s < 60``, while ``h`` may be negative
+  or exceed 24 (the callers' "hours past midnight" convention).
+  """
+  sign = -1 if decimal_hours < 0 else 1
+  a = abs(decimal_hours)
+  total_seconds = int(round(a * 3600))
+  hours, rem = divmod(total_seconds, 3600)
+  minutes, seconds = divmod(rem, 60)
+  return [sign * hours, minutes, seconds]
+
+
+def format_hms(hms, *, show_seconds=False):
+  """``[h, m, s]`` or decimal hours to a display string.
+
+  Normalises the carry (s == 60 -> next minute) and follows the library's
+  hours-past-midnight convention: hours may exceed 24 (e.g. ``27:00``), an
+  exact midnight stays ``24:00`` rather than ``00:00``. Keep ``show_seconds``
+  false for ``HH:MM`` endpoints (tithi/nakshatra ends in the grids) and true
+  for ``HH:MM:SS`` (day-view parana, sunrise/sunset columns).
+  """
+  if isinstance(hms, (int, float)):  # convenience: decimal hours
+    hms = to_hms(float(hms))
+  hours, minutes, seconds = hms
+  if show_seconds:
+    total_seconds = int(round(hours * 3600 + minutes * 60 + seconds))
+    h, rem = divmod(total_seconds, 3600)
+    m, s = divmod(rem, 60)
+    return f"{h:02d}:{m:02d}:{s:02d}"
+  total_minutes = int(round(hours * 60 + minutes + seconds / 60.0))
+  return f"{total_minutes // 60:02d}:{total_minutes % 60:02d}"
+
+
+def format_hms_from_jd(jd_ut, civil_jd, timezone_hours, *, show_seconds=False):
+  """Format a UT Julian day as local hours-past-midnight (``HH:MM``/``HH:MM:SS``).
+
+  Single place for the JD -> local -> display path, so
+  ``FormatLocalHM`` / "sunrise at 23:59:30" and related rounding rules
+  don't drift apart. Follows the hours-past-midnight convention: an exact
+  midnight displays as ``24:00`` of the previous civil day, consistent with
+  tithi/nakshatra ends ``27:00`` etc.
+  """
+  return format_hms((jd_ut - civil_jd) * 24 + timezone_hours, show_seconds=show_seconds)
 
 
 def unwrap_angles(angles):

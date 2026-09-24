@@ -493,25 +493,12 @@ def load_location(city):
   return Location(name, record["latitude"], record["longitude"], record["timezone"])
 
 
-def format_local_hm(jd, timezone_name):
-  """Format a UT Julian day as local ``HH:MM``, rounded to the nearest minute.
-
-  Follows the library's hours-past-midnight convention (README: "times beyond
-  24:00 are hours past midnight"): a time of 23:59:30 or later rounds up to
-  ``24:00`` rather than wrapping to ``00:00``. That matches
-  ``format_hms`` in the monthly generator and ``format_time`` in the web app,
-  both of which are documented to allow hours >= 24.
-  """
+def format_local_hm(jd, timezone_name):  # backward compat: UT JD -> HH:MM
+  civil_date = jd_to_local_civil_date(jd, timezone_name)
+  civil_jd = panchanga.gregorian_to_jd(panchanga.Date(civil_date.year, civil_date.month, civil_date.day))
   local = jd_to_local_datetime(jd, timezone_name)
-  secs_of_day = local.hour * 3600 + local.minute * 60 + local.second + local.microsecond / 1e6
-  if secs_of_day >= 86400.0 - 0.001:
-    # A midnight-exact clamped anchor picks up sub-microsecond float noise
-    # in the JD -> datetime conversion; render it as 00:00 of its own civil
-    # day. Genuine 23:59:59 is a full second away and still rounds up to
-    # 24:00 below, per the hours-past-midnight convention.
-    return "00:00"
-  total_minutes = int(round(secs_of_day / 60.0))
-  return f"{total_minutes // 60:02d}:{total_minutes % 60:02d}"
+  tz_hours = local.utcoffset().total_seconds() / 3600.0 if local.utcoffset() else 0.0
+  return panchanga.format_hms_from_jd(jd, civil_jd, tz_hours, show_seconds=False)
 
 
 def format_eclipse_line(eclipses, timezone_name, sunrise_by_date=None):

@@ -58,9 +58,8 @@ def _day_in_proleptic_gregorian_year(year, month, day):
   return 1 <= day <= calendar.monthrange(2001, month)[1]
 
 
-def format_time(hms):
-  hours, minutes, seconds = hms
-  return f"{int(hours):02d}:{int(minutes):02d}:{int(seconds):02d}"
+def format_time(hms):  # backward compat: [h,m,s] -> HH:MM:SS
+  return panchanga.format_hms(hms, show_seconds=True)
 
 
 def _named_segments(nhms, lookup):
