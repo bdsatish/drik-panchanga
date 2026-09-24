@@ -96,7 +96,7 @@ def probe_moon_event(jd, place, civil, rise=True):
   Festival rules (Sankashti) use the same Hindu-day moonrise window via
   ``festival_rules._moonrise_jd_ut``.
   """
-  event = panchanga.moonrise_hindu_day(jd, place) if rise else panchanga.moonset_hindu_day(jd, place)
+  event = panchanga.moonrise(jd, place) if rise else panchanga.moonset(jd, place)
   if event is not None:
     _local_jd, hms = event
     return panchanga.format_hms(hms, show_seconds=True), "ok"

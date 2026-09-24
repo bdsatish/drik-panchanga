@@ -272,7 +272,7 @@ def sun_moon_lines(location, civil):
     # Hindu day [sunrise, next sunrise): hours past this civil midnight (24:00+).
     # Same window Sankashti uses for K4-at-moonrise.
     parts = []
-    for event in (panchanga.moonrise_hindu_day(jd, place), panchanga.moonset_hindu_day(jd, place)):
+    for event in (panchanga.moonrise(jd, place), panchanga.moonset(jd, place)):
       if event is None:
         continue
       local_jd, hms = event

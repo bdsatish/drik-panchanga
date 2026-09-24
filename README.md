@@ -5,7 +5,8 @@ Observational Indian lunisolar calendar (Hindu Drig-ganita Panchanga) using
 the Swiss Ephemeris.
 
 Computes the five essentials — tithi, nakshatra, yoga, karana, vaara — with
-end times, plus sunrise, sunset, moonrise and moonset. Lunar months can be
+end times, plus sunrise, sunset, moonrise and moonset
+(Hindu day: ``[sunrise, next sunrise)``). Lunar months can be
 named in either amānta or pūrṇimānta reckoning. Accurate from 5000 BCE to
 5000 CE. All timings are end timings. Times use a hours-past-midnight clock that
 may run past 24:00 (e.g. ``26:15`` = 02:15 next civil morning); ``23:59:30``

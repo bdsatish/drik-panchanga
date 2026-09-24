@@ -600,7 +600,11 @@ def sunset(jd, place):
 
 @lru_cache(maxsize=4096)  # memoize expensive Swiss Ephemeris moonrise lookup
 def moonrise_jd(jd, place):
-  """Local Julian day of the first moonrise after local midnight."""
+  """Local-adjusted JD of the first moonrise after local midnight of ``jd``.
+
+  Low-level Swiss Ephemeris primitive used to gather candidates for
+  ``moonrise``; not the public Hindu-day API.
+  """
   lat, lon, tz = place
   result = swe.rise_trans(jd - tz / 24, swe.MOON, geopos=(lon, lat, 0), rsmi=_rise_flags + swe.CALC_RISE)
   rise = result[1][0]  # julian-day number (UT)
@@ -609,39 +613,24 @@ def moonrise_jd(jd, place):
 
 @lru_cache(maxsize=4096)  # memoize expensive Swiss Ephemeris moonset lookup
 def moonset_jd(jd, place):
-  """Local Julian day of the first moonset after local midnight."""
+  """Local-adjusted JD of the first moonset after local midnight of ``jd``.
+
+  Low-level Swiss Ephemeris primitive used to gather candidates for
+  ``moonset``; not the public Hindu-day API.
+  """
   lat, lon, tz = place
   result = swe.rise_trans(jd - tz / 24, swe.MOON, geopos=(lon, lat, 0), rsmi=_rise_flags + swe.CALC_SET)
   setting = result[1][0]  # julian-day number (UT)
   return setting + tz / 24.
 
 
-def moonrise(jd, place):
-  """Moonrise when centre of disc is at horizon for given date and place
-
-  Returns [local_jd, [h, m, s]] like sunrise(), sunset(). [h, m, s] is
-  local civil time hours past jd (may be >= 24 for next-day events).
-  """
-  local = moonrise_jd(jd, place)
-  return [local, to_hms((local - jd) * 24)]
-
-
-def moonset(jd, place):
-  """Moonset when centre of disc is at horizon for given date and place
-
-  Returns [local_jd, [h, m, s]] like sunrise(), sunset().
-  """
-  local = moonset_jd(jd, place)
-  return [local, to_hms((local - jd) * 24)]
-
-
 def _moon_event_in_window(jd, place, rise=True):
-  """First moonrise/moonset in ``[sunrise(jd), sunrise(jd+1))``, Hindu-day window.
+  """First moonrise/moonset in ``[sunrise(jd), sunrise(jd+1))``.
 
-  ``moonrise_jd`` / ``moonset_jd`` remain "first after local midnight" as
-  low-level SE wrappers. Sankashti and calendar Moon lines use this Hindu-day
-  window so a pre-sunrise rise is attributed to the previous civil row
-  (``24:xx``), not repeated next morning as ``00:xx``.
+  Scans ``moonrise_jd`` / ``moonset_jd`` on neighbouring civil midnights and
+  keeps the event that falls in the Hindu-day window so a pre-sunrise rise is
+  attributed to the previous civil row (``24:xx``), not repeated next morning
+  as ``00:xx``.
 
   Returns ``[local_jd, [h, m, s]]`` with hours past civil midnight of ``jd``,
   or ``None`` if none falls in the window (or the ephemeris lookup fails).
@@ -671,13 +660,21 @@ def _moon_event_in_window(jd, place, rise=True):
   return [local, to_hms((local - jd) * 24)]
 
 
-def moonrise_hindu_day(jd, place):
-  """Moonrise in the Hindu day starting at ``sunrise(jd)``, or ``None``."""
+def moonrise(jd, place):
+  """Moonrise in the Hindu day starting at ``sunrise(jd)``, or ``None``.
+
+  Returns ``[local_jd, [h, m, s]]`` like sunrise/sunset, with hours past civil
+  midnight of ``jd`` (may be ``>= 24``). No event in
+  ``[sunrise, next sunrise)`` yields ``None``.
+  """
   return _moon_event_in_window(jd, place, rise=True)
 
 
-def moonset_hindu_day(jd, place):
-  """Moonset in the Hindu day starting at ``sunrise(jd)``, or ``None``."""
+def moonset(jd, place):
+  """Moonset in the Hindu day starting at ``sunrise(jd)``, or ``None``.
+
+  Same return shape as ``moonrise``.
+  """
   return _moon_event_in_window(jd, place, rise=False)
 
 

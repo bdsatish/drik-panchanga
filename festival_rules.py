@@ -68,7 +68,7 @@ def _moonrise_jd_ut(civil_date, geopos, timezone_name):
   place = (geopos[1], geopos[0], tz_offset)  # (lat, lon, tz)
   jd = panchanga.gregorian_to_jd(panchanga.Date(civil_date.year, civil_date.month, civil_date.day))
   try:
-    event = panchanga.moonrise_hindu_day(jd, place)
+    event = panchanga.moonrise(jd, place)
   except Exception:
     return None
   if event is None:
