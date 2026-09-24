@@ -10,26 +10,14 @@ from zoneinfo import ZoneInfo
 
 import panchanga
 
+# JD/local helpers live in panchanga; re-export for existing imports/mocks.
 SECONDS_PER_DAY = 24 * 60 * 60
 JULIAN_DAY_AT_UNIX_EPOCH = 2440587.5
+julian_day_from_datetime = panchanga.julian_day_from_datetime
+jd_to_local_datetime = panchanga.jd_to_local_datetime
+jd_to_local_civil_date = panchanga.jd_to_local_civil_date
 log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
-
-
-def julian_day_from_datetime(value):
-  """Convert a timezone-aware ``datetime`` to a UT Julian day."""
-  return value.timestamp() / SECONDS_PER_DAY + JULIAN_DAY_AT_UNIX_EPOCH
-
-
-def jd_to_local_datetime(jd, timezone_name):
-  """Convert a UT Julian day to local ``datetime`` in ``timezone_name``."""
-  utc = datetime.fromtimestamp((jd - JULIAN_DAY_AT_UNIX_EPOCH) * SECONDS_PER_DAY, tz=timezone.utc)
-  return utc.astimezone(ZoneInfo(timezone_name))
-
-
-def jd_to_local_civil_date(jd, timezone_name):
-  """Convert a UT Julian day to the civil date in ``timezone_name``."""
-  return jd_to_local_datetime(jd, timezone_name).date()
 
 
 def _sunset_jd_ut(civil_date, geopos, timezone_name):

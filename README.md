@@ -57,6 +57,7 @@ panchanga.gauri_chogadiya(jd, place)           # 16 Choghadiya boundaries
 # Display (hours past civil midnight; never % 24):
 panchanga.format_hms([26, 15, 0])              # "26:15"
 panchanga.format_hms([23, 59, 30])             # "24:00"
+panchanga.format_local_hm(jd_ut, "Asia/Kolkata")  # UT JD -> local HH:MM
 ```
 
 Moonrise / moonset

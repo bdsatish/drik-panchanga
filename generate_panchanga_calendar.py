@@ -25,6 +25,10 @@ from festival_rules import (DayRecord, ekadashi_dates_from_records, find_local_e
                             select_pradosham_dates, select_sankashti_chaturthi_dates)
 import panchanga
 
+# Time display helpers (defined in panchanga; re-exported for calendars/tests).
+format_local_hm = panchanga.format_local_hm
+hindu_day_civil = panchanga.hindu_day_civil
+
 MONTH_COUNT = 14
 DEFAULT_CITIES_PATH = Path(__file__).parent / "data" / "cities.json"
 DEFAULT_FESTIVALS_PATH = Path(__file__).parent / "config" / "festivals.cfg"
@@ -491,37 +495,6 @@ def load_location(city):
   name = resolve_city_key(city, locations)
   record = locations[name]
   return Location(name, record["latitude"], record["longitude"], record["timezone"])
-
-
-def format_local_hm(jd, timezone_name, anchor_civil=None, show_seconds=False):
-  """Format UT ``jd`` as local ``HH:MM`` (or ``HH:MM:SS``) on the 24:00+ scale.
-
-  Hours are past local midnight of ``anchor_civil`` (a ``date``). Default anchor
-  is the event's own local civil date. Pass the calendar cell's civil date so
-  an event on the next civil morning still renders as ``24:00+`` on that row.
-
-  Never wraps with ``% 24``: ``23:59:30`` -> ``24:00``.
-  """
-  if anchor_civil is None:
-    anchor_civil = jd_to_local_civil_date(jd, timezone_name)
-  civil_jd = panchanga.gregorian_to_jd(panchanga.Date(anchor_civil.year, anchor_civil.month, anchor_civil.day))
-  local = jd_to_local_datetime(jd, timezone_name)
-  tz_hours = local.utcoffset().total_seconds() / 3600.0 if local.utcoffset() else 0.0
-  return panchanga.format_hms_from_jd(jd, civil_jd, tz_hours, show_seconds=show_seconds)
-
-
-def hindu_day_civil(jd, timezone_name, sunrise_jd=None):
-  """Civil date whose midnight is the 24:00+ origin for ``jd``.
-
-  When ``sunrise_jd`` is the sunrise of the event's civil morning and ``jd``
-  falls before it, the instant still belongs to the previous Hindu day, so
-  the previous civil date is returned (``00:05`` formats as ``24:05``).
-  Without a sunrise, returns the event's own local civil date.
-  """
-  civil = jd_to_local_civil_date(jd, timezone_name)
-  if sunrise_jd is not None and jd < sunrise_jd:
-    return civil - timedelta(days=1)
-  return civil
 
 
 def format_eclipse_line(eclipses, timezone_name, sunrise_by_date=None):

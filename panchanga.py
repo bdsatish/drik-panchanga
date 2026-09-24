@@ -27,10 +27,12 @@ Use Swiss ephemeris to calculate tithi, nakshatra, etc.
 
 from math import ceil, floor
 from collections import namedtuple as struct
+from datetime import datetime, timedelta, timezone
 from functools import lru_cache
 import os
 import sys
 from threading import RLock
+from zoneinfo import ZoneInfo
 import swisseph as swe
 
 # ------- Global options ----------
@@ -261,6 +263,58 @@ def format_hms_from_jd(jd_ut, civil_jd, timezone_hours, *, show_seconds=False):
   on the 24:00+ scale (``23:59:30`` -> ``24:00``), never wall-clock wrap.
   """
   return format_hms((jd_ut - civil_jd) * 24 + timezone_hours, show_seconds=show_seconds)
+
+
+# Julian day <-> civil/local datetime (IANA time zones, DST-aware)
+_SECONDS_PER_DAY = 24 * 60 * 60
+_JULIAN_DAY_AT_UNIX_EPOCH = 2440587.5
+
+
+def julian_day_from_datetime(value):
+  """Convert a timezone-aware ``datetime`` to a UT Julian day."""
+  return value.timestamp() / _SECONDS_PER_DAY + _JULIAN_DAY_AT_UNIX_EPOCH
+
+
+def jd_to_local_datetime(jd, timezone_name):
+  """Convert a UT Julian day to local ``datetime`` in ``timezone_name``."""
+  utc = datetime.fromtimestamp((jd - _JULIAN_DAY_AT_UNIX_EPOCH) * _SECONDS_PER_DAY, tz=timezone.utc)
+  return utc.astimezone(ZoneInfo(timezone_name))
+
+
+def jd_to_local_civil_date(jd, timezone_name):
+  """Convert a UT Julian day to the civil date in ``timezone_name``."""
+  return jd_to_local_datetime(jd, timezone_name).date()
+
+
+def format_local_hm(jd, timezone_name, anchor_civil=None, show_seconds=False):
+  """Format UT ``jd`` as local ``HH:MM`` (or ``HH:MM:SS``) on the 24:00+ scale.
+
+  Hours are past local midnight of ``anchor_civil`` (a ``date``). Default anchor
+  is the event's own local civil date. Pass the calendar cell's civil date so
+  an event on the next civil morning still renders as ``24:00+`` on that row.
+
+  Never wraps with ``% 24``: ``23:59:30`` -> ``24:00``.
+  """
+  if anchor_civil is None:
+    anchor_civil = jd_to_local_civil_date(jd, timezone_name)
+  civil_jd = gregorian_to_jd(Date(anchor_civil.year, anchor_civil.month, anchor_civil.day))
+  local = jd_to_local_datetime(jd, timezone_name)
+  tz_hours = local.utcoffset().total_seconds() / 3600.0 if local.utcoffset() else 0.0
+  return format_hms_from_jd(jd, civil_jd, tz_hours, show_seconds=show_seconds)
+
+
+def hindu_day_civil(jd, timezone_name, sunrise_jd=None):
+  """Civil date whose midnight is the 24:00+ origin for ``jd``.
+
+  When ``sunrise_jd`` is the sunrise of the event's civil morning and ``jd``
+  falls before it, the instant still belongs to the previous Hindu day, so
+  the previous civil date is returned (``00:05`` formats as ``24:05``).
+  Without a sunrise, returns the event's own local civil date.
+  """
+  civil = jd_to_local_civil_date(jd, timezone_name)
+  if sunrise_jd is not None and jd < sunrise_jd:
+    return civil - timedelta(days=1)
+  return civil
 
 
 def unwrap_angles(angles):
