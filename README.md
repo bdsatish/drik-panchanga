@@ -46,12 +46,34 @@ panchanga.vaara(jd)               # 4 (Thursday, 0 = Sunday)
 panchanga.masa(jd, place)         # [10, False]        -> Pausha, not adhika
 panchanga.sunrise(jd, place)      # [jd, [6, 49, 18]]  -> local sunrise 06:49:18
 panchanga.sunset(jd, place)       # [jd, [18, 8, 40]]  -> local sunset
+panchanga.moonrise(jd, place)     # [jd, [h,m,s]] or None — Hindu day only
+panchanga.moonset(jd, place)      # same window: [sunrise, next sunrise)
 panchanga.pratah_sandhya(jd, place)  # [[5, 10, 59], [5, 56, 18]]  start, end
 panchanga.trikalam(jd, place, option="rahu")   # Rahu Kala interval
 panchanga.durmuhurtam(jd, place)               # Durmuhurta intervals
 panchanga.planetary_positions(jd, place)       # all grahas, sidereal
 panchanga.gauri_chogadiya(jd, place)           # 16 Choghadiya boundaries
+
+# Display (hours past civil midnight; never % 24):
+panchanga.format_hms([26, 15, 0])              # "26:15"
+panchanga.format_hms([23, 59, 30])             # "24:00"
 ```
+
+Moonrise / moonset
+~~~~~~~~~~~~~~~~~~
+
+``moonrise`` / ``moonset`` return the event in ``[sunrise, next sunrise)`` for
+that civil ``jd``, or ``None``. Hours are past that day's civil midnight
+(``24:00+`` if the event is after the next civil midnight). A rise at 00:40
+before sunrise belongs on the **previous** civil row as ``24:40``, not again
+next morning as ``00:40``.
+
+``moonrise_jd`` / ``moonset_jd`` are low-level Swiss Ephemeris helpers (first
+event after **local midnight**). Prefer ``moonrise`` / ``moonset`` for
+calendars and for Sankashtahara Chaturthi (K4 at Hindu-day moonrise).
+
+``00:xx`` can still appear when the day's sunrise anchor itself sits just after
+civil midnight (midnight sun); that is the anchor time, not a wrap bug.
 
 Times are `[hours, minutes, seconds]` in the place's local civil time. Angles
 are sidereal longitudes in `[degrees, minutes, seconds]`. Negative years in

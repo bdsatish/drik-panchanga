@@ -40,7 +40,13 @@ jd = panchanga.gregorian_to_jd(panchanga.Date(2026, 1, 15))
 print(panchanga.tithi(jd, place))
 print(panchanga.nakshatra(jd, place))
 print(panchanga.masa(jd, place, amanta=True))   # or amanta=False for pūrṇimānta
+print(panchanga.moonrise(jd, place))  # Hindu day [sunrise, next sunrise), or None
+print(panchanga.format_hms([23, 59, 30]))  # "24:00" — never wraps to 00:00
 ```
+
+Times are hours past civil midnight and may run past 24:00 (Hindu day =
+sunrise to sunrise). ``moonrise`` / ``moonset`` use that window; the low-level
+``moonrise_jd`` helper is first-after-local-midnight only.
 
 For tropical (sāyana) values instead of sidereal, call
 `set_coordinate_mode("tropical")` before computing; reset with
