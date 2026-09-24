@@ -165,7 +165,7 @@ def tropical_nakshatra(jd, place, equal=True):
   x = offsets
   approx_end = inverse_lagrange(x, y, long_end)
   ends = (rise - jd + approx_end) * 24 + tz
-  answer = [int(nak), to_dms(ends)]
+  answer = [int(nak), to_hms(ends)]
 
   # 4. Check for skipped nakshatra
   nak_tmrw, nak_tmrw_end = tropical_long_fixed_stars(jd, longitudes[-1])
@@ -176,7 +176,7 @@ def tropical_nakshatra(jd, place, equal=True):
     approx_end = inverse_lagrange(offsets, longitudes, nak_tmrw_end)
     ends = (rise - jd + approx_end) * 24 + tz
     leap_nak = 1 if nak == 27 else leap_nak
-    answer += [int(leap_nak), to_dms(ends)]
+    answer += [int(leap_nak), to_hms(ends)]
 
   return answer
 

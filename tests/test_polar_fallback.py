@@ -142,7 +142,7 @@ class HistoricalRegressionTests(unittest.TestCase):
     anchor = sunrise(jd, vardo)[0]
     self.assertGreaterEqual(anchor, jd)
     _set_jd, set_hms = sunset(jd, vardo)
-    self.assertLess(set_hms[0], 24)  # sunset also renders inside the day
+    self.assertEqual(set_hms, [24, 0, 0])  # midnight-sun set = end of civil day (24:00)
 
 
 class EdgeContinuityTests(unittest.TestCase):

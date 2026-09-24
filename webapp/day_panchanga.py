@@ -115,7 +115,7 @@ def probe_moon_event(jd, place, civil, rise=True):
   local_hours = (times[0] - t0) * 24.0
   if not 0.0 <= local_hours < 24.0:
     return None, "none_today"
-  return format_time(panchanga.to_dms(local_hours)), "ok"
+  return format_time(panchanga.to_hms(local_hours)), "ok"
 
 
 def _interval_from_hms(start_hms, end_hms):

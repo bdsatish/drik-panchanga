@@ -17,9 +17,10 @@ from panchanga import (
   yamaganda_kalam, gulika_kalam, durmuhurtam, abhijit_muhurta, pratah_sandhya, elapsed_year, samvatsara,
   samvatsara_north, samvatsara_north_modern, ritu, drik_ritu, drik_ritu_at, lunar_masa, raasi, lunar_phase, new_moon,
   full_moon, local_time_to_jdut1, sweph_version, ephemeris_fingerprint, default_se_ephe_path, get_planet_name, to_dms,
-  to_dms_prec, unwrap_angles, lon_relative_to_base, inverse_lagrange, mean_longitude, norm360, bisection_search,
-  sidereal_saptarshi_nakshatra, saptarshi_nakshatra_traditional, set_nakshatra_system, set_chosen_ayanamsa,
-  set_ayanamsa_mode, set_coordinate_mode, set_coordinate_selection, reset_ayanamsa_mode, solar_longitude)
+  to_hms, format_hms, format_hms_from_jd, to_dms_prec, unwrap_angles, lon_relative_to_base, inverse_lagrange,
+  mean_longitude, norm360, bisection_search, sidereal_saptarshi_nakshatra, saptarshi_nakshatra_traditional,
+  set_nakshatra_system, set_chosen_ayanamsa, set_ayanamsa_mode, set_coordinate_mode, set_coordinate_selection,
+  reset_ayanamsa_mode, solar_longitude)
 
 bangalore = Place(12.972, 77.594, +5.5)
 shillong = Place(25.569, 91.883, +5.5)
@@ -56,11 +57,11 @@ class SunriseSetTests(PanchangaTestCase):
 
   def test_moonset(self):
     local, hms = moonset(date2, bangalore)
-    self.assertEqual(hms, [24, 14, 11])
+    self.assertEqual(hms, [24, 14, 12])
     self.assertAlmostEqual(local, moonset_jd(date2, bangalore))
 
   def test_sunrise(self):
-    self.assertEqual(sunrise(date2, bangalore)[1], [6, 49, 46])
+    self.assertEqual(sunrise(date2, bangalore)[1], [6, 49, 47])
 
   def test_sunset(self):
     self.assertEqual(sunset(date2, bangalore)[1], [18, 10, 25])
@@ -69,10 +70,8 @@ class SunriseSetTests(PanchangaTestCase):
     self.assertEqual(vaara(date2), 5)
 
   def test_karana_helsinki(self):
-    # Karana 14 is the 2nd half of tithi 7 (ends 12:54:19 above), matching
-    # tithi(date2, helsinki). The old pin [12, 54, 20] came from evaluating
-    # the phase at the local-valued sunrise JD (tz off by 2 h) instead of UT.
-    self.assertEqual(karana(date2, helsinki), [14, [12, 54, 19]])
+    # Karana 14 is the 2nd half of tithi 7; end time is rounded via to_hms.
+    self.assertEqual(karana(date2, helsinki), [14, [12, 54, 20]])
 
   def test_karana_number_matches_tithi(self):
     # Karana n spans phase [(n-1)*6, n*6); tithi m spans [(m-1)*12, m*12).
@@ -101,41 +100,41 @@ class VarjyamTests(PanchangaTestCase):
     delhi = Place(28.6139, 77.2090, 5.5)
     v = varjyam(jd, delhi)
     self.assertEqual(len(v), 2)
-    self.assertEqual(v, [[[7, 12, 6], [8, 42, 56]], [[26, 21, 48], [27, 55, 30]]])
+    self.assertEqual(v, [[[7, 12, 6], [8, 42, 56]], [[26, 21, 49], [27, 55, 30]]])
 
   def test_varjyam_helsinki_summer(self):
     jd = gregorian_to_jd(Date(2026, 6, 21))
     v = varjyam(jd, helsinki)
-    self.assertEqual(v, [[[13, 27, 21], [15, 6, 44]]])
+    self.assertEqual(v, [[[13, 27, 21], [15, 6, 45]]])
 
   def test_varjyam_helsinki_winter(self):
     jd = gregorian_to_jd(Date(2026, 12, 21))
     v = varjyam(jd, helsinki)
-    self.assertEqual(v, [[[20, 25, 38], [21, 52, 5]]])
+    self.assertEqual(v, [[[20, 25, 38], [21, 52, 6]]])
 
   def test_varjyam_reykjavik_midnight_sun(self):
     jd = gregorian_to_jd(Date(2026, 6, 21))
     reykjavik = Place(64.15, -21.94, 0.0)
     v = varjyam(jd, reykjavik)
-    self.assertEqual(v, [[[11, 27, 21], [13, 6, 44]]])
+    self.assertEqual(v, [[[11, 27, 21], [13, 6, 45]]])
 
   def test_varjyam_reykjavik_spring_two_periods(self):
     jd = gregorian_to_jd(Date(2026, 3, 21))
     reykjavik = Place(64.15, -21.94, 0.0)
     v = varjyam(jd, reykjavik)
-    self.assertEqual(v, [[[15, 25, 11], [16, 53, 51]], [[27, 56, 48], [29, 25, 8]]])
+    self.assertEqual(v, [[[15, 25, 12], [16, 53, 52]], [[27, 56, 49], [29, 25, 8]]])
 
   def test_varjyam_southern_hemisphere(self):
     jd = gregorian_to_jd(Date(2026, 1, 15))
     cape_town = Place(-33.92, 18.42, +2.0)
     v = varjyam(jd, cape_town)
-    self.assertEqual(v, [[[5, 46, 17], [7, 33, 13]]])
+    self.assertEqual(v, [[[5, 46, 18], [7, 33, 14]]])
 
   def test_varjyam_wraps_past_midnight(self):
     jd = gregorian_to_jd(Date(2026, 12, 15))
     fairbanks = Place(64.84, -147.72, -9.0)
     v = varjyam(jd, fairbanks)
-    self.assertEqual(v, [[[30, 18, 7], [32, 0, 0]]])
+    self.assertEqual(v, [[[30, 18, 8], [32, 0, 1]]])
     for start, end in v:
       self.assertGreaterEqual(start[0], 24)
 
@@ -143,7 +142,7 @@ class VarjyamTests(PanchangaTestCase):
     """Transit fallback anchors varjyam even when the sun never rises."""
     jd = gregorian_to_jd(Date(2026, 12, 21))
     tromso = Place(69.65, 18.96, +1.0)
-    self.assertEqual(varjyam(jd, tromso), [[[19, 25, 38], [20, 52, 5]]])
+    self.assertEqual(varjyam(jd, tromso), [[[19, 25, 38], [20, 52, 6]]])
 
   def test_varjyam_computes_at_polar_day(self):
     """Transit fallback anchors varjyam even when the sun never sets."""
@@ -152,14 +151,14 @@ class VarjyamTests(PanchangaTestCase):
     # Anchor = lower transit of the day window (solar midnight); value
     # changed from the pre-window-transit-fallback fix, which sampled at a
     # 47-hour-class anchor for east-of-meridian edge cases.
-    self.assertEqual(varjyam(jd, tromso), [[[12, 27, 21], [14, 6, 44]]])
+    self.assertEqual(varjyam(jd, tromso), [[[12, 27, 21], [14, 6, 45]]])
 
   def test_varjyam_polar_shoulder_still_computes(self):
     jd = gregorian_to_jd(Date(2026, 3, 15))
     tromso = Place(69.65, 18.96, +1.0)
     v = varjyam(jd, tromso)
     self.assertEqual(len(v), 1)
-    self.assertEqual(v, [[[29, 29, 29], [31, 7, 14]]])
+    self.assertEqual(v, [[[29, 29, 30], [31, 7, 14]]])
 
   def test_varjyam_empty_day_returns_empty_list(self):
     jd = gregorian_to_jd(Date(2025, 1, 26))
@@ -197,12 +196,12 @@ class TithiTests(PanchangaTestCase):
   def test_apr24_bangalore(self):
     apr24 = gregorian_to_jd(Date(2010, 4, 24))
     result = tithi(apr24, bangalore)
-    self.assertEqual(result, [10, [6, 9, 29], 11, [27, 33, 58]])
+    self.assertEqual(result, [10, [6, 9, 30], 11, [27, 33, 59]])
 
   def test_feb3_bangalore(self):
     feb3 = gregorian_to_jd(Date(2013, 2, 3))
     result = tithi(feb3, bangalore)
-    self.assertEqual(result, [22, [8, 14, 6], 23, [30, 33, 17]])
+    self.assertEqual(result, [22, [8, 14, 7], 23, [30, 33, 18]])
 
   def test_apr19_helsinki(self):
     apr19 = gregorian_to_jd(Date(2013, 4, 19))
@@ -467,6 +466,38 @@ class HelperMathTests(PanchangaTestCase):
     degrees, minutes, seconds = to_dms_prec(12.5)
     self.assertEqual([degrees, minutes], [12, 30])
     self.assertAlmostEqual(seconds, 0, places=5)
+
+  def test_to_hms_rounds_with_carry(self):
+    # Times use round-to-nearest second; angles keep truncating via to_dms.
+    self.assertEqual(to_hms(1 + 30 / 60 + 0.4 / 3600), [1, 30, 0])
+    self.assertEqual(to_hms(1 + 30 / 60 + 0.6 / 3600), [1, 30, 1])
+    self.assertEqual(to_hms(1 + 59 / 60 + 59.6 / 3600), [2, 0, 0])
+    self.assertEqual(to_hms(25.5), [25, 30, 0])  # past midnight stays >= 24
+
+  def test_format_hms_hours_past_midnight(self):
+    # Never wrap with % 24: 23:59:30+ becomes 24:00, and 26 h stays 26:xx.
+    self.assertEqual(format_hms([23, 59, 29]), "23:59")
+    self.assertEqual(format_hms([23, 59, 30]), "24:00")
+    self.assertEqual(format_hms([24, 0, 0]), "24:00")
+    self.assertEqual(format_hms([25, 30, 0]), "25:30")
+    self.assertEqual(format_hms(26.0), "26:00")
+    self.assertEqual(format_hms([5, 44, 30]), "05:44")
+    self.assertEqual(format_hms([5, 44, 30], show_seconds=True), "05:44:30")
+    self.assertEqual(format_hms([24, 0, 0], show_seconds=True), "24:00:00")
+    self.assertEqual(format_hms(0.0), "00:00")  # zero duration / start-of-day
+
+  def test_format_hms_from_jd_keeps_24_00(self):
+    # civil_jd = UTC midnight of the local civil day; local = civil + tz/24.
+    civil_jd = 2460000.5  # arbitrary *.5 civil midnight UT
+    tz = 5.5
+    # 23:59:30 local -> (23+59.5/60 - tz) hours UT past civil midnight
+    local_hours = 23 + 59.5 / 60.0
+    jd_ut = civil_jd + (local_hours - tz) / 24.0
+    self.assertEqual(format_hms_from_jd(jd_ut, civil_jd, tz), "24:00")
+    # Ordinary morning stays 00:xx when anchored on this civil day.
+    local_hours = 0 + 5 / 60.0
+    jd_ut = civil_jd + (local_hours - tz) / 24.0
+    self.assertEqual(format_hms_from_jd(jd_ut, civil_jd, tz), "00:05")
 
   def test_unwrap_angles(self):
     self.assertEqual(unwrap_angles([350, 10, 20]), [350, 370, 380])
@@ -796,12 +827,12 @@ class CalendarUtilityTests(PanchangaTestCase):
 
   def test_moonrise_jd_matches_moonrise(self):
     rise_jd = moonrise_jd(date2, bangalore)
-    self.assertEqual(moonrise(date2, bangalore)[1], to_dms((rise_jd - date2) * 24))
+    self.assertEqual(moonrise(date2, bangalore)[1], to_hms((rise_jd - date2) * 24))
     self.assertEqual(moonrise(date2, bangalore)[0], rise_jd)
 
   def test_moonset_jd_matches_moonset(self):
     set_jd = moonset_jd(date2, bangalore)
-    self.assertEqual(moonset(date2, bangalore)[1], to_dms((set_jd - date2) * 24))
+    self.assertEqual(moonset(date2, bangalore)[1], to_hms((set_jd - date2) * 24))
     self.assertEqual(moonset(date2, bangalore)[0], set_jd)
 
   def test_nakshatra_end_point_equal_and_unequal(self):
@@ -907,31 +938,31 @@ class MuhurtaTests(PanchangaTestCase):
     hours, as_dms = day_duration(date2, bangalore)
     self.assertGreater(hours, 10)
     self.assertLess(hours, 14)
-    self.assertEqual(as_dms, to_dms(hours))
+    self.assertEqual(as_dms, to_hms(hours))
 
   def test_night_duration(self):
     hours, as_dms = night_duration(date2, bangalore)
     self.assertGreater(hours, 10)
     self.assertLess(hours, 14)
-    self.assertEqual(as_dms, to_dms(hours))
+    self.assertEqual(as_dms, to_hms(hours))
     # Day + following night ≈ sunrise-to-sunrise span (~24 h).
     day_h, _ = day_duration(date2, bangalore)
     self.assertAlmostEqual(day_h + hours, 24.0, delta=0.01)
 
   def test_night_duration_multi_location(self):
     cases = (
-      (bangalore, date2, [12, 39, 26]),
-      (bangalore, date_summer, [11, 14, 15]),
+      (bangalore, date2, [12, 39, 27]),
+      (bangalore, date_summer, [11, 14, 16]),
       (shillong, date2, [13, 22, 8]),
-      (ujjain, date2, [13, 13, 23]),
-      (helsinki, date2, [17, 22, 44]),  # long winter night
-      (helsinki, date_summer, [5, 27, 12]),  # short summer night
+      (ujjain, date2, [13, 13, 24]),
+      (helsinki, date2, [17, 22, 45]),  # long winter night
+      (helsinki, date_summer, [5, 27, 13]),  # short summer night
       (london, date2, [15, 42, 28]),
     )
     for place, jd, expected_hms in cases:
       hours, as_dms = night_duration(jd, place)
       self.assertEqual(as_dms, expected_hms, msg=place)
-      self.assertEqual(as_dms, to_dms(hours))
+      self.assertEqual(as_dms, to_hms(hours))
       day_h, _ = day_duration(jd, place)
       self.assertAlmostEqual(day_h + hours, 24.0, delta=0.05, msg=place)
 
@@ -963,15 +994,15 @@ class MuhurtaTests(PanchangaTestCase):
   def test_pratah_sandhya_multi_location_pins(self):
     # Geometric (no-refraction) sunrise end; start = sunrise - previous_night/15.
     cases = (
-      (bangalore, date2, [5, 59, 7], [6, 49, 46]),
+      (bangalore, date2, [5, 59, 7], [6, 49, 47]),
       (bangalore, date_summer, [5, 13, 27], [5, 58, 24]),
       (shillong, date2, [5, 20, 35], [6, 14, 7]),
-      (shillong, date_summer, [3, 54, 39], [4, 36, 16]),
-      (ujjain, date2, [6, 21, 9], [7, 14, 6]),
-      (ujjain, date_summer, [5, 3, 27], [5, 45, 46]),
-      (helsinki, date2, [8, 3, 31], [9, 13, 19]),
-      (helsinki, date_summer, [2, 43, 42], [3, 5, 31]),
-      (london, date2, [6, 59, 59], [8, 2, 59]),
+      (shillong, date_summer, [3, 54, 39], [4, 36, 17]),
+      (ujjain, date2, [6, 21, 10], [7, 14, 7]),
+      (ujjain, date_summer, [5, 3, 28], [5, 45, 46]),
+      (helsinki, date2, [8, 3, 32], [9, 13, 20]),
+      (helsinki, date_summer, [2, 43, 43], [3, 5, 32]),
+      (london, date2, [6, 59, 59], [8, 3, 0]),
       (london, date_summer, [3, 19, 44], [3, 50, 7]),
     )
     for place, jd, start_hms, end_hms in cases:
