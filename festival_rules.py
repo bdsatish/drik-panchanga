@@ -307,20 +307,25 @@ def civil_day_has_eclipse(civil_date, geopos, timezone_name):
 
 
 def postpone_upakarma_if_eclipse(primary, fallback, geopos, timezone_name):
-  """Use fallback when a visible lunar eclipse peaks on a primary date."""
+  """Postpone each primary date to its own year's fallback on a local eclipse.
+
+    Each primary date is paired with the fallback of its own Gregorian year,
+    so only the eclipsed year's date moves; every other year keeps its date.
+    """
   if not primary:
     return list(fallback)
   if geopos is not None and timezone_name is None:
     log.error("Upakarma eclipse check skipped: no timezone name")
     return list(primary)
-  eclipse_on_primary = False
-  if geopos is not None:
-    for civil_date in primary:
-      if civil_day_has_eclipse(civil_date, geopos, timezone_name):
-        eclipse_on_primary = True
-        break
-  selected = fallback if eclipse_on_primary and fallback else primary
-  return list(selected)
+  fallback_by_year = {civil_date.year: civil_date for civil_date in fallback}
+  selected = []
+  for civil_date in primary:
+    fallback_date = fallback_by_year.get(civil_date.year)
+    if fallback_date and civil_day_has_eclipse(civil_date, geopos, timezone_name):
+      selected.append(fallback_date)
+    else:
+      selected.append(civil_date)
+  return selected
 
 
 def select_yajur_upakarma_dates(records, geopos=None, timezone_name=None):
