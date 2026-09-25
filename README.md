@@ -5,13 +5,9 @@ Observational Indian lunisolar calendar (Hindu Drig-ganita Panchanga) using
 the Swiss Ephemeris.
 
 Computes the five essentials — tithi, nakshatra, yoga, karana, vaara — with
-end times, plus sunrise, sunset, moonrise and moonset
-(Hindu day: ``[sunrise, next sunrise)``). Lunar months can be
+end times, plus sunrise, sunset, moonrise and moonset. Lunar months can be
 named in either amānta or pūrṇimānta reckoning. Accurate from 5000 BCE to
-5000 CE. All timings are end timings. Times use a hours-past-midnight clock that
-may run past 24:00 (e.g. ``26:15`` = 02:15 next civil morning); ``23:59:30``
-rounds to ``24:00``, never wraps to ``00:00``. The Hindu day itself runs
-sunrise to sunrise. Format with ``datetime_helper.format_hms`` / ``format_hms_from_jd``.
+5000 CE.
 
 Requirements
 ------------
@@ -61,49 +57,33 @@ datetime_helper.format_hms([23, 59, 30])             # "24:00"
 datetime_helper.format_local_hm(jd_ut, "Asia/Kolkata")  # UT JD -> local HH:MM
 ```
 
-Moonrise / moonset
-~~~~~~~~~~~~~~~~~~
+All timings are end timings. Times are `[hours, minutes, seconds]` in the
+place's local civil time, counted from civil midnight. The Hindu day runs
+from sunrise to the next sunrise, so a time after midnight reads `24:00` or
+later (e.g. `26:15` = 02:15 the next morning), and `23:59:30` rounds to
+`24:00`, never to `00:00`.
 
-``moonrise`` / ``moonset`` return the event in ``[sunrise, next sunrise)`` for
-that civil ``jd``, or ``None``. Hours are past that day's civil midnight
-(``24:00+`` if the event is after the next civil midnight). A rise at 00:40
-before sunrise belongs on the **previous** civil row as ``24:40``, not again
-next morning as ``00:40``.
+Angles are sidereal longitudes in `[degrees, minutes, seconds]`. Negative
+years in `Date` are proleptic Gregorian (works back to 5000 BCE). Available
+ayanamsas: `citra`, `revati`, `rohini`, `pushya`, `mula`, `krishnamurti`,
+`raman` — or `panchanga.set_coordinate_mode("tropical")` for sāyana
+positions.
 
-``moonrise_jd`` / ``moonset_jd`` are low-level Swiss Ephemeris helpers (first
-event after **local midnight**). Prefer ``moonrise`` / ``moonset`` for
-calendars and for Sankashtahara Chaturthi (K4 at Hindu-day moonrise).
+Above the polar circles, `sunrise()` and `sunset()` fall back to the Sun's
+meridian transit on days without a real sunrise or sunset; see
+[Polar regions](docs/README.CALENDARS.md#polar-regions).
 
-``00:xx`` can still appear when the day's sunrise anchor itself sits just after
-civil midnight (midnight sun); that is the anchor time, not a wrap bug.
+### Moonrise and moonset
 
-Times are `[hours, minutes, seconds]` in the place's local civil time. Angles
-are sidereal longitudes in `[degrees, minutes, seconds]`. Negative years in
-`Date` are proleptic Gregorian (works back to 5000 BCE). Available ayanamsas:
-`citra`, `revati`, `rohini`, `pushya`, `mula`, `krishnamurti`, `raman` — or
-`panchanga.set_coordinate_mode("tropical")` for sāyana positions.
+`moonrise` / `moonset` return the event in `[sunrise, next sunrise)` for that
+civil `jd`, or `None`. Hours are past that day's civil midnight (`24:00+` if
+the event is after the next civil midnight). A rise at 00:40 before sunrise
+belongs on the **previous** civil row as `24:40`, not again next morning as
+`00:40`.
 
-Polar regions
--------------
-
-Above the polar circles the Sun can go days or months without rising or
-setting. `sunrise()`/`sunset()` still return an anchor on every such day by
-falling back to the matching meridian transit, which exists at every latitude
-on every day:
-
-- **Polar night** — sunrise and sunset both anchor at the upper transit (the
-  noon glow): day length 0, night 24 h, as observed.
-- **Midnight sun** — sunrise anchors at the lower transit (solar midnight) and
-  sunset at the next day's lower transit: day length 24 h, night 0 h.
-
-Both transits sit within ~30 minutes of the real sunrises on the days just
-outside the polar period, so tithi, nakshatra, yoga, karaṇa and the derived
-kalas (Rahu Kala, Abhijit, Durmuhurta, Varjyam, sandhya) stay continuous
-across the polar edges. Solar-dependent intervals degrade truthfully: in
-polar night, Rahu Kala etc. collapse to the transit instant (there is no
-daylight to divide); in midnight sun they stretch to 1/8 of 24 h. Calendar
-PDFs and the web UI therefore generate for any city on any date; no visual
-marker distinguishes transit-anchored days from real sunrise days.
+`moonrise_jd` / `moonset_jd` are low-level Swiss Ephemeris helpers (first
+event after **local midnight**). Prefer `moonrise` / `moonset` for calendars
+and for Sankashtahara Chaturthi (K4 at Hindu-day moonrise).
 
 Calendar PDFs
 -------------
@@ -123,13 +103,6 @@ pushya, mula, krishnamurti, raman, tropical), `--festivals FILE.cfg`, and
 configuration: [docs/README.CALENDARS.md](docs/README.CALENDARS.md) and
 [docs/README.FESTIVALS.md](docs/README.FESTIVALS.md).
 
-For development setup (venv, ephemeris download), run
-`./scripts/setup_venv.sh`. Tests:
-
-```
-python -m unittest discover -s tests -t . -p 'test_*.py'
-```
-
 Web UI
 ------
 
@@ -144,9 +117,27 @@ python -m webapp.app    # then open http://127.0.0.1:8765/
 Enter a city, then look up a day's panchanga, download either calendar PDF,
 or export the 14-month span as iCal (.ics). Alternatively switch to
 Coordinates and enter decimal latitude/longitude plus a UTC offset in hours
-(e.g. `5.5`, no DST) — useful for places missing from `data/cities.json`. When the City field is left
-blank, the app suggests a city from the visitor's IP via a third-party GeoIP
-service (ip-api.com, plain HTTP — their free tier has no HTTPS).
+(e.g. `5.5`, no DST) — useful for places missing from `data/cities.json`.
+When the City field is left blank, the app suggests a city from the
+visitor's IP via a third-party GeoIP service (ip-api.com, plain HTTP — their
+free tier has no HTTPS).
+
+Development
+-----------
+
+From a repository checkout:
+
+```
+./scripts/setup_venv.sh
+source .venv/bin/activate
+python -m unittest discover -s tests -t . -p 'test_*.py'
+```
+
+`setup_venv.sh` creates `.venv`, installs pyswisseph, ReportLab and Flask,
+and offers to download the Swiss Ephemeris `.se1` files (~100 MB from
+[aloistr/swisseph](https://github.com/aloistr/swisseph/tree/master/ephe))
+into the default location. To use your own copy, run
+`SE_EPHE_PATH=/path/to/ephemeris/files ./scripts/setup_venv.sh`.
 
 Accuracy
 --------
@@ -174,7 +165,6 @@ Licence
 
 Copyright © Satish BD. Licensed under the GNU Affero GPL version 3 (or later).
 The bundled IndUni-H fonts are GPL-2.0+ (see `fonts/README.txt`).
-
 
 Word of caution
 ---------------

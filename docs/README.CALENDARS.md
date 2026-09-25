@@ -43,6 +43,31 @@ actually in effect after it: `28:17` becomes `29:17` on a spring-forward row,
 and `31:05` becomes `30:05` on a fall-back row. The *DST starts* / *DST ends*
 label stays on the civil date where the offset changes.
 
+Polar regions
+-------------
+
+Above the polar circles the Sun can go days or months without rising or
+setting. `sunrise()`/`sunset()` still return an anchor on every such day by
+falling back to the matching meridian transit, which exists at every latitude
+on every day:
+
+- **Polar night** — sunrise and sunset both anchor at the upper transit (the
+  noon glow): day length 0, night 24 h, as observed.
+- **Midnight sun** — sunrise anchors at the lower transit (solar midnight) and
+  sunset at the next day's lower transit: day length 24 h, night 0 h.
+
+Both transits sit within ~30 minutes of the real sunrises on the days just
+outside the polar period, so tithi, nakshatra, yoga, karaṇa and the derived
+kalas (Rahu Kala, Abhijit, Durmuhurta, Varjyam, sandhya) stay continuous
+across the polar edges. Solar-dependent intervals degrade truthfully: in
+polar night, Rahu Kala etc. collapse to the transit instant (there is no
+daylight to divide); in midnight sun they stretch to 1/8 of 24 h. Calendar
+PDFs and the web UI therefore generate for any city on any date; no visual
+marker distinguishes transit-anchored days from real sunrise days.
+
+`00:xx` can still appear when the day's sunrise anchor itself sits just after
+civil midnight (midnight sun); that is the anchor time, not a wrap bug.
+
 One-page legend
 ---------------
 
@@ -72,23 +97,6 @@ its local maximum time and that date's sunrise (`None` when none qualify).
 Ruleset and layout versions are printed at the top right and embedded in the
 PDF metadata so a generated calendar can be reproduced or compared after rule
 changes.
-
-Development setup
------------------
-
-```
-./scripts/setup_venv.sh
-source .venv/bin/activate
-```
-
-The script creates a venv, installs `pyswisseph` + ReportLab + Flask, and
-optionally downloads the Swiss Ephemeris `.se1` data files (~100 MB from
-[aloistr/swisseph](https://github.com/aloistr/swisseph/tree/master/ephe))
-into the default location. To use your own copy:
-
-```
-SE_EPHE_PATH=/path/to/ephemeris/files ./scripts/setup_venv.sh
-```
 
 Festivals
 ---------
