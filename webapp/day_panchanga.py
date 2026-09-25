@@ -11,7 +11,7 @@ import math
 from functools import partial
 
 import panchanga
-from datetime_helper import format_hms, format_local_hm, gregorian_to_jd
+from datetime_helper import Date, format_hms, format_local_hm, gregorian_to_jd
 from generate_panchanga_calendar import (
   ayanamsa_label,
   body_altitude_at_local_noon,
@@ -43,7 +43,7 @@ def parse_civil_date(text):
     raise ValueError("Year 0 is not used; use negative years for BCE")
   if not 1 <= month <= 12 or not _day_in_proleptic_gregorian_year(year, month, day):
     raise ValueError(f"Invalid date {text!r}")
-  return panchanga.Date(year, month, day)
+  return Date(year, month, day)
 
 
 def _day_in_proleptic_gregorian_year(year, month, day):
@@ -147,8 +147,7 @@ def _compute_day_details_unlocked(location, civil, amanta=None, coordinate_selec
   """Compute all mode-sensitive panchanga fields for one civil day.
 
     Shared by the JSON day API and the ICS generator so both consume the
-    same normalized day record.  ``civil`` has ``year``/``month``/``day``
-    attributes (``panchanga.Date`` or ``datetime.date``).
+    same normalized day record.  ``civil`` is a ``datetime_helper.Date``.
 
     Works at every latitude: above the polar circles the day anchors at the
     matching meridian transit (solar noon in polar night, solar midnight in

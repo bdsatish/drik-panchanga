@@ -3,7 +3,7 @@
 from calendar import monthrange
 from datetime import datetime, timezone
 
-from datetime_helper import format_hms
+from datetime_helper import Date, format_hms
 from generate_panchanga_calendar import (
   coordinate_selection_label,
   location_slug,
@@ -88,16 +88,9 @@ def generate_ics(location, start_year, start_month, month_system="amanta", coord
     ]
     for year, month in month_range(start_year, start_month):
       for day in range(1, monthrange(year, month)[1] + 1):
-        civil = panchanga.Date(year, month, day)
+        civil = Date(year, month, day)
         d = _ics_date(civil)
-        days_in_month = monthrange(civil.year, civil.month)[1]
-        if civil.day < days_in_month:
-          next_civil = panchanga.Date(civil.year, civil.month, civil.day + 1)
-        elif civil.month < 12:
-          next_civil = panchanga.Date(civil.year, civil.month + 1, 1)
-        else:
-          next_civil = panchanga.Date(civil.year + 1, 1, 1)
-        nxt = _ics_date(next_civil)
+        nxt = _ics_date(civil + 1)
         details = _compute_day_details_unlocked(location, civil, amanta=amanta,
                                                 coordinate_selection=coordinate_selection)
         names = details["names"]

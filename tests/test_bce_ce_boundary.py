@@ -1,6 +1,6 @@
 """BCE/CE boundary locks for the proleptic-Gregorian year-0 path.
 
-``panchanga.Date`` uses astronomical year numbering on the proleptic
+``datetime_helper.Date`` uses astronomical year numbering on the proleptic
 Gregorian calendar: year 0 is 1 BCE, year -1 is 2 BCE, and there is no
 missing "year zero" in the Julian Day sequence. Python ``datetime``
 rejects year <= 0, so calendar code substitutes a CE proxy year
@@ -23,9 +23,9 @@ import unittest
 import swisseph as swe
 
 import panchanga
-from datetime_helper import gregorian_to_jd, local_time_to_jdut1
+from datetime_helper import Date, gregorian_to_jd, local_time_to_jdut1
 from tests import local_hms
-from panchanga import (Date, Place, ahargana, elapsed_year, lunar_longitude, reset_ayanamsa_mode, set_ayanamsa_mode,
+from panchanga import (Place, ahargana, elapsed_year, lunar_longitude, reset_ayanamsa_mode, set_ayanamsa_mode,
                        set_chosen_ayanamsa, set_nakshatra_system, solar_longitude, vaara)
 from generate_panchanga_calendar import Location, place_for_date
 

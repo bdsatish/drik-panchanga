@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 import panchanga
-from datetime_helper import (gregorian_to_jd, jd_to_local_civil_date, julian_day_from_datetime, tzinfo_for,
+from datetime_helper import (Date, gregorian_to_jd, jd_to_local_civil_date, julian_day_from_datetime, tzinfo_for,
                              utc_offset_hours)
 
 log = logging.getLogger(__name__)
@@ -18,7 +18,7 @@ log.addHandler(logging.NullHandler())
 def _event_jd_ut(civil_date, geopos, timezone_name, getter):
   """UT JD of a local event, or None if missing / sentinel."""
   place = _place_for_civil(civil_date, geopos, timezone_name)
-  jd = gregorian_to_jd(panchanga.Date(civil_date.year, civil_date.month, civil_date.day))
+  jd = gregorian_to_jd(civil_date)
   try:
     event = getter(jd, place)
   except Exception:
@@ -120,7 +120,7 @@ def format_festival_dates(dates):
         break
     consecutive = True
     for index in range(1, len(dates)):
-      if dates[index] != dates[index - 1] + timedelta(days=1):
+      if dates[index] != dates[index - 1] + 1:
         consecutive = False
         break
     if len(dates) == 1 or not same_month or not consecutive:
@@ -163,7 +163,7 @@ def resolve_vriddhi_dates(dates):
   resolved = []
   previous = None
   for civil_date in sorted(dates):
-    if previous is not None and civil_date == previous + timedelta(days=1):
+    if previous is not None and civil_date == previous + 1:
       previous = civil_date
       continue
     resolved.append(civil_date)
@@ -183,7 +183,7 @@ def select_kshaya_dates(records, tithi, masa=None, allow_adhika=False):
   for record, following in zip(ordered, ordered[1:]):
     civil_date, day_tithi, day_masa = record.civil_date, record.tithi, record.masa
     next_date, next_tithi, next_masa = following.civil_date, following.tithi, following.masa
-    if next_date != civil_date + timedelta(days=1):
+    if next_date != civil_date + 1:
       continue
     start_tithi = plain_tithi_number(day_tithi)
     end_tithi = plain_tithi_number(next_tithi)
@@ -244,9 +244,9 @@ def select_varamahalakshmi_dates(records):
   """Friday strictly before non-adhika Sravana Purnima (S15)."""
   selected = []
   for purnima_date in select_plain_tithi_dates(records, 5, "S15"):
-    vrata_date = purnima_date - timedelta(days=1)
+    vrata_date = purnima_date - 1
     while vrata_date.weekday() != calendar.FRIDAY:
-      vrata_date -= timedelta(days=1)
+      vrata_date -= 1
     selected.append(vrata_date)
   return selected
 
@@ -299,7 +299,7 @@ def hindu_day_has_eclipse(civil_date, geopos, timezone_name):
   if geopos is None:
     return False
   start_jd = _event_jd_ut(civil_date, geopos, timezone_name, panchanga.sunrise)
-  end_jd = _event_jd_ut(civil_date + timedelta(days=1), geopos, timezone_name, panchanga.sunrise)
+  end_jd = _event_jd_ut(civil_date + 1, geopos, timezone_name, panchanga.sunrise)
   if start_jd is None or end_jd is None:
     log.warning("Sunrise unavailable for %s; eclipse test uses the civil day", civil_date)
     day_start = datetime(civil_date.year, civil_date.month, civil_date.day, tzinfo=tzinfo_for(timezone_name))
@@ -441,7 +441,7 @@ def _sunset_tithi_skipped(records, geopos, timezone_name):
   ordered = sorted(records, key=lambda r: r.civil_date)
   kshaya_dates = []
   for record, following in zip(ordered, ordered[1:]):
-    if following.civil_date != record.civil_date + timedelta(days=1):
+    if following.civil_date != record.civil_date + 1:
       continue
     sunset_jd = _sunset_jd_ut(record.civil_date, geopos, timezone_name)
     next_sunset_jd = _sunset_jd_ut(following.civil_date, geopos, timezone_name)
@@ -502,7 +502,7 @@ def _moonrise_tithi_skipped(records, geopos, timezone_name, target_tithi):
   ordered = sorted(records, key=lambda r: r.civil_date)
   kshaya_dates = []
   for record, following in zip(ordered, ordered[1:]):
-    if following.civil_date != record.civil_date + timedelta(days=1):
+    if following.civil_date != record.civil_date + 1:
       continue
     moonrise_jd = _moonrise_jd_ut(record.civil_date, geopos, timezone_name)
     next_moonrise_jd = _moonrise_jd_ut(following.civil_date, geopos, timezone_name)
@@ -610,14 +610,14 @@ def select_solstice_dates(records, solstice_longitude, timezone_name=None):
   local_timezone = timezone_name or "UTC"
   selected = []
   for year in years:
-    start_jd = gregorian_to_jd(panchanga.Date(year, 1, 1))
+    start_jd = gregorian_to_jd(Date(year, 1, 1))
     flags = panchanga.swe.FLG_SWIEPH | panchanga.swe.FLG_TROPICAL
     solstice_jd = panchanga.swe.solcross_ut(float(solstice_longitude), start_jd, flags)
     solstice_date = jd_to_local_civil_date(solstice_jd, local_timezone)
     for offset in range(-2, 2):
       # Timezones can shift the displayed solstice date; the exact UT
       # comparison below determines which nearby sunrise qualifies.
-      civil_date = solstice_date + timedelta(days=offset)
+      civil_date = solstice_date + offset
       record = records_by_date.get(civil_date)
       if record is not None and record.sunrise_jd > solstice_jd:
         selected.append(civil_date)
@@ -752,8 +752,7 @@ def _place_for_civil(civil_date, geopos, timezone_name):
 
 def _sunrise_tithi_end_jd_ut(civil_date, place):
   """UT Julian day when the tithi prevailing at sunrise on ``civil_date`` ends."""
-  jd = gregorian_to_jd(panchanga.Date(civil_date.year, civil_date.month, civil_date.day))
-  return panchanga.tithi(jd, place)[1]
+  return panchanga.tithi(gregorian_to_jd(civil_date), place)[1]
 
 
 def shraddha_tithi_at_aparahna(record, geopos, timezone_name):
@@ -763,7 +762,7 @@ def shraddha_tithi_at_aparahna(record, geopos, timezone_name):
   daylight duration and lunar phase come from the existing panchāṅga helpers;
   no sunrise-tithi approximation is used.
   """
-  jd = gregorian_to_jd(panchanga.Date(record.civil_date.year, record.civil_date.month, record.civil_date.day))
+  jd = gregorian_to_jd(record.civil_date)
   place = _place_for_civil(record.civil_date, geopos, timezone_name)
   try:
     daylight_hours = panchanga.day_duration(jd, place)[0]
@@ -798,7 +797,7 @@ def classify_ekadashi_upavasa(records_by_date, upavasa_date):
     raise KeyError(f"no DayRecord for upavasa date {upavasa_date}")
   if record.tithi not in EKADASHI_TITHIS:
     return "kshaya"
-  following = records_by_date.get(upavasa_date + timedelta(days=1))
+  following = records_by_date.get(upavasa_date + 1)
   if following is not None and following.tithi == record.tithi:
     return "vriddhi"
   return "normal"
@@ -823,7 +822,7 @@ def ekadashi_parana_for_upavasa(records_by_date, upavasa_date, geopos, timezone_
   Returns ``EkadashiParana``, or ``None`` when the next civil day is missing
   from ``records_by_date`` (no sunrise / outside the loaded window).
   """
-  parana_date = upavasa_date + timedelta(days=1)
+  parana_date = upavasa_date + 1
   parana_record = records_by_date.get(parana_date)
   if parana_record is None:
     return None

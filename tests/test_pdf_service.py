@@ -7,7 +7,7 @@ import sys
 import unittest
 from unittest import mock
 
-from datetime_helper import format_hms_from_jd, gregorian_to_jd
+from datetime_helper import Date, format_hms_from_jd, gregorian_to_jd
 from webapp import cgi_handlers
 from webapp.app import app
 from webapp.day_panchanga import _interval, compute_day_panchanga
@@ -152,7 +152,7 @@ class IcsServiceTests(unittest.TestCase):
     ics = unfold_ics(generate_ics(load_location("Tirupati"), 2026, 1))
     self.assertEqual(ics.count("Varjyam:"), ics.count("BEGIN:VEVENT"))
     # 01:02:03 and 04:05:06 IST on the 1 January row.
-    jan1 = gregorian_to_jd(panchanga.Date(2026, 1, 1))
+    jan1 = gregorian_to_jd(Date(2026, 1, 1))
     stub = [(jan1 + (1 + 2 / 60 + 3 / 3600 - 5.5) / 24, jan1 + (4 + 5 / 60 + 6 / 3600 - 5.5) / 24)]
     with mock.patch.object(panchanga, "varjyam", return_value=stub):
       stubbed = unfold_ics(generate_ics(load_location("Tirupati"), 2026, 1))

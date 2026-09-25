@@ -69,7 +69,6 @@ def default_se_ephe_path():
   return os.path.join(base, 'swisseph')
 
 
-Date = struct('Date', ['year', 'month', 'day'])
 Place = struct('Place', ['latitude', 'longitude', 'timezone'])
 
 sidereal_year = 365.256360417  # From WolframAlpha

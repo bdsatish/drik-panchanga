@@ -1,6 +1,5 @@
 """Regression tests for the 12-month wall-grid panchanga PDF."""
 
-from datetime import date, timedelta
 from io import BytesIO
 from pathlib import Path
 import re
@@ -8,7 +7,7 @@ from tempfile import TemporaryDirectory
 import unittest
 from unittest import mock
 
-from datetime_helper import gregorian_to_jd
+from datetime_helper import Date, gregorian_to_jd
 from generate_monthly_calendar import (
   MONTHLY_LAYOUT_VERSION,
   RULESET_VERSION,
@@ -110,7 +109,7 @@ class DayDetailsTests(unittest.TestCase):
   def test_day_details_returns_leap_tithi(self):
     location = load_location("Ujjain")
     # 2026-06-15 has a leap tithi (Amavasya + Pratipada)
-    tithi_lines, _naks_lines, _yoga_names = day_details(location, date(2026, 6, 15))
+    tithi_lines, _naks_lines, _yoga_names = day_details(location, Date(2026, 6, 15))
     self.assertEqual(len(tithi_lines), 2)
     self.assertEqual(tithi_lines[0][0], "K15")
     self.assertEqual(tithi_lines[1][0], "S1")
@@ -118,13 +117,13 @@ class DayDetailsTests(unittest.TestCase):
   def test_day_details_returns_leap_nakshatra(self):
     location = load_location("Ujjain")
     # 2026-06-12 has a leap nakshatra
-    tithi_lines, naks_lines, _yoga_names = day_details(location, date(2026, 6, 12))
+    tithi_lines, naks_lines, _yoga_names = day_details(location, Date(2026, 6, 12))
     self.assertEqual(len(naks_lines), 2)
 
   def test_day_details_returns_skipped_yoga_names(self):
     location = load_location("Ujjain")
     # 2026-06-10: Ayushman ends 06:27, Saubhagya is entirely skipped within the day
-    _tithi_lines, _naks_lines, yoga_names = day_details(location, date(2026, 6, 10))
+    _tithi_lines, _naks_lines, yoga_names = day_details(location, Date(2026, 6, 10))
     self.assertEqual(yoga_names, ["Āyuṣmān", "Saubhāgya"])
 
   def test_day_details_computes_at_polar_day_and_night(self):
@@ -132,7 +131,7 @@ class DayDetailsTests(unittest.TestCase):
     # every sunrise-based quantity was undefined. The core sunrise() transit
     # fallback now anchors these days, so real end times render instead.
     location = load_location("Murmansk, RU")
-    for day in (date(2026, 6, 21), date(2026, 12, 21)):
+    for day in (Date(2026, 6, 21), Date(2026, 12, 21)):
       with self.subTest(day=day):
         details = day_details(location, day)
         self.assertIsNotNone(details)
@@ -144,7 +143,7 @@ class DayDetailsTests(unittest.TestCase):
   def test_day_details_still_computes_at_polar_shoulder(self):
     # Murmansk does see a sunrise outside the polar day/night window.
     location = load_location("Murmansk, RU")
-    tithi_lines, naks_lines, yoga_names = day_details(location, date(2026, 3, 15))
+    tithi_lines, naks_lines, yoga_names = day_details(location, Date(2026, 3, 15))
     self.assertTrue(tithi_lines and naks_lines and yoga_names)
 
 
@@ -152,7 +151,7 @@ class SunMoonTests(unittest.TestCase):
 
   def test_sun_moon_lines_for_known_day(self):
     location = load_location("Ujjain")
-    lines = sun_moon_lines(location, date(2026, 6, 1))
+    lines = sun_moon_lines(location, Date(2026, 6, 1))
     self.assertEqual(len(lines), 2)
     self.assertTrue(lines[0].startswith("Sun:"))
     self.assertTrue(lines[1].startswith("Moon:"))
@@ -165,7 +164,7 @@ class SunMoonTests(unittest.TestCase):
     # anchors: solar-noon pair in polar night (day length 0), solar-midnight
     # pair in midnight sun (day length 24 h).
     location = load_location("Murmansk, RU")
-    for day, expected_set_hour in ((date(2026, 12, 21), 12), (date(2026, 6, 21), 24)):
+    for day, expected_set_hour in ((Date(2026, 12, 21), 12), (Date(2026, 6, 21), 24)):
       with self.subTest(day=day):
         lines = sun_moon_lines(location, day)
         sun_lines = [line for line in lines if line.startswith("Sun:")]
@@ -181,7 +180,7 @@ class SunMoonTests(unittest.TestCase):
     # no sunset, rendered as ``--``). The transit fallback now supplies both,
     # so the full ``rise – set`` line renders.
     location = load_location("Norilsk, RU")
-    lines = sun_moon_lines(location, date(2026, 5, 20))
+    lines = sun_moon_lines(location, Date(2026, 5, 20))
     sun_lines = [line for line in lines if line.startswith("Sun:")]
     self.assertEqual(len(sun_lines), 1)
     self.assertRegex(sun_lines[0], r"^Sun: \(\d\d:\d\d –\) \d\d:\d\d – \d\d:\d\d$")
@@ -190,7 +189,7 @@ class SunMoonTests(unittest.TestCase):
   def test_sun_moon_lines_render_sunset_only(self):
     # The mirror case: no sunrise, but a sunset worth printing.
     with mock.patch("generate_monthly_calendar.panchanga.sunrise", return_value=0.0):
-      lines = sun_moon_lines(load_location("Ujjain"), date(2026, 6, 1))
+      lines = sun_moon_lines(load_location("Ujjain"), Date(2026, 6, 1))
     sun_lines = [line for line in lines if line.startswith("Sun:")]
     self.assertEqual(len(sun_lines), 1)
     self.assertRegex(sun_lines[0], r"^Sun: -- – \d\d:\d\d$")
@@ -198,7 +197,7 @@ class SunMoonTests(unittest.TestCase):
   def test_sun_moon_lines_omit_sun_when_both_are_missing(self):
     with mock.patch("generate_monthly_calendar.panchanga.sunrise", return_value=0.0), mock.patch(
         "generate_monthly_calendar.panchanga.sunset", return_value=0.0):
-      lines = sun_moon_lines(load_location("Ujjain"), date(2026, 6, 1))
+      lines = sun_moon_lines(load_location("Ujjain"), Date(2026, 6, 1))
     self.assertFalse([line for line in lines if line.startswith("Sun:")])
 
 
@@ -212,19 +211,19 @@ class DstClockTests(unittest.TestCase):
   """
 
   def test_tithi_end_after_dst_start(self):
-    tithi_lines, _naks_lines, _yoga_names = day_details(load_location("Helsinki"), date(2026, 3, 28))
+    tithi_lines, _naks_lines, _yoga_names = day_details(load_location("Helsinki"), Date(2026, 3, 28))
     # S11 ends 02:17 UT on the 29th, after the change: the stale +2 read
     # 28:17, the clock says 29:17.
     self.assertEqual(tithi_lines[0], ("S11", "29:17"))
 
   def test_moonset_after_dst_start(self):
-    lines = sun_moon_lines(load_location("Helsinki"), date(2026, 3, 28))
+    lines = sun_moon_lines(load_location("Helsinki"), Date(2026, 3, 28))
     moon_line = [line for line in lines if line.startswith("Moon:")][0]
     # Was 29:15 with the stale +2; after the change the clock reads 30:15.
     self.assertTrue(moon_line.endswith("– 30:15"))
 
   def test_moonset_after_dst_end(self):
-    lines = sun_moon_lines(load_location("Helsinki"), date(2026, 10, 24))
+    lines = sun_moon_lines(load_location("Helsinki"), Date(2026, 10, 24))
     moon_line = [line for line in lines if line.startswith("Moon:")][0]
     # Was 31:05 with the stale +3; after the change the clock reads 30:05.
     self.assertTrue(moon_line.endswith("– 30:05"))
@@ -239,23 +238,23 @@ class CellDrawTests(unittest.TestCase):
     from festival_rules import DayRecord
     context = {
       "records_by_date": {
-        date(2026, 6, 16): DayRecord(date(2026, 6, 16), "S2", 1, 1, "5", False, 0.0)
+        Date(2026, 6, 16): DayRecord(Date(2026, 6, 16), "S2", 1, 1, "5", False, 0.0)
       },
       "festival_names_by_date": {},
       "eclipse_dates": set(),
       "eclipse_details_by_date": {},
       "masa_badges": {},
       "solar_by_date": {
-        date(2026, 6, 16): (3, 1, True)
+        Date(2026, 6, 16): (3, 1, True)
       },
       "shraddha_tithis": {
-        date(2026, 6, 16): 7
+        Date(2026, 6, 16): 7
       },
       "ekadashi": set(),
       "pradosham": set(),
       "sankashti": set(),
     }
-    draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 16, date(2026, 6, 16), load_location("Ujjain"), context, col=0)
+    draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 16, Date(2026, 6, 16), load_location("Ujjain"), context, col=0)
     solar_calls = [c for c in pdf.drawString.call_args_list if c.args[2] in ("Mithuna 1", " / [S7]")]
     self.assertEqual(len(solar_calls), 2)
     self.assertEqual(solar_calls[0].args[2], "Mithuna 1")
@@ -267,7 +266,7 @@ class CellDrawTests(unittest.TestCase):
     from festival_rules import DayRecord
     context = {
       "records_by_date": {
-        date(2026, 6, 15): DayRecord(date(2026, 6, 15), "K15", 1, 1, "5", False, 0.0)
+        Date(2026, 6, 15): DayRecord(Date(2026, 6, 15), "K15", 1, 1, "5", False, 0.0)
       },
       "festival_names_by_date": {},
       "eclipse_dates": set(),
@@ -280,7 +279,7 @@ class CellDrawTests(unittest.TestCase):
     }
     with mock.patch("generate_monthly_calendar.day_details", return_value=([("K15", "08:24"),
                                                                             ("S1", "28:31")], [], ["Śūla"])):
-      draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 15, date(2026, 6, 15), load_location("Ujjain"), context, col=0)
+      draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 15, Date(2026, 6, 15), load_location("Ujjain"), context, col=0)
     drawn_text = [c.args[2] for c in pdf.drawString.call_args_list]
     self.assertIn("Śrāvaṇa K15 08:24", drawn_text)
     self.assertIn("Śrāvaṇa S1 28:31", drawn_text)
@@ -293,7 +292,7 @@ class CellDrawTests(unittest.TestCase):
     from festival_rules import DayRecord
     context = {
       "records_by_date": {
-        date(2026, 6, 21): DayRecord(date(2026, 6, 21), "K7", 1, 1, "5", False, 0.0)
+        Date(2026, 6, 21): DayRecord(Date(2026, 6, 21), "K7", 1, 1, "5", False, 0.0)
       },
       "festival_names_by_date": {},
       "eclipse_dates": set(),
@@ -305,7 +304,7 @@ class CellDrawTests(unittest.TestCase):
       "sankashti": set(),
     }
     with mock.patch("generate_monthly_calendar.day_details", return_value=None):
-      draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 21, date(2026, 6, 21), load_location("Ujjain"), context, col=0)
+      draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 21, Date(2026, 6, 21), load_location("Ujjain"), context, col=0)
     drawn_text = [c.args[2] for c in pdf.drawString.call_args_list]
     # Graceful degradation: a None from day_details renders an empty cell,
     # never garbage end times.
@@ -317,20 +316,20 @@ class CellDrawTests(unittest.TestCase):
     from festival_rules import DayRecord
     context = {
       "records_by_date": {
-        date(2026, 6, 16): DayRecord(date(2026, 6, 16), "S2", 1, 1, "5", False, 0.0)
+        Date(2026, 6, 16): DayRecord(Date(2026, 6, 16), "S2", 1, 1, "5", False, 0.0)
       },
       "festival_names_by_date": {},
       "eclipse_dates": set(),
       "eclipse_details_by_date": {},
       "masa_badges": {
-        date(2026, 6, 16): "5"
+        Date(2026, 6, 16): "5"
       },
       "solar_by_date": {},
       "ekadashi": set(),
       "pradosham": set(),
       "sankashti": set(),
     }
-    draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 16, date(2026, 6, 16), load_location("Ujjain"), context, col=0)
+    draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 16, Date(2026, 6, 16), load_location("Ujjain"), context, col=0)
     fill_colors = [c.args[0] for c in pdf.setFillColor.call_args_list]
     from generate_panchanga_calendar import MASA_START_ROW
     self.assertIn(MASA_START_ROW, fill_colors)
@@ -341,7 +340,7 @@ class VarjyamTests(unittest.TestCase):
   def test_varjyam_lines_two_windows_on_nakshatra_change_day(self):
     from generate_monthly_calendar import varjyam_lines
     location = load_location("Ujjain")
-    lines = varjyam_lines(location, date(2026, 6, 14))
+    lines = varjyam_lines(location, Date(2026, 6, 14))
     self.assertEqual(len(lines), 2)
     for line in lines:
       self.assertTrue(line.startswith("Varjyam: "))
@@ -350,7 +349,7 @@ class VarjyamTests(unittest.TestCase):
     ensure_pdf_fonts()
     pdf = mock.Mock()
     from festival_rules import DayRecord
-    civil = date(2026, 6, 14)
+    civil = Date(2026, 6, 14)
     context = {
       "records_by_date": {
         civil: DayRecord(civil, "S30", 1, 1, "5", False, 0.0)
@@ -431,7 +430,7 @@ class YearLabelTests(unittest.TestCase):
     from generate_monthly_calendar import year_label_for_month
 
     panchanga.set_coordinate_selection("citra")
-    civil = date(2026, 6, 15)
+    civil = Date(2026, 6, 15)
     records_by_date = {civil: DayRecord(civil, "K15", 5, 7, "3", False, 0.0)}
     label = year_label_for_month(True, 2026, 6, records_by_date)
     self.assertEqual(label, "Parābhava 1948, Siddhārthī 2083, Kali (elapsed) 5127")
@@ -446,7 +445,7 @@ class YearLabelTests(unittest.TestCase):
     import panchanga
     # Underlying month 1 (Caitra), Krsna paksha -> purnimanta displays as 2 (Vaisakha).
     # Year label must use the underlying month, not the display month.
-    civil = date(2026, 4, 15)
+    civil = Date(2026, 4, 15)
     records_by_date = {civil: DayRecord(civil, "K20", 1, 1, "1", False, 0.0)}
     with mock.patch.object(panchanga, "elapsed_year", return_value=(5127, 1948, 2083)) as mock_elapsed, \
          mock.patch.object(panchanga, "samvatsara", return_value=1) as mock_samvatsara, \
@@ -523,8 +522,7 @@ class DstLabelInjectionTests(unittest.TestCase):
     ctx = collect_context(months, location, DEFAULT_FESTIVALS_PATH, amanta=True)
     dst_labels = ctx["dst_labels_by_date"]
     # Mar 29, 2026 is DST start for Helsinki
-    from datetime import date
-    self.assertIn("DST starts", dst_labels.get(date(2026, 3, 29), []))
+    self.assertIn("DST starts", dst_labels.get(Date(2026, 3, 29), []))
 
   def test_collect_context_includes_dst_end(self):
     from generate_monthly_calendar import collect_context
@@ -533,8 +531,7 @@ class DstLabelInjectionTests(unittest.TestCase):
     ctx = collect_context(months, location, DEFAULT_FESTIVALS_PATH, amanta=True)
     dst_labels = ctx["dst_labels_by_date"]
     # Oct 25, 2026 is DST end for Helsinki
-    from datetime import date
-    self.assertIn("DST ends", dst_labels.get(date(2026, 10, 25), []))
+    self.assertIn("DST ends", dst_labels.get(Date(2026, 10, 25), []))
 
   def test_collect_context_no_dst_for_non_dst_zone(self):
     from generate_monthly_calendar import collect_context
@@ -558,7 +555,7 @@ class IsoWeekNumberTests(unittest.TestCase):
     # Sunday Jan 4, 2026 is in ISO week 1, but Monday Jan 5 is week 2.
     # The Sunday cell must show W2 to match Mon–Sat in its row.
     from festival_rules import DayRecord
-    civil = date(2026, 1, 4)
+    civil = Date(2026, 1, 4)
     record = DayRecord(civil, "S1", 1, 1, "5", False, 0.0)
     context = {
       "records_by_date": {
@@ -584,7 +581,7 @@ class IsoWeekNumberTests(unittest.TestCase):
     location = load_location("Ujjain")
     # Sunday Dec 28, 2025 is ISO week 52, but Monday Dec 29 is week 1.
     from festival_rules import DayRecord
-    civil = date(2025, 12, 28)
+    civil = Date(2025, 12, 28)
     record = DayRecord(civil, "S1", 1, 1, "5", False, 0.0)
     context = {
       "records_by_date": {
@@ -611,7 +608,7 @@ class IsoWeekNumberTests(unittest.TestCase):
     # Sunday Jan 3, 2027 is ISO week 53 of 2026, but Mon Jan 4 is week 1.
     # The Sunday cell must show W1 (the week containing the Thursday).
     from festival_rules import DayRecord
-    civil = date(2027, 1, 3)
+    civil = Date(2027, 1, 3)
     record = DayRecord(civil, "S1", 1, 1, "5", False, 0.0)
     context = {
       "records_by_date": {
@@ -640,36 +637,36 @@ class EkadashiNameTests(unittest.TestCase):
     return DayRecord(civil, tithi, 1, 1, masa, is_adhika, 0.0)
 
   def test_amanta_sukla_uses_same_month(self):
-    record = self._record(date(2026, 3, 29), "S11", "1")
+    record = self._record(Date(2026, 3, 29), "S11", "1")
     self.assertEqual(ekadashi_name(record, amanta=True), "Kāmadā Ekādaśī")
 
   def test_amanta_krsna_names_from_same_month_entry(self):
-    record = self._record(date(2026, 4, 13), "K11", "1")
+    record = self._record(Date(2026, 4, 13), "K11", "1")
     self.assertEqual(ekadashi_name(record, amanta=True), "Varūthinī Ekādaśī")
 
   def test_purnimanta_krsna_shifts_back_one_month(self):
-    record = self._record(date(2026, 4, 13), "K11", "1")
+    record = self._record(Date(2026, 4, 13), "K11", "1")
     self.assertEqual(ekadashi_name(record, amanta=False), "Varūthinī Ekādaśī")
 
   def test_year_boundary_krsna_wraps_to_phalguna(self):
-    record = self._record(date(2026, 3, 15), "K11", "12")
+    record = self._record(Date(2026, 3, 15), "K11", "12")
     self.assertEqual(ekadashi_name(record, amanta=False), "Pāpamocanī Ekādaśī")
 
   def test_adhika_sukla_is_padmini_and_krsna_is_parama(self):
-    sukla = self._record(date(2026, 5, 26), "S11", "A3", True)
-    krsna = self._record(date(2026, 6, 11), "K11", "A3", True)
+    sukla = self._record(Date(2026, 5, 26), "S11", "A3", True)
+    krsna = self._record(Date(2026, 6, 11), "K11", "A3", True)
     self.assertEqual(ekadashi_name(sukla, amanta=True), "Padminī Ekādaśī")
     self.assertEqual(ekadashi_name(krsna, amanta=True), "Paramā Ekādaśī")
 
   def test_kshaya_dvadasi_sunrise_keeps_ekadashi_name(self):
-    record = self._record(date(2026, 7, 11), "K12", "3")
+    record = self._record(Date(2026, 7, 11), "K12", "3")
     self.assertEqual(ekadashi_name(record, amanta=True), "Yoginī Ekādaśī")
 
   def test_ekadashi_name_drawn_only_in_teal_cells(self):
     from festival_rules import DayRecord
     ensure_pdf_fonts()
     location = load_location("Ujjain")
-    civil = date(2026, 8, 9)
+    civil = Date(2026, 8, 9)
     record = DayRecord(civil, "K11", 1, 1, "4", False, 0.0)
     base_context = {
       "records_by_date": {
@@ -705,7 +702,7 @@ class EkadashiNameTests(unittest.TestCase):
     from festival_rules import DayRecord
     ensure_pdf_fonts()
     location = load_location("Ujjain")
-    civil = date(2026, 6, 26)
+    civil = Date(2026, 6, 26)
     record = DayRecord(civil, "S12", 1, 1, "3", False, 2461217.5)
     context = {
       "records_by_date": {
@@ -737,9 +734,9 @@ class EkadashiNameTests(unittest.TestCase):
     from festival_rules import DayRecord, EkadashiParana
     ensure_pdf_fonts()
     location = load_location("Ujjain")
-    civil = date(2026, 6, 26)
+    civil = Date(2026, 6, 26)
     record = DayRecord(civil, "S12", 1, 1, "3", False, 2461217.5)
-    parana = EkadashiParana(date(2026, 6, 25), civil, 2461217.5, 2461217.5 + 4 / 60.0, "normal")
+    parana = EkadashiParana(Date(2026, 6, 25), civil, 2461217.5, 2461217.5 + 4 / 60.0, "normal")
     context = {
       "records_by_date": {
         civil: record
@@ -791,7 +788,7 @@ class FestivalBarColorTests(unittest.TestCase):
   def test_pradosham_bar_is_purple(self):
     from generate_monthly_calendar import PURPLE
     pdf = mock.Mock()
-    civil = date(2026, 6, 11)
+    civil = Date(2026, 6, 11)
     context = self._base_context(pradosham={civil})
     draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 11, civil, load_location("Ujjain"), context, col=0)
     self.assertIn(PURPLE, self._fill_colors(pdf))
@@ -799,7 +796,7 @@ class FestivalBarColorTests(unittest.TestCase):
   def test_sankashti_bar_is_indigo(self):
     from generate_monthly_calendar import INDIGO
     pdf = mock.Mock()
-    civil = date(2026, 6, 11)
+    civil = Date(2026, 6, 11)
     context = self._base_context(sankashti={civil})
     draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 11, civil, load_location("Ujjain"), context, col=0)
     self.assertIn(INDIGO, self._fill_colors(pdf))
@@ -807,7 +804,7 @@ class FestivalBarColorTests(unittest.TestCase):
   def test_ekadashi_bar_is_teal(self):
     from generate_monthly_calendar import TEAL
     pdf = mock.Mock()
-    civil = date(2026, 6, 11)
+    civil = Date(2026, 6, 11)
     context = self._base_context(ekadashi={civil})
     draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 11, civil, load_location("Ujjain"), context, col=0)
     self.assertIn(TEAL, self._fill_colors(pdf))

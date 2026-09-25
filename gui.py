@@ -31,7 +31,7 @@ from time import strptime
 from pytz import timezone
 from datetime import datetime
 from panchanga import *
-from datetime_helper import format_hms, format_hms_from_jd, gregorian_to_jd
+from datetime_helper import Date, format_hms, format_hms_from_jd, gregorian_to_jd
 import difflib
 
 # begin wxGlade: extracode

@@ -8,7 +8,7 @@ import logging
 import re
 import sys
 from collections import namedtuple as struct
-from datetime import date as CivilDate, datetime
+from datetime import datetime
 from pathlib import Path
 
 try:
@@ -21,8 +21,8 @@ except ImportError:
 from festival_rules import (DayRecord, ekadashi_dates_from_records, find_local_eclipses, load_festival_selection,
                             resolve_festivals, select_pradosham_dates, select_sankashti_chaturthi_dates)
 import panchanga
-from datetime_helper import (fixed_offset_name, format_local_hm, format_utc_offset, gregorian_to_jd, hindu_day_civil,
-                             jd_to_local_civil_date, local_range_jds, utc_offset_hours)
+from datetime_helper import (Date, fixed_offset_name, format_local_hm, format_utc_offset, gregorian_to_jd,
+                             hindu_day_civil, jd_to_local_civil_date, local_range_jds, utc_offset_hours)
 
 MONTH_COUNT = 14
 DEFAULT_CITIES_PATH = Path(__file__).parent / "data" / "cities.json"
@@ -678,7 +678,7 @@ def daily_records(months, location):
   result = []
   for year, month in months:
     for day in range(1, calendar.monthrange(year, month)[1] + 1):
-      date = panchanga.Date(year, month, day)
+      date = Date(year, month, day)
       place = place_for_date(location, date)
       jd = gregorian_to_jd(date)
       tithi_number = panchanga.tithi(jd, place)[0]
@@ -686,8 +686,8 @@ def daily_records(months, location):
       yoga_number = panchanga.yoga(jd, place)[0]
       masa_number, is_adhika = panchanga.masa(jd, place, amanta=True, tithi_number=tithi_number)
       result.append(
-        DayRecord(CivilDate(year, month, day), tithi_code(tithi_number), nakshatra_number, yoga_number,
-                  masa_code(masa_number, is_adhika), is_adhika, panchanga.sunrise(jd, place)))
+        DayRecord(date, tithi_code(tithi_number), nakshatra_number, yoga_number, masa_code(masa_number, is_adhika),
+                  is_adhika, panchanga.sunrise(jd, place)))
   return result
 
 
@@ -777,15 +777,14 @@ def draw_month(pdf, year, month, records_by_date, masa_badges, festivals_by_date
   rows_top = header_top - COLUMN_HEADER_HEIGHT
   for index in range(31):
     day = index + 1
-    civil_date = (CivilDate(year, month, day) if day <= calendar.monthrange(year, month)[1] else None)
+    civil_date = (Date(year, month, day) if day <= calendar.monthrange(year, month)[1] else None)
     record = records_by_date.get(civil_date)
     row_y = rows_top - (index + 1) * ROW_HEIGHT
     is_sunday = False
     if record is None:
       pdf.setFillColor(MISSING_ROW)
     else:
-      weekday = datetime(year, month, day).weekday()
-      is_sunday = weekday == calendar.SUNDAY
+      is_sunday = civil_date.weekday() == calendar.SUNDAY
       if index % 2:
         pdf.setFillColor(ALT_ROW)
       else:
@@ -875,9 +874,9 @@ def kali_ahargana_range(months):
   """Return Kali Ahargana values for the first and last printed civil dates."""
   start_year, start_month = months[0]
   end_year, end_month = months[-1]
-  start_jd = gregorian_to_jd(panchanga.Date(start_year, start_month, 1))
+  start_jd = gregorian_to_jd(Date(start_year, start_month, 1))
   end_day = calendar.monthrange(end_year, end_month)[1]
-  end_jd = gregorian_to_jd(panchanga.Date(end_year, end_month, end_day))
+  end_jd = gregorian_to_jd(Date(end_year, end_month, end_day))
   return int(panchanga.ahargana(start_jd)), int(panchanga.ahargana(end_jd))
 
 
@@ -886,7 +885,7 @@ def calendar_year_label(records, amanta=True):
   representative = records[len(records) // 2]
   civil = representative.civil_date
   masa_num = int(representative.masa.lstrip("A"))
-  jd = gregorian_to_jd(panchanga.Date(civil.year, civil.month, civil.day))
+  jd = gregorian_to_jd(civil)
   kali_year, saka_year, vikrama_year = panchanga.elapsed_year(jd, masa_num)
   names = sanskrit_names()["samvats"]
   saka_name = names[str(panchanga.samvatsara(jd, masa_num))]
@@ -1010,9 +1009,9 @@ def build_pdf(location, start_year, start_month, output_path, festivals_path=Non
     recurring = require_recurring(recurring)
     panchanga.set_coordinate_selection(coordinate_selection)
     months = month_range(start_year, start_month)
-    range_start = CivilDate(start_year, start_month, 1)
+    range_start = Date(start_year, start_month, 1)
     end_year, end_month = months[-1]
-    range_end = CivilDate(end_year, end_month, calendar.monthrange(end_year, end_month)[1])
+    range_end = Date(end_year, end_month, calendar.monthrange(end_year, end_month)[1])
     header_year, header_month = months[len(months) // 2]
 
     context_months = context_month_range(start_year, start_month)

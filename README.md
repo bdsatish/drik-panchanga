@@ -29,39 +29,45 @@ Using `panchanga.py` as a library
 The core module works standalone — no Flask, no ReportLab:
 
 ```python
-import datetime_helper
 import panchanga
+from datetime_helper import Date, format_hms, format_hms_from_jd, format_local_hm, gregorian_to_jd
 
 panchanga.set_chosen_ayanamsa("citra")
-place = panchanga.Place(12.972, 77.594, +5.5)  # lat, lon, timezone hours
-jd = datetime_helper.gregorian_to_jd(panchanga.Date(2026, 1, 15))
+place = panchanga.Place(12.972, 77.594, +5.5)  # lat, lon, UTC offset hours that day
+day = Date(2026, 1, 15)
+jd = gregorian_to_jd(day)
 
-panchanga.tithi(jd, place)        # [27, [20, 17, 1]]  -> tithi 27, ends 20:17:01
-panchanga.nakshatra(jd, place)    # [18, [29, 46, 1]]  -> Jyeshtha, end time
-panchanga.yoga(jd, place)         # [11, [20, 34, 38]]
+panchanga.tithi(jd, place)        # [27, 2461056.1160]  -> tithi 27; end as a UT Julian day
+panchanga.nakshatra(jd, place)    # [18, 2461056.5111]  -> Jyeshtha
+panchanga.yoga(jd, place)         # [11, 2461056.1282]
 panchanga.vaara(jd)               # 4 (Thursday, 0 = Sunday)
-panchanga.masa(jd, place)         # [10, False]        -> Pausha, not adhika
-panchanga.sunrise(jd, place)      # [jd, [6, 49, 18]]  -> local sunrise 06:49:18
-panchanga.sunset(jd, place)       # [jd, [18, 8, 40]]  -> local sunset
-panchanga.moonrise(jd, place)     # [jd, [h,m,s]] or None — Hindu day only
+panchanga.masa(jd, place)         # [10, False]         -> Pausha, not adhika
+panchanga.sunrise(jd, place)      # 2461055.5551        (UT)
+panchanga.sunset(jd, place)       # 2461056.0269
+panchanga.moonrise(jd, place)     # UT JD or None — Hindu day only
 panchanga.moonset(jd, place)      # same window: [sunrise, next sunrise)
-panchanga.pratah_sandhya(jd, place)  # [[5, 10, 59], [5, 56, 18]]  start, end
-panchanga.trikalam(jd, place, option="rahu")   # Rahu Kala interval
-panchanga.durmuhurtam(jd, place)               # Durmuhurta intervals
+panchanga.pratah_sandhya(jd, place)  # [start, end]; end is sunrise
+panchanga.trikalam(jd, place, option="rahu")   # Rahu Kala [start, end]
+panchanga.durmuhurtam(jd, place)               # one or two [start, end] intervals
 panchanga.planetary_positions(jd, place)       # all grahas, sidereal
-panchanga.gauri_chogadiya(jd, place)           # 16 Choghadiya boundaries
+panchanga.gauri_chogadiya(jd, place)           # 16 Choghadiya end times
 
-# Display (hours past civil midnight; never % 24):
-datetime_helper.format_hms([26, 15, 0])              # "26:15"
-datetime_helper.format_hms([23, 59, 30])             # "24:00"
-datetime_helper.format_local_hm(jd_ut, "Asia/Kolkata")  # UT JD -> local HH:MM
+# Display: the zone (and DST) is applied here, never in the maths.
+end = panchanga.tithi(jd, place)[1]
+format_local_hm(end, "Asia/Kolkata", anchor_civil=day)                     # "20:17"
+format_local_hm(end, "Asia/Kolkata", anchor_civil=day, show_seconds=True)  # "20:17:02"
+format_hms_from_jd(end, jd, 5.5)                                           # "20:17", fixed offset
+format_hms([26, 15, 0])                                                    # "26:15"
 ```
 
-All timings are end timings. Times are `[hours, minutes, seconds]` in the
-place's local civil time, counted from civil midnight. The Hindu day runs
-from sunrise to the next sunrise, so a time after midnight reads `24:00` or
-later (e.g. `26:15` = 02:15 the next morning), and `23:59:30` rounds to
-`24:00`, never to `00:00`.
+All timings are end timings. Event functions return UT Julian days;
+`place.timezone` only locates the local midnight that opens the civil day.
+`format_local_hm` shows a UT Julian day as hours past `anchor_civil`'s
+midnight, at the UTC offset in force at that instant, so a DST change
+mid-row needs no special handling. The Hindu day runs from sunrise to the
+next sunrise, so a time after midnight reads `24:00` or later (e.g. `26:15`
+= 02:15 the next morning), `23:59:30` rounds to `24:00`, never to `00:00`,
+and a window that opens the previous evening reads `-00:26`.
 
 Angles are sidereal longitudes in `[degrees, minutes, seconds]`. Negative
 years in `Date` are proleptic Gregorian (works back to 5000 BCE). Available
@@ -75,11 +81,11 @@ meridian transit on days without a real sunrise or sunset; see
 
 ### Moonrise and moonset
 
-`moonrise` / `moonset` return the event in `[sunrise, next sunrise)` for that
-civil `jd`, or `None`. Hours are past that day's civil midnight (`24:00+` if
-the event is after the next civil midnight). A rise at 00:40 before sunrise
-belongs on the **previous** civil row as `24:40`, not again next morning as
-`00:40`.
+`moonrise` / `moonset` return the UT Julian day of the event in
+`[sunrise, next sunrise)` for that civil `jd`, or `None`. Anchored on that
+day, an event after the next civil midnight reads `24:00+`. A rise at 00:40
+before sunrise belongs on the **previous** civil row as `24:40`, not again
+next morning as `00:40`.
 
 `moonrise_jd` / `moonset_jd` are low-level Swiss Ephemeris helpers (first
 event after **local midnight**). Prefer `moonrise` / `moonset` for calendars

@@ -5,13 +5,13 @@ from threading import Event, Lock, Thread
 from unittest.mock import patch
 
 import panchanga
-from datetime_helper import gregorian_to_jd
+from datetime_helper import Date, gregorian_to_jd
 from webapp.day_panchanga import compute_day_panchanga
 
 
 def _ist(hours, minutes, seconds):
   """UT JD of an IST clock time on 21 April 2023."""
-  return gregorian_to_jd(panchanga.Date(2023, 4, 21)) + (hours + minutes / 60 + seconds / 3600 - 5.5) / 24
+  return gregorian_to_jd(Date(2023, 4, 21)) + (hours + minutes / 60 + seconds / 3600 - 5.5) / 24
 
 
 class DayPanchangaMasaRituTests(unittest.TestCase):
@@ -171,8 +171,8 @@ class DayPanchangaMasaRituTests(unittest.TestCase):
     for bad in ("31/04/2026", "30/02/2026", "29/02/2023", "00/01/2026", "32/01/2026", "01/13/2026"):
       with self.assertRaises(ValueError):
         parse_civil_date(bad)
-    self.assertEqual(parse_civil_date("29/02/2024"), panchanga.Date(2024, 2, 29))
-    self.assertEqual(parse_civil_date("18/01/-3101"), panchanga.Date(-3101, 1, 18))
+    self.assertEqual(parse_civil_date("29/02/2024"), Date(2024, 2, 29))
+    self.assertEqual(parse_civil_date("18/01/-3101"), Date(-3101, 1, 18))
     # Year 0 stays rejected (astronomical numbering: use -1 for 1 BCE).
     with self.assertRaises(ValueError):
       parse_civil_date("18/01/0")

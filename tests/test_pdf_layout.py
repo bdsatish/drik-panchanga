@@ -1,6 +1,5 @@
 """Regression tests for the generated one-page calendar layout."""
 
-from datetime import date
 from io import BytesIO
 from pathlib import Path
 import re
@@ -10,7 +9,7 @@ from unittest import mock
 
 from reportlab.pdfgen.canvas import Canvas
 
-from datetime_helper import dst_transitions, format_utc_offset
+from datetime_helper import Date, dst_transitions, format_utc_offset
 from festival_rules import DayRecord
 from generate_panchanga_calendar import (
   ACCENT,
@@ -193,7 +192,7 @@ class PdfLayoutTests(unittest.TestCase):
 
   def test_calendar_year_label_uses_both_samvatsara_conventions(self):
     records = [
-      DayRecord(date(2026, 8, 15), "S1", 1, 1, "A4", True, 0.0),
+      DayRecord(Date(2026, 8, 15), "S1", 1, 1, "A4", True, 0.0),
     ]
     self.assertEqual(calendar_year_label(records), "1948 Parābhava | 2083 Siddhārthī | 5127 Kali (elapsed)")
 
@@ -201,7 +200,7 @@ class PdfLayoutTests(unittest.TestCase):
     # Underlying month 1 (Caitra), Krsna paksha -> purnimanta displays as 2 (Vaisakha).
     # Samvatsara must use the underlying month, not the display month.
     records = [
-      DayRecord(date(2026, 4, 15), "K20", 1, 1, "1", False, 0.0),
+      DayRecord(Date(2026, 4, 15), "K20", 1, 1, "1", False, 0.0),
     ]
     with mock.patch("generate_panchanga_calendar.panchanga") as mock_panchanga, \
          mock.patch("generate_panchanga_calendar.gregorian_to_jd", return_value=2450000.0):
@@ -312,7 +311,7 @@ class MasaBadgeTests(unittest.TestCase):
     """Draw one badge-bearing day and return ``(badge_text, font_size)``."""
     ensure_pdf_fonts()
     pdf = Canvas(BytesIO())
-    civil = date(2026, 5, 17)
+    civil = Date(2026, 5, 17)
     record = DayRecord(civil, "S1", 5, 7, badge, is_adhika, 0.0)
     drawn = []
     active_size = []
@@ -349,10 +348,10 @@ class SpecialWeekdayTests(unittest.TestCase):
 
   def test_special_weekday_dates(self):
     from generate_panchanga_calendar import special_weekday_dates
-    monday = date(2026, 1, 5)
-    tuesday = date(2026, 1, 6)
-    friday = date(2026, 1, 16)
-    saturday = date(2026, 1, 10)
+    monday = Date(2026, 1, 5)
+    tuesday = Date(2026, 1, 6)
+    friday = Date(2026, 1, 16)
+    saturday = Date(2026, 1, 10)
     self.assertEqual(monday.weekday(), 0)
     self.assertEqual(tuesday.weekday(), 1)
     self.assertEqual(friday.weekday(), 4)
@@ -377,7 +376,7 @@ class RecurringUnderlineTests(unittest.TestCase):
     from generate_panchanga_calendar import draw_month
     ensure_pdf_fonts()
     pdf = Canvas(BytesIO())
-    civil = date(2026, 5, 17)
+    civil = Date(2026, 5, 17)
     record = DayRecord(civil, "S11", 5, 7, "3", False, 0.0)
     colours = []
     original_set_fill = pdf.setFillColor
@@ -388,7 +387,7 @@ class RecurringUnderlineTests(unittest.TestCase):
 
   def test_each_recurring_observance_has_its_own_underline_colour(self):
     from generate_panchanga_calendar import EKADASHI_MARK, PRADOSHAM_MARK, SANKASHTI_MARK
-    civil = date(2026, 5, 17)
+    civil = Date(2026, 5, 17)
     colours = self.underline_colours({civil}, {civil}, {civil})
     self.assertIn(EKADASHI_MARK, colours)
     self.assertIn(PRADOSHAM_MARK, colours)
@@ -405,23 +404,23 @@ class RecurringUnderlineTests(unittest.TestCase):
 class DisplayMasaTests(unittest.TestCase):
 
   def test_amanta_is_unchanged(self):
-    record = DayRecord(date(2030, 1, 1), "K1", 1, 1, "5", False, 0.0)
+    record = DayRecord(Date(2030, 1, 1), "K1", 1, 1, "5", False, 0.0)
     self.assertEqual(display_masa(record, amanta=True), "5")
 
   def test_purnimanta_advances_ordinary_krishna(self):
-    record = DayRecord(date(2030, 1, 1), "K1", 1, 1, "5", False, 0.0)
+    record = DayRecord(Date(2030, 1, 1), "K1", 1, 1, "5", False, 0.0)
     self.assertEqual(display_masa(record, amanta=False), "6")
 
   def test_purnimanta_leaves_sukla_unchanged(self):
-    record = DayRecord(date(2030, 1, 1), "S1", 1, 1, "5", False, 0.0)
+    record = DayRecord(Date(2030, 1, 1), "S1", 1, 1, "5", False, 0.0)
     self.assertEqual(display_masa(record, amanta=False), "5")
 
   def test_purnimanta_leaves_adhika_krishna_unchanged(self):
-    record = DayRecord(date(2030, 1, 1), "K1", 1, 1, "A5", True, 0.0)
+    record = DayRecord(Date(2030, 1, 1), "K1", 1, 1, "A5", True, 0.0)
     self.assertEqual(display_masa(record, amanta=False), "A5")
 
   def test_purnimanta_wraps_phalguna_krishna_to_chaitra(self):
-    record = DayRecord(date(2030, 1, 1), "K1", 1, 1, "12", False, 0.0)
+    record = DayRecord(Date(2030, 1, 1), "K1", 1, 1, "12", False, 0.0)
     self.assertEqual(display_masa(record, amanta=False), "1")
 
 
@@ -429,9 +428,9 @@ class SolarDateTests(unittest.TestCase):
 
   def test_solar_day_resets_at_sankranti(self):
     records = [
-      DayRecord(date(2026, 1, 13), "S1", 1, 1, "10", False, 1.0),
-      DayRecord(date(2026, 1, 14), "S2", 1, 1, "10", False, 2.0),
-      DayRecord(date(2026, 1, 15), "S3", 1, 1, "10", False, 3.0),
+      DayRecord(Date(2026, 1, 13), "S1", 1, 1, "10", False, 1.0),
+      DayRecord(Date(2026, 1, 14), "S2", 1, 1, "10", False, 2.0),
+      DayRecord(Date(2026, 1, 15), "S3", 1, 1, "10", False, 3.0),
     ]
     with mock.patch(
         "generate_panchanga_calendar.panchanga.raasi",
@@ -440,9 +439,9 @@ class SolarDateTests(unittest.TestCase):
       self.assertEqual(
         solar_dates_by_date(records),
         {
-          date(2026, 1, 13): (10, 1, False),
-          date(2026, 1, 14): (10, 2, False),
-          date(2026, 1, 15): (11, 1, True),
+          Date(2026, 1, 13): (10, 1, False),
+          Date(2026, 1, 14): (10, 2, False),
+          Date(2026, 1, 15): (11, 1, True),
         },
       )
 

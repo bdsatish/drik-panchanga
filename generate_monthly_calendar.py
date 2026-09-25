@@ -18,8 +18,7 @@ import argparse
 import calendar
 import logging
 import sys
-from datetime import date as CivilDate
-from datetime import timedelta
+from datetime import datetime
 from functools import partial
 from pathlib import Path
 
@@ -69,9 +68,8 @@ from generate_panchanga_calendar import (
   timing_key_line,
   tithi_code,
 )
-from panchanga import Date as PanDate
-from datetime_helper import (dst_transitions, format_local_hm, format_utc_offset, gregorian_to_jd, hindu_day_civil,
-                             jd_to_local_civil_date)
+from datetime_helper import (Date, dst_transitions, format_local_hm, format_utc_offset, gregorian_to_jd,
+                             hindu_day_civil, jd_to_local_civil_date)
 
 log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
@@ -321,12 +319,12 @@ def _wrap_lines(pdf, text, font, size, max_width):
 def year_label_for_month(amanta, year, month, records_by_date):
   """Webapp-style era label for mid-month: ``Parābhava 1948, Siddhārthī 2083, Kali (elapsed) 5127``."""
   days = calendar.monthrange(year, month)[1]
-  civil = CivilDate(year, month, min(15, days))
+  civil = Date(year, month, min(15, days))
   record = records_by_date.get(civil)
   if record is None:
     return None
   masa_num = int(record.masa.lstrip("A"))
-  jd = gregorian_to_jd(PanDate(year, month, civil.day))
+  jd = gregorian_to_jd(civil)
   kali_year, saka_year, vikrama_year = panchanga.elapsed_year(jd, masa_num)
   names = sanskrit_names()["samvats"]
   saka_name = names[str(panchanga.samvatsara(jd, masa_num))]
@@ -357,8 +355,7 @@ def draw_header(pdf, location, year, month, amanta, coordinate_selection, year_l
     PAGE_W - MARGIN, top - 42, f"{month_system_label(amanta)}, {coordinate_selection_label(coordinate_selection)}, "
     f"Ruleset {RULESET_VERSION}, layout {MONTHLY_LAYOUT_VERSION}")
   # Attribution stamp below ruleset line (dynamic year)
-  from datetime import date as DateType
-  current_year = DateType.today().year
+  current_year = datetime.now().year
   stamp_text = f"Drik Panchanga · Copyright © Satish BD {current_year} · AGPL-3.0"
   link_text = "Drik Panchanga"
   pdf.setFillColor(_GREY_AAAAAA)
@@ -429,10 +426,10 @@ def draw_cell(pdf, x, y_top, row_h, cell_w, day, civil, location, context, col):
   pdf.setFont(PDF_FONT_BOLD, 15)
   pdf.drawRightString(x + cell_w - 5, y_top - 15, str(day))
   if col == 0 and 1 <= day <= calendar.monthrange(civil.year, civil.month)[1]:
-    # ISO weeks are defined by the Thursday they contain; use the Thursday
-    # of this displayed week for the week number (always correct per ISO-8601).
-    thursday = civil + timedelta(days=4)
-    week_num = thursday.isocalendar()[1]
+    # ISO weeks are defined by the Thursday they contain; that Thursday's ISO
+    # week number is its (day of year - 1) // 7 + 1.
+    thursday = civil + 4
+    week_num = (thursday - Date(thursday.year, 1, 1)) // 7 + 1
     pdf.setFont(PDF_FONT_BOLD, 10)
     pdf.setFillColor(RED if is_sunday else INK)
     pdf.drawString(x + 5, y_top - 12, f"W{week_num}")
@@ -542,7 +539,7 @@ def rahu_kala_table_lines(location, year, month):
   windows = {}
   days = calendar.monthrange(year, month)[1]
   for day in range(1, days + 1):
-    civil = CivilDate(year, month, day)
+    civil = Date(year, month, day)
     try:
       place = place_for_date(location, civil)
       jd = gregorian_to_jd(civil)
@@ -626,7 +623,7 @@ def draw_grid(pdf, year, month, location, context):
           pdf.setFont(PDF_FONT, 9)
           pdf.drawRightString(x + cell_w - 5, y_top - 13, str(other))
         continue
-      civil = CivilDate(year, month, day)
+      civil = Date(year, month, day)
       draw_cell(pdf, x, y_top, row_h, cell_w, day, civil, location, context, col)
 
 
@@ -657,7 +654,7 @@ def collect_context(months, location, festivals_path, amanta=True):
   dst_labels_by_date = {}
   for year, month in months:
     for day, label in dst_transitions(location.timezone_name, year, month).items():
-      civil = CivilDate(year, month, day)
+      civil = Date(year, month, day)
       if civil in target_dates:
         dst_labels_by_date.setdefault(civil, []).append(label)
   eclipses = find_local_eclipses(records[0].sunrise_jd, records[-1].sunrise_jd + 1, geopos)

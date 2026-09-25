@@ -3,8 +3,9 @@
 Observational Indian lunisolar calendar (Hindu Drig-ganita / Drik Panchanga)
 using the [Swiss Ephemeris](https://www.astro.com/swisseph/).
 
-This PyPI package installs the core library module `panchanga.py`, plus the
-PDF calendar generators behind the `[pdf]` extra:
+This PyPI package installs the core library modules `panchanga.py` and
+`datetime_helper.py` (dates, time zones, clock formatting), plus the PDF
+calendar generators behind the `[pdf]` extra:
 
 ```bash
 pip install drik-panchanga          # core library only
@@ -32,22 +33,26 @@ this library:
 ## Usage
 
 ```python
-import datetime_helper
 import panchanga
+from datetime_helper import Date, format_hms, format_local_hm, gregorian_to_jd
 
 panchanga.set_chosen_ayanamsa("citra")
-place = panchanga.Place(12.972, 77.594, +5.5)  # lat, lon, timezone hours
-jd = datetime_helper.gregorian_to_jd(panchanga.Date(2026, 1, 15))
-print(panchanga.tithi(jd, place))
+place = panchanga.Place(12.972, 77.594, +5.5)  # lat, lon, UTC offset hours that day
+day = Date(2026, 1, 15)
+jd = gregorian_to_jd(day)
+tithi, end = panchanga.tithi(jd, place)[:2]     # end is a UT Julian day
+print(tithi, format_local_hm(end, "Asia/Kolkata", anchor_civil=day))  # 27 20:17
 print(panchanga.nakshatra(jd, place))
 print(panchanga.masa(jd, place, amanta=True))   # or amanta=False for pūrṇimānta
-print(panchanga.moonrise(jd, place))  # Hindu day [sunrise, next sunrise), or None
-print(datetime_helper.format_hms([23, 59, 30]))  # "24:00" — never wraps to 00:00
+print(panchanga.moonrise(jd, place))  # UT JD in the Hindu day [sunrise, next sunrise), or None
+print(format_hms([23, 59, 30]))  # "24:00" — never wraps to 00:00
 ```
 
-Times are hours past civil midnight and may run past 24:00 (Hindu day =
-sunrise to sunrise). ``moonrise`` / ``moonset`` use that window; the low-level
-``moonrise_jd`` helper is first-after-local-midnight only.
+Event times are UT Julian days; `format_local_hm` shows them as hours past
+the civil day's midnight at the offset in force at each instant (DST-aware),
+running past 24:00 when the Hindu day (sunrise to sunrise) does.
+``moonrise`` / ``moonset`` use that window; the low-level ``moonrise_jd``
+helper is first-after-local-midnight only.
 
 For tropical (sāyana) values instead of sidereal, call
 `set_coordinate_mode("tropical")` before computing; reset with

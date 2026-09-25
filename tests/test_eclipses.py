@@ -5,8 +5,8 @@ from unittest import mock
 
 import panchanga
 
-from datetime_helper import (format_hms, format_local_hm, gregorian_to_jd, hindu_day_civil, jd_to_local_civil_date,
-                             julian_day_from_datetime, utc_offset_hours)
+from datetime_helper import (Date, format_hms, format_local_hm, gregorian_to_jd, hindu_day_civil,
+                             jd_to_local_civil_date, julian_day_from_datetime, utc_offset_hours)
 from festival_rules import hindu_day_has_eclipse, find_local_eclipses
 from generate_panchanga_calendar import eclipse_civil_dates, format_eclipse_line
 
@@ -100,7 +100,7 @@ class FormatEclipseLineTests(unittest.TestCase):
     self.assertEqual(jd_to_local_civil_date(maximum, "Asia/Kolkata").isoformat(), "2026-03-03")
 
   def test_includes_sunrise_when_provided(self):
-    from datetime import date, datetime
+    from datetime import datetime
     from zoneinfo import ZoneInfo
 
     ist = ZoneInfo("Asia/Kolkata")
@@ -108,7 +108,7 @@ class FormatEclipseLineTests(unittest.TestCase):
     maximum = julian_day_from_datetime(datetime(2026, 3, 3, 10, 0, tzinfo=ist))
     sunrise = julian_day_from_datetime(datetime(2026, 3, 3, 6, 45, tzinfo=ist))
     line = format_eclipse_line([("Lunar", "Partial", maximum)], "Asia/Kolkata",
-                               sunrise_by_date={date(2026, 3, 3): sunrise})
+                               sunrise_by_date={Date(2026, 3, 3): sunrise})
     self.assertEqual(
       line,
       "Eclipses: Lunar Mar 03 (Partial) maximum phase at 10:00, sunrise 06:45. "
@@ -116,7 +116,7 @@ class FormatEclipseLineTests(unittest.TestCase):
     )
 
   def test_pre_sunrise_maximum_uses_24_plus_on_previous_civil_day(self):
-    from datetime import date, datetime
+    from datetime import datetime
     from zoneinfo import ZoneInfo
 
     ist = ZoneInfo("Asia/Kolkata")
@@ -124,7 +124,7 @@ class FormatEclipseLineTests(unittest.TestCase):
     maximum = julian_day_from_datetime(datetime(2026, 3, 4, 0, 5, tzinfo=ist))
     sunrise = julian_day_from_datetime(datetime(2026, 3, 4, 6, 30, tzinfo=ist))
     line = format_eclipse_line([("Lunar", "Partial", maximum)], "Asia/Kolkata",
-                               sunrise_by_date={date(2026, 3, 4): sunrise})
+                               sunrise_by_date={Date(2026, 3, 4): sunrise})
     self.assertEqual(
       line,
       "Eclipses: Lunar Mar 03 (Partial) maximum phase at 24:05, sunrise 06:30. "
@@ -155,18 +155,16 @@ class FormatLocalHmTests(unittest.TestCase):
     self.assertEqual(format_local_hm(self._jd(0, 5), self.TZ), "00:05")
 
   def test_anchor_civil_past_midnight_is_24_plus(self):
-    from datetime import date
     jd = self._jd(0, 5, day=4)
     # Hours past Mar 3 midnight -> 24:05 (Hindu-day scale).
-    self.assertEqual(format_local_hm(jd, self.TZ, anchor_civil=date(2026, 3, 3)), "24:05")
-    self.assertEqual(format_local_hm(jd, self.TZ, anchor_civil=date(2026, 3, 4)), "00:05")
+    self.assertEqual(format_local_hm(jd, self.TZ, anchor_civil=Date(2026, 3, 3)), "24:05")
+    self.assertEqual(format_local_hm(jd, self.TZ, anchor_civil=Date(2026, 3, 4)), "00:05")
 
   def test_hindu_day_civil_rolls_before_sunrise(self):
-    from datetime import date
     jd = self._jd(0, 5, day=4)
     sunrise = self._jd(6, 30, day=4)
-    self.assertEqual(hindu_day_civil(jd, self.TZ, sunrise), date(2026, 3, 3))
-    self.assertEqual(hindu_day_civil(sunrise, self.TZ, sunrise), date(2026, 3, 4))
+    self.assertEqual(hindu_day_civil(jd, self.TZ, sunrise), Date(2026, 3, 3))
+    self.assertEqual(hindu_day_civil(sunrise, self.TZ, sunrise), Date(2026, 3, 4))
     self.assertEqual(format_local_hm(jd, self.TZ, anchor_civil=hindu_day_civil(jd, self.TZ, sunrise)), "24:05")
 
   def test_rounds_up_to_24_00_not_00_00(self):
@@ -204,8 +202,7 @@ class DstRowTailTests(unittest.TestCase):
   HELSINKI = "Europe/Helsinki"
 
   def _read(self, ut_hours_past_jd, anchor):
-    from datetime import date
-    anchor_date = date(*anchor)
+    anchor_date = Date(*anchor)
     return format_local_hm(
       gregorian_to_jd(anchor_date) + ut_hours_past_jd / 24, self.HELSINKI, anchor_civil=anchor_date)
 
@@ -228,8 +225,8 @@ class DstRowTailTests(unittest.TestCase):
   def test_bce_instant_uses_the_year_4_offset(self):
     # datetime cannot hold year -500; the early LMT offset (year 4) applies.
     kolkata = "Asia/Kolkata"
-    early = panchanga.Date(-500, 1, 30)
-    offset = utc_offset_hours(kolkata, panchanga.Date(4, 1, 30))
+    early = Date(-500, 1, 30)
+    offset = utc_offset_hours(kolkata, Date(4, 1, 30))
     jd = gregorian_to_jd(early)
     self.assertEqual(format_local_hm(jd + (6 - offset) / 24, kolkata, anchor_civil=early), "06:00")
 
@@ -237,7 +234,7 @@ class DstRowTailTests(unittest.TestCase):
 class EclipseCivilDatesTests(unittest.TestCase):
 
   def test_marks_only_local_date_of_maximum(self):
-    from datetime import date, datetime
+    from datetime import datetime
     from zoneinfo import ZoneInfo
 
     ist = ZoneInfo("Asia/Kolkata")
@@ -246,11 +243,11 @@ class EclipseCivilDatesTests(unittest.TestCase):
     eclipse = ("Lunar", "Partial", maximum)
     # Without sunrise: civil date of the maximum itself.
     dates = eclipse_civil_dates([eclipse], "Asia/Kolkata")
-    self.assertEqual(dates, {date(2026, 3, 4)})
+    self.assertEqual(dates, {Date(2026, 3, 4)})
     # With sunrise after the maximum: previous Hindu day.
     sunrise = julian_day_from_datetime(datetime(2026, 3, 4, 6, 30, tzinfo=ist))
-    dates = eclipse_civil_dates([eclipse], "Asia/Kolkata", sunrise_by_date={date(2026, 3, 4): sunrise})
-    self.assertEqual(dates, {date(2026, 3, 3)})
+    dates = eclipse_civil_dates([eclipse], "Asia/Kolkata", sunrise_by_date={Date(2026, 3, 4): sunrise})
+    self.assertEqual(dates, {Date(2026, 3, 3)})
 
 
 class HinduDayHasEclipseTests(unittest.TestCase):
@@ -271,20 +268,18 @@ class HinduDayHasEclipseTests(unittest.TestCase):
     ))
 
   def test_maximum_before_sunrise_belongs_to_the_previous_date(self):
-    from datetime import date
     # Hypothetical maximum 02:00 on 12-Oct-2026; that morning's sunrise ~06:30,
     # so the maximum falls in the Hindu day that began on 11-Oct.
     with self._lunar_at(self._maximum_jd(2026, 10, 12, 2, 0)), mock.patch(
         "festival_rules.panchanga.swe.sol_eclipse_when_loc", return_value=(0, _times(100.0), None)):
-      self.assertTrue(hindu_day_has_eclipse(date(2026, 10, 11), self.geopos, "Asia/Kolkata"))
-      self.assertFalse(hindu_day_has_eclipse(date(2026, 10, 12), self.geopos, "Asia/Kolkata"))
+      self.assertTrue(hindu_day_has_eclipse(Date(2026, 10, 11), self.geopos, "Asia/Kolkata"))
+      self.assertFalse(hindu_day_has_eclipse(Date(2026, 10, 12), self.geopos, "Asia/Kolkata"))
 
   def test_maximum_after_sunrise_stays_on_its_own_date(self):
-    from datetime import date
     with self._lunar_at(self._maximum_jd(2026, 10, 12, 7, 0)), mock.patch(
         "festival_rules.panchanga.swe.sol_eclipse_when_loc", return_value=(0, _times(100.0), None)):
-      self.assertFalse(hindu_day_has_eclipse(date(2026, 10, 11), self.geopos, "Asia/Kolkata"))
-      self.assertTrue(hindu_day_has_eclipse(date(2026, 10, 12), self.geopos, "Asia/Kolkata"))
+      self.assertFalse(hindu_day_has_eclipse(Date(2026, 10, 11), self.geopos, "Asia/Kolkata"))
+      self.assertTrue(hindu_day_has_eclipse(Date(2026, 10, 12), self.geopos, "Asia/Kolkata"))
 
 
 if __name__ == "__main__":

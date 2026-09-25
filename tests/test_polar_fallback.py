@@ -18,7 +18,7 @@ from zoneinfo import ZoneInfo
 import swisseph as swe
 
 import panchanga
-from datetime_helper import gregorian_to_jd
+from datetime_helper import Date, gregorian_to_jd
 from panchanga import Place, sunrise, sunset, day_duration, tithi
 from tests import local_hms
 
@@ -43,7 +43,7 @@ class TransitWindowTests(unittest.TestCase):
     # The window rule must still pick the transit belonging to the day.
     vardo = Place(70.37, 31.11, _tz_hours("Europe/Oslo", 2026, 5, 20))
     tromso = Place(69.6492, 18.9553, _tz_hours("Europe/Oslo", 2026, 5, 20))
-    for jd_date in (gregorian_to_jd(panchanga.Date(2026, 5, 19)), gregorian_to_jd(panchanga.Date(2026, 6, 20))):
+    for jd_date in (gregorian_to_jd(Date(2026, 5, 19)), gregorian_to_jd(Date(2026, 6, 20))):
       for place in (vardo, tromso):
         transit = panchanga._transit_jd(jd_date, place, lower=True)
         # Window is (previous local noon, next local noon) in local frame.
@@ -51,7 +51,7 @@ class TransitWindowTests(unittest.TestCase):
 
   def test_upper_transit_window(self):
     mur = Place(68.97, 33.08, 3.0)
-    jd = gregorian_to_jd(panchanga.Date(2026, 12, 20))
+    jd = gregorian_to_jd(Date(2026, 12, 20))
     transit = panchanga._transit_jd(jd, mur)
     self.assertTrue(jd < transit + mur.timezone / 24 < jd + 1.0)
 
@@ -62,7 +62,7 @@ class AnchorContinuityTests(unittest.TestCase):
   def test_midnight_sun_anchor_gaps_are_24h(self):
     # Vardo mid-season 2026: a full virtual month (no real rises at all).
     vardo = Place(70.37, 31.11, _tz_hours("Europe/Oslo", 2026, 6, 15))
-    jd0 = gregorian_to_jd(panchanga.Date(2026, 6, 1))
+    jd0 = gregorian_to_jd(Date(2026, 6, 1))
     prev = None
     for i in range(30):
       jd = jd0 + i
@@ -75,19 +75,19 @@ class AnchorContinuityTests(unittest.TestCase):
 
   def test_polar_night_anchor_is_upper_transit(self):
     mur = Place(68.97, 33.08, 3.0)
-    jd = gregorian_to_jd(panchanga.Date(2026, 12, 20))
+    jd = gregorian_to_jd(Date(2026, 12, 20))
     self.assertEqual(sunrise(jd, mur), sunset(jd, mur))  # both anchor at the same upper transit
     self.assertAlmostEqual(day_duration(jd, mur)[0], 0.0, delta=0.001)
 
   def test_midnight_sun_day_length_is_24h(self):
     tro = Place(69.6492, 18.9553, 2.0)
-    jd = gregorian_to_jd(panchanga.Date(2026, 6, 20))
+    jd = gregorian_to_jd(Date(2026, 6, 20))
     self.assertAlmostEqual(day_duration(jd, tro)[0], 24.0, delta=0.01)
 
   def test_no_tithi_skips_across_virtual_season(self):
     # Tithi numbers advance by 0/1/2 (kshaya) per day, never jump.
     vardo = Place(70.37, 31.11, _tz_hours("Europe/Oslo", 2026, 6, 15))
-    jd0 = gregorian_to_jd(panchanga.Date(2026, 5, 25))
+    jd0 = gregorian_to_jd(Date(2026, 5, 25))
     prev = None
     for i in range(30):
       number = tithi(jd0 + i, vardo)[0]
@@ -102,36 +102,36 @@ class HistoricalRegressionTests(unittest.TestCase):
   def test_murmansk_2029_short_day_keeps_real_set(self):
     # The 29-min sweep epsilon used to skip the set on a 1.3-minute day.
     mur = Place(68.97, 33.08, 3.0)
-    jd = gregorian_to_jd(panchanga.Date(2029, 1, 15))
+    jd = gregorian_to_jd(Date(2029, 1, 15))
     self.assertAlmostEqual((sunset(jd, mur) - sunrise(jd, mur)) * 24 * 60, 1.3, delta=0.2)  # minutes
 
   def test_norilsk_midnight_sun_shoulder_day_positive(self):
     # sunset() searched from midnight and returned the spill set: -2.07 h.
     nor = Place(69.3535, 88.2027, 7.0)
-    jd = gregorian_to_jd(panchanga.Date(2026, 7, 24))
+    jd = gregorian_to_jd(Date(2026, 7, 24))
     self.assertAlmostEqual(day_duration(jd, nor)[0], 21.78, delta=0.05)
 
   def test_auckland_winter_day_not_inflated(self):
     # The frame-mixing guard pushed short east-of-UTC winter days into the
     # circumpolar fallback (day 16.75 h instead of 9.49 h).
     auk = Place(-36.85, 174.76, 12.0)
-    jd = gregorian_to_jd(panchanga.Date(2026, 6, 15))
+    jd = gregorian_to_jd(Date(2026, 6, 15))
     self.assertAlmostEqual(day_duration(jd, auk)[0], 9.49, delta=0.05)
 
   def test_vardo_onset_anchor_does_not_jump(self):
     # The after-midnight transit search produced a 47.7 h anchor gap and a
     # tithi skip (2 -> 4) at the midnight-sun onset.
     vardo = Place(70.37, 31.11, _tz_hours("Europe/Oslo", 2026, 5, 20))
-    anchors = [sunrise(gregorian_to_jd(panchanga.Date(2026, 5, d)), vardo) for d in range(16, 23)]
+    anchors = [sunrise(gregorian_to_jd(Date(2026, 5, d)), vardo) for d in range(16, 23)]
     for gap in ((b - a) * 24 for a, b in zip(anchors, anchors[1:])):
       self.assertAlmostEqual(gap, 24.0, delta=0.5)
-    numbers = [tithi(gregorian_to_jd(panchanga.Date(2026, 5, d)), vardo)[0] for d in range(16, 23)]
+    numbers = [tithi(gregorian_to_jd(Date(2026, 5, d)), vardo)[0] for d in range(16, 23)]
     self.assertEqual(numbers, [29, 1, 2, 3, 4, 5, 6])
 
   def test_vardo_parana_anchor_within_civil_day(self):
     # The clamped anchor keeps parana-style consumers inside the day.
     vardo = Place(70.37, 31.11, _tz_hours("Europe/Oslo", 2028, 5, 21))
-    jd = gregorian_to_jd(panchanga.Date(2028, 5, 21))
+    jd = gregorian_to_jd(Date(2028, 5, 21))
     self.assertGreaterEqual(sunrise(jd, vardo), jd - vardo.timezone / 24)
     # midnight-sun set = end of civil day (24:00)
     self.assertEqual(local_hms(sunset(jd, vardo), jd, vardo), [24, 0, 0])
@@ -144,8 +144,8 @@ class EdgeContinuityTests(unittest.TestCase):
     # Tromso 2026: last real rise Nov 22 ~11:58, first virtual Nov 23
     # ~12:30 (upper transit) — under ~40 minutes.
     tro = Place(69.6492, 18.9553, _tz_hours("Europe/Oslo", 2026, 11, 23))
-    real_jd = gregorian_to_jd(panchanga.Date(2026, 11, 22))
-    virtual_jd = gregorian_to_jd(panchanga.Date(2026, 11, 23))
+    real_jd = gregorian_to_jd(Date(2026, 11, 22))
+    virtual_jd = gregorian_to_jd(Date(2026, 11, 23))
     self.assertTrue(_is_real_rise(real_jd, tro))
     self.assertFalse(_is_real_rise(virtual_jd, tro))
     gap = (sunrise(virtual_jd, tro) - sunrise(real_jd, tro)) * 24
@@ -160,8 +160,8 @@ class MoonWindowTests(unittest.TestCase):
     # rise) precedes the 00:50 sunrise and belongs to the previous Hindu day;
     # the same civil day has a second one just before midnight.
     mur = Place(68.97, 33.08, 3.0)
-    jun25 = gregorian_to_jd(panchanga.Date(2026, 6, 25))
-    jul5 = gregorian_to_jd(panchanga.Date(2026, 7, 5))
+    jun25 = gregorian_to_jd(Date(2026, 6, 25))
+    jul5 = gregorian_to_jd(Date(2026, 7, 5))
     moonset = panchanga.moonset(jun25, mur)
     moonrise = panchanga.moonrise(jul5, mur)
     self.assertIsNotNone(moonset)
@@ -177,7 +177,7 @@ class GuardedPathTests(unittest.TestCase):
     # The sentinel guard in varjyam() must never interpolate on a bogus
     # anchor: force one and expect an empty list, not garbage.
     blr = Place(12.972, 77.594, 5.5)
-    jd = gregorian_to_jd(panchanga.Date(2026, 1, 15))
+    jd = gregorian_to_jd(Date(2026, 1, 15))
     with mock.patch.object(panchanga, "sunrise", return_value=0.0):
       self.assertEqual(panchanga.varjyam(jd, blr), [])
 
@@ -185,7 +185,7 @@ class GuardedPathTests(unittest.TestCase):
     # If the forward search overshoots the window, the midpoint re-search
     # still lands a transit inside it (never an out-of-window instant).
     mur = Place(68.97, 33.08, 3.0)
-    jd = gregorian_to_jd(panchanga.Date(2026, 12, 20))
+    jd = gregorian_to_jd(Date(2026, 12, 20))
     real = panchanga._transit_jd(jd, mur)
 
     def overshooting_search(jd_ut, body, geopos, rsmi):

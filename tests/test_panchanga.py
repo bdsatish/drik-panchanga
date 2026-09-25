@@ -10,10 +10,10 @@ from unittest import mock
 import swisseph as swe
 
 import panchanga
-from datetime_helper import format_hms, format_hms_from_jd, gregorian_to_jd, local_time_to_jdut1, to_hms
+from datetime_helper import Date, format_hms, format_hms_from_jd, gregorian_to_jd, local_time_to_jdut1, to_hms
 from tests import local_ends, local_hms, local_intervals
 from panchanga import (
-  Date, Place, from_dms, sunrise, sunset, moonrise, moonrise_jd, moonset, moonset_jd, tithi, nakshatra, nakshatra_pada,
+  Place, from_dms, sunrise, sunset, moonrise, moonrise_jd, moonset, moonset_jd, tithi, nakshatra, nakshatra_pada,
   nakshatra_end_point, yoga, karana, vaara, masa, varjyam, ascendant, navamsa, navamsa_from_long, planetary_positions,
   day_duration, night_duration, gauri_chogadiya, trikalam, rahu_kalam, yamaganda_kalam, gulika_kalam, durmuhurtam,
   abhijit_muhurta, pratah_sandhya, elapsed_year, samvatsara, samvatsara_north, samvatsara_north_modern, ritu, drik_ritu,
@@ -66,12 +66,9 @@ class SunriseSetTests(PanchangaTestCase):
   def test_moonrise_no_adjacent_00_24_duplicate(self):
     # After-midnight SE primitive can see the same rise on D and D+1; public
     # moonrise() keeps it on exactly one Hindu-day row.
-    from datetime import date
     place = bangalore
-    d0 = date(2026, 3, 10)
-    d1 = date(2026, 3, 11)
-    jd0 = gregorian_to_jd(Date(d0.year, d0.month, d0.day))
-    jd1 = gregorian_to_jd(Date(d1.year, d1.month, d1.day))
+    jd0 = gregorian_to_jd(Date(2026, 3, 10))
+    jd1 = gregorian_to_jd(Date(2026, 3, 11))
     # Primitives: first after each civil midnight — same physical rise twice.
     prim0 = moonrise_jd(jd0, place)
     prim1 = moonrise_jd(jd1, place)
@@ -370,23 +367,21 @@ class MasaTests(PanchangaTestCase):
 
   def test_purnimanta_matches_amanta_on_shukla(self):
     """Śukla pakṣa month names must agree in both systems."""
-    from datetime import date, timedelta
-    day = date(2023, 1, 1)
+    day = Date(2023, 1, 1)
     for _ in range(365):
-      jd = gregorian_to_jd(Date(day.year, day.month, day.day))
+      jd = gregorian_to_jd(day)
       ti = tithi(jd, bangalore)[0]
       if ti <= 15:
         amanta_masa, amanta_adhika = masa(jd, bangalore, amanta=True)
         purni_masa, purni_adhika = masa(jd, bangalore, amanta=False)
         self.assertEqual((purni_masa, purni_adhika), (amanta_masa, amanta_adhika), msg=f"{day} ti={ti}")
-      day += timedelta(days=1)
+      day += 1
 
   def test_purnimanta_is_next_month_on_ordinary_krishna(self):
     """Ordinary kṛṣṇa: pūrṇimānta is the month after amānta."""
-    from datetime import date, timedelta
-    day = date(2023, 1, 1)
+    day = Date(2023, 1, 1)
     for _ in range(365):
-      jd = gregorian_to_jd(Date(day.year, day.month, day.day))
+      jd = gregorian_to_jd(day)
       ti = tithi(jd, bangalore)[0]
       if ti >= 16:
         amanta_masa, amanta_adhika = masa(jd, bangalore, amanta=True)
@@ -396,7 +391,7 @@ class MasaTests(PanchangaTestCase):
           self.assertEqual(purni_masa, amanta_masa, msg=f"{day} ti={ti}")
         else:
           self.assertEqual(purni_masa, amanta_masa % 12 + 1, msg=f"{day} ti={ti}")
-      day += timedelta(days=1)
+      day += 1
 
   def test_purnimanta_magha_krishna_is_phalguna(self):
     """Amānta Māgha-kṛṣṇa must be pūrṇimānta Phālguna (not Chaitra)."""
@@ -525,6 +520,15 @@ class HelperMathTests(PanchangaTestCase):
     # A window opening the previous evening (23:34) on this row's scale.
     self.assertEqual(format_hms(-(25 + 53 / 60) / 60), "-00:26")
     self.assertEqual(format_hms(-(25 + 53 / 60) / 60, show_seconds=True), "-00:25:53")
+
+  def test_date_arithmetic_weekday_and_isoformat(self):
+    self.assertEqual(Date(2026, 1, 31) + 1, Date(2026, 2, 1))
+    self.assertEqual(Date(2024, 3, 1) - 1, Date(2024, 2, 29))
+    self.assertEqual(Date(0, 3, 1) - 1, Date(0, 2, 29))  # year 0 = 1 BCE, a leap year
+    self.assertEqual(Date(1, 1, 1) - 1, Date(0, 12, 31))
+    self.assertEqual(Date(2026, 3, 1) - Date(2026, 2, 1), 28)
+    self.assertEqual(Date(2026, 9, 28).weekday(), 0)  # a Monday
+    self.assertEqual(Date(-500, 1, 30).isoformat(), "-500-01-30")
 
   def test_format_hms_from_jd_keeps_24_00(self):
     # civil_jd = UTC midnight of the local civil day; local = civil + tz/24.

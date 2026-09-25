@@ -1,7 +1,8 @@
 """Julian day, civil date and IANA time-zone helpers, and the hours-past-midnight clock."""
 
 import calendar
-from datetime import date, datetime, timedelta, timezone
+from collections import namedtuple as struct
+from datetime import datetime, timedelta, timezone
 from math import floor
 from zoneinfo import ZoneInfo
 
@@ -10,6 +11,33 @@ import swisseph as swe
 # Julian Day number as on (year, month, day) at 00:00 UTC
 gregorian_to_jd = lambda date, hours=0.0: swe.julday(date.year, date.month, date.day, hours)
 jd_to_gregorian = lambda jd: swe.revjul(jd, swe.GREG_CAL)  # returns (y, m, d, h, min, s)
+
+
+class Date(struct('Date', ['year', 'month', 'day'])):
+  """Proleptic Gregorian civil date; unlike ``datetime.date``, years <= 0 work (year 0 = 1 BCE).
+
+  ``date + n`` / ``date - n`` shift by whole days; ``date - other`` is the day count between them.
+  """
+  __slots__ = ()
+
+  def _noon_jd(self):
+    # Noon keeps day arithmetic clear of the midnight boundary.
+    return swe.julday(self.year, self.month, self.day, 12.0)
+
+  def __add__(self, days):
+    return Date(*jd_to_gregorian(self._noon_jd() + days)[:3])
+
+  def __sub__(self, other):
+    if isinstance(other, Date):
+      return round(self._noon_jd() - other._noon_jd())
+    return self + -other
+
+  def weekday(self):
+    """Monday = 0 ... Sunday = 6, as ``datetime.date.weekday``."""
+    return floor(self._noon_jd()) % 7
+
+  def isoformat(self):
+    return f"{self.year:04d}-{self.month:02d}-{self.day:02d}"
 
 
 def local_time_to_jdut1(year, month, day, hour=0, minutes=0, seconds=0, timezone=0.0):
@@ -54,8 +82,9 @@ def jd_to_local_datetime(jd, timezone_name):
 
 
 def jd_to_local_civil_date(jd, timezone_name):
-  """Convert a UT Julian day to the civil date in ``timezone_name``."""
-  return jd_to_local_datetime(jd, timezone_name).date()
+  """Convert a UT Julian day to the civil ``Date`` in ``timezone_name``."""
+  local = jd_to_local_datetime(jd, timezone_name)
+  return Date(local.year, local.month, local.day)
 
 
 def utc_offset_hours(timezone_name, civil):
@@ -109,10 +138,10 @@ def dst_transitions(timezone_name, year, month):
   # Initialize from the last day of the previous month to catch transitions on the 1st
   prev_month_year, prev_month = (year, month - 1) if month > 1 else (year - 1, 12)
   prev_day = calendar.monthrange(prev_month_year, prev_month)[1]
-  prev_offset = utc_offset_hours(timezone_name, date(prev_month_year, prev_month, prev_day))
+  prev_offset = utc_offset_hours(timezone_name, Date(prev_month_year, prev_month, prev_day))
   transitions = {}
   for day in range(1, last_day + 1):
-    hours = utc_offset_hours(timezone_name, date(year, month, day))
+    hours = utc_offset_hours(timezone_name, Date(year, month, day))
     if hours != prev_offset:
       transitions[day] = "DST starts" if hours > prev_offset else "DST ends"
     prev_offset = hours
@@ -196,5 +225,5 @@ def hindu_day_civil(jd, timezone_name, sunrise_jd=None):
   """
   civil = jd_to_local_civil_date(jd, timezone_name)
   if sunrise_jd is not None and jd < sunrise_jd:
-    return civil - timedelta(days=1)
+    return civil - 1
   return civil

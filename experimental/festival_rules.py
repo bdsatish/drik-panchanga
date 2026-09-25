@@ -1501,8 +1501,8 @@ def select_makara_sankranti_dates(records, rule):
     years = sorted(list(set(r[0].year for r in jan_records)))
     selected = []
     for year in years:
-        jd_start = datetime_helper.gregorian_to_jd(panchanga.Date(year, 1, 13))
-        jd_end = datetime_helper.gregorian_to_jd(panchanga.Date(year, 1, 16))
+        jd_start = datetime_helper.gregorian_to_jd(datetime_helper.Date(year, 1, 13))
+        jd_end = datetime_helper.gregorian_to_jd(datetime_helper.Date(year, 1, 16))
 
         low = jd_start
         high = jd_end

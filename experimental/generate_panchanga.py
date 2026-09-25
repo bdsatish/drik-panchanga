@@ -266,7 +266,7 @@ def daily_values(year, month, location):
   timezone = ZoneInfo(location.timezone_name)
   days = calendar.monthrange(year, month)[1]
   for day in range(1, days + 1):
-    date = panchanga.Date(year, month, day)
+    date = datetime_helper.Date(year, month, day)
     place = panchanga.Place(
       location.latitude,
       location.longitude,
