@@ -8,10 +8,10 @@ from generate_panchanga_calendar import (
   DEFAULT_FESTIVALS_PATH,
   build_pdf as build_one_page_pdf,
   default_output_path as default_one_page_path,
-  load_location,
   require_coordinate_selection,
   require_month_system,
   require_start_month,
+  resolve_location,
 )
 
 
@@ -28,9 +28,9 @@ def generate_pdf(fields):
   layout = (fields.get("layout") or "one-page").strip().casefold()
   if layout not in ("one-page", "monthly"):
     raise ValueError("Layout must be 'one-page' or 'monthly'.")
-  city = (fields.get("city") or "").strip()
+  location = resolve_location(fields.get("city"), fields.get("latitude"), fields.get("longitude"),
+                              fields.get("timezone"))
   start = (fields.get("start") or "").strip()
-  location = load_location(city)
   start_year, start_month = require_start_month(start)
   month_system = (fields.get("month") or "amanta").strip()
   require_month_system(month_system)

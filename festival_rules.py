@@ -6,10 +6,9 @@ import logging
 from collections import namedtuple as struct
 from datetime import datetime, timedelta
 from pathlib import Path
-from zoneinfo import ZoneInfo
 
 import panchanga
-from panchanga import julian_day_from_datetime, jd_to_local_civil_date, jd_to_local_datetime
+from panchanga import julian_day_from_datetime, jd_to_local_civil_date, jd_to_local_datetime, tzinfo_for
 
 log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
@@ -305,7 +304,7 @@ def hindu_day_has_eclipse(civil_date, geopos, timezone_name):
   end_jd = _event_jd_ut(civil_date + timedelta(days=1), geopos, timezone_name, panchanga.sunrise)
   if start_jd is None or end_jd is None:
     log.warning("Sunrise unavailable for %s; eclipse test uses the civil day", civil_date)
-    day_start = datetime(civil_date.year, civil_date.month, civil_date.day, tzinfo=ZoneInfo(timezone_name))
+    day_start = datetime(civil_date.year, civil_date.month, civil_date.day, tzinfo=tzinfo_for(timezone_name))
     start_jd = julian_day_from_datetime(day_start)
     end_jd = julian_day_from_datetime(day_start + timedelta(days=1))
   for kind, _phase, _maximum_jd in find_local_eclipses(start_jd, end_jd, geopos):

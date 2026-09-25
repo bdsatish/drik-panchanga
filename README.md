@@ -141,7 +141,9 @@ python -m webapp.app    # then open http://127.0.0.1:8765/
 ```
 
 Enter a city, then look up a day's panchanga, download either calendar PDF,
-or export the 14-month span as iCal (.ics). When the City field is left
+or export the 14-month span as iCal (.ics). Alternatively switch to
+Coordinates and enter decimal latitude/longitude plus a UTC offset in hours
+(e.g. `5.5`, no DST) — useful for places missing from `data/cities.json`. When the City field is left
 blank, the app suggests a city from the visitor's IP via a third-party GeoIP
 service (ip-api.com, plain HTTP — their free tier has no HTTPS).
 

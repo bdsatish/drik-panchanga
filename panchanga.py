@@ -273,6 +273,15 @@ _SECONDS_PER_DAY = 24 * 60 * 60
 _JULIAN_DAY_AT_UNIX_EPOCH = 2440587.5
 
 
+def tzinfo_for(timezone_name):
+  """tzinfo for an IANA key, or a fixed offset name like ``UTC+5:30``."""
+  if timezone_name.startswith(("UTC+", "UTC-")):
+    sign = -1 if timezone_name[3] == "-" else 1
+    hours, _, minutes = timezone_name[4:].partition(":")
+    return timezone(sign * timedelta(hours=int(hours), minutes=int(minutes or 0)))
+  return ZoneInfo(timezone_name)
+
+
 def julian_day_from_datetime(value):
   """Convert a timezone-aware ``datetime`` to a UT Julian day."""
   return value.timestamp() / _SECONDS_PER_DAY + _JULIAN_DAY_AT_UNIX_EPOCH
@@ -281,7 +290,7 @@ def julian_day_from_datetime(value):
 def jd_to_local_datetime(jd, timezone_name):
   """Convert a UT Julian day to local ``datetime`` in ``timezone_name``."""
   utc = datetime.fromtimestamp((jd - _JULIAN_DAY_AT_UNIX_EPOCH) * _SECONDS_PER_DAY, tz=timezone.utc)
-  return utc.astimezone(ZoneInfo(timezone_name))
+  return utc.astimezone(tzinfo_for(timezone_name))
 
 
 def jd_to_local_civil_date(jd, timezone_name):
@@ -297,7 +306,7 @@ def utc_offset_hours(timezone_name, civil):
   local mean time offsets that modern standardized offsets obscure, and year 4
   is the earliest leap year, so a 29 February needs no special case.
   """
-  noon = datetime(max(4, civil.year), civil.month, civil.day, 12, tzinfo=ZoneInfo(timezone_name))
+  noon = datetime(max(4, civil.year), civil.month, civil.day, 12, tzinfo=tzinfo_for(timezone_name))
   return noon.utcoffset().total_seconds() / 3600
 
 

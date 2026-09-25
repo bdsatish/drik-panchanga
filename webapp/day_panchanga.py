@@ -15,10 +15,10 @@ from generate_panchanga_calendar import (
   ayanamsa_label,
   body_altitude_at_local_noon,
   coordinate_selection_label,
-  load_location,
   month_system_label,
   place_for_date,
   require_month_system,
+  resolve_location,
   sanskrit_names,
 )
 
@@ -249,7 +249,8 @@ def _compute_day_details_unlocked(location, civil, amanta=None, coordinate_selec
   }
 
 
-def compute_day_panchanga(city, date_text, month_system="amanta", coordinate_selection="citra"):
+def compute_day_panchanga(city, date_text, month_system="amanta", coordinate_selection="citra", latitude=None,
+                          longitude=None, timezone=None):
   """Return named panchanga fields for ``city`` on ``date_text`` (DD/MM/YYYY).
 
     ``month_system`` is ``amanta`` (default) or ``purnimanta``; it affects the
@@ -259,14 +260,14 @@ def compute_day_panchanga(city, date_text, month_system="amanta", coordinate_sel
     ``coordinate_selection`` is a sidereal ayanāṃśa key (``citra`` default,
     ``revati``, ``rohini``, ``pushya``, ``mula``, ``krishnamurti``, ``raman``)
     or ``"tropical"`` for tropical (sāyana) longitudes.
+
+    ``latitude``/``longitude``/``timezone`` select a manual location with a
+    fixed UTC offset (no DST); when any of them is set they win over ``city``.
     """
   with panchanga.coordinate_calculation_lock:
-    city = (city or "").strip()
-    if not city:
-      raise ValueError("City is required.")
+    location = resolve_location(city, latitude, longitude, timezone)
     amanta = require_month_system(month_system)
     civil = parse_civil_date(date_text)
-    location = load_location(city)
 
     details = _compute_day_details_unlocked(location, civil, amanta=amanta, coordinate_selection=coordinate_selection)
     names = details["names"]

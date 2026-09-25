@@ -396,8 +396,14 @@ def coordinate_selection_label(selection):
 
 
 def location_slug(name):
-  """Filename-safe city key: ``Helsinki, FI`` → ``helsinki-fi``."""
-  return (name or "").replace(", ", "-").casefold()
+  """Filename-safe slug: ``Helsinki, FI`` → ``helsinki-fi``.
+
+  Anything outside ``[a-z0-9._-]`` becomes ``-`` (collapsed), so custom
+  ``lat, lon (UTC+5:30)`` names stay filename- and UID-safe.
+  """
+  slug = (name or "").replace(", ", "-").casefold()
+  slug = re.sub(r"[^a-z0-9._-]+", "-", slug).strip("-")
+  return slug or "custom"
 
 
 def body_altitude_at_local_noon(body, year, month, day, place):
@@ -491,12 +497,50 @@ def resolve_city_key(city, locations):
   raise ValueError(message)
 
 
+def _parse_float(text, kind, low, high):
+  """Signed float for ``kind`` within ``[low, high]``."""
+  text = (text or "").strip()
+  try:
+    value = float(text)
+  except ValueError:
+    raise ValueError(f"{kind.capitalize()} {text!r} must be a number.") from None
+  if not low <= value <= high:
+    raise ValueError(f"{kind.capitalize()} {text!r} is out of range ({low} to {high}).")
+  return value
+
+
+def fixed_offset_name(hours):
+  """Display name for a fixed UTC offset in hours: ``5.5`` → ``UTC+5:30``."""
+  total = round(hours * 60)
+  magnitude = abs(total)
+  suffix = f":{magnitude % 60:02d}" if magnitude % 60 else ""
+  return f"UTC{'+' if total >= 0 else '-'}{magnitude // 60}{suffix}"
+
+
+def load_custom_location(latitude, longitude, timezone):
+  """``Location`` from signed floats: lat/lon degrees + UTC offset hours."""
+  latitude = _parse_float(latitude, "latitude", -90, 90)
+  longitude = _parse_float(longitude, "longitude", -180, 180)
+  utc_name = fixed_offset_name(_parse_float(timezone, "timezone", -12, 14))
+  lat_hem = "N" if latitude >= 0 else "S"
+  lon_hem = "E" if longitude >= 0 else "W"
+  name = f"{abs(latitude):.2f}{lat_hem}, {abs(longitude):.2f}{lon_hem} ({utc_name})"
+  return Location(name, latitude, longitude, utc_name)
+
+
 def load_location(city):
   """Resolve ``city`` against ``cities.json`` and return a ``Location``."""
   locations = city_locations()
   name = resolve_city_key(city, locations)
   record = locations[name]
   return Location(name, record["latitude"], record["longitude"], record["timezone"])
+
+
+def resolve_location(city=None, latitude=None, longitude=None, timezone=None):
+  """Manual lat/lon/timezone floats when any is set (wins over city), else the catalog city."""
+  if latitude or longitude or timezone:
+    return load_custom_location(latitude, longitude, timezone)
+  return load_location(city)
 
 
 def format_eclipse_line(eclipses, timezone_name, sunrise_by_date=None):
@@ -600,8 +644,10 @@ def solar_dates_by_date(records):
 
 
 def local_range_jds(start_year, start_month, end_year, end_month, timezone_name):
-  """UT Julian days covering the printed Gregorian months in local civil time."""
-  timezone_info = ZoneInfo(timezone_name)
+  """UT Julian days covering the printed Gregorian months in local civil time.
+
+  Fixed ``UTC±H[:MM]`` offsets are plain ``datetime.timezone`` values."""
+  timezone_info = panchanga.tzinfo_for(timezone_name)
   last_day = calendar.monthrange(end_year, end_month)[1]
   start_local = datetime(start_year, start_month, 1, 0, 0, 0, tzinfo=timezone_info)
   end_local = datetime(end_year, end_month, last_day, 23, 59, 59, tzinfo=timezone_info)
@@ -610,7 +656,7 @@ def local_range_jds(start_year, start_month, end_year, end_month, timezone_name)
 
 def format_utc_offset(timezone_name, year, month, day=15):
   """Return 'UTC+5:30 (IST)' style label for a timezone on a given date."""
-  zone = ZoneInfo(timezone_name)
+  zone = panchanga.tzinfo_for(timezone_name)
   local = datetime(year, month, day, 12, tzinfo=zone)
   offset = local.utcoffset()
   if offset is None:
