@@ -6,7 +6,7 @@ from unittest import mock
 import panchanga
 
 from festival_rules import (
-  civil_day_has_eclipse,
+  hindu_day_has_eclipse,
   find_local_eclipses,
   jd_to_local_civil_date,
   julian_day_from_datetime,
@@ -216,14 +216,39 @@ class EclipseCivilDatesTests(unittest.TestCase):
     dates = eclipse_civil_dates([eclipse], "Asia/Kolkata", sunrise_by_date={date(2026, 3, 4): sunrise})
     self.assertEqual(dates, {date(2026, 3, 3)})
 
-    with mock.patch("festival_rules.panchanga.swe.lun_eclipse_when_loc", return_value=(
-        panchanga.swe.ECL_PARTIAL | panchanga.swe.ECL_VISIBLE,
-        _times(maximum),
-        None,
-    )), mock.patch("festival_rules.panchanga.swe.sol_eclipse_when_loc", return_value=(0, _times(100.0), None)):
-      geopos = (77.6, 13.0, 0.0)
-      self.assertFalse(civil_day_has_eclipse(date(2026, 3, 3), geopos, "Asia/Kolkata"))
-      self.assertTrue(civil_day_has_eclipse(date(2026, 3, 4), geopos, "Asia/Kolkata"))
+
+class HinduDayHasEclipseTests(unittest.TestCase):
+  """The eclipse test uses [sunrise, next sunrise), like the printed mark."""
+
+  geopos = (75.0, 23.0, 0.0)  # Ujjain-ish
+
+  def _maximum_jd(self, year, month, day, hour, minute):
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    return julian_day_from_datetime(datetime(year, month, day, hour, minute, tzinfo=ZoneInfo("Asia/Kolkata")))
+
+  def _lunar_at(self, maximum):
+    return mock.patch("festival_rules.panchanga.swe.lun_eclipse_when_loc", return_value=(
+      panchanga.swe.ECL_PARTIAL | panchanga.swe.ECL_VISIBLE,
+      _times(maximum),
+      None,
+    ))
+
+  def test_maximum_before_sunrise_belongs_to_the_previous_date(self):
+    from datetime import date
+    # Hypothetical maximum 02:00 on 12-Oct-2026; that morning's sunrise ~06:30,
+    # so the maximum falls in the Hindu day that began on 11-Oct.
+    with self._lunar_at(self._maximum_jd(2026, 10, 12, 2, 0)), mock.patch(
+        "festival_rules.panchanga.swe.sol_eclipse_when_loc", return_value=(0, _times(100.0), None)):
+      self.assertTrue(hindu_day_has_eclipse(date(2026, 10, 11), self.geopos, "Asia/Kolkata"))
+      self.assertFalse(hindu_day_has_eclipse(date(2026, 10, 12), self.geopos, "Asia/Kolkata"))
+
+  def test_maximum_after_sunrise_stays_on_its_own_date(self):
+    from datetime import date
+    with self._lunar_at(self._maximum_jd(2026, 10, 12, 7, 0)), mock.patch(
+        "festival_rules.panchanga.swe.sol_eclipse_when_loc", return_value=(0, _times(100.0), None)):
+      self.assertFalse(hindu_day_has_eclipse(date(2026, 10, 11), self.geopos, "Asia/Kolkata"))
+      self.assertTrue(hindu_day_has_eclipse(date(2026, 10, 12), self.geopos, "Asia/Kolkata"))
 
 
 if __name__ == "__main__":

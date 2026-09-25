@@ -19,6 +19,7 @@ from festival_rules import (
   ekadashi_parana_by_parana_date,
   ekadashi_parana_for_upavasa,
   format_festival_dates,
+  hindu_day_has_eclipse,
   jd_to_local_datetime,
   load_festival_selection,
   plain_tithi_number,
@@ -724,23 +725,23 @@ class UpakarmaEclipseFallbackTests(unittest.TestCase):
     self.geopos = (79.42, 13.65, 0.0)
 
   def test_keeps_primary_without_an_eclipse(self):
-    with mock.patch("festival_rules.civil_day_has_eclipse", return_value=False) as eclipse:
+    with mock.patch("festival_rules.hindu_day_has_eclipse", return_value=False) as eclipse:
       selected = postpone_upakarma_if_eclipse(self.primary, self.fallback, self.geopos, "Asia/Kolkata")
     self.assertEqual(selected, self.primary)
     eclipse.assert_called_once_with(self.primary[0], self.geopos, "Asia/Kolkata")
 
   def test_uses_fallback_for_an_eclipse(self):
-    with mock.patch("festival_rules.civil_day_has_eclipse", return_value=True):
+    with mock.patch("festival_rules.hindu_day_has_eclipse", return_value=True):
       selected = postpone_upakarma_if_eclipse(self.primary, self.fallback, self.geopos, "Asia/Kolkata")
     self.assertEqual(selected, self.fallback)
 
   def test_keeps_primary_when_an_eclipse_has_no_fallback(self):
-    with mock.patch("festival_rules.civil_day_has_eclipse", return_value=True):
+    with mock.patch("festival_rules.hindu_day_has_eclipse", return_value=True):
       selected = postpone_upakarma_if_eclipse(self.primary, [], self.geopos, "Asia/Kolkata")
     self.assertEqual(selected, self.primary)
 
   def test_keeps_primary_without_timezone(self):
-    with mock.patch("festival_rules.civil_day_has_eclipse") as eclipse:
+    with mock.patch("festival_rules.hindu_day_has_eclipse") as eclipse:
       selected = postpone_upakarma_if_eclipse(self.primary, self.fallback, self.geopos, None)
     self.assertEqual(selected, self.primary)
     eclipse.assert_not_called()
@@ -748,7 +749,7 @@ class UpakarmaEclipseFallbackTests(unittest.TestCase):
   def test_eclipse_moves_only_its_own_year_to_the_fallback(self):
     primary = [date(2030, 8, 10), date(2031, 8, 10)]
     fallback = [date(2030, 9, 8), date(2031, 9, 8)]
-    with mock.patch("festival_rules.civil_day_has_eclipse",
+    with mock.patch("festival_rules.hindu_day_has_eclipse",
                     side_effect=lambda civil_date, geopos, timezone_name: civil_date == date(2030, 8, 10)) as eclipse:
       selected = postpone_upakarma_if_eclipse(primary, fallback, self.geopos, "Asia/Kolkata")
     self.assertEqual(selected, [date(2030, 9, 8), date(2031, 8, 10)])
@@ -760,7 +761,7 @@ class UpakarmaEclipseFallbackTests(unittest.TestCase):
   def test_eclipse_moves_only_the_second_year_to_the_fallback(self):
     primary = [date(2030, 8, 10), date(2031, 8, 10)]
     fallback = [date(2030, 9, 8), date(2031, 9, 8)]
-    with mock.patch("festival_rules.civil_day_has_eclipse",
+    with mock.patch("festival_rules.hindu_day_has_eclipse",
                     side_effect=lambda civil_date, geopos, timezone_name: civil_date == date(2031, 8, 10)):
       selected = postpone_upakarma_if_eclipse(primary, fallback, self.geopos, "Asia/Kolkata")
     self.assertEqual(selected, [date(2030, 8, 10), date(2031, 9, 8)])
@@ -768,7 +769,7 @@ class UpakarmaEclipseFallbackTests(unittest.TestCase):
   def test_eclipse_year_without_fallback_keeps_its_own_primary(self):
     primary = [date(2030, 8, 10), date(2031, 8, 10)]
     fallback = [date(2031, 9, 8)]
-    with mock.patch("festival_rules.civil_day_has_eclipse",
+    with mock.patch("festival_rules.hindu_day_has_eclipse",
                     side_effect=lambda civil_date, geopos, timezone_name: civil_date == date(2030, 8, 10)):
       selected = postpone_upakarma_if_eclipse(primary, fallback, self.geopos, "Asia/Kolkata")
     self.assertEqual(selected, [date(2030, 8, 10), date(2031, 8, 10)])
@@ -776,7 +777,7 @@ class UpakarmaEclipseFallbackTests(unittest.TestCase):
   def test_missing_fallback_year_does_not_take_another_year_fallback(self):
     primary = [date(2030, 8, 10)]
     fallback = [date(2031, 9, 8)]
-    with mock.patch("festival_rules.civil_day_has_eclipse", return_value=True):
+    with mock.patch("festival_rules.hindu_day_has_eclipse", return_value=True):
       selected = postpone_upakarma_if_eclipse(primary, fallback, self.geopos, "Asia/Kolkata")
     self.assertEqual(selected, [date(2030, 8, 10)])
 
@@ -830,7 +831,7 @@ class RigUpakarmaTests(unittest.TestCase):
       festival_record(date(2030, 9, 9), "S12", masa="6", is_adhika=False, nakshatra=23, sunrise_jd=42.0),
     ]
     geopos = (79.42, 13.65, 0.0)
-    with mock.patch("festival_rules.civil_day_has_eclipse",
+    with mock.patch("festival_rules.hindu_day_has_eclipse",
                     side_effect=lambda civil_date, geopos, timezone_name: civil_date == date(2030, 8, 10)):
       self.assertEqual(select_rig_upakarma_dates(records, geopos=geopos, timezone_name="Asia/Kolkata"),
                        [date(2030, 9, 8)])
@@ -887,7 +888,7 @@ class SamaUpakarmaTests(unittest.TestCase):
       festival_record(date(2030, 9, 9), "S12", masa="6", is_adhika=False, nakshatra=14, sunrise_jd=42.0),
     ]
     geopos = (79.42, 13.65, 0.0)
-    with mock.patch("festival_rules.civil_day_has_eclipse",
+    with mock.patch("festival_rules.hindu_day_has_eclipse",
                     side_effect=lambda civil_date, geopos, timezone_name: civil_date == date(2030, 9, 8)):
       self.assertEqual(select_sama_upakarma_dates(records, geopos=geopos, timezone_name="Asia/Kolkata"),
                        [date(2030, 8, 10)])
@@ -949,7 +950,7 @@ class YajurUpakarmaTests(unittest.TestCase):
       festival_record(date(2030, 9, 15), "K1", masa="6", is_adhika=False, nakshatra=1, sunrise_jd=42.0),
     ]
     geopos = (79.42, 13.65, 0.0)
-    with mock.patch("festival_rules.civil_day_has_eclipse",
+    with mock.patch("festival_rules.hindu_day_has_eclipse",
                     side_effect=lambda civil_date, geopos, timezone_name: civil_date == date(2030, 8, 15)):
       self.assertEqual(select_yajur_upakarma_dates(records, geopos=geopos, timezone_name="Asia/Kolkata"),
                        [date(2030, 9, 14)])
@@ -970,12 +971,15 @@ class YajurUpakarmaTests(unittest.TestCase):
       festival_record(date(2031, 9, 4), "K1", masa="6", is_adhika=False, nakshatra=1, sunrise_jd=82.0),
     ]
     geopos = (79.42, 13.65, 0.0)
-    with mock.patch("festival_rules.civil_day_has_eclipse",
+    with mock.patch("festival_rules.hindu_day_has_eclipse",
                     side_effect=lambda civil_date, geopos, timezone_name: civil_date == date(2030, 8, 15)):
       self.assertEqual(select_yajur_upakarma_dates(records, geopos=geopos, timezone_name="Asia/Kolkata"),
                        [date(2030, 9, 14), date(2031, 8, 5)])
 
-  def test_helsinki_pre_sunrise_eclipse_postpones_to_bhadrapada(self):
+  def test_helsinki_pre_sunrise_eclipse_belongs_to_the_previous_hindu_day(self):
+    # Maximum 2026-08-28 06:05 EEST, sunrise 06:12 EEST: the eclipse precedes
+    # that morning's sunrise, so it sits in the Hindu day that began on
+    # 08-27 and does not move Upakarma on 08-28.
     location = load_location("Helsinki")
     panchanga.set_chosen_ayanamsa("citra")
     months = list(month_range(2026, 5))
@@ -983,7 +987,30 @@ class YajurUpakarmaTests(unittest.TestCase):
     geopos = (location.longitude, location.latitude, 0.0)
 
     self.assertEqual(select_yajur_upakarma_dates(records, geopos=geopos, timezone_name=location.timezone_name),
-                     [date(2026, 9, 26)])
+                     [date(2026, 8, 28)])
+
+  def test_helsinki_pre_sunrise_eclipse_is_attributed_to_the_previous_day(self):
+    # Real data: maximum 2026-08-28 06:05 EEST precedes the 06:12 sunrise, so
+    # the instant lands in the Hindu day that began on 08-27.
+    location = load_location("Helsinki")
+    geopos = (location.longitude, location.latitude, 0.0)
+
+    self.assertTrue(hindu_day_has_eclipse(date(2026, 8, 27), geopos, location.timezone_name))
+    self.assertFalse(hindu_day_has_eclipse(date(2026, 8, 28), geopos, location.timezone_name))
+
+  def test_eclipse_inside_the_upakarma_hindu_day_postpones_to_bhadrapada(self):
+    # Same real Helsinki records as above, with the eclipse predicate forced
+    # on, so the postpone wiring itself is pinned against the nija-S15 dates.
+    location = load_location("Helsinki")
+    panchanga.set_chosen_ayanamsa("citra")
+    months = list(month_range(2026, 5))
+    records = daily_records(months, location)
+    geopos = (location.longitude, location.latitude, 0.0)
+
+    with mock.patch("festival_rules.hindu_day_has_eclipse",
+                    side_effect=lambda civil_date, geopos, timezone_name: civil_date == date(2026, 8, 28)):
+      self.assertEqual(select_yajur_upakarma_dates(records, geopos=geopos, timezone_name=location.timezone_name),
+                       [date(2026, 9, 26)])
 
 
 class VaikunthaEkadashiTests(unittest.TestCase):

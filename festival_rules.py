@@ -291,15 +291,23 @@ def find_local_eclipses(start_jd, end_jd, geopos):
   return found
 
 
-def civil_day_has_eclipse(civil_date, geopos, timezone_name):
-  """True when a visible non-penumbral lunar eclipse peaks locally on date."""
+def hindu_day_has_eclipse(civil_date, geopos, timezone_name):
+  """True when a visible non-penumbral lunar eclipse peaks in the Hindu day.
+
+    The Hindu day runs ``[sunrise, next sunrise)``, not midnight to midnight:
+    an eclipse before that morning's sunrise belongs to the previous date, the
+    same date the printed eclipse mark sits on. If a sunrise is unavailable,
+    fall back to the civil window rather than silently dropping the eclipse.
+    """
   if geopos is None:
     return False
-  timezone_info = ZoneInfo(timezone_name)
-  day_start = datetime(civil_date.year, civil_date.month, civil_date.day, tzinfo=timezone_info)
-  day_end = day_start + timedelta(days=1)
-  start_jd = julian_day_from_datetime(day_start)
-  end_jd = julian_day_from_datetime(day_end)
+  start_jd = _event_jd_ut(civil_date, geopos, timezone_name, panchanga.sunrise)
+  end_jd = _event_jd_ut(civil_date + timedelta(days=1), geopos, timezone_name, panchanga.sunrise)
+  if start_jd is None or end_jd is None:
+    log.warning("Sunrise unavailable for %s; eclipse test uses the civil day", civil_date)
+    day_start = datetime(civil_date.year, civil_date.month, civil_date.day, tzinfo=ZoneInfo(timezone_name))
+    start_jd = julian_day_from_datetime(day_start)
+    end_jd = julian_day_from_datetime(day_start + timedelta(days=1))
   for kind, _phase, _maximum_jd in find_local_eclipses(start_jd, end_jd, geopos):
     if kind == "Lunar":
       return True
@@ -311,6 +319,8 @@ def postpone_upakarma_if_eclipse(primary, fallback, geopos, timezone_name):
 
     Each primary date is paired with the fallback of its own Gregorian year,
     so only the eclipsed year's date moves; every other year keeps its date.
+    The eclipse is tested against the Hindu day (``[sunrise, next sunrise)``)
+    that begins on the primary date, matching the printed eclipse mark.
     """
   if not primary:
     return list(fallback)
@@ -321,7 +331,7 @@ def postpone_upakarma_if_eclipse(primary, fallback, geopos, timezone_name):
   selected = []
   for civil_date in primary:
     fallback_date = fallback_by_year.get(civil_date.year)
-    if fallback_date and civil_day_has_eclipse(civil_date, geopos, timezone_name):
+    if fallback_date and hindu_day_has_eclipse(civil_date, geopos, timezone_name):
       selected.append(fallback_date)
     else:
       selected.append(civil_date)

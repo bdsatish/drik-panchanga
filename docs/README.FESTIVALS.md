@@ -100,12 +100,14 @@ These have dedicated selectors (dispatch by catalog name):
   the former sunrise.
 
   Upakarma eclipse test (Yajur and Rig): postpone when the instant of a
-  locally visible non-penumbral lunar eclipse's maximum falls on the chosen
-  local civil date. In practical terms, an eclipse `X` on the selected
-  Upakarma date triggers the fallback. Solar and purely penumbral lunar
-  eclipses are ignored. Using midnight-to-midnight civil date for an eclipse
-  is in line with Dharma Sindhu. Using the maximum's moment avoids interval
-  arithmetic.
+  locally visible non-penumbral lunar eclipse's maximum falls inside the
+  Hindu day that starts on the chosen date, i.e. inside
+  `[sunrise, next sunrise)`. An eclipse before that morning's sunrise
+  therefore belongs to the previous date: it does not postpone the chosen
+  Upakarma day, and it does not mark that day's cell either. Solar and purely
+  penumbral lunar eclipses are ignored. Using the same window as the printed
+  wavy eclipse mark keeps a date and its cell in agreement; using the
+  maximum's moment avoids interval arithmetic.
 * **Onam** -- sunrise nakshatra Sravana (`22`) while the Sun is in Simha
   (raasi 5); if none, try Kanya (raasi 6). Same vriddhi / empty-primary
   pattern as Rig Upakarma, but keyed on solar rasi rather than lunar masa, and
