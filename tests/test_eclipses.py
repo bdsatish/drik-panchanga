@@ -12,7 +12,7 @@ from festival_rules import (
   julian_day_from_datetime,
 )
 from generate_panchanga_calendar import eclipse_civil_dates, format_eclipse_line
-from panchanga import format_local_hm, hindu_day_civil
+from panchanga import format_hms_at_instant, format_local_hm, hindu_day_civil
 
 
 def _times(maximum):
@@ -196,6 +196,43 @@ class FormatLocalHmTests(unittest.TestCase):
     jd = self._jd(23, 59, 50)
     self.assertEqual(format_local_hm(jd, self.TZ), "24:00")
     self.assertEqual(jd_to_local_civil_date(jd, self.TZ).isoformat(), "2026-03-03")
+
+
+class FormatHmsAtInstantTests(unittest.TestCase):
+  """A baked hours-past-midnight value is re-read at the event instant.
+
+  The bake uses the one UTC offset of the civil date (``place_for_date``
+  stores the offset at local noon). An event after that day's DST change
+  must read the offset in force when it happened.
+  """
+
+  HELSINKI = "Europe/Helsinki"
+
+  def _read(self, ut_hours_past_jd, anchor, baked_offset):
+    """Bake ``(event_ut - jd) * 24 + baked_offset`` as the helpers do, then read."""
+    from datetime import date
+    anchor_date = date(*anchor)
+    jd = panchanga.gregorian_to_jd(anchor_date)
+    place = panchanga.Place(60.17, 24.94, baked_offset)
+    hms = panchanga.to_hms(ut_hours_past_jd + baked_offset)
+    return format_hms_at_instant(hms, jd, place, self.HELSINKI, anchor_civil=anchor_date)
+
+  def test_tail_after_dst_start_reads_the_new_offset(self):
+    # 28 Mar 2026 row, event at 02:17 UT on the 29th (after the 03:00
+    # EET->EEST change): the stale +2 bake reads 28:17, the clock says 29:17.
+    self.assertEqual(self._read(26 + 17 / 60, (2026, 3, 28), +2.0), "29:17")
+
+  def test_tail_after_dst_end_reads_the_new_offset(self):
+    # 24 Oct 2026 row, event at 04:05 UT on the 25th (after the 04:00
+    # EEST->EET change): the stale +3 bake reads 31:05, the clock says 30:05.
+    self.assertEqual(self._read(28 + 5 / 60, (2026, 10, 24), +3.0), "30:05")
+
+  def test_tail_before_the_change_keeps_the_old_reading(self):
+    # Same row, event at 22:15 UT on the 28th: no transition in between, so
+    # the reading equals plain ``format_hms`` of the baked value (24:15).
+    hms = panchanga.to_hms(22 + 15 / 60 + 2.0)
+    self.assertEqual(self._read(22 + 15 / 60, (2026, 3, 28), +2.0), panchanga.format_hms(hms))
+    self.assertEqual(self._read(22 + 15 / 60, (2026, 3, 28), +2.0), "24:15")
 
 
 class EclipseCivilDatesTests(unittest.TestCase):

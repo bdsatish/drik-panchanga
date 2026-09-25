@@ -29,6 +29,20 @@ fixed-star (nirayana) reference. The PDF subtitle shows *Tropical (Sāyana)*
 instead of an ayanamśa label, and the default filename gets a `_tropical`
 suffix.
 
+Daylight saving
+---------------
+
+A row is a Hindu day (sunrise to the next sunrise), but it is labelled with
+the civil date it starts on, and every time in it is hours past that civil
+midnight — so a time after midnight prints as `24:00` or later.
+
+One civil date carries one UTC offset (its offset at local noon). When the
+offset changes while a Hindu day is still running, the row keeps that label
+and that offset up to the change, and its tail is printed with the offset
+actually in effect after it: `28:17` becomes `29:17` on a spring-forward row,
+and `31:05` becomes `30:05` on a fall-back row. The *DST starts* / *DST ends*
+label stays on the civil date where the offset changes.
+
 One-page legend
 ---------------
 

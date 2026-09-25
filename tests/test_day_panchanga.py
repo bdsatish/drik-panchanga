@@ -170,3 +170,15 @@ class DayPanchangaMasaRituTests(unittest.TestCase):
     # Year 0 stays rejected (astronomical numbering: use -1 for 1 BCE).
     with self.assertRaises(ValueError):
       parse_civil_date("18/01/0")
+
+
+class DstClockTests(unittest.TestCase):
+  """Day view: a Hindu-day tail crossing a DST change reads the clock."""
+
+  def test_tithi_end_and_moonset_after_dst_start(self):
+    # Helsinki 28 Mar 2026: the tithi ends 02:17 UT and the moon sets 03:15 UT
+    # on the 29th, both after the 03:00 EET->EEST change. The stale +2 read
+    # 28:17:xx and 29:15:xx; the clock says 29:17:xx and 30:15:xx.
+    data = compute_day_panchanga("Helsinki", "28/03/2026")
+    self.assertTrue(data["tithi"][0]["ends"].startswith("29:"))
+    self.assertTrue(data["moonset"].startswith("30:"))

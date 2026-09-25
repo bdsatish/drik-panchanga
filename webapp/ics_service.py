@@ -64,8 +64,8 @@ def _ics_date(civil):
   return f"{civil.year:04d}{civil.month:02d}{civil.day:02d}"
 
 
-def _fmt_interval(start_hms, end_hms):
-  return f"{panchanga.format_hms(start_hms, show_seconds=True)}–{panchanga.format_hms(end_hms, show_seconds=True)}"
+def _fmt_interval(start_hms, end_hms, clock):
+  return f"{clock(start_hms, show_seconds=True)}–{clock(end_hms, show_seconds=True)}"
 
 
 def generate_ics(location, start_year, start_month, month_system="amanta", coordinate_selection="citra"):
@@ -101,6 +101,7 @@ def generate_ics(location, start_year, start_month, month_system="amanta", coord
         details = _compute_day_details_unlocked(location, civil, amanta=amanta,
                                                 coordinate_selection=coordinate_selection)
         names = details["names"]
+        clock = details["clock"]
         tithi_name = names["tithis"][str(details["ti"][0])]
         nak_name = names["nakshatras"][str(details["nak"][0])]
         yoga_name = names["yogas"][str(details["yog"][0])]
@@ -122,12 +123,12 @@ def generate_ics(location, start_year, start_month, month_system="amanta", coord
 
         durmuhurta_parts = []
         for start, end in _valid_durmuhurta_intervals(details["durmuhurta"]):
-          durmuhurta_parts.append(_fmt_interval(start, end))
+          durmuhurta_parts.append(_fmt_interval(start, end, clock))
         durmuhurta_text = ", ".join(durmuhurta_parts) if durmuhurta_parts else "—"
 
         varjyam_parts = []
         for start, end in details["varjyam"]:
-          varjyam_parts.append(_fmt_interval(start, end))
+          varjyam_parts.append(_fmt_interval(start, end, clock))
         varjyam_text = ", ".join(varjyam_parts) if varjyam_parts else "—"
 
         desc_lines = []
@@ -137,23 +138,21 @@ def generate_ics(location, start_year, start_month, month_system="amanta", coord
         desc_lines.append("Ayana: " + drik_ayana + " (drik) · " + ayana + " (siddhantic)")
         desc_lines.append("Ṛtu: " + drik_rtu_label + " (drik) · " + rtu_label + " (siddhantic)")
         desc_lines.append("Māsa: " + masa_label)
-        desc_lines.append("Tithi: " + tithi_name + " (ends " +
-                          panchanga.format_hms(details["ti"][1], show_seconds=True) + ")")
-        desc_lines.append("Nakṣatra: " + nak_name + " (ends " +
-                          panchanga.format_hms(details["nak"][1], show_seconds=True) + ")")
+        desc_lines.append("Tithi: " + tithi_name + " (ends " + clock(details["ti"][1], show_seconds=True) + ")")
+        desc_lines.append("Nakṣatra: " + nak_name + " (ends " + clock(details["nak"][1], show_seconds=True) + ")")
         desc_lines.append("Vāra: " + vara_name)
-        desc_lines.append("Yoga: " + yoga_name + " (ends " +
-                          panchanga.format_hms(details["yog"][1], show_seconds=True) + ")")
+        desc_lines.append("Yoga: " + yoga_name + " (ends " + clock(details["yog"][1], show_seconds=True) + ")")
         desc_lines.append("Karaṇa: " + names["karanas"][str(details["kar"][0])] + " (ends " +
-                          panchanga.format_hms(details["kar"][1], show_seconds=True) + ")")
-        desc_lines.append("Sun*: " + panchanga.format_hms(details["sunrise"][1], show_seconds=True) + " – " +
-                          panchanga.format_hms(details["sunset"][1], show_seconds=True))
+                          clock(details["kar"][1], show_seconds=True) + ")")
+        desc_lines.append("Sun*: " + clock(details["sunrise"][1], show_seconds=True) + " – " +
+                          clock(details["sunset"][1], show_seconds=True))
         desc_lines.append(moon_line)
+        # Duration, not an instant: a DST lengthened day really is 25 h.
         desc_lines.append("Day duration: " + panchanga.format_hms(details["day_dur"][1], show_seconds=True))
-        desc_lines.append("Rāhukāla: " + _fmt_interval(*details["rahu_kala"]))
+        desc_lines.append("Rāhukāla: " + _fmt_interval(*details["rahu_kala"], clock))
         desc_lines.append("Durmuhūrta: " + durmuhurta_text)
         desc_lines.append("Varjyam: " + varjyam_text)
-        desc_lines.append("Prātaḥ Sandhyā: " + _fmt_interval(*details["pratah_sandhya"]))
+        desc_lines.append("Prātaḥ Sandhyā: " + _fmt_interval(*details["pratah_sandhya"], clock))
         desc_lines.append("Kali Day: " + str(details["kali_day"]))
         desc_lines.append("Julian day: " + f"{details['jd']:.1f}")
         desc_lines.append("Sunrise JD (UT): " + f"{details['sunrise_jd_ut']:.6f}")

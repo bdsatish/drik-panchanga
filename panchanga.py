@@ -315,6 +315,23 @@ def format_local_hm(jd, timezone_name, anchor_civil=None, show_seconds=False):
   return format_hms_from_jd(jd, civil_jd, tz_hours, show_seconds=show_seconds)
 
 
+def format_hms_at_instant(hms, jd, place, timezone_name, anchor_civil, *, show_seconds=False):
+  """Format a baked ``hours past jd's midnight`` value at the event's own offset.
+
+  The tithi / nakshatra / yoga / moon / varjyam helpers return
+  ``to_hms((event_ut - jd) * 24 + place.timezone)``: the event read against the
+  one UTC offset of the civil date (``place_for_date`` stores the offset at
+  local noon). An event after a DST change keeps reading that old offset.
+  Invert the same formula to recover ``event_ut``, then let ``format_local_hm``
+  apply the offset actually in force at that instant.
+
+  ``anchor_civil`` is the cell's date, so a Hindu-day tail stays on that row's
+  24:00+ scale.
+  """
+  event_ut = jd + (hms[0] + hms[1] / 60 + hms[2] / 3600 - place.timezone) / 24
+  return format_local_hm(event_ut, timezone_name, anchor_civil=anchor_civil, show_seconds=show_seconds)
+
+
 def hindu_day_civil(jd, timezone_name, sunrise_jd=None):
   """Civil date whose midnight is the 24:00+ origin for ``jd``.
 

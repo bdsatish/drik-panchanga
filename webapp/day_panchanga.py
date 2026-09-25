@@ -8,6 +8,7 @@ request so ayanāṃśa / tropical mode stays stable under concurrent web use.
 import calendar
 import logging
 import math
+from functools import partial
 
 import panchanga
 from generate_panchanga_calendar import (
@@ -58,18 +59,18 @@ def _day_in_proleptic_gregorian_year(year, month, day):
   return 1 <= day <= calendar.monthrange(2001, month)[1]
 
 
-def _named_segments(nhms, lookup):
+def _named_segments(nhms, lookup, clock):
   """Map ``[index, [h,m,s]]`` or skipped ``[..., next_index, next_hms]`` to names."""
   segments = [{
     "number": int(nhms[0]),
     "name": lookup[str(nhms[0])],
-    "ends": panchanga.format_hms(nhms[1], show_seconds=True),
+    "ends": clock(nhms[1], show_seconds=True),
   }]
   if len(nhms) == 4:
     segments.append({
       "number": int(nhms[2]),
       "name": lookup[str(nhms[2])],
-      "ends": panchanga.format_hms(nhms[3], show_seconds=True),
+      "ends": clock(nhms[3], show_seconds=True),
     })
   return segments
 
@@ -86,16 +87,17 @@ def format_masa_label(names, masa_num, is_adhika):
   return format_masa_name(names, masa_num, is_adhika) + " māsa"
 
 
-def probe_moon_event(jd, place, civil, rise=True):
+def probe_moon_event(jd, place, civil, clock, rise=True):
   """Moonrise/moonset on the Hindu day: ``(HH:MM:SS or None, status)``.
 
   Status is ``ok``, ``none_today``, ``always_below``, ``always_above``, or
-  ``unavailable``.
+  ``unavailable``. ``clock`` reads baked hours-past-midnight values at the
+  event's own UTC offset (``panchanga.format_hms_at_instant``).
   """
   event = panchanga.moonrise(jd, place) if rise else panchanga.moonset(jd, place)
   if event is not None:
     _local_jd, hms = event
-    return panchanga.format_hms(hms, show_seconds=True), "ok"
+    return clock(hms, show_seconds=True), "ok"
   # No event in the Hindu-day window: distinguish circumpolar vs none today.
   swe = panchanga.swe
   t0 = jd - place.timezone / 24.0
@@ -116,11 +118,8 @@ def probe_moon_event(jd, place, civil, rise=True):
   return None, "none_today"
 
 
-def _interval_from_hms(start_hms, end_hms):
-  return {
-    "start": panchanga.format_hms(start_hms, show_seconds=True),
-    "end": panchanga.format_hms(end_hms, show_seconds=True)
-  }
+def _interval_from_hms(start_hms, end_hms, clock):
+  return {"start": clock(start_hms, show_seconds=True), "end": clock(end_hms, show_seconds=True)}
 
 
 def _valid_durmuhurta_intervals(values):
@@ -169,6 +168,9 @@ def _compute_day_details_unlocked(location, civil, amanta=None, coordinate_selec
   panchanga.set_coordinate_selection(coordinate_selection)
   place = place_for_date(location, civil)
   jd = panchanga.gregorian_to_jd(civil)
+  # One DST-aware reader for every baked hours-past-midnight value of this day.
+  clock = partial(panchanga.format_hms_at_instant, jd=jd, place=place, timezone_name=location.timezone_name,
+                  anchor_civil=civil)
 
   sunrise = panchanga.sunrise(jd, place)
   sunset = panchanga.sunset(jd, place)
@@ -200,8 +202,8 @@ def _compute_day_details_unlocked(location, civil, amanta=None, coordinate_selec
     finally:
       panchanga.reset_ayanamsa_mode()
   sun_raasi = int(panchanga.raasi(sunrise_jd_ut))
-  moonrise, moonrise_status = probe_moon_event(jd, place, civil, rise=True)
-  moonset, moonset_status = probe_moon_event(jd, place, civil, rise=False)
+  moonrise, moonrise_status = probe_moon_event(jd, place, civil, clock, rise=True)
+  moonset, moonset_status = probe_moon_event(jd, place, civil, clock, rise=False)
   rahu_kala = panchanga.rahu_kalam(jd, place)
   durmuhurta = panchanga.durmuhurtam(jd, place)
   varjyam = panchanga.varjyam(jd, place)
@@ -211,6 +213,7 @@ def _compute_day_details_unlocked(location, civil, amanta=None, coordinate_selec
     "civil": civil,
     "place": place,
     "jd": jd,
+    "clock": clock,
     "sunrise_jd_ut": sunrise_jd_ut,
     "sunrise": sunrise,
     "sunset": sunset,
@@ -278,11 +281,11 @@ def compute_day_panchanga(city, date_text, month_system="amanta", coordinate_sel
 
     durmuhurta_intervals = []
     for start, end in _valid_durmuhurta_intervals(details["durmuhurta"]):
-      durmuhurta_intervals.append(_interval_from_hms(start, end))
+      durmuhurta_intervals.append(_interval_from_hms(start, end, details["clock"]))
 
     varjyam_intervals = []
     for start, end in details["varjyam"]:
-      varjyam_intervals.append(_interval_from_hms(start, end))
+      varjyam_intervals.append(_interval_from_hms(start, end, details["clock"]))
 
     return {
       "city": location.name,
@@ -311,19 +314,21 @@ def compute_day_panchanga(city, date_text, month_system="amanta", coordinate_sel
       "saka_year": details["saka_year"],
       "kali_year": details["kali_year"],
       "vikrama_year": details["vikrama_year"],
-      "sunrise": panchanga.format_hms(details["sunrise"][1], show_seconds=True),
-      "sunset": panchanga.format_hms(details["sunset"][1], show_seconds=True),
+      # Instants read the event's own UTC offset; durations do not (a DST
+      # lengthened day really is 25 h).
+      "sunrise": details["clock"](details["sunrise"][1], show_seconds=True),
+      "sunset": details["clock"](details["sunset"][1], show_seconds=True),
       "moonrise": details["moonrise"],
       "moonrise_status": details["moonrise_status"],
       "moonset": details["moonset"],
       "moonset_status": details["moonset_status"],
       "day_duration": panchanga.format_hms(details["day_dur"][1], show_seconds=True),
-      "rahu_kala": _interval_from_hms(*details["rahu_kala"]),
+      "rahu_kala": _interval_from_hms(*details["rahu_kala"], details["clock"]),
       "durmuhurta": durmuhurta_intervals,
       "varjyam": varjyam_intervals,
-      "pratah_sandhya": _interval_from_hms(*details["pratah_sandhya"]),
-      "tithi": _named_segments(details["ti"], names["tithis"]),
-      "nakshatra": _named_segments(details["nak"], names["nakshatras"]),
-      "yoga": _named_segments(details["yog"], names["yogas"]),
-      "karana": _named_segments(details["kar"], names["karanas"]),
+      "pratah_sandhya": _interval_from_hms(*details["pratah_sandhya"], details["clock"]),
+      "tithi": _named_segments(details["ti"], names["tithis"], details["clock"]),
+      "nakshatra": _named_segments(details["nak"], names["nakshatras"], details["clock"]),
+      "yoga": _named_segments(details["yog"], names["yogas"], details["clock"]),
+      "karana": _named_segments(details["kar"], names["karanas"], details["clock"]),
     }

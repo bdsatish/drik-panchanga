@@ -201,6 +201,34 @@ class SunMoonTests(unittest.TestCase):
     self.assertFalse([line for line in lines if line.startswith("Sun:")])
 
 
+class DstClockTests(unittest.TestCase):
+  """A Hindu-day tail crossing a DST change reads the clock at the event.
+
+  Cell times are baked as hours past the row's midnight with the one UTC
+  offset of that civil date (its local-noon offset). The tail must re-read
+  the offset in force when the event happened. Helsinki 2026: DST starts
+  29 Mar 03:00 and ends 25 Oct 04:00 (01:00 UT at both changes).
+  """
+
+  def test_tithi_end_after_dst_start(self):
+    tithi_lines, _naks_lines, _yoga_names = day_details(load_location("Helsinki"), date(2026, 3, 28))
+    # S11 ends 02:17 UT on the 29th, after the change: the stale +2 read
+    # 28:17, the clock says 29:17.
+    self.assertEqual(tithi_lines[0], ("S11", "29:17"))
+
+  def test_moonset_after_dst_start(self):
+    lines = sun_moon_lines(load_location("Helsinki"), date(2026, 3, 28))
+    moon_line = [line for line in lines if line.startswith("Moon:")][0]
+    # Was 29:15 with the stale +2; after the change the clock reads 30:15.
+    self.assertTrue(moon_line.endswith("– 30:15"))
+
+  def test_moonset_after_dst_end(self):
+    lines = sun_moon_lines(load_location("Helsinki"), date(2026, 10, 24))
+    moon_line = [line for line in lines if line.startswith("Moon:")][0]
+    # Was 31:05 with the stale +3; after the change the clock reads 30:05.
+    self.assertTrue(moon_line.endswith("– 30:05"))
+
+
 class CellDrawTests(unittest.TestCase):
 
   def test_solar_day_line_is_drawn(self):

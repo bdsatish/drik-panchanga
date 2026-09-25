@@ -20,6 +20,7 @@ import logging
 import sys
 from datetime import date as CivilDate
 from datetime import timedelta
+from functools import partial
 from pathlib import Path
 
 try:
@@ -205,6 +206,16 @@ def yoga_name(number):
   return sanskrit_names().get("yogas", {}).get(str(int(number)), str(number))
 
 
+def cell_clock(location, civil, place, jd):
+  """Reader for a cell's baked hours-past-midnight values (``hms -> 'HH:MM'``).
+
+  Reads each event against the UTC offset in force when the event happened,
+  on this cell's 24:00+ scale (DST-aware).
+  """
+  return partial(panchanga.format_hms_at_instant, jd=jd, place=place, timezone_name=location.timezone_name,
+                 anchor_civil=civil)
+
+
 def day_details(location, civil):
   """Tithi / nakshatra / yoga lines at the day's sunrise anchor.
 
@@ -214,16 +225,17 @@ def day_details(location, civil):
   """
   place = place_for_date(location, civil)
   jd = gregorian_to_jd(civil)
+  clock = cell_clock(location, civil, place, jd)
   tithi_lines = []
   t = panchanga.tithi(jd, place)
-  tithi_lines.append((tithi_code(t[0]), panchanga.format_hms(t[1])))
+  tithi_lines.append((tithi_code(t[0]), clock(t[1])))
   if len(t) >= 4:
-    tithi_lines.append((tithi_code(t[2]), panchanga.format_hms(t[3])))
+    tithi_lines.append((tithi_code(t[2]), clock(t[3])))
   naks_lines = []
   n = panchanga.nakshatra(jd, place)
-  naks_lines.append((nakshatra_name(n[0]), panchanga.format_hms(n[1])))
+  naks_lines.append((nakshatra_name(n[0]), clock(n[1])))
   if len(n) >= 4:
-    naks_lines.append((nakshatra_name(n[2]), panchanga.format_hms(n[3])))
+    naks_lines.append((nakshatra_name(n[2]), clock(n[3])))
   yoga_names = []
   y = panchanga.yoga(jd, place)
   yoga_names.append(yoga_name(y[0]))
@@ -246,6 +258,7 @@ def sun_moon_lines(location, civil):
   """
   place = place_for_date(location, civil)
   jd = gregorian_to_jd(civil)
+  clock = cell_clock(location, civil, place, jd)
   lines = []
   try:
     # Swiss Ephemeris returns a 0.0 sentinel for a failed rise/set lookup
@@ -253,15 +266,15 @@ def sun_moon_lines(location, civil):
     # else a missing one prints a nonsense time like ``-59069097:00``.
     rise = panchanga.sunrise(jd, place)
     set_ = panchanga.sunset(jd, place)
-    rise_text = panchanga.format_hms(rise[1]) if jd - 1 <= rise[0] <= jd + 2 else "--"
-    set_text = panchanga.format_hms(set_[1]) if jd - 1 <= set_[0] <= jd + 2 else "--"
+    rise_text = clock(rise[1]) if jd - 1 <= rise[0] <= jd + 2 else "--"
+    set_text = clock(set_[1]) if jd - 1 <= set_[0] <= jd + 2 else "--"
     if rise_text != "--" or set_text != "--":
       sandhya_prefix = ""
       if rise_text != "--":
         try:
           ps_start, _ps_end = panchanga.pratah_sandhya(jd, place)
           if 0 <= ps_start[0] < 48:
-            sandhya_prefix = f"({panchanga.format_hms(ps_start)} –) "
+            sandhya_prefix = f"({clock(ps_start)} –) "
         except Exception as sandhya_exc:
           log.debug("pratah sandhya unavailable %s: %s", civil, sandhya_exc)
       lines.append(f"Sun: {sandhya_prefix}{rise_text} – {set_text}")
@@ -274,7 +287,7 @@ def sun_moon_lines(location, civil):
         continue
       local_jd, hms = event
       if jd - 1 <= local_jd <= jd + 2 and 0 <= hms[0] < 48:
-        parts.append(panchanga.format_hms(hms))
+        parts.append(clock(hms))
     if parts:
       lines.append("Moon: " + " – ".join(parts))
   except Exception as exc:
@@ -286,10 +299,11 @@ def varjyam_lines(location, civil):
   """Varjyam (Vishaghati) windows for one civil day, sunrise to next sunrise."""
   place = place_for_date(location, civil)
   jd = gregorian_to_jd(civil)
+  clock = cell_clock(location, civil, place, jd)
   lines = []
   try:
     for start, end in panchanga.varjyam(jd, place):
-      lines.append(f"Varjyam: {panchanga.format_hms(start)} – {panchanga.format_hms(end)}")
+      lines.append(f"Varjyam: {clock(start)} – {clock(end)}")
   except Exception as exc:
     log.debug("varjyam unavailable %s: %s", civil, exc)
   return lines
@@ -540,11 +554,12 @@ def rahu_kala_table_lines(location, year, month):
     try:
       place = place_for_date(location, civil)
       jd = gregorian_to_jd(civil)
+      clock = cell_clock(location, civil, place, jd)
       start, end = panchanga.trikalam(jd, place, option="rahu")
     except Exception as exc:
       log.debug("rahu kala unavailable %s: %s", civil, exc)
       continue
-    windows.setdefault(civil.weekday(), []).append((panchanga.format_hms(start), panchanga.format_hms(end)))
+    windows.setdefault(civil.weekday(), []).append((clock(start), clock(end)))
   lines = []
   for weekday in (6, 0, 1, 2, 3, 4, 5):
     if weekday not in windows:
