@@ -336,18 +336,29 @@ def select_yajur_upakarma_dates(records, geopos=None, timezone_name=None):
 
 
 def _nija_nakshatra_dates(records, masa, nakshatra):
-  """Non-adhika civil dates with ``nakshatra`` in lunar ``masa``, vriddhi-resolved."""
+  """First non-adhika civil date with ``nakshatra`` in each lunar ``masa`` month.
+
+    The nakshatra cycle is shorter than a long lunar month, so the same
+    nakshatra can reach sunrise twice in one masa (e.g. Bhadrapada Hasta on
+    2026-09-13 and 2026-10-10). Only the first day is the nija observance,
+    which also keeps the former sunrise when vriddhi repeats it next day.
+    """
   dates = []
   masa_code = str(masa)
-  for record in records:
+  month_has_date = False
+  for record in sorted(records, key=lambda record: record.civil_date):
     if record.masa != masa_code:
+      month_has_date = False
       continue
     if record.is_adhika:
       continue
     if record.nakshatra != nakshatra:
       continue
+    if month_has_date:
+      continue
+    month_has_date = True
     dates.append(record.civil_date)
-  return resolve_vriddhi_dates(dates)
+  return dates
 
 
 def _sravana_nakshatra_in_raasi_dates(records, raasi):
@@ -376,7 +387,7 @@ def select_rig_upakarma_dates(records, geopos=None, timezone_name=None):
 
 
 def select_sama_upakarma_dates(records, geopos=None, timezone_name=None):
-  """Nija Bhadrapada Hasta, postponed to Sravana Hasta on kshaya / local lunar eclipse."""
+  """Nija Bhadrapada Hasta, preponed to Sravana Hasta on kshaya / local lunar eclipse."""
   primary = _nija_nakshatra_dates(records, 6, HASTA_NAKSHATRA)
   fallback = _nija_nakshatra_dates(records, 5, HASTA_NAKSHATRA)
   return postpone_upakarma_if_eclipse(primary, fallback, geopos, timezone_name)

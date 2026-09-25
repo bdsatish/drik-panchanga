@@ -852,6 +852,31 @@ class SamaUpakarmaTests(unittest.TestCase):
     ]
     self.assertEqual(select_sama_upakarma_dates(records), [date(2030, 9, 8)])
 
+  def test_keeps_only_the_first_hasta_of_one_bhadrapada_month(self):
+    # Hasta reaches sunrise twice in one Bhadrapada (2026: 13 Sep and
+    # 10 Oct, the latter also Mahalaya Amavasya). Only the first day is
+    # the observance. The masa-7 row ends the 2026 Bhadrapada run, so the
+    # next year's Hasta is kept again.
+    records = [
+      festival_record(date(2026, 9, 12), "S2", masa="6", is_adhika=False, nakshatra=12, sunrise_jd=10.0),
+      festival_record(date(2026, 9, 13), "S3", masa="6", is_adhika=False, nakshatra=13, sunrise_jd=11.0),
+      festival_record(date(2026, 9, 14), "S4", masa="6", is_adhika=False, nakshatra=14, sunrise_jd=12.0),
+      festival_record(date(2026, 10, 9), "K14", masa="6", is_adhika=False, nakshatra=12, sunrise_jd=40.0),
+      festival_record(date(2026, 10, 10), "K15", masa="6", is_adhika=False, nakshatra=13, sunrise_jd=41.0),
+      festival_record(date(2026, 10, 11), "S1", masa="7", is_adhika=False, nakshatra=14, sunrise_jd=42.0),
+      festival_record(date(2027, 9, 2), "S2", masa="6", is_adhika=False, nakshatra=12, sunrise_jd=70.0),
+      festival_record(date(2027, 9, 3), "S3", masa="6", is_adhika=False, nakshatra=13, sunrise_jd=71.0),
+      festival_record(date(2027, 9, 4), "S4", masa="6", is_adhika=False, nakshatra=14, sunrise_jd=72.0),
+    ]
+    self.assertEqual(select_sama_upakarma_dates(records), [date(2026, 9, 13), date(2027, 9, 3)])
+
+  def test_vriddhi_keeps_former_sunrise(self):
+    records = [
+      festival_record(date(2030, 9, 8), "S11", masa="6", is_adhika=False, nakshatra=13, sunrise_jd=0.0),
+      festival_record(date(2030, 9, 9), "S12", masa="6", is_adhika=False, nakshatra=13, sunrise_jd=0.0),
+    ]
+    self.assertEqual(select_sama_upakarma_dates(records), [date(2030, 9, 8)])
+
   def test_eclipse_on_bhadrapada_hasta_postpones_to_sravana_hasta(self):
     records = [
       festival_record(date(2030, 8, 9), "S11", masa="5", is_adhika=False, nakshatra=12, sunrise_jd=10.0),
