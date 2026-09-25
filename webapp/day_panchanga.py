@@ -11,6 +11,7 @@ import math
 from functools import partial
 
 import panchanga
+from datetime_helper import format_hms, format_hms_at_instant, gregorian_to_jd
 from generate_panchanga_calendar import (
   ayanamsa_label,
   body_altitude_at_local_noon,
@@ -92,7 +93,7 @@ def probe_moon_event(jd, place, civil, clock, rise=True):
 
   Status is ``ok``, ``none_today``, ``always_below``, ``always_above``, or
   ``unavailable``. ``clock`` reads baked hours-past-midnight values at the
-  event's own UTC offset (``panchanga.format_hms_at_instant``).
+  event's own UTC offset (``datetime_helper.format_hms_at_instant``).
   """
   event = panchanga.moonrise(jd, place) if rise else panchanga.moonset(jd, place)
   if event is not None:
@@ -167,10 +168,9 @@ def _compute_day_details_unlocked(location, civil, amanta=None, coordinate_selec
     """
   panchanga.set_coordinate_selection(coordinate_selection)
   place = place_for_date(location, civil)
-  jd = panchanga.gregorian_to_jd(civil)
+  jd = gregorian_to_jd(civil)
   # One DST-aware reader for every baked hours-past-midnight value of this day.
-  clock = partial(panchanga.format_hms_at_instant, jd=jd, place=place, timezone_name=location.timezone_name,
-                  anchor_civil=civil)
+  clock = partial(format_hms_at_instant, jd=jd, place=place, timezone_name=location.timezone_name, anchor_civil=civil)
 
   sunrise = panchanga.sunrise(jd, place)
   sunset = panchanga.sunset(jd, place)
@@ -323,7 +323,7 @@ def compute_day_panchanga(city, date_text, month_system="amanta", coordinate_sel
       "moonrise_status": details["moonrise_status"],
       "moonset": details["moonset"],
       "moonset_status": details["moonset_status"],
-      "day_duration": panchanga.format_hms(details["day_dur"][1], show_seconds=True),
+      "day_duration": format_hms(details["day_dur"][1], show_seconds=True),
       "rahu_kala": _interval_from_hms(*details["rahu_kala"], details["clock"]),
       "durmuhurta": durmuhurta_intervals,
       "varjyam": varjyam_intervals,

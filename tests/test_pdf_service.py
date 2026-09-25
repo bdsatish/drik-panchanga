@@ -7,6 +7,7 @@ import sys
 import unittest
 from unittest import mock
 
+from datetime_helper import format_hms
 from webapp import cgi_handlers
 from webapp.app import app
 from webapp.day_panchanga import _interval_from_hms, _valid_durmuhurta_intervals
@@ -136,11 +137,11 @@ class DurmuhurtaRenderingTests(unittest.TestCase):
     self.assertEqual(intervals, [([10, 30, 0], [11, 15, 0])])
     json_intervals = []
     for start, end in intervals:
-      json_intervals.append(_interval_from_hms(start, end, panchanga.format_hms))
+      json_intervals.append(_interval_from_hms(start, end, format_hms))
     self.assertEqual(json_intervals, [{"start": "10:30:00", "end": "11:15:00"}])
     ics_parts = []
     for start, end in intervals:
-      ics_parts.append(_fmt_interval(start, end, panchanga.format_hms))
+      ics_parts.append(_fmt_interval(start, end, format_hms))
     self.assertEqual(", ".join(ics_parts), "10:30:00–11:15:00")
 
   def test_preserves_two_intervals_and_empty_fallback(self):

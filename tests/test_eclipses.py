@@ -5,14 +5,10 @@ from unittest import mock
 
 import panchanga
 
-from festival_rules import (
-  hindu_day_has_eclipse,
-  find_local_eclipses,
-  jd_to_local_civil_date,
-  julian_day_from_datetime,
-)
+from datetime_helper import (format_hms, format_hms_at_instant, format_local_hm, gregorian_to_jd, hindu_day_civil,
+                             jd_to_local_civil_date, julian_day_from_datetime, to_hms)
+from festival_rules import hindu_day_has_eclipse, find_local_eclipses
 from generate_panchanga_calendar import eclipse_civil_dates, format_eclipse_line
-from panchanga import format_hms_at_instant, format_local_hm, hindu_day_civil
 
 
 def _times(maximum):
@@ -212,9 +208,9 @@ class FormatHmsAtInstantTests(unittest.TestCase):
     """Bake ``(event_ut - jd) * 24 + baked_offset`` as the helpers do, then read."""
     from datetime import date
     anchor_date = date(*anchor)
-    jd = panchanga.gregorian_to_jd(anchor_date)
+    jd = gregorian_to_jd(anchor_date)
     place = panchanga.Place(60.17, 24.94, baked_offset)
-    hms = panchanga.to_hms(ut_hours_past_jd + baked_offset)
+    hms = to_hms(ut_hours_past_jd + baked_offset)
     return format_hms_at_instant(hms, jd, place, self.HELSINKI, anchor_civil=anchor_date)
 
   def test_tail_after_dst_start_reads_the_new_offset(self):
@@ -230,8 +226,8 @@ class FormatHmsAtInstantTests(unittest.TestCase):
   def test_tail_before_the_change_keeps_the_old_reading(self):
     # Same row, event at 22:15 UT on the 28th: no transition in between, so
     # the reading equals plain ``format_hms`` of the baked value (24:15).
-    hms = panchanga.to_hms(22 + 15 / 60 + 2.0)
-    self.assertEqual(self._read(22 + 15 / 60, (2026, 3, 28), +2.0), panchanga.format_hms(hms))
+    hms = to_hms(22 + 15 / 60 + 2.0)
+    self.assertEqual(self._read(22 + 15 / 60, (2026, 3, 28), +2.0), format_hms(hms))
     self.assertEqual(self._read(22 + 15 / 60, (2026, 3, 28), +2.0), "24:15")
 
 

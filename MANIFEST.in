@@ -1,5 +1,6 @@
 include LICENSE
 include docs/README.pypi.md
+include datetime_helper.py
 include panchanga.py
 include festival_rules.py
 include generate_panchanga_calendar.py

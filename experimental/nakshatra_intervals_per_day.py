@@ -1,6 +1,7 @@
 # Computes the average time interval (in days) between two successive nakshatras
 
 from panchanga import *
+from datetime_helper import gregorian_to_jd
 from numpy import diff, mean
 
 # 1/1/2024  to 31/12/2025 gives 27.3248068, expected 27.321662

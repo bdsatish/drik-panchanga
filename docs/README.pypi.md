@@ -32,16 +32,17 @@ this library:
 ## Usage
 
 ```python
+import datetime_helper
 import panchanga
 
 panchanga.set_chosen_ayanamsa("citra")
 place = panchanga.Place(12.972, 77.594, +5.5)  # lat, lon, timezone hours
-jd = panchanga.gregorian_to_jd(panchanga.Date(2026, 1, 15))
+jd = datetime_helper.gregorian_to_jd(panchanga.Date(2026, 1, 15))
 print(panchanga.tithi(jd, place))
 print(panchanga.nakshatra(jd, place))
 print(panchanga.masa(jd, place, amanta=True))   # or amanta=False for pūrṇimānta
 print(panchanga.moonrise(jd, place))  # Hindu day [sunrise, next sunrise), or None
-print(panchanga.format_hms([23, 59, 30]))  # "24:00" — never wraps to 00:00
+print(datetime_helper.format_hms([23, 59, 30]))  # "24:00" — never wraps to 00:00
 ```
 
 Times are hours past civil midnight and may run past 24:00 (Hindu day =

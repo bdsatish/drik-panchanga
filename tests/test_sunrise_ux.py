@@ -2,6 +2,7 @@
 
 import unittest
 
+from datetime_helper import format_hms, gregorian_to_jd
 from generate_panchanga_calendar import load_location
 from webapp.day_panchanga import compute_day_panchanga, place_for_date, parse_civil_date, probe_moon_event
 import panchanga
@@ -17,7 +18,7 @@ class PolarDayTests(unittest.TestCase):
     """Murmansk Jan 1 has no real rise: anchor = solar noon, rise == set."""
     civil = parse_civil_date("01/01/2025")
     place = place_for_date(self.murmansk, civil)
-    jd = panchanga.gregorian_to_jd(civil)
+    jd = gregorian_to_jd(civil)
     sunrise = panchanga.sunrise(jd, place)
     sunset = panchanga.sunset(jd, place)
     self.assertEqual(sunrise[0], sunset[0])  # day length 0
@@ -28,7 +29,7 @@ class PolarDayTests(unittest.TestCase):
     midnight, sunset at the next day's lower transit)."""
     civil = parse_civil_date("01/07/2025")
     place = place_for_date(self.murmansk, civil)
-    jd = panchanga.gregorian_to_jd(civil)
+    jd = gregorian_to_jd(civil)
     sunrise = panchanga.sunrise(jd, place)
     sunset = panchanga.sunset(jd, place)
     self.assertAlmostEqual((sunset[0] - sunrise[0]) * 24, 24.0, delta=0.01)
@@ -89,8 +90,8 @@ class MoonEventGapTests(unittest.TestCase):
     location = load_location("Bengaluru")
     civil = parse_civil_date("15/01/2025")
     place = place_for_date(location, civil)
-    jd = panchanga.gregorian_to_jd(civil)
-    time, status = probe_moon_event(jd, place, civil, panchanga.format_hms, rise=True)
+    jd = gregorian_to_jd(civil)
+    time, status = probe_moon_event(jd, place, civil, format_hms, rise=True)
     self.assertEqual(status, "ok")
     self.assertRegex(time, r"^\d{2}:\d{2}:\d{2}$")
     hour = int(time.split(":")[0])

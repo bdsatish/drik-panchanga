@@ -10,7 +10,6 @@ import sys
 from collections import namedtuple as struct
 from datetime import date as CivilDate, datetime
 from pathlib import Path
-from zoneinfo import ZoneInfo
 
 try:
   from reportlab.lib.colors import HexColor, white
@@ -22,7 +21,8 @@ except ImportError:
 from festival_rules import (DayRecord, ekadashi_dates_from_records, find_local_eclipses, load_festival_selection,
                             resolve_festivals, select_pradosham_dates, select_sankashti_chaturthi_dates)
 import panchanga
-from panchanga import format_local_hm, hindu_day_civil, jd_to_local_civil_date, julian_day_from_datetime
+from datetime_helper import (fixed_offset_name, format_local_hm, format_utc_offset, gregorian_to_jd, hindu_day_civil,
+                             jd_to_local_civil_date, local_range_jds, utc_offset_hours)
 
 MONTH_COUNT = 14
 DEFAULT_CITIES_PATH = Path(__file__).parent / "data" / "cities.json"
@@ -509,14 +509,6 @@ def _parse_float(text, kind, low, high):
   return value
 
 
-def fixed_offset_name(hours):
-  """Display name for a fixed UTC offset in hours: ``5.5`` → ``UTC+5:30``."""
-  total = round(hours * 60)
-  magnitude = abs(total)
-  suffix = f":{magnitude % 60:02d}" if magnitude % 60 else ""
-  return f"UTC{'+' if total >= 0 else '-'}{magnitude // 60}{suffix}"
-
-
 def load_custom_location(latitude, longitude, timezone):
   """``Location`` from signed floats: lat/lon degrees + UTC offset hours."""
   latitude = _parse_float(latitude, "latitude", -90, 90)
@@ -643,58 +635,9 @@ def solar_dates_by_date(records):
   return result
 
 
-def local_range_jds(start_year, start_month, end_year, end_month, timezone_name):
-  """UT Julian days covering the printed Gregorian months in local civil time.
-
-  Fixed ``UTC±H[:MM]`` offsets are plain ``datetime.timezone`` values."""
-  timezone_info = panchanga.tzinfo_for(timezone_name)
-  last_day = calendar.monthrange(end_year, end_month)[1]
-  start_local = datetime(start_year, start_month, 1, 0, 0, 0, tzinfo=timezone_info)
-  end_local = datetime(end_year, end_month, last_day, 23, 59, 59, tzinfo=timezone_info)
-  return julian_day_from_datetime(start_local), julian_day_from_datetime(end_local)
-
-
-def format_utc_offset(timezone_name, year, month, day=15):
-  """Return 'UTC+5:30 (IST)' style label for a timezone on a given date."""
-  zone = panchanga.tzinfo_for(timezone_name)
-  local = datetime(year, month, day, 12, tzinfo=zone)
-  offset = local.utcoffset()
-  if offset is None:
-    return ""
-  total_seconds = int(offset.total_seconds())
-  sign = "+" if total_seconds >= 0 else "-"
-  total_seconds = abs(total_seconds)
-  hours, remainder = divmod(total_seconds, 3600)
-  minutes = remainder // 60
-  offset_str = f"UTC{sign}{hours}" if minutes == 0 else f"UTC{sign}{hours}:{minutes:02d}"
-  abbr = local.strftime("%Z") or timezone_name
-  return f"{offset_str} ({abbr})"
-
-
-def dst_transitions(timezone_name, year, month):
-  """Return a dict of {day: 'DST starts'|'DST ends'} for transitions in a given month.
-
-  Scans the month day-by-day comparing UTC offset; when the offset changes,
-  the transition day is recorded with the appropriate label. The previous
-  month's last day is used to detect transitions on the 1st of the month.
-  """
-  last_day = calendar.monthrange(year, month)[1]
-  # Initialize from the last day of the previous month to catch transitions on the 1st
-  prev_month_year, prev_month = (year, month - 1) if month > 1 else (year - 1, 12)
-  prev_day = calendar.monthrange(prev_month_year, prev_month)[1]
-  prev_offset = panchanga.utc_offset_hours(timezone_name, CivilDate(prev_month_year, prev_month, prev_day))
-  transitions = {}
-  for day in range(1, last_day + 1):
-    hours = panchanga.utc_offset_hours(timezone_name, CivilDate(year, month, day))
-    if hours != prev_offset:
-      transitions[day] = "DST starts" if hours > prev_offset else "DST ends"
-    prev_offset = hours
-  return transitions
-
-
 def place_for_date(location, civil):
   """Build a ``Place`` with the city's UTC offset on the given civil date."""
-  offset = panchanga.utc_offset_hours(location.timezone_name, civil)
+  offset = utc_offset_hours(location.timezone_name, civil)
   return panchanga.Place(location.latitude, location.longitude, offset)
 
 
@@ -737,7 +680,7 @@ def daily_records(months, location):
     for day in range(1, calendar.monthrange(year, month)[1] + 1):
       date = panchanga.Date(year, month, day)
       place = place_for_date(location, date)
-      jd = panchanga.gregorian_to_jd(date)
+      jd = gregorian_to_jd(date)
       sunrise_jd = panchanga.sunrise(jd, place)[0]
       tithi_number = panchanga.tithi(jd, place)[0]
       nakshatra_number = panchanga.nakshatra(jd, place)[0]
@@ -933,9 +876,9 @@ def kali_ahargana_range(months):
   """Return Kali Ahargana values for the first and last printed civil dates."""
   start_year, start_month = months[0]
   end_year, end_month = months[-1]
-  start_jd = panchanga.gregorian_to_jd(panchanga.Date(start_year, start_month, 1))
+  start_jd = gregorian_to_jd(panchanga.Date(start_year, start_month, 1))
   end_day = calendar.monthrange(end_year, end_month)[1]
-  end_jd = panchanga.gregorian_to_jd(panchanga.Date(end_year, end_month, end_day))
+  end_jd = gregorian_to_jd(panchanga.Date(end_year, end_month, end_day))
   return int(panchanga.ahargana(start_jd)), int(panchanga.ahargana(end_jd))
 
 
@@ -944,7 +887,7 @@ def calendar_year_label(records, amanta=True):
   representative = records[len(records) // 2]
   civil = representative.civil_date
   masa_num = int(representative.masa.lstrip("A"))
-  jd = panchanga.gregorian_to_jd(panchanga.Date(civil.year, civil.month, civil.day))
+  jd = gregorian_to_jd(panchanga.Date(civil.year, civil.month, civil.day))
   kali_year, saka_year, vikrama_year = panchanga.elapsed_year(jd, masa_num)
   names = sanskrit_names()["samvats"]
   saka_name = names[str(panchanga.samvatsara(jd, masa_num))]

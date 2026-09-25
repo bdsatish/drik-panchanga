@@ -32,6 +32,7 @@ from festival_rules import (
   DURGA_ASHTAMI_NUMBER,
   RAKSHA_BANDHAN_NUMBER,
 )
+import datetime_helper
 import panchanga
 
 MONTH_COUNT = 13
@@ -276,7 +277,7 @@ def daily_values(year, month, location):
       location.longitude,
       timezone_hours(timezone, year, month, day),
     )
-    jd = panchanga.gregorian_to_jd(date)
+    jd = datetime_helper.gregorian_to_jd(date)
     try:
       sunrise_result = panchanga.sunrise(jd, place)
       sunrise_jd = sunrise_result[0]

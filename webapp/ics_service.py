@@ -3,6 +3,7 @@
 from calendar import monthrange
 from datetime import datetime, timezone
 
+from datetime_helper import format_hms
 from generate_panchanga_calendar import (
   coordinate_selection_label,
   location_slug,
@@ -148,7 +149,7 @@ def generate_ics(location, start_year, start_month, month_system="amanta", coord
                           clock(details["sunset"][1], show_seconds=True))
         desc_lines.append(moon_line)
         # Duration, not an instant: a DST lengthened day really is 25 h.
-        desc_lines.append("Day duration: " + panchanga.format_hms(details["day_dur"][1], show_seconds=True))
+        desc_lines.append("Day duration: " + format_hms(details["day_dur"][1], show_seconds=True))
         desc_lines.append("Rāhukāla: " + _fmt_interval(*details["rahu_kala"], clock))
         desc_lines.append("Durmuhūrta: " + durmuhurta_text)
         desc_lines.append("Varjyam: " + varjyam_text)

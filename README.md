@@ -11,7 +11,7 @@ named in either amānta or pūrṇimānta reckoning. Accurate from 5000 BCE to
 5000 CE. All timings are end timings. Times use a hours-past-midnight clock that
 may run past 24:00 (e.g. ``26:15`` = 02:15 next civil morning); ``23:59:30``
 rounds to ``24:00``, never wraps to ``00:00``. The Hindu day itself runs
-sunrise to sunrise. Format with ``panchanga.format_hms`` / ``format_hms_from_jd``.
+sunrise to sunrise. Format with ``datetime_helper.format_hms`` / ``format_hms_from_jd``.
 
 Requirements
 ------------
@@ -33,11 +33,12 @@ Using `panchanga.py` as a library
 The core module works standalone — no Flask, no ReportLab:
 
 ```python
+import datetime_helper
 import panchanga
 
 panchanga.set_chosen_ayanamsa("citra")
 place = panchanga.Place(12.972, 77.594, +5.5)  # lat, lon, timezone hours
-jd = panchanga.gregorian_to_jd(panchanga.Date(2026, 1, 15))
+jd = datetime_helper.gregorian_to_jd(panchanga.Date(2026, 1, 15))
 
 panchanga.tithi(jd, place)        # [27, [20, 17, 1]]  -> tithi 27, ends 20:17:01
 panchanga.nakshatra(jd, place)    # [18, [29, 46, 1]]  -> Jyeshtha, end time
@@ -55,9 +56,9 @@ panchanga.planetary_positions(jd, place)       # all grahas, sidereal
 panchanga.gauri_chogadiya(jd, place)           # 16 Choghadiya boundaries
 
 # Display (hours past civil midnight; never % 24):
-panchanga.format_hms([26, 15, 0])              # "26:15"
-panchanga.format_hms([23, 59, 30])             # "24:00"
-panchanga.format_local_hm(jd_ut, "Asia/Kolkata")  # UT JD -> local HH:MM
+datetime_helper.format_hms([26, 15, 0])              # "26:15"
+datetime_helper.format_hms([23, 59, 30])             # "24:00"
+datetime_helper.format_local_hm(jd_ut, "Asia/Kolkata")  # UT JD -> local HH:MM
 ```
 
 Moonrise / moonset

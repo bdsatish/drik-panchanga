@@ -1339,7 +1339,7 @@ class MakaraSankrantiRuleTests(unittest.TestCase):
             "panchanga.solar_longitude",
             side_effect=lambda jd: 270.0 if jd >= 2462511.2 else 269.0, # Sankranti at 11.2, which is before sunset 11.5
         ), patch(
-            "panchanga.gregorian_to_jd",
+            "datetime_helper.gregorian_to_jd",
             side_effect=lambda d: 2462510.0 if d.day == 13 else 2462513.0,
         ):
             self.assertEqual(
@@ -1352,7 +1352,7 @@ class MakaraSankrantiRuleTests(unittest.TestCase):
             "panchanga.solar_longitude",
             side_effect=lambda jd: 270.0 if jd >= 2462511.6 else 269.0, # Sankranti at 11.6, which is after sunset 11.5
         ), patch(
-            "panchanga.gregorian_to_jd",
+            "datetime_helper.gregorian_to_jd",
             side_effect=lambda d: 2462510.0 if d.day == 13 else 2462513.0,
         ):
             self.assertEqual(

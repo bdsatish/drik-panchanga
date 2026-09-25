@@ -52,6 +52,7 @@ Issues = "https://github.com/bdsatish/drik-panchanga/issues"
 # Data, fonts, and config are shipped alongside the Python modules via [tool.setuptools.package-data].
 [tool.setuptools]
 py-modules = [
+  "datetime_helper",
   "panchanga",
   "festival_rules",
   "generate_panchanga_calendar",

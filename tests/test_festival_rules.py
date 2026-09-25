@@ -10,6 +10,7 @@ from unittest import mock
 
 import panchanga
 
+from datetime_helper import gregorian_to_jd, jd_to_local_datetime
 from festival_rules import (
   DayRecord,
   FESTIVAL_RULES,
@@ -20,7 +21,6 @@ from festival_rules import (
   ekadashi_parana_for_upavasa,
   format_festival_dates,
   hindu_day_has_eclipse,
-  jd_to_local_datetime,
   load_festival_selection,
   plain_tithi_number,
   resolve_festivals,
@@ -1119,8 +1119,8 @@ class MeshaSankrantiTests(unittest.TestCase):
 class SolsticeTests(unittest.TestCase):
 
   def test_uses_first_sunrise_after_each_solstice_and_switches_hemisphere(self):
-    june_midnight = panchanga.gregorian_to_jd(panchanga.Date(2030, 6, 21))
-    december_midnight = panchanga.gregorian_to_jd(panchanga.Date(2030, 12, 21))
+    june_midnight = gregorian_to_jd(panchanga.Date(2030, 6, 21))
+    december_midnight = gregorian_to_jd(panchanga.Date(2030, 12, 21))
     june_solstice = june_midnight + 0.5
     december_solstice = december_midnight + 0.5
     records = [

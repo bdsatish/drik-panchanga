@@ -53,10 +53,8 @@ from generate_panchanga_calendar import (
   coordinate_selection_label,
   daily_records,
   display_masa,
-  dst_transitions,
   embed_pdf_metadata,
   ensure_pdf_fonts,
-  format_utc_offset,
   load_location,
   location_slug,
   masa_badges_by_date,
@@ -71,7 +69,9 @@ from generate_panchanga_calendar import (
   timing_key_line,
   tithi_code,
 )
-from panchanga import Date as PanDate, format_local_hm, gregorian_to_jd, hindu_day_civil, jd_to_local_civil_date
+from panchanga import Date as PanDate
+from datetime_helper import (dst_transitions, format_hms_at_instant, format_local_hm, format_utc_offset,
+                             gregorian_to_jd, hindu_day_civil, jd_to_local_civil_date)
 
 log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
@@ -212,8 +212,7 @@ def cell_clock(location, civil, place, jd):
   Reads each event against the UTC offset in force when the event happened,
   on this cell's 24:00+ scale (DST-aware).
   """
-  return partial(panchanga.format_hms_at_instant, jd=jd, place=place, timezone_name=location.timezone_name,
-                 anchor_civil=civil)
+  return partial(format_hms_at_instant, jd=jd, place=place, timezone_name=location.timezone_name, anchor_civil=civil)
 
 
 def day_details(location, civil):

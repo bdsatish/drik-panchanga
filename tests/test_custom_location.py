@@ -2,11 +2,8 @@
 
 import unittest
 
-from generate_panchanga_calendar import (
-  format_utc_offset,
-  load_custom_location,
-  resolve_location,
-)
+from datetime_helper import format_utc_offset
+from generate_panchanga_calendar import load_custom_location, resolve_location
 from webapp.app import app
 from webapp.day_panchanga import compute_day_panchanga
 

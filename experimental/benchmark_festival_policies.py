@@ -25,6 +25,7 @@ from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+import datetime_helper
 import panchanga
 
 from experimental.festival_rules import (
@@ -152,7 +153,7 @@ def daily_values(year, month, location):
       location.longitude,
       timezone_hours(timezone, year, month, day),
     )
-    jd = panchanga.gregorian_to_jd(date)
+    jd = datetime_helper.gregorian_to_jd(date)
     try:
       sunrise_result = panchanga.sunrise(jd, place)
       sunrise_jd = sunrise_result[0]

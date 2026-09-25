@@ -8,7 +8,8 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 import panchanga
-from panchanga import julian_day_from_datetime, jd_to_local_civil_date, jd_to_local_datetime, tzinfo_for
+from datetime_helper import (gregorian_to_jd, jd_to_local_civil_date, julian_day_from_datetime, tzinfo_for,
+                             utc_offset_hours)
 
 log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
@@ -17,7 +18,7 @@ log.addHandler(logging.NullHandler())
 def _event_jd_ut(civil_date, geopos, timezone_name, getter):
   """UT JD of a local event, or None if missing / sentinel."""
   place = _place_for_civil(civil_date, geopos, timezone_name)
-  jd = panchanga.gregorian_to_jd(panchanga.Date(civil_date.year, civil_date.month, civil_date.day))
+  jd = gregorian_to_jd(panchanga.Date(civil_date.year, civil_date.month, civil_date.day))
   try:
     event = getter(jd, place)
   except Exception:
@@ -612,7 +613,7 @@ def select_solstice_dates(records, solstice_longitude, timezone_name=None):
   local_timezone = timezone_name or "UTC"
   selected = []
   for year in years:
-    start_jd = panchanga.gregorian_to_jd(panchanga.Date(year, 1, 1))
+    start_jd = gregorian_to_jd(panchanga.Date(year, 1, 1))
     flags = panchanga.swe.FLG_SWIEPH | panchanga.swe.FLG_TROPICAL
     solstice_jd = panchanga.swe.solcross_ut(float(solstice_longitude), start_jd, flags)
     solstice_date = jd_to_local_civil_date(solstice_jd, local_timezone)
@@ -749,12 +750,12 @@ def ekadashi_dates_from_records(records):
 def _place_for_civil(civil_date, geopos, timezone_name):
   """``panchanga.Place`` for ``civil_date`` at ``geopos`` (lon, lat, alt)."""
   lon, lat, _alt = geopos
-  return panchanga.Place(lat, lon, panchanga.utc_offset_hours(timezone_name, civil_date))
+  return panchanga.Place(lat, lon, utc_offset_hours(timezone_name, civil_date))
 
 
 def _sunrise_tithi_end_jd_ut(civil_date, place):
   """UT Julian day when the tithi prevailing at sunrise on ``civil_date`` ends."""
-  jd = panchanga.gregorian_to_jd(panchanga.Date(civil_date.year, civil_date.month, civil_date.day))
+  jd = gregorian_to_jd(panchanga.Date(civil_date.year, civil_date.month, civil_date.day))
   tithi_info = panchanga.tithi(jd, place)
   hours, minutes, seconds = tithi_info[1]
   ends_hours = hours + minutes / 60.0 + seconds / 3600.0
@@ -768,7 +769,7 @@ def shraddha_tithi_at_aparahna(record, geopos, timezone_name):
   daylight duration and lunar phase come from the existing panchāṅga helpers;
   no sunrise-tithi approximation is used.
   """
-  jd = panchanga.gregorian_to_jd(panchanga.Date(record.civil_date.year, record.civil_date.month, record.civil_date.day))
+  jd = gregorian_to_jd(panchanga.Date(record.civil_date.year, record.civil_date.month, record.civil_date.day))
   place = _place_for_civil(record.civil_date, geopos, timezone_name)
   try:
     daylight_hours = panchanga.day_duration(jd, place)[0]

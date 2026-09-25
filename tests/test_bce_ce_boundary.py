@@ -23,9 +23,9 @@ import unittest
 import swisseph as swe
 
 import panchanga
-from panchanga import (Date, Place, ahargana, elapsed_year, gregorian_to_jd, local_time_to_jdut1, lunar_longitude,
-                       reset_ayanamsa_mode, set_ayanamsa_mode, set_chosen_ayanamsa, set_nakshatra_system,
-                       solar_longitude, vaara)
+from datetime_helper import gregorian_to_jd, local_time_to_jdut1
+from panchanga import (Date, Place, ahargana, elapsed_year, lunar_longitude, reset_ayanamsa_mode, set_ayanamsa_mode,
+                       set_chosen_ayanamsa, set_nakshatra_system, solar_longitude, vaara)
 from generate_panchanga_calendar import Location, place_for_date
 
 UJJAIN = Place(23.1765, 75.7864, +5.5)

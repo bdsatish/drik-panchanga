@@ -97,7 +97,7 @@ jobs:
       - name: Check formatting
         run: |
           # Packaged modules + webapp: the code that ships or runs in CI.
-          yapf --diff panchanga.py festival_rules.py \
+          yapf --diff datetime_helper.py panchanga.py festival_rules.py \
             generate_panchanga_calendar.py generate_monthly_calendar.py \
             webapp/*.py
 
@@ -136,6 +136,7 @@ jobs:
               "data/sanskrit_names.json",
               "fonts/IndUni-H.ttc",
               "config/festivals.cfg",
+              "datetime_helper.py",
               "panchanga.py",
               "festival_rules.py",
               "generate_panchanga_calendar.py",

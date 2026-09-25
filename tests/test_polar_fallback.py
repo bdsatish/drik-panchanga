@@ -18,7 +18,8 @@ from zoneinfo import ZoneInfo
 import swisseph as swe
 
 import panchanga
-from panchanga import Place, gregorian_to_jd, sunrise, sunset, day_duration, tithi
+from datetime_helper import gregorian_to_jd
+from panchanga import Place, sunrise, sunset, day_duration, tithi
 
 
 def _tz_hours(tz_name, year, month, day):

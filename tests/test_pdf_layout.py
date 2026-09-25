@@ -10,6 +10,7 @@ from unittest import mock
 
 from reportlab.pdfgen.canvas import Canvas
 
+from datetime_helper import dst_transitions, format_utc_offset
 from festival_rules import DayRecord
 from generate_panchanga_calendar import (
   ACCENT,
@@ -40,10 +41,8 @@ from generate_panchanga_calendar import (
   draw_sankranti_mark,
   draw_solar_day_mark,
   draw_tithi_underline,
-  dst_transitions,
   ensure_pdf_fonts,
   fitted_font_size,
-  format_utc_offset,
   kali_ahargana_range,
   load_location,
   month_range,
@@ -100,7 +99,7 @@ class PdfLayoutTests(unittest.TestCase):
     from datetime import datetime
     from zoneinfo import ZoneInfo
 
-    from festival_rules import julian_day_from_datetime
+    from datetime_helper import julian_day_from_datetime
 
     helsinki = ZoneInfo("Europe/Helsinki")
     # Printed span is Jun 2026 - Jul 2027; both maxima are at 02:00, before sunrise.
@@ -204,8 +203,8 @@ class PdfLayoutTests(unittest.TestCase):
     records = [
       DayRecord(date(2026, 4, 15), "K20", 1, 1, "1", False, 0.0),
     ]
-    with mock.patch("generate_panchanga_calendar.panchanga") as mock_panchanga:
-      mock_panchanga.gregorian_to_jd.return_value = 2450000.0
+    with mock.patch("generate_panchanga_calendar.panchanga") as mock_panchanga, \
+         mock.patch("generate_panchanga_calendar.gregorian_to_jd", return_value=2450000.0):
       mock_panchanga.elapsed_year.return_value = (5127, 1948, 2083)
       mock_panchanga.samvatsara.return_value = 1
       mock_panchanga.samvatsara_north_modern.return_value = 1
