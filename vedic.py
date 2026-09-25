@@ -28,7 +28,7 @@ def vedic_month(jd, place):
   lunar_month = 29.530589  # days
   month = ceil(abs(jd - uttarayana_moment) / lunar_month)
   ti = tithi(jd, place)[0]
-  critical = sunrise(jd, place)[0]  # - tz/24 ?
+  critical = sunrise(jd, place)
   next_new_moon = new_moon(critical, ti, +1)
   if jd < next_new_moon: month = 12
   return month
@@ -130,7 +130,7 @@ def tropical_raasi(jd):
 def tropical_month_tithi(jd, place, rename=False):
   """Tropical (sayana) month and tithi. 1 = Caitra,...,12 = Phalguna"""
   ti = tithi(jd, place)  # does not depend on tropical or sidereal
-  critical = sunrise(jd, place)[0]  # - tz/24 ?
+  critical = sunrise(jd, place)
   last_new_moon = new_moon(critical, ti[0], -1)  # doesn't depend on ayanamsa
   next_new_moon = new_moon(critical, ti[0], +1)  # doesn't depend on ayanamsa
   this_solar_month = tropical_raasi(last_new_moon)
@@ -145,13 +145,12 @@ def tropical_month_tithi(jd, place, rename=False):
 
 
 def tropical_nakshatra(jd, place, equal=True):
-  """Current nakshatra as of julian day (jd)
+  """Tropical nakshatra at sunrise and its end as a UT JD, shaped like ``nakshatra``.
      1 = Asvini, 2 = Bharani, ..., 27 = Revati
      `equal = False' uses Garga's unequal nakshatra spacing.
   """
   # 1. Find time of sunrise
-  lat, lon, tz = place
-  rise = sunrise(jd, place)[0] - tz / 24.  # Sunrise at UT 00:00
+  rise = sunrise(jd, place)
 
   offsets = [0.0, 0.25, 0.5, 0.75, 1.0]
   longitudes = [tropical_lunar_longitude(rise + t) for t in offsets]
@@ -165,8 +164,7 @@ def tropical_nakshatra(jd, place, equal=True):
   y = unwrap_angles(longitudes)
   x = offsets
   approx_end = inverse_lagrange(x, y, long_end)
-  ends = (rise - jd + approx_end) * 24 + tz
-  answer = [int(nak), to_hms(ends)]
+  answer = [int(nak), rise + approx_end]
 
   # 4. Check for skipped nakshatra
   nak_tmrw, nak_tmrw_end = tropical_long_fixed_stars(jd, longitudes[-1])
@@ -175,9 +173,8 @@ def tropical_nakshatra(jd, place, equal=True):
   if isSkipped:
     leap_nak = nak + 1
     approx_end = inverse_lagrange(offsets, longitudes, nak_tmrw_end)
-    ends = (rise - jd + approx_end) * 24 + tz
     leap_nak = 1 if nak == 27 else leap_nak
-    answer += [int(leap_nak), to_hms(ends)]
+    answer += [int(leap_nak), rise + approx_end]
 
   return answer
 
@@ -305,30 +302,41 @@ def tropical_long_fixed_stars_tests():
   assert (nak == 3 and (nak_ends_long - 358.90) < 0.1)  # Mercury in Krittika
 
 
+def _local_hms(jd_ut, jd, place):
+  return to_hms((jd_ut - jd) * 24 + place.timezone)
+
+
+def _month_tithi_hms(val, jd, place):
+  """``tropical_month_tithi`` result with the tithi end as local ``[h, m, s]``."""
+  (masa, ti), (number, end) = val[0], val[1][:2]
+  return [[masa, ti], [number, _local_hms(end, jd, place)]]
+
+
 def tropical_month_tithi_tests():
   dt1 = gregorian_to_jd(Date(2022, 12, 21))  # Margashira K13 in sidereal
   bangalore = Place(12.972, 77.594, +5.5)
   # Matches with JHora (sayana), month 10 = Pushya, tithi 28 = Krishna-trayodashi
   val = tropical_month_tithi(dt1, bangalore, False)
-  assert (val == [[10, False], [28, [22, 16, 39]]])
+  assert (_month_tithi_hms(val, dt1, bangalore) == [[10, False], [28, [22, 16, 39]]])
   # What we actually want: month 9 = Margashira, just like in sidereal
   val = tropical_month_tithi(dt1, bangalore, True)
-  assert (val == [[9, False], [28, [22, 16, 39]]])
+  assert (_month_tithi_hms(val, dt1, bangalore) == [[9, False], [28, [22, 16, 39]]])
   dt2 = gregorian_to_jd(Date(2022, 2, 21))  # sidereal Magha K5
   val = tropical_month_tithi(dt2, bangalore, True)
-  assert (val == [[11, False], [20, [19, 58, 1]]])  # 11 = Magha, 20 = K5
+  assert (_month_tithi_hms(val, dt2, bangalore) == [[11, False], [20, [19, 58, 1]]])  # 11 = Magha, 20 = K5
   # Test some very old dates.
   # Pushya Purnima must have Pushya nak, but sidereal itself gives Mrgasira (=Pusya-3)
   # so something is off with sidereal calendar also.
   dt3 = gregorian_to_jd(Date(-3100, 10, 18))  # sidereal Pushya Purnima
   val = tropical_month_tithi(dt3, bangalore, True)
-  assert (val == [[7, False], [15, [25, 0, 42]]])  # 7 = Ashvija :(
+  assert (_month_tithi_hms(val, dt3, bangalore) == [[7, False], [15, [25, 0, 42]]])  # 7 = Ashvija :(
   val = tropical_month_tithi(dt3, bangalore, False)
-  assert (val == [[8, False], [15, [25, 0, 42]]])  # 8 = Kartika :(
+  assert (_month_tithi_hms(val, dt3, bangalore) == [[8, False], [15, [25, 0, 42]]])  # 8 = Kartika :(
   # Kali Yuga start date
   dt3 = gregorian_to_jd(Date(-3101, 1, 22))  # sidereal Caitra S1
   val = tropical_month_tithi(dt3, bangalore, True)
-  assert (val == [[11, False], [1, [29, 29, 5]]])  # 11 = Magha, no way January is Caitra!
+  # 11 = Magha, no way January is Caitra!
+  assert (_month_tithi_hms(val, dt3, bangalore) == [[11, False], [1, [29, 29, 5]]])
   # Below dates from Reformed Sanathan Calendar, matches, including tithi END times!
   # http://web.archive.org/web/20160807161349/http://reformedsanathancalendar.in/sanathancalendar.pdf
   mar10 = gregorian_to_jd(Date(2016, 3, 10))
@@ -336,25 +344,27 @@ def tropical_month_tithi_tests():
   assert ([[1, False], [2, [24, 34, 3]]])  # Caitra S2, ends 24:34
   nov18 = gregorian_to_jd(Date(2016, 11, 18))  # RSC expected Ardra (6)
   val = tropical_month_tithi(nov18, bangalore)
-  assert (val == [[9, False], [20, [27, 32, 23]]])  # Margashira K5, ends 27:32
+  # Margashira K5, ends 27:32
+  assert (_month_tithi_hms(val, nov18, bangalore) == [[9, False], [20, [27, 32, 23]]])
 
 
 def tropical_nakshatra_tests():
   nov18 = gregorian_to_jd(Date(2016, 11, 18))  # RSC expected Ardra (6)
   nak, ends = nakshatra(nov18, bangalore)  # assumes SIDM_LAHIRI
-  assert (nak == 7 and ends == [28, 16, 24])  # Punarvasu (7) ends 28:16
+  assert (nak == 7 and _local_hms(ends, nov18, bangalore) == [28, 16, 24])  # Punarvasu (7) ends 28:16
   tr_nak = tropical_nakshatra(nov18, bangalore)
-  assert (tr_nak == [7, [28, 14, 15]])  # Punarvasu (7) TRUE_PUSHYA ends 26:19
+  # Punarvasu (7) TRUE_PUSHYA ends 26:19
+  assert (tr_nak[0] == 7 and _local_hms(tr_nak[1], nov18, bangalore) == [28, 14, 15])
   nov11 = gregorian_to_jd(Date(2016, 11, 11))  # RSC expected P.Bhadra (25)
   nak = nakshatra(nov11, bangalore)  # U.Bhadra (26), ends 25:00
-  assert (nak[0] == 26 and nak[1][0] == 25)
+  assert (nak[0] == 26 and _local_hms(nak[1], nov11, bangalore)[0] == 25)
   tr_nak = tropical_nakshatra(nov11, bangalore)  # U.Bhadra (26)
-  assert (tr_nak[0] == 26 and tr_nak[1] == [24, 58, 8])
+  assert (tr_nak[0] == 26 and _local_hms(tr_nak[1], nov11, bangalore) == [24, 58, 8])
   mar9 = gregorian_to_jd(Date(2017, 3, 9))  # SMKAP expected Punarvasu (7)
   nak = nakshatra(mar9, bangalore)  # sidereal Puṣya (8) ends 17:12:04
-  assert (nak[0] == 8 and nak[1][0:2] == [17, 12])
+  assert (nak[0] == 8 and _local_hms(nak[1], mar9, bangalore)[0:2] == [17, 12])
   tr_nak = tropical_nakshatra(mar9, bangalore)  # Pushya (8)
-  assert (tr_nak[0] == 8 and tr_nak[1] == [17, 10, 52])
+  assert (tr_nak[0] == 8 and _local_hms(tr_nak[1], mar9, bangalore) == [17, 10, 52])
 
 
 if __name__ == "__main__":

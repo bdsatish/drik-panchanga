@@ -5,7 +5,13 @@ from threading import Event, Lock, Thread
 from unittest.mock import patch
 
 import panchanga
+from datetime_helper import gregorian_to_jd
 from webapp.day_panchanga import compute_day_panchanga
+
+
+def _ist(hours, minutes, seconds):
+  """UT JD of an IST clock time on 21 April 2023."""
+  return gregorian_to_jd(panchanga.Date(2023, 4, 21)) + (hours + minutes / 60 + seconds / 3600 - 5.5) / 24
 
 
 class DayPanchangaMasaRituTests(unittest.TestCase):
@@ -46,7 +52,7 @@ class DayPanchangaMasaRituTests(unittest.TestCase):
     for interval in day["varjyam"]:
       self.assertRegex(interval["start"], r"^\d{2}:\d{2}:\d{2}$")
       self.assertRegex(interval["end"], r"^\d{2}:\d{2}:\d{2}$")
-    with patch.object(panchanga, "varjyam", return_value=[([1, 2, 3], [4, 5, 6])]) as stub:
+    with patch.object(panchanga, "varjyam", return_value=[(_ist(1, 2, 3), _ist(4, 5, 6))]) as stub:
       stubbed = compute_day_panchanga("Bengaluru", "21/04/2023", coordinate_selection="citra")
     self.assertEqual(stub.call_count, 1)
     self.assertEqual(stubbed["varjyam"], [{"start": "01:02:03", "end": "04:05:06"}])
@@ -55,7 +61,7 @@ class DayPanchangaMasaRituTests(unittest.TestCase):
     day = compute_day_panchanga("Bengaluru", "21/04/2023", coordinate_selection="citra")
     self.assertRegex(day["pratah_sandhya"]["start"], r"^\d{2}:\d{2}:\d{2}$")
     self.assertRegex(day["pratah_sandhya"]["end"], r"^\d{2}:\d{2}:\d{2}$")
-    with patch.object(panchanga, "pratah_sandhya", return_value=[[5, 59, 7], [6, 49, 46]]) as stub:
+    with patch.object(panchanga, "pratah_sandhya", return_value=[_ist(5, 59, 7), _ist(6, 49, 46)]) as stub:
       stubbed = compute_day_panchanga("Bengaluru", "21/04/2023", coordinate_selection="citra")
     self.assertEqual(stub.call_count, 1)
     self.assertEqual(stubbed["pratah_sandhya"], {"start": "05:59:07", "end": "06:49:46"})

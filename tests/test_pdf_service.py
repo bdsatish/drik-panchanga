@@ -7,10 +7,10 @@ import sys
 import unittest
 from unittest import mock
 
-from datetime_helper import format_hms
+from datetime_helper import format_hms_from_jd, gregorian_to_jd
 from webapp import cgi_handlers
 from webapp.app import app
-from webapp.day_panchanga import _interval_from_hms, _valid_durmuhurta_intervals
+from webapp.day_panchanga import _interval, compute_day_panchanga
 from webapp.ics_service import generate_ics
 from webapp.ics_service import _fmt_interval
 from webapp.pdf_service import generate_pdf
@@ -131,25 +131,14 @@ class CgiGenerationTests(unittest.TestCase):
 
 class DurmuhurtaRenderingTests(unittest.TestCase):
 
-  def test_filters_unused_slots_for_json_and_ics(self):
-    values = ([[0, 0, 0], [10, 30, 0]], [[0, 0, 0], [11, 15, 0]])
-    intervals = _valid_durmuhurta_intervals(values)
-    self.assertEqual(intervals, [([10, 30, 0], [11, 15, 0])])
-    json_intervals = []
-    for start, end in intervals:
-      json_intervals.append(_interval_from_hms(start, end, format_hms))
-    self.assertEqual(json_intervals, [{"start": "10:30:00", "end": "11:15:00"}])
-    ics_parts = []
-    for start, end in intervals:
-      ics_parts.append(_fmt_interval(start, end, format_hms))
-    self.assertEqual(", ".join(ics_parts), "10:30:00–11:15:00")
+  def test_json_and_ics_share_one_clock(self):
+    clock = lambda jd_ut, show_seconds: format_hms_from_jd(jd_ut, 0.0, 0.0, show_seconds=show_seconds)
+    self.assertEqual(_interval(10.5 / 24, 11.25 / 24, clock), {"start": "10:30:00", "end": "11:15:00"})
+    self.assertEqual(_fmt_interval(10.5 / 24, 11.25 / 24, clock), "10:30:00–11:15:00")
 
-  def test_preserves_two_intervals_and_empty_fallback(self):
-    self.assertEqual(
-      _valid_durmuhurta_intervals(([[1, 0, 0], [3, 0, 0]], [[2, 0, 0], [4, 0, 0]])),
-      [([1, 0, 0], [2, 0, 0]), ([3, 0, 0], [4, 0, 0])],
-    )
-    self.assertEqual(_valid_durmuhurta_intervals(([[0, 0, 0], [0, 0, 0]], [[0, 0, 0], [0, 0, 0]])), [])
+  def test_one_interval_on_sunday_two_on_friday(self):
+    self.assertEqual(len(compute_day_panchanga("Bengaluru", "18/01/2026")["durmuhurta"]), 1)
+    self.assertEqual(len(compute_day_panchanga("Bengaluru", "16/01/2026")["durmuhurta"]), 2)
 
 
 def unfold_ics(text):
@@ -162,7 +151,10 @@ class IcsServiceTests(unittest.TestCase):
   def test_describes_varjyam_for_every_day(self):
     ics = unfold_ics(generate_ics(load_location("Tirupati"), 2026, 1))
     self.assertEqual(ics.count("Varjyam:"), ics.count("BEGIN:VEVENT"))
-    with mock.patch.object(panchanga, "varjyam", return_value=[([1, 2, 3], [4, 5, 6])]):
+    # 01:02:03 and 04:05:06 IST on the 1 January row.
+    jan1 = gregorian_to_jd(panchanga.Date(2026, 1, 1))
+    stub = [(jan1 + (1 + 2 / 60 + 3 / 3600 - 5.5) / 24, jan1 + (4 + 5 / 60 + 6 / 3600 - 5.5) / 24)]
+    with mock.patch.object(panchanga, "varjyam", return_value=stub):
       stubbed = unfold_ics(generate_ics(load_location("Tirupati"), 2026, 1))
     self.assertIn("Varjyam: 01:02:03–04:05:06", stubbed)
     with mock.patch.object(panchanga, "varjyam", return_value=[]):

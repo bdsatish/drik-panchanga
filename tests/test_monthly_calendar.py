@@ -8,6 +8,7 @@ from tempfile import TemporaryDirectory
 import unittest
 from unittest import mock
 
+from datetime_helper import gregorian_to_jd
 from generate_monthly_calendar import (
   MONTHLY_LAYOUT_VERSION,
   RULESET_VERSION,
@@ -188,15 +189,15 @@ class SunMoonTests(unittest.TestCase):
 
   def test_sun_moon_lines_render_sunset_only(self):
     # The mirror case: no sunrise, but a sunset worth printing.
-    with mock.patch("generate_monthly_calendar.panchanga.sunrise", return_value=[0.0, [-59069097, 0, 0]]):
+    with mock.patch("generate_monthly_calendar.panchanga.sunrise", return_value=0.0):
       lines = sun_moon_lines(load_location("Ujjain"), date(2026, 6, 1))
     sun_lines = [line for line in lines if line.startswith("Sun:")]
     self.assertEqual(len(sun_lines), 1)
     self.assertRegex(sun_lines[0], r"^Sun: -- – \d\d:\d\d$")
 
   def test_sun_moon_lines_omit_sun_when_both_are_missing(self):
-    with mock.patch("generate_monthly_calendar.panchanga.sunrise", return_value=[0.0, [-1, 0, 0]]), mock.patch(
-        "generate_monthly_calendar.panchanga.sunset", return_value=[0.0, [-1, 0, 0]]):
+    with mock.patch("generate_monthly_calendar.panchanga.sunrise", return_value=0.0), mock.patch(
+        "generate_monthly_calendar.panchanga.sunset", return_value=0.0):
       lines = sun_moon_lines(load_location("Ujjain"), date(2026, 6, 1))
     self.assertFalse([line for line in lines if line.startswith("Sun:")])
 
@@ -363,7 +364,9 @@ class VarjyamTests(unittest.TestCase):
       "pradosham": set(),
       "sankashti": set(),
     }
-    with mock.patch("generate_monthly_calendar.panchanga.varjyam", return_value=[[[15.22, 13, 0], [16.63, 37, 0]]]):
+    jd = gregorian_to_jd(civil)
+    ist = lambda hours: jd + (hours - 5.5) / 24
+    with mock.patch("generate_monthly_calendar.panchanga.varjyam", return_value=[[ist(15.4367), ist(17.2467)]]):
       draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 14, civil, load_location("Ujjain"), context, col=0)
     drawn_text = [c.args[2] for c in pdf.drawString.call_args_list]
     self.assertIn("Varjyam: 15:26 – 17:15", drawn_text)

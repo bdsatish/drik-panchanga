@@ -681,14 +681,13 @@ def daily_records(months, location):
       date = panchanga.Date(year, month, day)
       place = place_for_date(location, date)
       jd = gregorian_to_jd(date)
-      sunrise_jd = panchanga.sunrise(jd, place)[0]
       tithi_number = panchanga.tithi(jd, place)[0]
       nakshatra_number = panchanga.nakshatra(jd, place)[0]
       yoga_number = panchanga.yoga(jd, place)[0]
       masa_number, is_adhika = panchanga.masa(jd, place, amanta=True, tithi_number=tithi_number)
       result.append(
         DayRecord(CivilDate(year, month, day), tithi_code(tithi_number), nakshatra_number, yoga_number,
-                  masa_code(masa_number, is_adhika), is_adhika, sunrise_jd - place.timezone / 24))
+                  masa_code(masa_number, is_adhika), is_adhika, panchanga.sunrise(jd, place)))
   return result
 
 

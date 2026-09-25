@@ -13,6 +13,22 @@ diagnosable instead of mysterious.
 import sys
 
 import panchanga
+from datetime_helper import to_hms
+
+
+def local_hms(jd_ut, jd, place):
+  """``[h, m, s]`` of UT ``jd_ut`` past ``jd``'s civil midnight at ``place.timezone``."""
+  return to_hms((jd_ut - jd) * 24 + place.timezone)
+
+
+def local_ends(result, jd, place):
+  """``tithi``-style ``[n, end, ...]`` with each UT end as ``local_hms``."""
+  return [local_hms(value, jd, place) if index % 2 else value for index, value in enumerate(result)]
+
+
+def local_intervals(intervals, jd, place):
+  """``[[start, end], ...]`` UT pairs as ``local_hms`` pairs."""
+  return [[local_hms(start, jd, place), local_hms(end, jd, place)] for start, end in intervals]
 
 
 def _report_ephemeris():

@@ -24,6 +24,7 @@ import swisseph as swe
 
 import panchanga
 from datetime_helper import gregorian_to_jd, local_time_to_jdut1
+from tests import local_hms
 from panchanga import (Date, Place, ahargana, elapsed_year, lunar_longitude, reset_ayanamsa_mode, set_ayanamsa_mode,
                        set_chosen_ayanamsa, set_nakshatra_system, solar_longitude, vaara)
 from generate_panchanga_calendar import Location, place_for_date
@@ -174,25 +175,26 @@ to come from the JD/celestial pipeline itself, not from civil-date code.
 
   TIME_TOLERANCE_SECONDS = 30
 
-  def assertTiming(self, actual, expected_number, expected_hms, label):
-    """Assert a ``[number, [h, m, s]]`` answer: number exact, time within tolerance."""
+  def assertTiming(self, actual, jd, expected_number, expected_hms, label):
+    """Assert a ``[number, end_ut]`` answer: number exact, local end time within tolerance."""
     self.assertEqual(actual[0], expected_number, f"{label} number changed")
-    actual_seconds = actual[1][0] * 3600 + actual[1][1] * 60 + actual[1][2]
+    hms = local_hms(actual[1], jd, UJJAIN)
+    actual_seconds = hms[0] * 3600 + hms[1] * 60 + hms[2]
     expected_seconds = expected_hms[0] * 3600 + expected_hms[1] * 60 + expected_hms[2]
     self.assertLessEqual(abs(actual_seconds - expected_seconds), self.TIME_TOLERANCE_SECONDS,
-                         f"{label} end time moved: {actual[1]} vs {expected_hms} (>{self.TIME_TOLERANCE_SECONDS}s)")
+                         f"{label} end time moved: {hms} vs {expected_hms} (>{self.TIME_TOLERANCE_SECONDS}s)")
 
   def test_nakshatra_at_june_15_100_bce(self):
     jd = gregorian_to_jd(Date(-100, 6, 15))
     require_swieph(jd)
     # Krittika, ends ~15:09:38 local.
-    self.assertTiming(panchanga.nakshatra(jd, UJJAIN), 8, [15, 9, 38], "100 BCE nakshatra")
+    self.assertTiming(panchanga.nakshatra(jd, UJJAIN), jd, 8, [15, 9, 38], "100 BCE nakshatra")
 
   def test_tithi_at_june_15_1_ce(self):
     jd = gregorian_to_jd(Date(-1, 6, 15))
     require_swieph(jd)
     # Pournima (15), ends ~21:21:56 local.
-    self.assertTiming(panchanga.tithi(jd, UJJAIN), 15, [21, 21, 56], "1 BCE tithi")
+    self.assertTiming(panchanga.tithi(jd, UJJAIN), jd, 15, [21, 21, 56], "1 BCE tithi")
 
   def test_skipped_tithi_on_boundary_day(self):
     # 15 Jun 1 BCE (year 0): tithi 26 ends ~05:59:42 and the skipped
@@ -202,8 +204,8 @@ to come from the JD/celestial pipeline itself, not from civil-date code.
     require_swieph(jd)
     answer = panchanga.tithi(jd, UJJAIN)
     self.assertEqual(len(answer), 4, f"expected a skipped tithi, got {answer}")
-    self.assertTiming(answer[:2], 26, [5, 59, 42], "1 BCE tithi 26")
-    self.assertTiming([answer[2], answer[3]], 27, [26, 59, 49], "1 BCE skipped tithi 27")
+    self.assertTiming(answer[:2], jd, 26, [5, 59, 42], "1 BCE tithi 26")
+    self.assertTiming([answer[2], answer[3]], jd, 27, [26, 59, 49], "1 BCE skipped tithi 27")
 
   def test_deep_bce_sanity(self):
     # Range/shape checks only (no minute-precision goldens this far back,
@@ -217,7 +219,7 @@ to come from the JD/celestial pipeline itself, not from civil-date code.
         self.assertEqual(len(tithi_answer) % 2, 0)
         nakshatra_answer = panchanga.nakshatra(jd, UJJAIN)
         self.assertTrue(1 <= nakshatra_answer[0] <= 27)
-        hours = panchanga.sunrise(jd, UJJAIN)[1][0]
+        hours = local_hms(panchanga.sunrise(jd, UJJAIN), jd, UJJAIN)[0]
         self.assertTrue(4 <= hours <= 9)
 
 

@@ -261,11 +261,6 @@ def zero_pad_calendar_value(value):
   return "/".join(formatted)
 
 
-def dms_to_hours(dms):
-  hours, minutes, seconds = dms
-  return hours + minutes / 60 + seconds / 3600
-
-
 def daily_values(year, month, location):
   result = []
   timezone = ZoneInfo(location.timezone_name)
@@ -279,12 +274,10 @@ def daily_values(year, month, location):
     )
     jd = datetime_helper.gregorian_to_jd(date)
     try:
-      sunrise_result = panchanga.sunrise(jd, place)
-      sunrise_jd = sunrise_result[0]
+      sunrise_jd = panchanga.sunrise(jd, place)
       if not jd - 1 <= sunrise_jd <= jd + 2:
         raise RuntimeError("no local sunrise")
-      sunset_result = panchanga.sunset(jd, place)
-      sunset_jd = sunset_result[0]
+      sunset_jd = panchanga.sunset(jd, place)
       if not jd - 1 <= sunset_jd <= jd + 2:
         raise RuntimeError("no local sunset")
       try:
@@ -294,9 +287,8 @@ def daily_values(year, month, location):
       except Exception:
         # At high latitudes the Moon might not rise on a civil date.
         moonrise_jd = None
-      tithi_result = panchanga.tithi(jd, place)
-      tithi_number = tithi_result[0]
-      tithi_hours_after_sunrise = (dms_to_hours(tithi_result[1]) - dms_to_hours(sunrise_result[1]))
+      tithi_number, tithi_end = panchanga.tithi(jd, place)[:2]
+      tithi_hours_after_sunrise = (tithi_end - sunrise_jd) * 24
       nakshatra_number = panchanga.nakshatra(jd, place)[0]
       yoga_number = panchanga.yoga(jd, place)[0]
       masa_number, is_adhika = panchanga.masa(jd, place)
@@ -310,10 +302,10 @@ def daily_values(year, month, location):
       masa_code(masa_number, is_adhika),
       is_adhika,
       tithi_hours_after_sunrise,
-      sunrise_jd - place.timezone / 24,
-      sunset_jd - place.timezone / 24,
+      sunrise_jd,
+      sunset_jd,
       yoga_number,
-      (moonrise_jd - place.timezone / 24 if moonrise_jd is not None else None),
+      moonrise_jd,
     ))
   return result
 

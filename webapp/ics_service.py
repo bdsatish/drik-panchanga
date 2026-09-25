@@ -13,7 +13,6 @@ from generate_panchanga_calendar import (
 )
 from webapp.day_panchanga import (
   _compute_day_details_unlocked,
-  _valid_durmuhurta_intervals,
   ayana_label,
   drik_ayana_label,
   format_masa_label,
@@ -65,8 +64,8 @@ def _ics_date(civil):
   return f"{civil.year:04d}{civil.month:02d}{civil.day:02d}"
 
 
-def _fmt_interval(start_hms, end_hms, clock):
-  return f"{clock(start_hms, show_seconds=True)}–{clock(end_hms, show_seconds=True)}"
+def _fmt_interval(start, end, clock):
+  return f"{clock(start, show_seconds=True)}–{clock(end, show_seconds=True)}"
 
 
 def generate_ics(location, start_year, start_month, month_system="amanta", coordinate_selection="citra"):
@@ -122,9 +121,7 @@ def generate_ics(location, start_year, start_month, month_system="amanta", coord
 
         summary = _escape_text(tithi_name + " · " + nak_name + " · " + masa_name)
 
-        durmuhurta_parts = []
-        for start, end in _valid_durmuhurta_intervals(details["durmuhurta"]):
-          durmuhurta_parts.append(_fmt_interval(start, end, clock))
+        durmuhurta_parts = [_fmt_interval(start, end, clock) for start, end in details["durmuhurta"]]
         durmuhurta_text = ", ".join(durmuhurta_parts) if durmuhurta_parts else "—"
 
         varjyam_parts = []
@@ -145,8 +142,8 @@ def generate_ics(location, start_year, start_month, month_system="amanta", coord
         desc_lines.append("Yoga: " + yoga_name + " (ends " + clock(details["yog"][1], show_seconds=True) + ")")
         desc_lines.append("Karaṇa: " + names["karanas"][str(details["kar"][0])] + " (ends " +
                           clock(details["kar"][1], show_seconds=True) + ")")
-        desc_lines.append("Sun*: " + clock(details["sunrise"][1], show_seconds=True) + " – " +
-                          clock(details["sunset"][1], show_seconds=True))
+        desc_lines.append("Sun*: " + clock(details["sunrise"], show_seconds=True) + " – " +
+                          clock(details["sunset"], show_seconds=True))
         desc_lines.append(moon_line)
         # Duration, not an instant: a DST lengthened day really is 25 h.
         desc_lines.append("Day duration: " + format_hms(details["day_dur"][1], show_seconds=True))
@@ -156,7 +153,7 @@ def generate_ics(location, start_year, start_month, month_system="amanta", coord
         desc_lines.append("Prātaḥ Sandhyā: " + _fmt_interval(*details["pratah_sandhya"], clock))
         desc_lines.append("Kali Day: " + str(details["kali_day"]))
         desc_lines.append("Julian day: " + f"{details['jd']:.1f}")
-        desc_lines.append("Sunrise JD (UT): " + f"{details['sunrise_jd_ut']:.6f}")
+        desc_lines.append("Sunrise JD (UT): " + f"{details['sunrise']:.6f}")
         description = _escape_text("\n".join(desc_lines))
 
         out.append("BEGIN:VEVENT")

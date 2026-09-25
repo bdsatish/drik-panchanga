@@ -23,12 +23,9 @@ def _event_jd_ut(civil_date, geopos, timezone_name, getter):
     event = getter(jd, place)
   except Exception:
     return None
-  if event is None:
+  if event is None or not jd - 1 <= event <= jd + 2:
     return None
-  local_jd = event[0]
-  if not jd - 1 <= local_jd <= jd + 2:
-    return None
-  return local_jd - place.timezone / 24
+  return event
 
 
 def _sunset_jd_ut(civil_date, geopos, timezone_name):
@@ -756,10 +753,7 @@ def _place_for_civil(civil_date, geopos, timezone_name):
 def _sunrise_tithi_end_jd_ut(civil_date, place):
   """UT Julian day when the tithi prevailing at sunrise on ``civil_date`` ends."""
   jd = gregorian_to_jd(panchanga.Date(civil_date.year, civil_date.month, civil_date.day))
-  tithi_info = panchanga.tithi(jd, place)
-  hours, minutes, seconds = tithi_info[1]
-  ends_hours = hours + minutes / 60.0 + seconds / 3600.0
-  return jd + (ends_hours - place.timezone) / 24.0
+  return panchanga.tithi(jd, place)[1]
 
 
 def shraddha_tithi_at_aparahna(record, geopos, timezone_name):

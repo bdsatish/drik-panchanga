@@ -70,8 +70,8 @@ from generate_panchanga_calendar import (
   tithi_code,
 )
 from panchanga import Date as PanDate
-from datetime_helper import (dst_transitions, format_hms_at_instant, format_local_hm, format_utc_offset,
-                             gregorian_to_jd, hindu_day_civil, jd_to_local_civil_date)
+from datetime_helper import (dst_transitions, format_local_hm, format_utc_offset, gregorian_to_jd, hindu_day_civil,
+                             jd_to_local_civil_date)
 
 log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
@@ -206,13 +206,9 @@ def yoga_name(number):
   return sanskrit_names().get("yogas", {}).get(str(int(number)), str(number))
 
 
-def cell_clock(location, civil, place, jd):
-  """Reader for a cell's baked hours-past-midnight values (``hms -> 'HH:MM'``).
-
-  Reads each event against the UTC offset in force when the event happened,
-  on this cell's 24:00+ scale (DST-aware).
-  """
-  return partial(format_hms_at_instant, jd=jd, place=place, timezone_name=location.timezone_name, anchor_civil=civil)
+def cell_clock(location, civil):
+  """UT JD -> ``'HH:MM'`` on this cell's 24:00+ scale, at the UTC offset in force at that instant."""
+  return partial(format_local_hm, timezone_name=location.timezone_name, anchor_civil=civil)
 
 
 def day_details(location, civil):
@@ -224,7 +220,7 @@ def day_details(location, civil):
   """
   place = place_for_date(location, civil)
   jd = gregorian_to_jd(civil)
-  clock = cell_clock(location, civil, place, jd)
+  clock = cell_clock(location, civil)
   tithi_lines = []
   t = panchanga.tithi(jd, place)
   tithi_lines.append((tithi_code(t[0]), clock(t[1])))
@@ -257,7 +253,7 @@ def sun_moon_lines(location, civil):
   """
   place = place_for_date(location, civil)
   jd = gregorian_to_jd(civil)
-  clock = cell_clock(location, civil, place, jd)
+  clock = cell_clock(location, civil)
   lines = []
   try:
     # Swiss Ephemeris returns a 0.0 sentinel for a failed rise/set lookup
@@ -265,14 +261,14 @@ def sun_moon_lines(location, civil):
     # else a missing one prints a nonsense time like ``-59069097:00``.
     rise = panchanga.sunrise(jd, place)
     set_ = panchanga.sunset(jd, place)
-    rise_text = clock(rise[1]) if jd - 1 <= rise[0] <= jd + 2 else "--"
-    set_text = clock(set_[1]) if jd - 1 <= set_[0] <= jd + 2 else "--"
+    rise_text = clock(rise) if jd - 1 <= rise <= jd + 2 else "--"
+    set_text = clock(set_) if jd - 1 <= set_ <= jd + 2 else "--"
     if rise_text != "--" or set_text != "--":
       sandhya_prefix = ""
       if rise_text != "--":
         try:
           ps_start, _ps_end = panchanga.pratah_sandhya(jd, place)
-          if 0 <= ps_start[0] < 48:
+          if jd - 1 <= ps_start <= jd + 2:
             sandhya_prefix = f"({clock(ps_start)} –) "
         except Exception as sandhya_exc:
           log.debug("pratah sandhya unavailable %s: %s", civil, sandhya_exc)
@@ -282,11 +278,8 @@ def sun_moon_lines(location, civil):
   try:
     parts = []
     for event in (panchanga.moonrise(jd, place), panchanga.moonset(jd, place)):
-      if event is None:
-        continue
-      local_jd, hms = event
-      if jd - 1 <= local_jd <= jd + 2 and 0 <= hms[0] < 48:
-        parts.append(clock(hms))
+      if event is not None and jd - 1 <= event <= jd + 2:
+        parts.append(clock(event))
     if parts:
       lines.append("Moon: " + " – ".join(parts))
   except Exception as exc:
@@ -298,7 +291,7 @@ def varjyam_lines(location, civil):
   """Varjyam (Vishaghati) windows for one civil day, sunrise to next sunrise."""
   place = place_for_date(location, civil)
   jd = gregorian_to_jd(civil)
-  clock = cell_clock(location, civil, place, jd)
+  clock = cell_clock(location, civil)
   lines = []
   try:
     for start, end in panchanga.varjyam(jd, place):
@@ -553,7 +546,7 @@ def rahu_kala_table_lines(location, year, month):
     try:
       place = place_for_date(location, civil)
       jd = gregorian_to_jd(civil)
-      clock = cell_clock(location, civil, place, jd)
+      clock = cell_clock(location, civil)
       start, end = panchanga.trikalam(jd, place, option="rahu")
     except Exception as exc:
       log.debug("rahu kala unavailable %s: %s", civil, exc)

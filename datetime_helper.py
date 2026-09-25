@@ -22,6 +22,7 @@ def local_time_to_jdut1(year, month, day, hour=0, minutes=0, seconds=0, timezone
 # Julian day <-> civil/local datetime (IANA time zones, DST-aware)
 _SECONDS_PER_DAY = 24 * 60 * 60
 _JULIAN_DAY_AT_UNIX_EPOCH = 2440587.5
+_JULIAN_DAY_AT_YEAR_4 = swe.julday(4, 1, 1)
 
 
 def tzinfo_for(timezone_name):
@@ -142,7 +143,8 @@ def format_hms(hms, *, show_seconds=False):
   durations (day/night length); a zero span is ``00:00``, not a midnight flag.
 
   ``show_seconds`` false -> ``HH:MM`` (grid endpoints); true -> ``HH:MM:SS``
-  (day view, sunrise/sunset columns).
+  (day view, sunrise/sunset columns). A time before that midnight (a window
+  opening the previous evening) reads ``-00:26``.
 
   Halves round up. Decimal hours are rounded once, straight to the shown
   unit: rounding to whole seconds first would turn 12:35:29.6 into 12:36.
@@ -152,11 +154,13 @@ def format_hms(hms, *, show_seconds=False):
   hours, minutes, seconds = hms
   if show_seconds:
     total_seconds = floor(hours * 3600 + minutes * 60 + seconds + 0.5)
-    h, rem = divmod(total_seconds, 3600)
+    sign = "-" if total_seconds < 0 else ""
+    h, rem = divmod(abs(total_seconds), 3600)
     m, s = divmod(rem, 60)
-    return f"{h:02d}:{m:02d}:{s:02d}"
+    return f"{sign}{h:02d}:{m:02d}:{s:02d}"
   total_minutes = floor(hours * 60 + minutes + seconds / 60.0 + 0.5)
-  return f"{total_minutes // 60:02d}:{total_minutes % 60:02d}"
+  sign = "-" if total_minutes < 0 else ""
+  return f"{sign}{abs(total_minutes) // 60:02d}:{abs(total_minutes) % 60:02d}"
 
 
 def format_hms_from_jd(jd_ut, civil_jd, timezone_hours, *, show_seconds=False):
@@ -178,26 +182,10 @@ def format_local_hm(jd, timezone_name, anchor_civil=None, show_seconds=False):
   if anchor_civil is None:
     anchor_civil = jd_to_local_civil_date(jd, timezone_name)
   civil_jd = gregorian_to_jd(anchor_civil)
-  local = jd_to_local_datetime(jd, timezone_name)
-  tz_hours = local.utcoffset().total_seconds() / 3600.0 if local.utcoffset() else 0.0
+  # datetime stops at year 1; earlier instants read the year-4 zone rules, as utc_offset_hours does.
+  local = jd_to_local_datetime(max(jd, _JULIAN_DAY_AT_YEAR_4), timezone_name)
+  tz_hours = local.utcoffset().total_seconds() / 3600.0
   return format_hms_from_jd(jd, civil_jd, tz_hours, show_seconds=show_seconds)
-
-
-def format_hms_at_instant(hms, jd, place, timezone_name, anchor_civil, *, show_seconds=False):
-  """Format a baked ``hours past jd's midnight`` value at the event's own offset.
-
-  The tithi / nakshatra / yoga / moon / varjyam helpers return
-  ``to_hms((event_ut - jd) * 24 + place.timezone)``: the event read against the
-  one UTC offset of the civil date (``place_for_date`` stores the offset at
-  local noon). An event after a DST change keeps reading that old offset.
-  Invert the same formula to recover ``event_ut``, then let ``format_local_hm``
-  apply the offset actually in force at that instant.
-
-  ``anchor_civil`` is the cell's date, so a Hindu-day tail stays on that row's
-  24:00+ scale.
-  """
-  event_ut = jd + (hms[0] + hms[1] / 60 + hms[2] / 3600 - place.timezone) / 24
-  return format_local_hm(event_ut, timezone_name, anchor_civil=anchor_civil, show_seconds=show_seconds)
 
 
 def hindu_day_civil(jd, timezone_name, sunrise_jd=None):

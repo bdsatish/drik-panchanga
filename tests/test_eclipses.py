@@ -5,8 +5,8 @@ from unittest import mock
 
 import panchanga
 
-from datetime_helper import (format_hms, format_hms_at_instant, format_local_hm, gregorian_to_jd, hindu_day_civil,
-                             jd_to_local_civil_date, julian_day_from_datetime, to_hms)
+from datetime_helper import (format_hms, format_local_hm, gregorian_to_jd, hindu_day_civil, jd_to_local_civil_date,
+                             julian_day_from_datetime, utc_offset_hours)
 from festival_rules import hindu_day_has_eclipse, find_local_eclipses
 from generate_panchanga_calendar import eclipse_civil_dates, format_eclipse_line
 
@@ -194,41 +194,44 @@ class FormatLocalHmTests(unittest.TestCase):
     self.assertEqual(jd_to_local_civil_date(jd, self.TZ).isoformat(), "2026-03-03")
 
 
-class FormatHmsAtInstantTests(unittest.TestCase):
-  """A baked hours-past-midnight value is re-read at the event instant.
+class DstRowTailTests(unittest.TestCase):
+  """A UT instant on a DST-spanning row reads the offset in force at that instant.
 
-  The bake uses the one UTC offset of the civil date (``place_for_date``
-  stores the offset at local noon). An event after that day's DST change
-  must read the offset in force when it happened.
+  The row keeps its civil date's 24:00+ scale (``anchor_civil``); only the
+  offset changes after the transition.
   """
 
   HELSINKI = "Europe/Helsinki"
 
-  def _read(self, ut_hours_past_jd, anchor, baked_offset):
-    """Bake ``(event_ut - jd) * 24 + baked_offset`` as the helpers do, then read."""
+  def _read(self, ut_hours_past_jd, anchor):
     from datetime import date
     anchor_date = date(*anchor)
-    jd = gregorian_to_jd(anchor_date)
-    place = panchanga.Place(60.17, 24.94, baked_offset)
-    hms = to_hms(ut_hours_past_jd + baked_offset)
-    return format_hms_at_instant(hms, jd, place, self.HELSINKI, anchor_civil=anchor_date)
+    return format_local_hm(
+      gregorian_to_jd(anchor_date) + ut_hours_past_jd / 24, self.HELSINKI, anchor_civil=anchor_date)
 
   def test_tail_after_dst_start_reads_the_new_offset(self):
     # 28 Mar 2026 row, event at 02:17 UT on the 29th (after the 03:00
-    # EET->EEST change): the stale +2 bake reads 28:17, the clock says 29:17.
-    self.assertEqual(self._read(26 + 17 / 60, (2026, 3, 28), +2.0), "29:17")
+    # EET->EEST change): the day's +2 would read 28:17, the clock says 29:17.
+    self.assertEqual(self._read(26 + 17 / 60, (2026, 3, 28)), "29:17")
 
   def test_tail_after_dst_end_reads_the_new_offset(self):
     # 24 Oct 2026 row, event at 04:05 UT on the 25th (after the 04:00
-    # EEST->EET change): the stale +3 bake reads 31:05, the clock says 30:05.
-    self.assertEqual(self._read(28 + 5 / 60, (2026, 10, 24), +3.0), "30:05")
+    # EEST->EET change): the day's +3 would read 31:05, the clock says 30:05.
+    self.assertEqual(self._read(28 + 5 / 60, (2026, 10, 24)), "30:05")
 
   def test_tail_before_the_change_keeps_the_old_reading(self):
     # Same row, event at 22:15 UT on the 28th: no transition in between, so
-    # the reading equals plain ``format_hms`` of the baked value (24:15).
-    hms = to_hms(22 + 15 / 60 + 2.0)
-    self.assertEqual(self._read(22 + 15 / 60, (2026, 3, 28), +2.0), format_hms(hms))
-    self.assertEqual(self._read(22 + 15 / 60, (2026, 3, 28), +2.0), "24:15")
+    # the day's +2 applies (24:15).
+    self.assertEqual(self._read(22 + 15 / 60, (2026, 3, 28)), format_hms(22 + 15 / 60 + 2.0))
+    self.assertEqual(self._read(22 + 15 / 60, (2026, 3, 28)), "24:15")
+
+  def test_bce_instant_uses_the_year_4_offset(self):
+    # datetime cannot hold year -500; the early LMT offset (year 4) applies.
+    kolkata = "Asia/Kolkata"
+    early = panchanga.Date(-500, 1, 30)
+    offset = utc_offset_hours(kolkata, panchanga.Date(4, 1, 30))
+    jd = gregorian_to_jd(early)
+    self.assertEqual(format_local_hm(jd + (6 - offset) / 24, kolkata, anchor_civil=early), "06:00")
 
 
 class EclipseCivilDatesTests(unittest.TestCase):

@@ -31,7 +31,7 @@ from time import strptime
 from pytz import timezone
 from datetime import datetime
 from panchanga import *
-from datetime_helper import format_hms, gregorian_to_jd
+from datetime_helper import format_hms, format_hms_from_jd, gregorian_to_jd
 import difflib
 
 # begin wxGlade: extracode
@@ -209,8 +209,8 @@ class Panchanga(wx.Frame):
 
     kar = karana(jd, place)
     vara = vaara(jd)
-    srise = sunrise(jd, place)[1]
-    sset = sunset(jd, place)[1]
+    srise = sunrise(jd, place)
+    sset = sunset(jd, place)
     kday = ahargana(jd)
     kyear, sakayr, _ = elapsed_year(jd, mas[0])
     samvat = samvatsara(jd, mas[0])
@@ -220,8 +220,8 @@ class Panchanga(wx.Frame):
 
     # Update GUI one by one. First the easy ones
     self.varaTxt.SetLabel("%s" % self.vaaras[str(vara)])
-    self.sunriseTxt.SetLabel(format_hms(srise, show_seconds=True))
-    self.sunsetTxt.SetLabel(format_hms(sset, show_seconds=True))
+    self.sunriseTxt.SetLabel(format_hms_from_jd(srise, jd, place.timezone, show_seconds=True))
+    self.sunsetTxt.SetLabel(format_hms_from_jd(sset, jd, place.timezone, show_seconds=True))
     self.sakaTxt.SetLabel(u"\u015a\u0101liv\u0101hana \u015baka %d" % (sakayr))
     self.kaliTxt.SetLabel("GataKali %d" % (kyear))
     self.aharTxt.SetLabel("KaliDay %d" % (kday))
@@ -235,19 +235,19 @@ class Panchanga(wx.Frame):
     if is_leap: month_name = "Adhika " + month_name.lower()
     self.masaTxt.SetLabel(month_name + u" m\u0101sa")
 
-    name, hms = format_name_hms(yog, self.yogas)
+    name, hms = format_name_hms(yog, self.yogas, jd, place)
     self.yogaTxt.SetLabel(name)
     self.yogaTimeTxt.SetLabel(hms)
 
-    name, hms = format_name_hms(kar, self.karanas)
+    name, hms = format_name_hms(kar, self.karanas, jd, place)
     self.karanaTxt.SetLabel(name)
     self.karanaTimeTxt.SetLabel(hms)
 
-    name, hms = format_name_hms(ti, self.tithis)
+    name, hms = format_name_hms(ti, self.tithis, jd, place)
     self.tithiTxt.SetLabel(name)
     self.tithiTimeTxt.SetLabel(hms)
 
-    name, hms = format_name_hms(nak, self.nakshatras)
+    name, hms = format_name_hms(nak, self.nakshatras, jd, place)
     self.nakTxt.SetLabel(name)
     self.nakTimeTxt.SetLabel(hms)
 
@@ -388,13 +388,13 @@ def load_json_file(filename):
     return json.loads(content)
 
 
-# Converts list [12, [23, 45, 50]] to lookup[12] and 23:45:50
-def format_name_hms(nhms, lookup):
-  name_txt = lookup[str(nhms[0])]
-  time_txt = format_hms(nhms[1], show_seconds=True)
-  if len(nhms) == 4:
-    name_txt += "\n" + lookup[str(nhms[2])]
-    time_txt += "\n" + format_hms(nhms[3], show_seconds=True)
+# Converts [12, end_ut] to lookup[12] and the end as local HH:MM:SS past jd's midnight
+def format_name_hms(values, lookup, jd, place):
+  name_txt = lookup[str(values[0])]
+  time_txt = format_hms_from_jd(values[1], jd, place.timezone, show_seconds=True)
+  if len(values) == 4:
+    name_txt += "\n" + lookup[str(values[2])]
+    time_txt += "\n" + format_hms_from_jd(values[3], jd, place.timezone, show_seconds=True)
 
   return name_txt, time_txt
 

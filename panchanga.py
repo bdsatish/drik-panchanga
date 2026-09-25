@@ -506,13 +506,16 @@ def sunrise(jd, place):
   Both sit within ~30 min of the real sunrises on the days just outside
   the polar period, so the anchor series stays continuous across the
   edges.
+
+  Returns the UT Julian day. ``place.timezone`` only locates the local
+  midnight that opens the civil day ``jd``.
   """
   lat, lon, tz = place
   result = swe.rise_trans(jd - tz / 24, swe.SUN, geopos=(lon, lat, 0), rsmi=_rise_flags + swe.CALC_RISE)
   rise = result[1][0]  # julian-day number (UT)
   if result[0] != 0 or not jd <= rise + tz / 24. < jd + 1.0:
     rise = (_transit_jd(jd, place, lower=True) if _is_midnight_sun(jd, place) else _transit_jd(jd, place))
-  return [rise + tz / 24., to_hms((rise - jd) * 24 + tz)]
+  return rise
 
 
 @lru_cache(maxsize=4096)  # memoize expensive Swiss Ephemeris set lookup
@@ -526,9 +529,11 @@ def sunset(jd, place):
   * polar night: the day's upper transit, the same instant as the fallback
     sunrise — day 0 h, night 24 h;
   * midnight sun: the next day's lower transit — day 24 h, night 0 h.
+
+  Returns the UT Julian day.
   """
-  lat, lon, tz = place
-  srise_ut = sunrise(jd, place)[0] - tz / 24  # UT frame for rise_trans
+  lat, lon, _tz = place
+  srise_ut = sunrise(jd, place)
   result = swe.rise_trans(srise_ut, swe.SUN, geopos=(lon, lat, 0), rsmi=_rise_flags + swe.CALC_SET)
   setting = result[1][0]
   # A real set always falls within 24 h of its sunrise; the virtual
@@ -537,102 +542,98 @@ def sunset(jd, place):
   # day — belongs to another day's record.
   if result[0] != 0 or not srise_ut < setting < srise_ut + 1.005:
     setting = _transit_jd(jd + 1, place, lower=True) if _is_midnight_sun(jd, place) else _transit_jd(jd, place)
-  return [setting + tz / 24., to_hms((setting - jd) * 24 + tz)]
+  return setting
 
 
 def _moon_jd_after_midnight(jd, place, rise):
-  """Local-adjusted JD of the first moon rise/set after local midnight of ``jd``."""
+  """UT Julian day of the first moon rise/set after local midnight of ``jd``."""
   lat, lon, tz = place
   flag = _rise_flags + (swe.CALC_RISE if rise else swe.CALC_SET)
   result = swe.rise_trans(jd - tz / 24, swe.MOON, geopos=(lon, lat, 0), rsmi=flag)
-  return result[1][0] + tz / 24.
+  return result[1][0]
 
 
 @lru_cache(maxsize=4096)
 def moonrise_jd(jd, place):
-  """First moonrise after local midnight of ``jd`` (SE candidate for ``moonrise``)."""
+  """First moonrise after local midnight of ``jd``, UT (SE candidate for ``moonrise``)."""
   return _moon_jd_after_midnight(jd, place, True)
 
 
 @lru_cache(maxsize=4096)
 def moonset_jd(jd, place):
-  """First moonset after local midnight of ``jd`` (SE candidate for ``moonset``)."""
+  """First moonset after local midnight of ``jd``, UT (SE candidate for ``moonset``)."""
   return _moon_jd_after_midnight(jd, place, False)
 
 
-def _next_moon_event_jd(local_jd, place, rise=True):
-  """Local-adjusted JD of the first moon rise/set after ``local_jd``, or ``None``."""
-  lat, lon, tz = place
+def _next_moon_event_jd(after_ut, place, rise=True):
+  """UT Julian day of the first moon rise/set after ``after_ut``, or ``None``."""
+  lat, lon, _tz = place
   flag = _rise_flags + (swe.CALC_RISE if rise else swe.CALC_SET)
-  result = swe.rise_trans(local_jd - tz / 24 + 1 / 1440, swe.MOON, geopos=(lon, lat, 0), rsmi=flag)
+  result = swe.rise_trans(after_ut + 1 / 1440, swe.MOON, geopos=(lon, lat, 0), rsmi=flag)
   if result[0] != 0 or not result[1][0]:
     return None
-  return result[1][0] + tz / 24.
+  return result[1][0]
 
 
 def _moon_event_in_window(jd, place, rise=True):
-  """First moonrise/moonset in ``[sunrise(jd), sunrise(jd+1))``, or ``None``.
+  """First moonrise/moonset in ``[sunrise(jd), sunrise(jd+1))`` as a UT JD, or ``None``.
 
-  Hours in the result are past civil midnight of ``jd`` (``24:xx`` if after it).
   At high latitudes the Moon can rise (or set) twice in one civil day; when
   the first falls before sunrise, the second is looked up too.
   """
   try:
-    window_start = sunrise(jd, place)[0]
-    window_end = sunrise(jd + 1, place)[0]
+    window_start = sunrise(jd, place)
+    window_end = sunrise(jd + 1, place)
   except Exception:
     return None
   if window_end <= window_start:
     window_end = window_start + 1.0
   finder = moonrise_jd if rise else moonset_jd
+  next_midnight = jd + 1 - place.timezone / 24.
   candidates = []
   for day_jd in (jd - 1, jd, jd + 1):
     try:
-      local = finder(day_jd, place)
+      event = finder(day_jd, place)
     except Exception:
       continue
     # Reject SE failed-lookup sentinels (same band as monthly sun/moon lines).
-    if not (day_jd - 1 <= local <= day_jd + 2):
+    if not (day_jd - 1 <= event <= day_jd + 2):
       continue
-    if window_start <= local < window_end:
-      candidates.append(local)
-    elif day_jd == jd and local < window_start:
+    if window_start <= event < window_end:
+      candidates.append(event)
+    elif day_jd == jd and event < window_start:
       try:
-        later = _next_moon_event_jd(local, place, rise)
+        later = _next_moon_event_jd(event, place, rise)
       except Exception:
         continue
-      if later is not None and later < jd + 1 and window_start <= later < window_end:
+      if later is not None and later < next_midnight and window_start <= later < window_end:
         candidates.append(later)
   if not candidates:
     return None
-  local = min(candidates)
-  return [local, to_hms((local - jd) * 24)]
+  return min(candidates)
 
 
 def moonrise(jd, place):
-  """Moonrise in the Hindu day starting at ``sunrise(jd)``, or ``None``.
+  """Moonrise in the Hindu day starting at ``sunrise(jd)``, as a UT JD, or ``None``.
 
-  Returns ``[local_jd, [h, m, s]]`` like sunrise/sunset, with hours past civil
-  midnight of ``jd`` (may be ``>= 24``). No event in
-  ``[sunrise, next sunrise)`` yields ``None``.
+  No event in ``[sunrise, next sunrise)`` yields ``None``.
   """
   return _moon_event_in_window(jd, place, rise=True)
 
 
 def moonset(jd, place):
-  """Moonset in the Hindu day starting at ``sunrise(jd)``, or ``None``.
-
-  Same return shape as ``moonrise``.
-  """
+  """Moonset in the Hindu day starting at ``sunrise(jd)``, as a UT JD, or ``None``."""
   return _moon_event_in_window(jd, place, rise=False)
 
 
 # Tithi doesn't depend on Ayanamsa
 def tithi(jd, place):
-  """Tithi at sunrise for given date and place. Also returns tithi's end time."""
-  tz = place.timezone
+  """Tithi at sunrise for given date and place, and its end as a UT JD.
+
+  ``[tithi, end]``, or ``[tithi, end, skipped_tithi, skipped_end]``.
+  """
   # 1. Find time of sunrise
-  rise = sunrise(jd, place)[0] - tz / 24
+  rise = sunrise(jd, place)
 
   # 2. Find tithi at this JDN
   moon_phase = lunar_phase(rise)
@@ -650,8 +651,7 @@ def tithi(jd, place):
   x = offsets
   # compute fraction of day (after sunrise) needed to traverse 'degrees_left'
   approx_end = inverse_lagrange(x, y, degrees_left)
-  ends = (rise + approx_end - jd) * 24 + tz
-  answer = [int(today), to_hms(ends)]
+  answer = [int(today), rise + approx_end]
 
   # 5. Check for skipped tithi
   moon_phase_tmrw = lunar_phase(rise + 1)
@@ -662,20 +662,18 @@ def tithi(jd, place):
     leap_tithi = today + 1
     degrees_left = leap_tithi * 12 - moon_phase
     approx_end = inverse_lagrange(x, y, degrees_left)
-    ends = (rise + approx_end - jd) * 24 + place.timezone
     leap_tithi = 1 if today == 30 else leap_tithi
-    answer += [int(leap_tithi), to_hms(ends)]
+    answer += [int(leap_tithi), rise + approx_end]
 
   return answer
 
 
 def nakshatra(jd, place):
-  """Current nakshatra as of julian day (jd)
+  """Nakshatra at sunrise and its end as a UT JD, shaped like ``tithi``.
      1 = Asvini, 2 = Bharani, ..., 27 = Revati
   """
   # 1. Find time of sunrise
-  lat, lon, tz = place
-  rise = sunrise(jd, place)[0] - tz / 24.  # Sunrise at UT 00:00
+  rise = sunrise(jd, place)
 
   offsets = [0.0, 0.25, 0.5, 0.75, 1.0]
   longitudes = [lunar_longitude(rise + t) for t in offsets]
@@ -688,8 +686,7 @@ def nakshatra(jd, place):
   y = unwrap_angles(longitudes)
   x = offsets
   approx_end = inverse_lagrange(x, y, nakshatra_end_point(nak))
-  ends = (rise - jd + approx_end) * 24 + tz
-  answer = [int(nak), to_hms(ends)]
+  answer = [int(nak), rise + approx_end]
 
   # 4. Check for skipped nakshatra. Classify the raw (wrapped) longitude:
   # ``nakshatra_pada`` expects [0, 360), and ``longitudes`` must stay wrapped
@@ -700,20 +697,18 @@ def nakshatra(jd, place):
     leap_nak = nak + 1
     # Interpolate against the unwrapped window, not the raw wrapped values.
     approx_end = inverse_lagrange(offsets, y, nakshatra_end_point(leap_nak))
-    ends = (rise - jd + approx_end) * 24 + tz
     leap_nak = 1 if nak == 27 else leap_nak
-    answer += [int(leap_nak), to_hms(ends)]
+    answer += [int(leap_nak), rise + approx_end]
 
   return answer
 
 
 def yoga(jd, place):
-  """Yoga at given jd and place.
+  """Yoga at sunrise and its end as a UT JD, shaped like ``tithi``.
      1 = Vishkambha, 2 = Priti, ..., 27 = Vaidhrti
   """
   # 1. Find time of sunrise
-  lat, lon, tz = place
-  rise = sunrise(jd, place)[0] - tz / 24.  # Sunrise at UT 00:00
+  rise = sunrise(jd, place)
 
   # 2. Find the Nirayana longitudes and add them
   lunar_long = lunar_longitude(rise)
@@ -736,8 +731,7 @@ def yoga(jd, place):
   x = offsets
   # compute fraction of day (after sunrise) needed to traverse 'degrees_left'
   approx_end = inverse_lagrange(x, y, degrees_left)
-  ends = (rise + approx_end - jd) * 24 + tz
-  answer = [int(yog), to_hms(ends)]
+  answer = [int(yog), rise + approx_end]
 
   # 5. Check for skipped yoga
   lunar_long_tmrw = lunar_longitude(rise + 1)
@@ -750,9 +744,8 @@ def yoga(jd, place):
     leap_yog = yog + 1
     degrees_left = leap_yog * (360 / 27) - total
     approx_end = inverse_lagrange(x, y, degrees_left)
-    ends = (rise + approx_end - jd) * 24 + tz
     leap_yog = 1 if yog == 27 else leap_yog
-    answer += [int(leap_yog), to_hms(ends)]
+    answer += [int(leap_yog), rise + approx_end]
 
   return answer
 
@@ -763,12 +756,10 @@ def karana(jd, place):
   Karana n ends exactly when the lunar phase reaches n*6 degrees, so even
   karanas end with their parent tithi. Even-karana skips are astronomically
   impossible; an odd (first-half) karana can cross midnight and end after
-  the next sunrise, which is reported as hours past local midnight.
+  the next sunrise. Returns ``[karana, end]`` with ``end`` as a UT JD.
   """
-  tz = place.timezone
-  # 1. Find time of sunrise, in UT like tithi()/nakshatra()/yoga():
-  # sunrise()[0] is local hours past jd, so subtract tz/24 for the UT JD.
-  rise = sunrise(jd, place)[0] - tz / 24.
+  # 1. Find time of sunrise
+  rise = sunrise(jd, place)
 
   # 2. Find karana at this JDN
   moon_phase = lunar_phase(rise)
@@ -786,8 +777,7 @@ def karana(jd, place):
   x = offsets
   # compute fraction of day (after sunrise) needed to traverse 'degrees_left'
   approx_end = inverse_lagrange(x, y, degrees_left)
-  ends = (rise + approx_end - jd) * 24 + tz
-  answer = [int(today), to_hms(ends)]
+  answer = [int(today), rise + approx_end]
 
   return answer
 
@@ -818,7 +808,7 @@ def lunar_masa(jd, place, tithi_number=None):
   Optional ``tithi_number`` skips a second ``tithi()`` call.
   """
   ti = tithi(jd, place)[0] if tithi_number is None else tithi_number
-  critical = sunrise(jd, place)[0]
+  critical = sunrise(jd, place)
   last_new_moon = new_moon(critical, ti, -1)
   next_new_moon = new_moon(critical, ti, +1)
   this_solar_month = raasi(last_new_moon)
@@ -864,7 +854,7 @@ ahargana = lambda jd: jd - 588465.5
 
 
 def elapsed_year(jd, maasa_num):
-  ahar = ahargana(jd)  # or (jd + sunrise(jd, place)[0])
+  ahar = ahargana(jd)
   kali = floor((ahar + (4 - maasa_num) * 30) / sidereal_year)
   saka = kali - 3179
   vikrama = saka + 135
@@ -1050,9 +1040,7 @@ def previous_masa_was_adhika(last_new_moon, is_adhika):
 
 
 def day_duration(jd, place):
-  srise = sunrise(jd, place)[0]  # julian day num
-  sset = sunset(jd, place)[0]  # julian day num
-  diff = (sset - srise) * 24  # In hours
+  diff = (sunset(jd, place) - sunrise(jd, place)) * 24  # In hours
   return [diff, to_hms(diff)]
 
 
@@ -1063,43 +1051,32 @@ def night_duration(jd, place):
   ``day_duration(jd) + night_duration(jd)`` spans sunrise today to sunrise
   tomorrow (~24 h).
   """
-  sset = sunset(jd, place)[0]  # julian day num (local-adjusted)
-  next_srise = sunrise(jd + 1, place)[0]
-  diff = (next_srise - sset) * 24  # In hours
+  diff = (sunrise(jd + 1, place) - sunset(jd, place)) * 24  # In hours
   return [diff, to_hms(diff)]
-
-
-def solar_times_utc(jd, place):
-  """Today's sunrise/sunset and tomorrow's sunrise as UTC Julian days."""
-  timezone = place.timezone / 24
-  today_sunrise = sunrise(jd, place)[0] - timezone
-  today_sunset = sunset(jd, place)[0] - timezone
-  tomorrow_sunrise = sunrise(jd + 1, place)[0] - timezone
-  return today_sunrise, today_sunset, tomorrow_sunrise
 
 
 # The day duration is divided into 8 parts
 # Similarly night duration
 def gauri_chogadiya(jd, place):
-  tz = place.timezone
-  srise, sset, tomorrow_srise = solar_times_utc(jd, place)
+  """End times (UT JDs) of the 8 day and 8 night Choghadiya parts."""
+  srise, sset, tomorrow_srise = sunrise(jd, place), sunset(jd, place), sunrise(jd + 1, place)
   day_dur = (sset - srise)
 
   end_times = []
   for i in range(1, 9):
-    end_times.append(to_hms((srise + (i * day_dur) / 8 - jd) * 24 + tz))
+    end_times.append(srise + (i * day_dur) / 8)
 
   # Night duration = time from today's sunset to tomorrow's sunrise
   night_dur = (tomorrow_srise - sset)
   for i in range(1, 9):
-    end_times.append(to_hms((sset + (i * night_dur) / 8 - jd) * 24 + tz))
+    end_times.append(sset + (i * night_dur) / 8)
 
   return end_times
 
 
 def trikalam(jd, place, option='rahu'):
-  tz = place.timezone
-  srise, sset, _tomorrow_srise = solar_times_utc(jd, place)
+  """``[start, end]`` (UT JDs) of Rahu, Yamaganda or Gulika kala."""
+  srise, sset = sunrise(jd, place), sunset(jd, place)
   day_dur = (sset - srise)
   weekday = vaara(jd)
 
@@ -1111,12 +1088,7 @@ def trikalam(jd, place, option='rahu'):
   }
 
   start_time = srise + day_dur * offsets[option][weekday]
-  end_time = start_time + 0.125 * day_dur
-
-  # to local timezone
-  start_time = (start_time - jd) * 24 + tz
-  end_time = (end_time - jd) * 24 + tz
-  return [to_hms(start_time), to_hms(end_time)]  # decimal hours to H:M:S
+  return [start_time, start_time + 0.125 * day_dur]
 
 
 rahu_kalam = lambda jd, place: trikalam(jd, place, 'rahu')
@@ -1125,10 +1097,9 @@ gulika_kalam = lambda jd, place: trikalam(jd, place, 'gulika')
 
 
 def durmuhurtam(jd, place):
-  tz = place.timezone
-
+  """Durmuhurta ``[start, end]`` pairs (UT JDs): one on Sun, Wed and Sat, two otherwise."""
   # Night = today's sunset to tomorrow's sunrise
-  srise, sset, tomorrow_srise = solar_times_utc(jd, place)
+  srise, sset, tomorrow_srise = sunrise(jd, place), sunset(jd, place), sunrise(jd + 1, place)
   night_dur = (tomorrow_srise - sset)
 
   # Day = today's sunrise to today's sunset
@@ -1154,36 +1125,21 @@ def durmuhurtam(jd, place):
     dur[1] = night_dur
     base[1] = sset
 
-  # compute start and end timings
-  start_times = [[0, 0, 0], [0, 0, 0]]
-  end_times = [[0, 0, 0], [0, 0, 0]]
+  intervals = []
   for i in range(0, 2):
     offset = offsets[weekday][i]
     if offset != 0.0:
-      start = base[i] + dur[i] * offsets[weekday][i] / 12
-      end = start + dur[i] * 0.8 / 12
-
-      # convert to local time
-      start_times[i] = to_hms((start - jd) * 24 + tz)
-      end_times[i] = to_hms((end - jd) * 24 + tz)
-
-  # ``[0, 0, 0]`` marks an unused slot: there is only one durmuhurtam on
-  # Sunday, Wednesday, and Saturday.
-  return [start_times, end_times]
+      start = base[i] + dur[i] * offset / 12
+      intervals.append([start, start + dur[i] * 0.8 / 12])
+  return intervals
 
 
 def abhijit_muhurta(jd, place):
   """Abhijit muhurta is the 8th muhurta (middle one) of the 15 muhurtas
-  during the day_duration (~12 hours)"""
-  tz = place.timezone
-  srise, sset, _tomorrow_srise = solar_times_utc(jd, place)
+  during the day_duration (~12 hours). Returns ``[start, end]`` as UT JDs."""
+  srise, sset = sunrise(jd, place), sunset(jd, place)
   day_dur = (sset - srise)
-
-  start_time = srise + 7 / 15 * day_dur
-  end_time = srise + 8 / 15 * day_dur
-
-  # to local time
-  return [to_hms((start_time - jd) * 24 + tz), to_hms((end_time - jd) * 24 + tz)]
+  return [srise + 7 / 15 * day_dur, srise + 8 / 15 * day_dur]
 
 
 def pratah_sandhya(jd, place):
@@ -1199,15 +1155,14 @@ def pratah_sandhya(jd, place):
   night here is anchored at the latest real sunset strictly before today's
   sunrise, and the start is clamped at civil midnight.
 
-  Returns ``[start_hms, end_hms]`` in local civil time; end is sunrise.
+  Returns ``[start, end]`` as UT JDs; end is sunrise.
   """
-  srise, srise_hms = sunrise(jd, place)
-  prev_sunset = max((c for c in (sunset(jd - 1, place)[0], sunset(jd, place)[0]) if c < srise), default=srise)
+  srise = sunrise(jd, place)
+  prev_sunset = max((c for c in (sunset(jd - 1, place), sunset(jd, place)) if c < srise), default=srise)
   night_hours = max((srise - prev_sunset) * 24, 0.0)
   start = srise - (night_hours / 15.0) / 24.0
-  start = max(start, jd)
-  # srise already includes +tz/24, so (start - jd)*24 is local hours.
-  return [to_hms((start - jd) * 24), srise_hms]
+  start = max(start, jd - place.timezone / 24.)
+  return [start, srise]
 
 
 def varjyam(jd, place):
@@ -1220,20 +1175,16 @@ def varjyam(jd, place):
                           18, 16, 24, 30)
   """Varjyam (Vishaghati) timings for the day.
 
-  Returns a list of [start_time, end_time] in [h, m, s] format for all
-  varjyam periods that overlap with the day (sunrise to next sunrise).
-  Times past 24:00 (e.g. 26:21:48) belong to the next civil day.
+  Returns a list of [start, end] UT JDs for all varjyam periods that
+  overlap with the day (sunrise to next sunrise).
 
   Returns an empty list if either sunrise anchor falls outside the day's
   expected window (sentinel-garbage protection).
   """
-  tz = place.timezone
-  today_sunrise = sunrise(jd, place)[0]
-  tomorrow_sunrise = sunrise(jd + 1, place)[0]
-  if today_sunrise < jd - 1 or today_sunrise > jd + 2 or tomorrow_sunrise < jd - 1 or tomorrow_sunrise > jd + 2:
+  srise1 = sunrise(jd, place)
+  srise2 = sunrise(jd + 1, place)
+  if srise1 < jd - 1 or srise1 > jd + 2 or srise2 < jd - 1 or srise2 > jd + 2:
     return []
-  srise1 = today_sunrise - tz / 24.
-  srise2 = tomorrow_sunrise - tz / 24.
 
   # Sample Moon on a 0.40d grid (shared for all nakshatras). Coarser than
   # nakshatra/tithi's 0.25d; local 5-point Lagrange still lands within ~1s.
@@ -1302,9 +1253,7 @@ def varjyam(jd, place):
     v_end = v_start + (4.0 / 60.0) * duration
 
     if v_end > srise1 and v_start < srise2:
-      local_start = (v_start - jd) * 24 + tz
-      local_end = (v_end - jd) * 24 + tz
-      varjyam_periods.append([to_hms(local_start), to_hms(local_end)])
+      varjyam_periods.append([v_start, v_end])
 
   varjyam_periods.sort(key=lambda x: x[0])
   return varjyam_periods

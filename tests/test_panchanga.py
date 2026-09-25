@@ -11,16 +11,17 @@ import swisseph as swe
 
 import panchanga
 from datetime_helper import format_hms, format_hms_from_jd, gregorian_to_jd, local_time_to_jdut1, to_hms
+from tests import local_ends, local_hms, local_intervals
 from panchanga import (
-  Date, Place, from_dms, sunrise, sunset, solar_times_utc, moonrise, moonrise_jd, moonset, moonset_jd, tithi, nakshatra,
-  nakshatra_pada, nakshatra_end_point, yoga, karana, vaara, masa, varjyam, ascendant, navamsa, navamsa_from_long,
-  planetary_positions, day_duration, night_duration, gauri_chogadiya, trikalam, rahu_kalam, yamaganda_kalam,
-  gulika_kalam, durmuhurtam, abhijit_muhurta, pratah_sandhya, elapsed_year, samvatsara, samvatsara_north,
-  samvatsara_north_modern, ritu, drik_ritu, drik_ritu_at, lunar_masa, raasi, lunar_phase, new_moon, full_moon,
-  sweph_version, ephemeris_fingerprint, default_se_ephe_path, get_planet_name, to_dms, to_dms_prec, unwrap_angles,
-  lon_relative_to_base, inverse_lagrange, mean_longitude, norm360, bisection_search, sidereal_saptarshi_nakshatra,
-  saptarshi_nakshatra_traditional, set_nakshatra_system, set_chosen_ayanamsa, set_ayanamsa_mode, set_coordinate_mode,
-  set_coordinate_selection, reset_ayanamsa_mode, solar_longitude)
+  Date, Place, from_dms, sunrise, sunset, moonrise, moonrise_jd, moonset, moonset_jd, tithi, nakshatra, nakshatra_pada,
+  nakshatra_end_point, yoga, karana, vaara, masa, varjyam, ascendant, navamsa, navamsa_from_long, planetary_positions,
+  day_duration, night_duration, gauri_chogadiya, trikalam, rahu_kalam, yamaganda_kalam, gulika_kalam, durmuhurtam,
+  abhijit_muhurta, pratah_sandhya, elapsed_year, samvatsara, samvatsara_north, samvatsara_north_modern, ritu, drik_ritu,
+  drik_ritu_at, lunar_masa, raasi, lunar_phase, new_moon, full_moon, sweph_version, ephemeris_fingerprint,
+  default_se_ephe_path, get_planet_name, to_dms, to_dms_prec, unwrap_angles, lon_relative_to_base, inverse_lagrange,
+  mean_longitude, norm360, bisection_search, sidereal_saptarshi_nakshatra, saptarshi_nakshatra_traditional,
+  set_nakshatra_system, set_chosen_ayanamsa, set_ayanamsa_mode, set_coordinate_mode, set_coordinate_selection,
+  reset_ayanamsa_mode, solar_longitude)
 
 bangalore = Place(12.972, 77.594, +5.5)
 shillong = Place(25.569, 91.883, +5.5)
@@ -53,16 +54,14 @@ class SunriseSetTests(PanchangaTestCase):
   def test_moonrise(self):
     event = moonrise(date2, bangalore)
     self.assertIsNotNone(event)
-    local, hms = event
-    self.assertEqual(hms, [11, 35, 6])
-    self.assertAlmostEqual(local, moonrise_jd(date2, bangalore))
+    self.assertEqual(local_hms(event, date2, bangalore), [11, 35, 6])
+    self.assertAlmostEqual(event, moonrise_jd(date2, bangalore))
 
   def test_moonset(self):
     event = moonset(date2, bangalore)
     self.assertIsNotNone(event)
-    local, hms = event
-    self.assertEqual(hms, [24, 14, 12])
-    self.assertAlmostEqual(local, moonset_jd(date2, bangalore))
+    self.assertEqual(local_hms(event, date2, bangalore), [24, 14, 12])
+    self.assertAlmostEqual(event, moonset_jd(date2, bangalore))
 
   def test_moonrise_no_adjacent_00_24_duplicate(self):
     # After-midnight SE primitive can see the same rise on D and D+1; public
@@ -77,33 +76,32 @@ class SunriseSetTests(PanchangaTestCase):
     prim0 = moonrise_jd(jd0, place)
     prim1 = moonrise_jd(jd1, place)
     self.assertAlmostEqual(prim0, prim1, places=5)
-    self.assertGreaterEqual(to_hms((prim0 - jd0) * 24)[0], 24)
-    self.assertEqual(to_hms((prim1 - jd1) * 24)[0], 0)
+    self.assertGreaterEqual(local_hms(prim0, jd0, place)[0], 24)
+    self.assertEqual(local_hms(prim1, jd1, place)[0], 0)
 
     h0 = moonrise(jd0, place)
     h1 = moonrise(jd1, place)
-    carried = [x for x in (h0, h1) if x is not None and abs(x[0] - prim0) < 1e-6]
+    carried = [x for x in (h0, h1) if x is not None and abs(x - prim0) < 1e-6]
     self.assertEqual(len(carried), 1)
-    local_jd, hms = carried[0]
     owner_jd = jd0 if h0 is carried[0] else jd1
-    self.assertEqual(hms, to_hms((local_jd - owner_jd) * 24))
+    hms = local_hms(carried[0], owner_jd, place)
     if owner_jd == jd0:
       self.assertGreaterEqual(hms[0], 24)
     else:
       self.assertLess(hms[0], 24)
 
   def test_sunrise(self):
-    self.assertEqual(sunrise(date2, bangalore)[1], [6, 49, 47])
+    self.assertEqual(local_hms(sunrise(date2, bangalore), date2, bangalore), [6, 49, 47])
 
   def test_sunset(self):
-    self.assertEqual(sunset(date2, bangalore)[1], [18, 10, 25])
+    self.assertEqual(local_hms(sunset(date2, bangalore), date2, bangalore), [18, 10, 25])
 
   def test_vaara(self):
     self.assertEqual(vaara(date2), 5)
 
   def test_karana_helsinki(self):
     # Karana 14 is the 2nd half of tithi 7; end time is rounded via to_hms.
-    self.assertEqual(karana(date2, helsinki), [14, [12, 54, 20]])
+    self.assertEqual(local_ends(karana(date2, helsinki), date2, helsinki), [14, [12, 54, 20]])
 
   def test_karana_number_matches_tithi(self):
     # Karana n spans phase [(n-1)*6, n*6); tithi m spans [(m-1)*12, m*12).
@@ -132,40 +130,40 @@ class VarjyamTests(PanchangaTestCase):
     delhi = Place(28.6139, 77.2090, 5.5)
     v = varjyam(jd, delhi)
     self.assertEqual(len(v), 2)
-    self.assertEqual(v, [[[7, 12, 6], [8, 42, 56]], [[26, 21, 49], [27, 55, 30]]])
+    self.assertEqual(local_intervals(v, jd, delhi), [[[7, 12, 6], [8, 42, 56]], [[26, 21, 49], [27, 55, 30]]])
 
   def test_varjyam_helsinki_summer(self):
     jd = gregorian_to_jd(Date(2026, 6, 21))
     v = varjyam(jd, helsinki)
-    self.assertEqual(v, [[[13, 27, 21], [15, 6, 45]]])
+    self.assertEqual(local_intervals(v, jd, helsinki), [[[13, 27, 21], [15, 6, 45]]])
 
   def test_varjyam_helsinki_winter(self):
     jd = gregorian_to_jd(Date(2026, 12, 21))
     v = varjyam(jd, helsinki)
-    self.assertEqual(v, [[[20, 25, 38], [21, 52, 6]]])
+    self.assertEqual(local_intervals(v, jd, helsinki), [[[20, 25, 38], [21, 52, 6]]])
 
   def test_varjyam_reykjavik_midnight_sun(self):
     jd = gregorian_to_jd(Date(2026, 6, 21))
     reykjavik = Place(64.15, -21.94, 0.0)
     v = varjyam(jd, reykjavik)
-    self.assertEqual(v, [[[11, 27, 21], [13, 6, 45]]])
+    self.assertEqual(local_intervals(v, jd, reykjavik), [[[11, 27, 21], [13, 6, 45]]])
 
   def test_varjyam_reykjavik_spring_two_periods(self):
     jd = gregorian_to_jd(Date(2026, 3, 21))
     reykjavik = Place(64.15, -21.94, 0.0)
     v = varjyam(jd, reykjavik)
-    self.assertEqual(v, [[[15, 25, 12], [16, 53, 52]], [[27, 56, 49], [29, 25, 8]]])
+    self.assertEqual(local_intervals(v, jd, reykjavik), [[[15, 25, 12], [16, 53, 52]], [[27, 56, 49], [29, 25, 8]]])
 
   def test_varjyam_southern_hemisphere(self):
     jd = gregorian_to_jd(Date(2026, 1, 15))
     cape_town = Place(-33.92, 18.42, +2.0)
     v = varjyam(jd, cape_town)
-    self.assertEqual(v, [[[5, 46, 18], [7, 33, 14]]])
+    self.assertEqual(local_intervals(v, jd, cape_town), [[[5, 46, 18], [7, 33, 14]]])
 
   def test_varjyam_wraps_past_midnight(self):
     jd = gregorian_to_jd(Date(2026, 12, 15))
     fairbanks = Place(64.84, -147.72, -9.0)
-    v = varjyam(jd, fairbanks)
+    v = local_intervals(varjyam(jd, fairbanks), jd, fairbanks)
     self.assertEqual(v, [[[30, 18, 8], [32, 0, 1]]])
     for start, end in v:
       self.assertGreaterEqual(start[0], 24)
@@ -174,7 +172,7 @@ class VarjyamTests(PanchangaTestCase):
     """Transit fallback anchors varjyam even when the sun never rises."""
     jd = gregorian_to_jd(Date(2026, 12, 21))
     tromso = Place(69.65, 18.96, +1.0)
-    self.assertEqual(varjyam(jd, tromso), [[[19, 25, 38], [20, 52, 6]]])
+    self.assertEqual(local_intervals(varjyam(jd, tromso), jd, tromso), [[[19, 25, 38], [20, 52, 6]]])
 
   def test_varjyam_computes_at_polar_day(self):
     """Transit fallback anchors varjyam even when the sun never sets."""
@@ -183,14 +181,14 @@ class VarjyamTests(PanchangaTestCase):
     # Anchor = lower transit of the day window (solar midnight); value
     # changed from the pre-window-transit-fallback fix, which sampled at a
     # 47-hour-class anchor for east-of-meridian edge cases.
-    self.assertEqual(varjyam(jd, tromso), [[[12, 27, 21], [14, 6, 45]]])
+    self.assertEqual(local_intervals(varjyam(jd, tromso), jd, tromso), [[[12, 27, 21], [14, 6, 45]]])
 
   def test_varjyam_polar_shoulder_still_computes(self):
     jd = gregorian_to_jd(Date(2026, 3, 15))
     tromso = Place(69.65, 18.96, +1.0)
     v = varjyam(jd, tromso)
     self.assertEqual(len(v), 1)
-    self.assertEqual(v, [[[29, 29, 30], [31, 7, 14]]])
+    self.assertEqual(local_intervals(v, jd, tromso), [[[29, 29, 30], [31, 7, 14]]])
 
   def test_varjyam_empty_day_returns_empty_list(self):
     jd = gregorian_to_jd(Date(2025, 1, 26))
@@ -203,7 +201,7 @@ class VarjyamTests(PanchangaTestCase):
     v = varjyam(jd, reykjavik)
     self.assertEqual(v, sorted(v))
     for start, end in v:
-      self.assertLess(start[0], end[0])
+      self.assertLess(start, end)
 
 
 class TithiTests(PanchangaTestCase):
@@ -228,12 +226,12 @@ class TithiTests(PanchangaTestCase):
   def test_apr24_bangalore(self):
     apr24 = gregorian_to_jd(Date(2010, 4, 24))
     result = tithi(apr24, bangalore)
-    self.assertEqual(result, [10, [6, 9, 30], 11, [27, 33, 59]])
+    self.assertEqual(local_ends(result, apr24, bangalore), [10, [6, 9, 30], 11, [27, 33, 59]])
 
   def test_feb3_bangalore(self):
     feb3 = gregorian_to_jd(Date(2013, 2, 3))
     result = tithi(feb3, bangalore)
-    self.assertEqual(result, [22, [8, 14, 7], 23, [30, 33, 18]])
+    self.assertEqual(local_ends(result, feb3, bangalore), [22, [8, 14, 7], 23, [30, 33, 18]])
 
   def test_apr19_helsinki(self):
     apr19 = gregorian_to_jd(Date(2013, 4, 19))
@@ -440,7 +438,7 @@ class MasaTests(PanchangaTestCase):
     jd = gregorian_to_jd(Date(2023, 1, 6))
     ti = tithi(jd, bangalore)[0]
     self.assertEqual(ti, 15)
-    crit = sunrise(jd, bangalore)[0]
+    crit = sunrise(jd, bangalore)
     current = full_moon(crit, ti, +1)
     previous = full_moon(crit, ti, -1)
     self.assertLess(abs(current - crit), 2)
@@ -522,6 +520,11 @@ class HelperMathTests(PanchangaTestCase):
     self.assertEqual(format_hms(12 + 35 / 60 + 29.6 / 3600), "12:35")
     self.assertEqual(format_hms(12 + 34 / 60 + 30.4 / 3600), "12:35")
     self.assertEqual(format_hms(12 + 34 / 60 + 29.6 / 3600, show_seconds=True), "12:34:30")
+
+  def test_format_hms_before_midnight_keeps_sign(self):
+    # A window opening the previous evening (23:34) on this row's scale.
+    self.assertEqual(format_hms(-(25 + 53 / 60) / 60), "-00:26")
+    self.assertEqual(format_hms(-(25 + 53 / 60) / 60, show_seconds=True), "-00:25:53")
 
   def test_format_hms_from_jd_keeps_24_00(self):
     # civil_jd = UTC midnight of the local civil day; local = civil + tz/24.
@@ -630,7 +633,7 @@ class HelperMathTests(PanchangaTestCase):
     ti, last_nm, masa_num, is_adhika = lunar_masa(jd, bangalore)
     self.assertEqual(ti, tithi(jd, bangalore)[0])
     self.assertEqual([masa_num, is_adhika], masa(jd, bangalore, True))
-    self.assertLess(last_nm, sunrise(jd, bangalore)[0])
+    self.assertLess(last_nm, sunrise(jd, bangalore))
 
     # Optional tithi_number avoids recomputing tithi.
     again = lunar_masa(jd, bangalore, tithi_number=ti)
@@ -865,17 +868,17 @@ class CalendarUtilityTests(PanchangaTestCase):
   def test_moonrise_jd_is_after_midnight_primitive(self):
     # moonrise_jd stays the SE "first after local midnight" helper.
     rise_jd = moonrise_jd(date2, bangalore)
-    self.assertEqual(to_hms((rise_jd - date2) * 24), [11, 35, 6])
+    self.assertEqual(local_hms(rise_jd, date2, bangalore), [11, 35, 6])
     event = moonrise(date2, bangalore)
     self.assertIsNotNone(event)
-    self.assertEqual(event[0], rise_jd)  # same physical rise on this date
+    self.assertEqual(event, rise_jd)  # same physical rise on this date
 
   def test_moonset_jd_is_after_midnight_primitive(self):
     set_jd = moonset_jd(date2, bangalore)
-    self.assertEqual(to_hms((set_jd - date2) * 24), [24, 14, 12])
+    self.assertEqual(local_hms(set_jd, date2, bangalore), [24, 14, 12])
     event = moonset(date2, bangalore)
     self.assertIsNotNone(event)
-    self.assertEqual(event[0], set_jd)
+    self.assertEqual(event, set_jd)
 
   def test_nakshatra_end_point_equal_and_unequal(self):
     self.assertAlmostEqual(nakshatra_end_point(1), 360 / 27)
@@ -916,15 +919,6 @@ class EphemerisCacheTests(PanchangaTestCase):
     self.assertEqual(sunrise.cache_info().hits, rise_hits + 1)
     self.assertEqual(sunset.cache_info().hits, set_hits + 1)
 
-  def test_solar_times_utc_matches_cached_local_rise_and_set(self):
-    timezone = bangalore.timezone / 24
-    expected = (
-      sunrise(date2, bangalore)[0] - timezone,
-      sunset(date2, bangalore)[0] - timezone,
-      sunrise(date2 + 1, bangalore)[0] - timezone,
-    )
-    self.assertEqual(solar_times_utc(date2, bangalore), expected)
-
   def test_moonrise_jd_cache_hit_on_repeat(self):
     first = moonrise_jd(date2, bangalore)
     hits = moonrise_jd.cache_info().hits
@@ -941,8 +935,8 @@ class EphemerisCacheTests(PanchangaTestCase):
     """Nearest-day search centres must collide within one synodic span."""
     jd_a = gregorian_to_jd(Date(2026, 1, 10))
     jd_b = gregorian_to_jd(Date(2026, 1, 11))
-    crit_a = sunrise(jd_a, bangalore)[0]
-    crit_b = sunrise(jd_b, bangalore)[0]
+    crit_a = sunrise(jd_a, bangalore)
+    crit_b = sunrise(jd_b, bangalore)
     ti_a = tithi(jd_a, bangalore)[0]
     ti_b = tithi(jd_b, bangalore)[0]
     panchanga._phase_event_cached.cache_clear()
@@ -960,8 +954,8 @@ class EphemerisCacheTests(PanchangaTestCase):
   def test_full_moon_day_bucket_shared_across_adjacent_days(self):
     jd_a = gregorian_to_jd(Date(2026, 1, 10))
     jd_b = gregorian_to_jd(Date(2026, 1, 11))
-    crit_a = sunrise(jd_a, bangalore)[0]
-    crit_b = sunrise(jd_b, bangalore)[0]
+    crit_a = sunrise(jd_a, bangalore)
+    crit_b = sunrise(jd_b, bangalore)
     ti_a = tithi(jd_a, bangalore)[0]
     ti_b = tithi(jd_b, bangalore)[0]
     panchanga._phase_event_cached.cache_clear()
@@ -1010,7 +1004,7 @@ class MuhurtaTests(PanchangaTestCase):
 
   def test_pratah_sandhya_ends_at_sunrise(self):
     start, end = pratah_sandhya(date2, bangalore)
-    self.assertEqual(end, sunrise(date2, bangalore)[1])
+    self.assertEqual(end, sunrise(date2, bangalore))
     self.assertLess(start, end)
 
   def test_pratah_sandhya_is_last_night_muhurta(self):
@@ -1024,14 +1018,9 @@ class MuhurtaTests(PanchangaTestCase):
       (london, date_summer),
     ):
       start, end = pratah_sandhya(jd, place)
-      self.assertEqual(end, sunrise(jd, place)[1], msg=place)
+      self.assertEqual(end, sunrise(jd, place), msg=place)
       night_h, _ = night_duration(jd - 1, place)
-      muhurta_h = night_h / 15.0
-      # Convert HMS back to decimal hours (allow >24 wrap not expected here).
-      start_h = from_dms(*start)
-      end_h = from_dms(*end)
-      # HMS rounding can shift the printed window by up to ~1 s.
-      self.assertAlmostEqual(end_h - start_h, muhurta_h, delta=1.5 / 3600, msg=place)
+      self.assertAlmostEqual((end - start) * 24, night_h / 15.0, delta=1e-6, msg=place)
 
   def test_pratah_sandhya_multi_location_pins(self):
     # Geometric (no-refraction) sunrise end; start = sunrise - previous_night/15.
@@ -1048,42 +1037,36 @@ class MuhurtaTests(PanchangaTestCase):
       (london, date_summer, [3, 19, 44], [3, 50, 7]),
     )
     for place, jd, start_hms, end_hms in cases:
-      self.assertEqual(pratah_sandhya(jd, place), [start_hms, end_hms], msg=place)
+      self.assertEqual(local_intervals([pratah_sandhya(jd, place)], jd, place), [[start_hms, end_hms]], msg=place)
 
   def test_gauri_chogadiya(self):
     ends = gauri_chogadiya(date2, bangalore)
     self.assertEqual(len(ends), 16)
-    self.assertEqual(len(ends[0]), 3)
+    self.assertEqual(ends, sorted(ends))
+    self.assertAlmostEqual(ends[7], sunset(date2, bangalore), places=9)
+    self.assertAlmostEqual(ends[15], sunrise(date2 + 1, bangalore), places=9)
 
   def test_trikalam_aliases(self):
     rahu = rahu_kalam(date2, bangalore)
     yama = yamaganda_kalam(date2, bangalore)
     gulika = gulika_kalam(date2, bangalore)
-    for window in (rahu, yama, gulika):
-      self.assertEqual(len(window), 2)
-      self.assertEqual(len(window[0]), 3)
-      self.assertEqual(len(window[1]), 3)
+    for start, end in (rahu, yama, gulika):
+      self.assertLess(sunrise(date2, bangalore) - 1e-9, start)
+      self.assertLess(start, end)
     self.assertEqual(trikalam(date2, bangalore, "rahu"), rahu)
 
   def test_durmuhurtam_and_abhijit(self):
-    starts, ends = durmuhurtam(date2, bangalore)
-    self.assertEqual(len(starts), 2)
-    self.assertEqual(len(ends), 2)
-    for value in starts + ends:
-      self.assertEqual(len(value), 3)  # [h, m, s]
+    intervals = durmuhurtam(date2, bangalore)  # Friday: two
+    self.assertEqual(len(intervals), 2)
+    for start, end in intervals:
+      self.assertLess(start, end)
     abhijit = abhijit_muhurta(date2, bangalore)
     self.assertEqual(len(abhijit), 2)
-    self.assertEqual(len(abhijit[0]), 3)
     self.assertLess(abhijit[0], abhijit[1])
 
-  def test_durmuhurtam_unused_slot_is_zero_hms(self):
-    # Sunday (2026-01-18) has a single durmuhurtam; the unused slot must be
-    # a uniform [0, 0, 0] rather than a bare int, so callers can compare
-    # every entry as [h, m, s].
-    starts, ends = durmuhurtam(gregorian_to_jd(Date(2026, 1, 18)), bangalore)
-    self.assertIn([0, 0, 0], starts)
-    self.assertIn([0, 0, 0], ends)
-    self.assertTrue(all(len(value) == 3 for value in starts + ends))
+  def test_durmuhurtam_single_on_sunday(self):
+    # Sunday (2026-01-18) has a single durmuhurtam.
+    self.assertEqual(len(durmuhurtam(gregorian_to_jd(Date(2026, 1, 18)), bangalore)), 1)
 
 
 class PlanetaryPositionTests(PanchangaTestCase):
