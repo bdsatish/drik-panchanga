@@ -27,9 +27,9 @@ import panchanga
 from datetime_helper import (Date, dst_transitions, format_utc_offset, gregorian_to_jd, jd_to_local_civil_date,
                              jd_to_local_datetime, julian_day_from_datetime, local_range_jds, tzinfo_for,
                              utc_offset_hours)
-from tests import local_hms
-from panchanga import (Place, ahargana, elapsed_year, lunar_longitude, reset_ayanamsa_mode, set_ayanamsa_mode,
-                       set_chosen_ayanamsa, set_nakshatra_system, solar_longitude, vaara)
+from tests import local_hms, require_swieph
+from panchanga import (Place, ahargana, elapsed_year, lunar_longitude, reset_ayanamsa_mode, set_chosen_ayanamsa,
+                       set_nakshatra_system, solar_longitude, vaara)
 from generate_panchanga_calendar import Location, place_for_date
 
 UJJAIN = Place(23.1765, 75.7864, +5.5)
@@ -47,24 +47,6 @@ class BoundaryTestCase(unittest.TestCase):
   def tearDown(self):
     set_nakshatra_system("equal")
     reset_ayanamsa_mode()
-
-
-def require_swieph(jd):
-  """Skip the test unless ``.se1`` ephemeris data backs this Julian Day.
-
-  Without ``.se1`` files, pyswisseph either flags the Moshier fallback in
-  the retflag or raises outright for far-past dates (the built-in Moshier
-  ephemeris is only valid for the modern era); both mean "skip", not pass.
-  """
-  set_ayanamsa_mode()
-  try:
-    retflag = swe.calc_ut(jd, swe.SUN, flags=swe.FLG_SWIEPH | swe.FLG_SIDEREAL)[1]
-  except swe.Error as err:
-    raise unittest.SkipTest(f"Swiss Ephemeris .se1 files not available; skipping .se1 golden ({err})")
-  finally:
-    reset_ayanamsa_mode()
-  if not retflag & swe.FLG_SWIEPH:
-    raise unittest.SkipTest("Swiss Ephemeris .se1 files not available; skipping .se1 golden")
 
 
 class JulianDayContinuityTests(BoundaryTestCase):

@@ -11,9 +11,30 @@ diagnosable instead of mysterious.
 """
 
 import sys
+import unittest
+
+import swisseph as swe
 
 import panchanga
 from datetime_helper import to_hms
+
+
+def require_swieph(jd):
+  """Skip the test unless ``.se1`` ephemeris data backs this Julian Day.
+
+  Without ``.se1`` files, pyswisseph either flags the Moshier fallback in
+  the retflag or raises outright for far-past dates (the built-in Moshier
+  ephemeris is only valid for the modern era); both mean "skip", not pass.
+  """
+  panchanga.set_ayanamsa_mode()
+  try:
+    retflag = swe.calc_ut(jd, swe.SUN, flags=swe.FLG_SWIEPH | swe.FLG_SIDEREAL)[1]
+  except swe.Error as err:
+    raise unittest.SkipTest(f"Swiss Ephemeris .se1 files not available; skipping .se1 golden ({err})")
+  finally:
+    panchanga.reset_ayanamsa_mode()
+  if not retflag & swe.FLG_SWIEPH:
+    raise unittest.SkipTest("Swiss Ephemeris .se1 files not available; skipping .se1 golden")
 
 
 def local_hms(jd_ut, jd, place):
