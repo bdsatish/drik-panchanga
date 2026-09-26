@@ -76,8 +76,9 @@ zone's reference city (Kolkata's +5:53 for all of India). Pass
 `longitude=` to `utc_offset_hours`, `format_local_hm` and the other zone
 helpers to get this; the calendars and the web UI do.
 
-Angles are sidereal longitudes in `[degrees, minutes, seconds]`. Negative
-years in `Date` are proleptic Gregorian (works back to 5000 BCE). Available
+Angles are sidereal longitudes in `[degrees, minutes, seconds]`. Years in
+`Date` and in the web day view are astronomical, on the proleptic Gregorian
+calendar: year 0 is 1 BCE and -1 is 2 BCE (works back to 5000 BCE). Available
 ayanamsas: `citra`, `revati`, `rohini`, `pushya`, `mula`, `krishnamurti`,
 `raman` — or `panchanga.set_coordinate_mode("tropical")` for sāyana
 positions.

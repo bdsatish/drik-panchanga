@@ -173,9 +173,9 @@ class DayPanchangaMasaRituTests(unittest.TestCase):
         parse_civil_date(bad)
     self.assertEqual(parse_civil_date("29/02/2024"), Date(2024, 2, 29))
     self.assertEqual(parse_civil_date("18/01/-3101"), Date(-3101, 1, 18))
-    # Year 0 stays rejected (astronomical numbering: use -1 for 1 BCE).
-    with self.assertRaises(ValueError):
-      parse_civil_date("18/01/0")
+    # Astronomical numbering: year 0 is 1 BCE, and a leap year.
+    self.assertEqual(parse_civil_date("18/01/0"), Date(0, 1, 18))
+    self.assertEqual(parse_civil_date("29/02/0"), Date(0, 2, 29))
 
 
 class DstClockTests(unittest.TestCase):

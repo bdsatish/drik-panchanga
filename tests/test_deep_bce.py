@@ -199,7 +199,7 @@ class BceDayViewSweepTests(unittest.TestCase):
   """The web day view answers every BCE day in full (it once raised on year < 1)."""
 
   DATES = ("15/06/-3299", "15/12/-3299", "23/01/-3101", "29/02/-3200", "21/03/-2500", "22/12/-1500", "30/01/-500",
-           "31/12/-1")
+           "31/12/-1", "29/02/0")
 
   @classmethod
   def setUpClass(cls):

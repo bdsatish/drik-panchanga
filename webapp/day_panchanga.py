@@ -27,19 +27,17 @@ log.addHandler(logging.NullHandler())
 
 
 def parse_civil_date(text):
-  """Parse ``DD/MM/YYYY``; negative years are proleptic Gregorian."""
+  """Parse ``DD/MM/YYYY``: proleptic Gregorian, astronomical years (0 = 1 BCE, -1 = 2 BCE)."""
   text = (text or "").strip()
   if not text:
     raise ValueError("Date is required (DD/MM/YYYY)")
   parts = text.split("/")
   if len(parts) != 3:
-    raise ValueError("Date must be DD/MM/YYYY (negative years allowed).")
+    raise ValueError("Date must be DD/MM/YYYY (year 0 = 1 BCE, -1 = 2 BCE).")
   try:
     day, month, year = int(parts[0]), int(parts[1]), int(parts[2])
   except ValueError:
-    raise ValueError("Date must be DD/MM/YYYY (negative years allowed).") from None
-  if year == 0:
-    raise ValueError("Year 0 is not used; use negative years for BCE")
+    raise ValueError("Date must be DD/MM/YYYY (year 0 = 1 BCE, -1 = 2 BCE).") from None
   # swe.julday would silently roll 31/4 or 30/2 into the next month.
   if not panchanga.swe.date_conversion(year, month, day)[0]:
     raise ValueError(f"Invalid date {text!r}")

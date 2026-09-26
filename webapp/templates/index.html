@@ -437,7 +437,8 @@
         <div class="field">
           <label for="date">Date</label>
           <input id="date" name="date" type="text" required placeholder="DD/MM/YYYY" inputmode="numeric">
-          <p class="hint">Proleptic Gregorian; negative years allowed (e.g. 30/01/-1316).</p>
+          <p class="hint">Proleptic Gregorian, astronomical years: 0 = 1 BCE, -1 = 2 BCE (e.g. 23/01/-3101,
+            the Kali Yuga epoch in 3102 BCE).</p>
         </div>
         <button type="submit" id="day-btn">Show panchanga</button>
         <p class="status" id="day-status" aria-live="polite"></p>
