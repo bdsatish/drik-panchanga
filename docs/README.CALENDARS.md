@@ -17,12 +17,19 @@ Common options
 
 ```
 --city "Ujjain, IN"      # data/cities.json; country code disambiguates
+--place -13.4,70,5.5     # instead of --city: LAT,LON,TZ (see below)
 --start 2026-06          # first month of the span (14 or 12 months)
 --month amanta|purnimanta
 --ayanamsa citra|revati|rohini|pushya|mula|krishnamurti|raman|tropical
 --festivals FILE.cfg
 --output FILE.pdf
 ```
+
+`--place` takes three comma-separated decimal numbers instead of a city name:
+latitude (negative = south), longitude (east = positive), and the timezone as a
+UTC offset in hours (5.5 = UTC+5:30; no DST is applied). The header names the
+place by its coordinates, e.g. `13.40S, 70.00E (UTC+5:30)`. Either `--city` or
+`--place` must be given; when both are, `--place` wins.
 
 `--ayanamsa tropical` uses the equinox-referenced ecliptic instead of a
 fixed-star (nirayana) reference. The PDF subtitle shows *Tropical (Sāyana)*

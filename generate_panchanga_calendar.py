@@ -498,12 +498,15 @@ def resolve_city_key(city, locations):
 
 
 def _parse_float(text, kind, low, high):
-  """Signed float for ``kind`` within ``[low, high]``."""
-  text = (text or "").strip()
-  try:
+  """Signed float for ``kind`` within ``[low, high]``. Accepts a number or text."""
+  if isinstance(text, (int, float)):
     value = float(text)
-  except ValueError:
-    raise ValueError(f"{kind.capitalize()} {text!r} must be a number.") from None
+  else:
+    text = (text or "").strip()
+    try:
+      value = float(text)
+    except ValueError:
+      raise ValueError(f"{kind.capitalize()} {text!r} must be a number.") from None
   if not low <= value <= high:
     raise ValueError(f"{kind.capitalize()} {text!r} is out of range ({low} to {high}).")
   return value
@@ -533,6 +536,47 @@ def resolve_location(city=None, latitude=None, longitude=None, timezone=None):
   if latitude or longitude or timezone:
     return load_custom_location(latitude, longitude, timezone)
   return load_location(city)
+
+
+def parse_place_spec(text):
+  """``--place LAT,LON,TZ`` into three floats, or ``None`` for blank text.
+
+  Latitude is negative for south, longitude positive for east, and the
+  timezone is a UTC offset in hours (5.5 = UTC+5:30). Exactly three
+  comma-separated numbers are required.
+  """
+  if text is None or not text.strip():
+    return None
+  parts = [part.strip() for part in text.split(",")]
+  if len(parts) != 3:
+    raise ValueError("--place expects exactly three comma-separated numbers: LAT,LON,TZ")
+  return tuple(
+    _parse_float(part, kind, low, high)
+    for part, (kind, low, high) in zip(parts, (("latitude", -90, 90), ("longitude", -180, 180), ("timezone", -12, 14))))
+
+
+def resolve_cli_location(city=None, place=None):
+  """Location from ``--place LAT,LON,TZ`` (wins over city), else the catalog city."""
+  coordinates = parse_place_spec(place)
+  if coordinates is not None:
+    return load_custom_location(*coordinates)
+  if not city:
+    raise ValueError("City is required: pass --city NAME or --place LAT,LON,TZ")
+  return load_location(city)
+
+
+def attach_place_values(argv):
+  """Glue ``--place`` to its value (``--place -1,2,3`` -> ``--place=-1,2,3``).
+
+  argparse would otherwise read the leading ``-`` of a negative latitude as
+  the start of another option.
+  """
+  argv = list(argv)
+  for index, item in enumerate(argv):
+    if item == "--place" and index + 1 < len(argv):
+      argv[index] = "--place=" + argv[index + 1]
+      del argv[index + 1]
+  return argv
 
 
 def format_eclipse_line(eclipses, timezone_name, sunrise_by_date=None, longitude=None):
@@ -1134,8 +1178,13 @@ def default_output_path(location, start_year, start_month, month_system="amanta"
 
 def argument_parser():
   parser = argparse.ArgumentParser(description=("Generate a one-page A4 panchanga for 14 consecutive months."))
-  parser.add_argument("--city", required=True, help=(f"city as listed in {DEFAULT_CITIES_PATH.name} "
-                                                     f'(e.g. "Helsinki, FI" or Helsinki,FI)'))
+  parser.add_argument("--city", help=(f"city as listed in {DEFAULT_CITIES_PATH.name} "
+                                      f'(e.g. "Helsinki, FI" or Helsinki,FI)'))
+  parser.add_argument(
+    "--place", metavar="LAT,LON,TZ",
+    help=("location as three floats instead of --city: latitude (negative = south), "
+          "longitude (east = positive), timezone as UTC offset hours (5.5 = UTC+5:30), "
+          "e.g. --place -13.4,70,5.5"))
   parser.add_argument("--start", required=True, metavar="YYYY-MM", help="first of the 14 consecutive calendar months")
   parser.add_argument("-o", "--output", type=Path, help="output PDF path (default: generated from city and range)")
   parser.add_argument("--month", default="amanta", metavar="SYSTEM",
@@ -1163,11 +1212,11 @@ def _check_reportlab():
 def main(argv=None):
   configure_logging()
   parser = argument_parser()
-  arguments = parser.parse_args(argv)
+  arguments = parser.parse_args(attach_place_values(sys.argv[1:] if argv is None else argv))
   _check_reportlab()
   try:
     start_year, start_month = require_start_month(arguments.start)
-    location = load_location(arguments.city)
+    location = resolve_cli_location(arguments.city, place=arguments.place)
     month_system = arguments.month
     coordinate_selection = require_coordinate_selection(arguments.ayanamsa)
     require_month_system(month_system)

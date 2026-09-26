@@ -113,8 +113,12 @@ drik-panchanga-long  --city Ujjain --start 2026-03    # 12-page wall calendar
 Both accept `--month amanta|purnimanta`, `--ayanamsa` (citra, revati, rohini,
 pushya, mula, krishnamurti, raman, tropical), `--festivals FILE.cfg`, and
 `--output`. Cities come from `data/cities.json` as `AsciiName, CC`
-(e.g. `Bengaluru, IN`). Full details, including the PDF legend and festival
-configuration: [docs/README.CALENDARS.md](docs/README.CALENDARS.md) and
+(e.g. `Bengaluru, IN`). For places missing from the catalog, pass
+`--place LAT,LON,TZ` with three decimal numbers instead: latitude (negative =
+south), longitude (east = positive), and the timezone as a UTC offset in hours,
+e.g. `--place -13.4,70,5.5` (UTC+5:30, no DST). Full details, including the
+PDF legend and festival configuration:
+[docs/README.CALENDARS.md](docs/README.CALENDARS.md) and
 [docs/README.FESTIVALS.md](docs/README.FESTIVALS.md).
 
 Web UI

@@ -56,13 +56,16 @@ from generate_panchanga_calendar import (
   ensure_pdf_fonts,
   load_location,
   location_slug,
+  parse_place_spec,
   masa_badges_by_date,
   month_system_label,
   place_for_date,
   require_coordinate_selection,
   require_month_system,
   require_start_month,
+  resolve_cli_location,
   resolve_festivals,
+  attach_place_values,
   sanskrit_names,
   solar_dates_by_date,
   timing_key_line,
@@ -755,8 +758,13 @@ def default_monthly_output_path(location, start_year, start_month, month_system=
 def argument_parser():
   parser = argparse.ArgumentParser(description=("Generate a 12-month wall-calendar panchanga PDF "
                                                 "(one A4 portrait grid page per month)."))
-  parser.add_argument("--city", required=True, help=(f'city as listed in {DEFAULT_CITIES_PATH.name} '
-                                                     '(e.g. "Helsinki, FI" or Helsinki,FI)'))
+  parser.add_argument("--city", help=(f'city as listed in {DEFAULT_CITIES_PATH.name} '
+                                      '(e.g. "Helsinki, FI" or Helsinki,FI)'))
+  parser.add_argument(
+    "--place", metavar="LAT,LON,TZ",
+    help=("location as three floats instead of --city: latitude (negative = south), "
+          "longitude (east = positive), timezone as UTC offset hours (5.5 = UTC+5:30), "
+          "e.g. --place -13.4,70,5.5"))
   parser.add_argument("--start", required=True, help="first month of the 12-month span, e.g. 2026-06")
   parser.add_argument("--month", choices=("amanta", "purnimanta"), default="amanta",
                       help="amānta (default) or pūrṇimānta month labels")
@@ -779,10 +787,13 @@ def _check_reportlab():
 def main(argv=None):
   _check_reportlab()
   parser = argument_parser()
-  args = parser.parse_args(argv)
+  args = parser.parse_args(attach_place_values(sys.argv[1:] if argv is None else argv))
   coordinate_selection = require_coordinate_selection(args.ayanamsa)
-  start_year, start_month = require_start_month(args.start)
-  location = load_location(args.city)
+  try:
+    start_year, start_month = require_start_month(args.start)
+    location = resolve_cli_location(args.city, place=args.place)
+  except ValueError as error:
+    parser.error(str(error))
   if args.output:
     output_path = Path(args.output)
   else:

@@ -19,6 +19,7 @@ With the `[pdf]` extra, two console commands are available:
 
 ```bash
 drik-panchanga-short --city "Bengaluru, IN" --start 2026-06
+drik-panchanga-short --place -13.4,70,5.5 --start 2026-06  # lat, lon, UTC offset hours
 ```
 
 ## Ephemeris data
