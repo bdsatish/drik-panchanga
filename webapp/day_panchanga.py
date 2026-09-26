@@ -219,8 +219,7 @@ def _compute_day_details_unlocked(location, civil, amanta=None, coordinate_selec
   }
 
 
-def compute_day_panchanga(city, date_text, month_system="amanta", coordinate_selection="citra", latitude=None,
-                          longitude=None, timezone=None):
+def compute_day_panchanga(city, date_text, month_system="amanta", coordinate_selection="citra", place=None):
   """Return named panchanga fields for ``city`` on ``date_text`` (DD/MM/YYYY).
 
     ``month_system`` is ``amanta`` (default) or ``purnimanta``; it affects the
@@ -231,11 +230,11 @@ def compute_day_panchanga(city, date_text, month_system="amanta", coordinate_sel
     ``revati``, ``rohini``, ``pushya``, ``mula``, ``krishnamurti``, ``raman``)
     or ``"tropical"`` for tropical (sāyana) longitudes.
 
-    ``latitude``/``longitude``/``timezone`` select a manual location with a
-    fixed UTC offset (no DST); when any of them is set they win over ``city``.
+    ``place`` (``LAT,LON,TZ``, as ``--place``) selects a manual location with
+    a fixed UTC offset (no DST); when set it wins over ``city``.
     """
   with panchanga.coordinate_calculation_lock:
-    location = resolve_location(city, latitude, longitude, timezone)
+    location = resolve_location(city, place)
     amanta = require_month_system(month_system)
     civil = parse_civil_date(date_text)
 

@@ -54,18 +54,17 @@ from generate_panchanga_calendar import (
   display_masa,
   embed_pdf_metadata,
   ensure_pdf_fonts,
+  attach_place_values,
   load_location,
   location_slug,
-  parse_place_spec,
   masa_badges_by_date,
   month_system_label,
   place_for_date,
   require_coordinate_selection,
   require_month_system,
   require_start_month,
-  resolve_cli_location,
   resolve_festivals,
-  attach_place_values,
+  resolve_location,
   sanskrit_names,
   solar_dates_by_date,
   timing_key_line,
@@ -791,7 +790,7 @@ def main(argv=None):
   coordinate_selection = require_coordinate_selection(args.ayanamsa)
   try:
     start_year, start_month = require_start_month(args.start)
-    location = resolve_cli_location(args.city, place=args.place)
+    location = resolve_location(args.city, args.place)
   except ValueError as error:
     parser.error(str(error))
   if args.output:

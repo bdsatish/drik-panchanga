@@ -28,8 +28,7 @@ def generate_pdf(fields):
   layout = (fields.get("layout") or "one-page").strip().casefold()
   if layout not in ("one-page", "monthly"):
     raise ValueError("Layout must be 'one-page' or 'monthly'.")
-  location = resolve_location(fields.get("city"), fields.get("latitude"), fields.get("longitude"),
-                              fields.get("timezone"))
+  location = resolve_location(fields.get("city"), fields.get("place"))
   start = (fields.get("start") or "").strip()
   start_year, start_month = require_start_month(start)
   month_system = (fields.get("month") or "amanta").strip()

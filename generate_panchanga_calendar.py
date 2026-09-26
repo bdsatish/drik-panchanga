@@ -498,15 +498,12 @@ def resolve_city_key(city, locations):
 
 
 def _parse_float(text, kind, low, high):
-  """Signed float for ``kind`` within ``[low, high]``. Accepts a number or text."""
-  if isinstance(text, (int, float)):
+  """Signed float for ``kind`` within ``[low, high]``."""
+  text = (text or "").strip()
+  try:
     value = float(text)
-  else:
-    text = (text or "").strip()
-    try:
-      value = float(text)
-    except ValueError:
-      raise ValueError(f"{kind.capitalize()} {text!r} must be a number.") from None
+  except ValueError:
+    raise ValueError(f"{kind.capitalize()} {text!r} must be a number.") from None
   if not low <= value <= high:
     raise ValueError(f"{kind.capitalize()} {text!r} is out of range ({low} to {high}).")
   return value
@@ -531,37 +528,20 @@ def load_location(city):
   return Location(name, record["latitude"], record["longitude"], record["timezone"])
 
 
-def resolve_location(city=None, latitude=None, longitude=None, timezone=None):
-  """Manual lat/lon/timezone floats when any is set (wins over city), else the catalog city."""
-  if latitude or longitude or timezone:
-    return load_custom_location(latitude, longitude, timezone)
-  return load_location(city)
-
-
-def parse_place_spec(text):
-  """``--place LAT,LON,TZ`` into three floats, or ``None`` for blank text.
+def resolve_location(city=None, place=None):
+  """``place`` as ``LAT,LON,TZ`` when given (wins over city), else the catalog city.
 
   Latitude is negative for south, longitude positive for east, and the
-  timezone is a UTC offset in hours (5.5 = UTC+5:30). Exactly three
-  comma-separated numbers are required.
+  timezone is a fixed UTC offset in hours (5.5 = UTC+5:30, no DST).
+  Shared by ``--place`` and the web ``place`` field.
   """
-  if text is None or not text.strip():
-    return None
-  parts = [part.strip() for part in text.split(",")]
-  if len(parts) != 3:
-    raise ValueError("--place expects exactly three comma-separated numbers: LAT,LON,TZ")
-  return tuple(
-    _parse_float(part, kind, low, high)
-    for part, (kind, low, high) in zip(parts, (("latitude", -90, 90), ("longitude", -180, 180), ("timezone", -12, 14))))
-
-
-def resolve_cli_location(city=None, place=None):
-  """Location from ``--place LAT,LON,TZ`` (wins over city), else the catalog city."""
-  coordinates = parse_place_spec(place)
-  if coordinates is not None:
-    return load_custom_location(*coordinates)
+  if place and place.strip():
+    parts = place.split(",")
+    if len(parts) != 3:
+      raise ValueError("Place must be three comma-separated numbers: LAT,LON,TZ")
+    return load_custom_location(*parts)
   if not city:
-    raise ValueError("City is required: pass --city NAME or --place LAT,LON,TZ")
+    raise ValueError("City is required (or a place as LAT,LON,TZ).")
   return load_location(city)
 
 
@@ -1216,7 +1196,7 @@ def main(argv=None):
   _check_reportlab()
   try:
     start_year, start_month = require_start_month(arguments.start)
-    location = resolve_cli_location(arguments.city, place=arguments.place)
+    location = resolve_location(arguments.city, arguments.place)
     month_system = arguments.month
     coordinate_selection = require_coordinate_selection(arguments.ayanamsa)
     require_month_system(month_system)

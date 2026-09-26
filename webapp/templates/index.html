@@ -456,9 +456,7 @@
       <h2>Calendar PDF</h2>
       <form id="generate-form" method="post" action="/generate" autocomplete="off">
         <input type="hidden" name="city" id="pdf-city">
-        <input type="hidden" name="latitude" id="pdf-latitude">
-        <input type="hidden" name="longitude" id="pdf-longitude">
-        <input type="hidden" name="timezone" id="pdf-timezone">
+        <input type="hidden" name="place" id="pdf-place">
         <input type="hidden" name="month" id="pdf-month" value="amanta">
         <input type="hidden" name="ayanamsa" id="pdf-ayanamsa" value="citra">
         <input type="hidden" name="layout" id="pdf-layout" value="one-page">
@@ -509,9 +507,7 @@
       const dayBody = document.getElementById("day-body");
       const pdfForm = document.getElementById("generate-form");
       const pdfCity = document.getElementById("pdf-city");
-      const pdfLatitude = document.getElementById("pdf-latitude");
-      const pdfLongitude = document.getElementById("pdf-longitude");
-      const pdfTimezone = document.getElementById("pdf-timezone");
+      const pdfPlace = document.getElementById("pdf-place");
       const pdfMonth = document.getElementById("pdf-month");
       const pdfAyanamsa = document.getElementById("pdf-ayanamsa");
       const pdfLayout = document.getElementById("pdf-layout");
@@ -550,41 +546,27 @@
       modeInputs.forEach((radio) => radio.addEventListener("change", syncMode));
       syncMode();
 
-      function locationFields() {
-        if (selectedMode() === "coords") {
-          return {
-            city: "",
-            latitude: latInput.value.trim(),
-            longitude: lonInput.value.trim(),
-            timezone: tzInput.value.trim(),
-          };
-        }
-        return { city: cityInput.value.trim(), latitude: "", longitude: "", timezone: "" };
-      }
-
       function requireLocation(statusEl) {
-        const loc = locationFields();
         if (selectedMode() === "coords") {
-          if (!loc.latitude || !loc.longitude || !loc.timezone) {
+          const parts = [latInput, lonInput, tzInput].map((input) => input.value.trim());
+          if (parts.some((part) => !part)) {
             statusEl.textContent = "Enter latitude, longitude, and timezone.";
             return null;
           }
-          return loc;
+          return { city: "", place: parts.join(",") };
         }
-        if (!loc.city) {
+        const city = cityInput.value.trim();
+        if (!city) {
           statusEl.textContent = "Enter a city.";
           return null;
         }
-        return loc;
+        return { city, place: "" };
       }
 
       function locationQuery(loc) {
-        if (selectedMode() === "coords") {
-          return `latitude=${encodeURIComponent(loc.latitude)}`
-            + `&longitude=${encodeURIComponent(loc.longitude)}`
-            + `&timezone=${encodeURIComponent(loc.timezone)}`;
-        }
-        return `city=${encodeURIComponent(loc.city)}`;
+        return loc.place
+          ? `place=${encodeURIComponent(loc.place)}`
+          : `city=${encodeURIComponent(loc.city)}`;
       }
 
       if (!startInput.value) {
@@ -846,9 +828,7 @@
           return;
         }
         pdfCity.value = loc.city;
-        pdfLatitude.value = loc.latitude;
-        pdfLongitude.value = loc.longitude;
-        pdfTimezone.value = loc.timezone;
+        pdfPlace.value = loc.place;
         pdfMonth.value = selectedMonthSystem();
         pdfAyanamsa.value = ayanamsaParams();
         pdfLayout.value = layout;

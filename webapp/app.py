@@ -136,9 +136,7 @@ def api_panchanga():
   date = (request.args.get("date") or "").strip()
   month = request.args.get("month")
   ayanamsa = request.args.get("ayanamsa")
-  latitude = (request.args.get("latitude") or "").strip()
-  longitude = (request.args.get("longitude") or "").strip()
-  timezone = (request.args.get("timezone") or "").strip()
+  place = request.args.get("place")
   try:
     if ayanamsa:
       ayanamsa = ayanamsa.strip()
@@ -146,8 +144,7 @@ def api_panchanga():
     if month:
       month = month.strip()
     return jsonify(
-      compute_day_panchanga(city, date, month_system=month, coordinate_selection=coordinate_selection,
-                            latitude=latitude, longitude=longitude, timezone=timezone))
+      compute_day_panchanga(city, date, month_system=month, coordinate_selection=coordinate_selection, place=place))
   except ValueError as error:
     abort(400, description=str(error))
 
@@ -165,12 +162,9 @@ def generate():
 @app.get("/api/panchanga.ics")
 def ics_calendar():
   city = (request.args.get("city") or "").strip()
-  latitude = (request.args.get("latitude") or "").strip()
-  longitude = (request.args.get("longitude") or "").strip()
-  timezone = (request.args.get("timezone") or "").strip()
   start = (request.args.get("start") or "").strip()
   try:
-    location = resolve_location(city, latitude, longitude, timezone)
+    location = resolve_location(city, request.args.get("place"))
     start_year, start_month = require_start_month(start)
     month = (request.args.get("month") or "amanta").strip()
     amanta = require_month_system(month)

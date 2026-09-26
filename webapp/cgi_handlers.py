@@ -139,9 +139,7 @@ def handle_panchanga():
     city = (params.get("city") or [""])[0]
     date = (params.get("date") or [""])[0]
     month = (params.get("month") or ["amanta"])[0]
-    latitude = (params.get("latitude") or [""])[0]
-    longitude = (params.get("longitude") or [""])[0]
-    timezone = (params.get("timezone") or [""])[0]
+    place = (params.get("place") or [""])[0]
     a = params.get("ayanamsa")
     if a:
       ayanamsa = a[0]
@@ -149,7 +147,7 @@ def handle_panchanga():
       ayanamsa = None
     coordinate_selection = require_coordinate_selection(ayanamsa)
     payload = compute_day_panchanga(city, date, month_system=month, coordinate_selection=coordinate_selection,
-                                    latitude=latitude, longitude=longitude, timezone=timezone)
+                                    place=place)
   except ValueError as error:
     write_error(str(error), as_json=True)
     return
