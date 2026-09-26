@@ -5,7 +5,6 @@ an ``_unlocked`` helper that does the real work. Hold the lock for the whole
 request so ayanāṃśa / tropical mode stays stable under concurrent web use.
 """
 
-import calendar
 import logging
 import math
 from functools import partial
@@ -41,23 +40,10 @@ def parse_civil_date(text):
     raise ValueError("Date must be DD/MM/YYYY (negative years allowed).") from None
   if year == 0:
     raise ValueError("Year 0 is not used; use negative years for BCE")
-  if not 1 <= month <= 12 or not _day_in_proleptic_gregorian_year(year, month, day):
+  # swe.julday would silently roll 31/4 or 30/2 into the next month.
+  if not panchanga.swe.date_conversion(year, month, day)[0]:
     raise ValueError(f"Invalid date {text!r}")
   return Date(year, month, day)
-
-
-def _day_in_proleptic_gregorian_year(year, month, day):
-  """Whether ``day`` exists in ``month`` of astronomical-year ``year``.
-
-  Swiss Ephemeris uses astronomical year numbering with the proleptic
-  Gregorian calendar (year 0 = 1 BCE, and year 0 is a leap year). Python's
-  ``calendar`` helpers apply the same rule for negative years, so we can
-  reject impossible days like 31/4 or 30/2 here instead of letting the
-  ephemeris silently roll them into the next month.
-  """
-  if month == 2:
-    return 1 <= day <= (29 if calendar.isleap(year) else 28)
-  return 1 <= day <= calendar.monthrange(2001, month)[1]
 
 
 def _named_segments(values, lookup, clock):
