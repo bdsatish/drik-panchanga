@@ -23,7 +23,7 @@ import unittest
 import swisseph as swe
 
 import panchanga
-from datetime_helper import Date, gregorian_to_jd, local_time_to_jdut1
+from datetime_helper import Date, gregorian_to_jd
 from tests import local_hms
 from panchanga import (Place, ahargana, elapsed_year, lunar_longitude, reset_ayanamsa_mode, set_ayanamsa_mode,
                        set_chosen_ayanamsa, set_nakshatra_system, solar_longitude, vaara)
@@ -78,15 +78,6 @@ class JulianDayContinuityTests(BoundaryTestCase):
     # year -1 (2 BCE) is a common year.
     self.assertEqual(gregorian_to_jd(Date(1, 1, 1)) - gregorian_to_jd(Date(0, 1, 1)), 366.0)
     self.assertEqual(gregorian_to_jd(Date(0, 1, 1)) - gregorian_to_jd(Date(-1, 1, 1)), 365.0)
-
-  def test_jd_paths_agree_across_boundary(self):
-    # gregorian_to_jd (swe.julday) and local_time_to_jdut1 (swe.utc_to_jd)
-    # must differ by exactly the timezone offset, even for year <= 0.
-    for year in (1, 0, -1, -100):
-      with self.subTest(year=year):
-        jd_midnight_utc = gregorian_to_jd(Date(year, 1, 1))
-        jd_local_midnight = local_time_to_jdut1(year, 1, 1, 0, 0, 0, timezone=5.5)
-        self.assertAlmostEqual((jd_midnight_utc - jd_local_midnight) * 24, 5.5, places=6)
 
 
 class WeekdayContinuityTests(BoundaryTestCase):

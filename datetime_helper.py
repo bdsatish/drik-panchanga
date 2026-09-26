@@ -40,13 +40,6 @@ class Date(struct('Date', ['year', 'month', 'day'])):
     return f"{self.year:04d}-{self.month:02d}-{self.day:02d}"
 
 
-def local_time_to_jdut1(year, month, day, hour=0, minutes=0, seconds=0, timezone=0.0):
-  """Converts local time to JD(UT1)"""
-  y, m, d, h, mnt, s = swe.utc_time_zone(year, month, day, hour, minutes, seconds, timezone)
-  jd_et, jd_ut1 = swe.utc_to_jd(y, m, d, h, mnt, s, cal=swe.GREG_CAL)
-  return jd_ut1
-
-
 # Julian day <-> civil/local datetime (IANA time zones, DST-aware)
 _SECONDS_PER_DAY = 24 * 60 * 60
 _JULIAN_DAY_AT_UNIX_EPOCH = 2440587.5

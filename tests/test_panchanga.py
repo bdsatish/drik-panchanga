@@ -10,7 +10,7 @@ from unittest import mock
 import swisseph as swe
 
 import panchanga
-from datetime_helper import Date, format_hms, format_hms_from_jd, gregorian_to_jd, local_time_to_jdut1, to_hms
+from datetime_helper import Date, format_hms, format_hms_from_jd, gregorian_to_jd, to_hms
 from tests import local_ends, local_hms, local_intervals
 from panchanga import (
   Place, from_dms, sunrise, sunset, moonrise, moonrise_jd, moonset, moonset_jd, tithi, nakshatra, nakshatra_pada,
@@ -862,12 +862,6 @@ class CalendarUtilityTests(PanchangaTestCase):
     self.assertLess(previous_full, next_full)
     self.assertAlmostEqual(min(lunar_phase(previous_new) % 360, 360 - (lunar_phase(previous_new) % 360)), 0, delta=1.0)
     self.assertAlmostEqual(lunar_phase(previous_full), 180, delta=1.0)
-
-  def test_local_time_to_jdut1(self):
-    jd = local_time_to_jdut1(2013, 1, 18, 12, 0, 0, timezone=5.5)
-    self.assertIsInstance(jd, float)
-    self.assertGreater(jd, date2)
-    self.assertLess(jd, date2 + 1)
 
   def test_moonrise_jd_is_after_midnight_primitive(self):
     # moonrise_jd stays the SE "first after local midnight" helper.
