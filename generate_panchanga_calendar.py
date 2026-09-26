@@ -545,7 +545,7 @@ def format_eclipse_line(eclipses, timezone_name, sunrise_by_date=None, longitude
     sunrise_by_date = sunrise_by_date or {}
     parts = []
     for kind, phase, maximum_jd in eclipses:
-      event_civil = jd_to_local_civil_date(maximum_jd, timezone_name)
+      event_civil = jd_to_local_civil_date(maximum_jd, timezone_name, longitude)
       sunrise_jd = sunrise_by_date.get(event_civil)
       civil = hindu_day_civil(maximum_jd, timezone_name, sunrise_jd, longitude=longitude)
       month_name = calendar.month_abbr[civil.month]
@@ -565,7 +565,7 @@ def format_eclipse_line(eclipses, timezone_name, sunrise_by_date=None, longitude
 
 def eclipse_hindu_date(maximum_jd, timezone_name, sunrise_by_date=None, longitude=None):
   """Local civil date of an eclipse maximum (Hindu-day when that morning's sunrise is given)."""
-  event_civil = jd_to_local_civil_date(maximum_jd, timezone_name)
+  event_civil = jd_to_local_civil_date(maximum_jd, timezone_name, longitude)
   return hindu_day_civil(maximum_jd, timezone_name, (sunrise_by_date or {}).get(event_civil), longitude=longitude)
 
 
@@ -1049,7 +1049,7 @@ def build_pdf(location, start_year, start_month, output_path, festivals_path=Non
       context_records, target_dates, geopos=geopos, timezone_name=location.timezone_name, enabled_names=enabled_names)
 
     eclipse_start_jd, eclipse_end_jd = local_range_jds(start_year, start_month, end_year, end_month,
-                                                       location.timezone_name)
+                                                       location.timezone_name, location.longitude)
     # A maximum before sunrise belongs to the previous day: search one more
     # morning, and drop maxima before the first printed sunrise.
     eclipses = [

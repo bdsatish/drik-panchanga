@@ -656,7 +656,7 @@ def collect_context(months, location, festivals_path, amanta=True):
     festival_names_by_date[civil] = [lookup.get(m, str(m)) for m in markers]
   dst_labels_by_date = {}
   for year, month in months:
-    for day, label in dst_transitions(location.timezone_name, year, month).items():
+    for day, label in dst_transitions(location.timezone_name, year, month, location.longitude).items():
       civil = Date(year, month, day)
       if civil in target_dates:
         dst_labels_by_date.setdefault(civil, []).append(label)

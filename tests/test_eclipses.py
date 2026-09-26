@@ -8,7 +8,7 @@ import panchanga
 from datetime_helper import (Date, format_hms, format_local_hm, gregorian_to_jd, hindu_day_civil,
                              jd_to_local_civil_date, julian_day_from_datetime, utc_offset_hours)
 from festival_rules import hindu_day_has_eclipse, find_local_eclipses
-from generate_panchanga_calendar import eclipse_civil_dates, format_eclipse_line
+from generate_panchanga_calendar import eclipse_civil_dates, format_eclipse_line, load_location, place_for_date
 
 
 def _times(maximum):
@@ -251,6 +251,20 @@ class EclipseCivilDatesTests(unittest.TestCase):
     sunrise = julian_day_from_datetime(datetime(2026, 3, 4, 6, 30, tzinfo=ist))
     dates = eclipse_civil_dates([eclipse], "Asia/Kolkata", sunrise_by_date={Date(2026, 3, 4): sunrise})
     self.assertEqual(dates, {Date(2026, 3, 3)})
+
+  def test_lmt_era_reads_the_observers_mean_time_throughout(self):
+    # 23:30 Ujjain mean time on 10 Mar 1800 is already 00:20 on the 11th at
+    # Kolkata's (tzdb) LMT. Looking up "that morning's sunrise" at Kolkata time
+    # and the Hindu day at Ujjain time used to print "Mar 09 ... 47:30".
+    ujjain = load_location("Ujjain")
+    day = Date(1800, 3, 10)
+    maximum = gregorian_to_jd(day) + (23.5 - ujjain.longitude / 15) / 24
+    sunrise_by_date = {d: panchanga.sunrise(gregorian_to_jd(d), place_for_date(ujjain, d)) for d in (day, day + 1)}
+    eclipse = ("Lunar", "Total", maximum)
+    kwargs = {"sunrise_by_date": sunrise_by_date, "longitude": ujjain.longitude}
+    self.assertEqual(eclipse_civil_dates([eclipse], ujjain.timezone_name, **kwargs), {day})
+    self.assertIn("Lunar Mar 10 (Total) maximum phase at 23:30",
+                  format_eclipse_line([eclipse], ujjain.timezone_name, **kwargs))
 
 
 class HinduDayHasEclipseTests(unittest.TestCase):

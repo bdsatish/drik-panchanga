@@ -43,6 +43,10 @@ actually in effect after it: `28:17` becomes `29:17` on a spring-forward row,
 and `31:05` becomes `30:05` on a fall-back row. The *DST starts* / *DST ends*
 label stays on the civil date where the offset changes.
 
+Before the zone adopted standard time (India before 1854, every BCE date),
+times use the city's own local mean time, longitude / 15 hours, and the
+header shows it as e.g. `UTC+5:03 (LMT)` for Ujjain.
+
 Polar regions
 -------------
 

@@ -19,11 +19,14 @@ absent, checked via the ``FLG_SWIEPH`` return flag.
 """
 
 import unittest
+from datetime import datetime
 
 import swisseph as swe
 
 import panchanga
-from datetime_helper import Date, gregorian_to_jd
+from datetime_helper import (Date, dst_transitions, format_utc_offset, gregorian_to_jd, jd_to_local_civil_date,
+                             jd_to_local_datetime, julian_day_from_datetime, local_range_jds, tzinfo_for,
+                             utc_offset_hours)
 from tests import local_hms
 from panchanga import (Place, ahargana, elapsed_year, lunar_longitude, reset_ayanamsa_mode, set_ayanamsa_mode,
                        set_chosen_ayanamsa, set_nakshatra_system, solar_longitude, vaara)
@@ -271,6 +274,54 @@ class PlaceForDateProxyTests(BoundaryTestCase):
   def test_ce_years_after_the_floor_are_not_clamped(self):
     # Year 5 onwards uses its own year, so real tz history is still honoured.
     self.assertEqual(place_for_date(KOLKATA, Date(2026, 6, 15)).timezone, 5.5)
+
+  def test_pre_standard_ce_uses_longitude_meridian(self):
+    # The LMT era is not only BCE: Asia/Kolkata stays LMT until 1854.
+    self.assertAlmostEqual(place_for_date(KOLKATA, Date(1800, 6, 15)).timezone, 75.7864 / 15.0, places=9)
+
+  def test_standard_time_history_is_untouched(self):
+    # Only tzdb's LMT era moves to the observer: Howrah and Madras Mean Time
+    # (HMT 1854-1870, MMT 1870-1941) were real civil time and stay as they are.
+    self.assertAlmostEqual(place_for_date(KOLKATA, Date(1860, 6, 15)).timezone, 5 + 53 / 60 + 20 / 3600, places=9)
+    self.assertAlmostEqual(place_for_date(KOLKATA, Date(1900, 6, 15)).timezone, 5 + 21 / 60 + 10 / 3600, places=9)
+
+
+class LongitudeMeridianHelperTests(unittest.TestCase):
+  """``longitude=`` on the datetime_helper conversions: LMT eras read longitude/15."""
+
+  LONGITUDE = 75.7864  # Ujjain
+
+  def test_round_trip_in_the_lmt_era(self):
+    wall = datetime(1800, 3, 1, 23, 50, tzinfo=tzinfo_for("Asia/Kolkata"))
+    jd = julian_day_from_datetime(wall, self.LONGITUDE)
+    self.assertAlmostEqual(jd, gregorian_to_jd(Date(1800, 3, 1)) + (23 + 50 / 60 - self.LONGITUDE / 15) / 24, places=9)
+    back = jd_to_local_datetime(jd, "Asia/Kolkata", self.LONGITUDE)
+    self.assertEqual((back.day, back.hour, back.minute), (1, 23, 50))
+    self.assertEqual(jd_to_local_civil_date(jd, "Asia/Kolkata", self.LONGITUDE), Date(1800, 3, 1))
+
+  def test_month_range_starts_at_local_mean_midnight(self):
+    start, _end = local_range_jds(1800, 3, 1800, 3, "Asia/Kolkata", self.LONGITUDE)
+    self.assertAlmostEqual(start, gregorian_to_jd(Date(1800, 3, 1)) - self.LONGITUDE / 15 / 24, places=9)
+    self.assertEqual(local_range_jds(2026, 3, 2026, 3, "Asia/Kolkata", self.LONGITUDE),
+                     local_range_jds(2026, 3, 2026, 3, "Asia/Kolkata"))
+
+  def test_label_names_lmt_at_the_observer_offset(self):
+    self.assertEqual(format_utc_offset("Asia/Kolkata", 1800, 6, longitude=self.LONGITUDE), "UTC+5:03 (LMT)")
+    self.assertEqual(format_utc_offset("Asia/Kolkata", 2026, 6, longitude=self.LONGITUDE), "UTC+5:30 (IST)")
+
+  def test_dst_label_follows_the_observers_clock(self):
+    # 28 Jun 1854, LMT -> HMT: Kolkata's clock moves back 8 s, Ujjain's forward 50 min.
+    self.assertEqual(dst_transitions("Asia/Kolkata", 1854, 6), {28: "DST ends"})
+    self.assertEqual(dst_transitions("Asia/Kolkata", 1854, 6, self.LONGITUDE), {28: "DST starts"})
+
+  def test_dst_zones_keep_their_rules_after_lmt(self):
+    self.assertEqual(utc_offset_hours("Europe/Helsinki", Date(2026, 7, 15), longitude=24.94), 3.0)
+    self.assertEqual(utc_offset_hours("Europe/Helsinki", Date(2026, 1, 15), longitude=24.94), 2.0)
+    self.assertAlmostEqual(utc_offset_hours("Europe/Helsinki", Date(1800, 7, 15), longitude=24.94), 24.94 / 15,
+                           places=9)
+
+  def test_fixed_offsets_ignore_longitude(self):
+    self.assertEqual(utc_offset_hours("UTC+5:30", Date(-500, 1, 30), longitude=75.78), 5.5)
 
 
 if __name__ == "__main__":

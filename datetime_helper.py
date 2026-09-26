@@ -63,9 +63,15 @@ def fixed_offset_name(hours):
   return f"UTC{'+' if total >= 0 else '-'}{magnitude // 60}{suffix}"
 
 
-def julian_day_from_datetime(value):
-  """Convert a timezone-aware ``datetime`` to a UT Julian day."""
-  return value.timestamp() / _SECONDS_PER_DAY + _JULIAN_DAY_AT_UNIX_EPOCH
+def julian_day_from_datetime(value, longitude=None):
+  """Convert a timezone-aware ``datetime`` to a UT Julian day.
+
+  In the zone's LMT era the wall time is read at ``longitude/15``, as in
+  ``utc_offset_hours``.
+  """
+  zone_hours = value.utcoffset().total_seconds() / 3600
+  return (value.timestamp() / _SECONDS_PER_DAY + _JULIAN_DAY_AT_UNIX_EPOCH +
+          (zone_hours - _meridian_offset_hours(value, longitude)) / 24)
 
 
 def jd_to_local_datetime(jd, timezone_name, longitude=None):
@@ -117,7 +123,7 @@ def utc_offset_hours(timezone_name, civil, longitude=None):
   return _meridian_offset_hours(noon, longitude)
 
 
-def local_range_jds(start_year, start_month, end_year, end_month, timezone_name):
+def local_range_jds(start_year, start_month, end_year, end_month, timezone_name, longitude=None):
   """UT Julian days covering the printed Gregorian months in local civil time.
 
   Fixed ``UTC±H[:MM]`` offsets are plain ``datetime.timezone`` values."""
@@ -125,7 +131,7 @@ def local_range_jds(start_year, start_month, end_year, end_month, timezone_name)
   last_day = calendar.monthrange(end_year, end_month)[1]
   start_local = datetime(start_year, start_month, 1, 0, 0, 0, tzinfo=timezone_info)
   end_local = datetime(end_year, end_month, last_day, 23, 59, 59, tzinfo=timezone_info)
-  return julian_day_from_datetime(start_local), julian_day_from_datetime(end_local)
+  return julian_day_from_datetime(start_local, longitude), julian_day_from_datetime(end_local, longitude)
 
 
 def format_utc_offset(timezone_name, year, month, day=15, longitude=None):
@@ -145,7 +151,7 @@ def format_utc_offset(timezone_name, year, month, day=15, longitude=None):
   return f"{offset_str} ({abbr})"
 
 
-def dst_transitions(timezone_name, year, month):
+def dst_transitions(timezone_name, year, month, longitude=None):
   """Return a dict of {day: 'DST starts'|'DST ends'} for transitions in a given month.
 
   Scans the month day-by-day comparing UTC offset; when the offset changes,
@@ -156,10 +162,10 @@ def dst_transitions(timezone_name, year, month):
   # Initialize from the last day of the previous month to catch transitions on the 1st
   prev_month_year, prev_month = (year, month - 1) if month > 1 else (year - 1, 12)
   prev_day = calendar.monthrange(prev_month_year, prev_month)[1]
-  prev_offset = utc_offset_hours(timezone_name, Date(prev_month_year, prev_month, prev_day))
+  prev_offset = utc_offset_hours(timezone_name, Date(prev_month_year, prev_month, prev_day), longitude)
   transitions = {}
   for day in range(1, last_day + 1):
-    hours = utc_offset_hours(timezone_name, Date(year, month, day))
+    hours = utc_offset_hours(timezone_name, Date(year, month, day), longitude)
     if hours != prev_offset:
       transitions[day] = "DST starts" if hours > prev_offset else "DST ends"
     prev_offset = hours

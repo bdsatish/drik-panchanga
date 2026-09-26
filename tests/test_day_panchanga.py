@@ -5,7 +5,7 @@ from threading import Event, Lock, Thread
 from unittest.mock import patch
 
 import panchanga
-from datetime_helper import Date, gregorian_to_jd
+from datetime_helper import Date, format_hms_from_jd, gregorian_to_jd
 from webapp.day_panchanga import compute_day_panchanga
 
 
@@ -188,3 +188,16 @@ class DstClockTests(unittest.TestCase):
     data = compute_day_panchanga("Helsinki", "28/03/2026")
     self.assertTrue(data["tithi"][0]["ends"].startswith("29:"))
     self.assertTrue(data["moonset"].startswith("30:"))
+
+
+class PreStandardClockTests(unittest.TestCase):
+  """Day view: before standard time, times read the place's own local mean time."""
+
+  def test_bce_ujjain_sunrise_is_on_ujjain_mean_time(self):
+    from generate_panchanga_calendar import load_location, place_for_date
+    ujjain = load_location("Ujjain")
+    civil = Date(-500, 6, 15)
+    jd = gregorian_to_jd(civil)
+    sunrise = panchanga.sunrise(jd, place_for_date(ujjain, civil))
+    expected = format_hms_from_jd(sunrise, jd, ujjain.longitude / 15, show_seconds=True)
+    self.assertEqual(compute_day_panchanga("Ujjain", "15/06/-500")["sunrise"], expected)

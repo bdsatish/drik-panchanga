@@ -303,8 +303,8 @@ def hindu_day_has_eclipse(civil_date, geopos, timezone_name):
   if start_jd is None or end_jd is None:
     log.warning("Sunrise unavailable for %s; eclipse test uses the civil day", civil_date)
     day_start = datetime(civil_date.year, civil_date.month, civil_date.day, tzinfo=tzinfo_for(timezone_name))
-    start_jd = julian_day_from_datetime(day_start)
-    end_jd = julian_day_from_datetime(day_start + timedelta(days=1))
+    start_jd = julian_day_from_datetime(day_start, geopos[0])
+    end_jd = julian_day_from_datetime(day_start + timedelta(days=1), geopos[0])
   for kind, _phase, _maximum_jd in find_local_eclipses(start_jd, end_jd, geopos):
     if kind == "Lunar":
       return True

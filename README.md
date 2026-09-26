@@ -69,6 +69,13 @@ next sunrise, so a time after midnight reads `24:00` or later (e.g. `26:15`
 = 02:15 the next morning), `23:59:30` rounds to `24:00`, never to `00:00`,
 and a window that opens the previous evening reads `-00:26`.
 
+Before a zone adopted standard time (the time-zone database's `LMT` era:
+India before 1854, every BCE date), times read the
+place's own local mean time, longitude / 15 hours, not the mean time of the
+zone's reference city (Kolkata's +5:53 for all of India). Pass
+`longitude=` to `utc_offset_hours`, `format_local_hm` and the other zone
+helpers to get this; the calendars and the web UI do.
+
 Angles are sidereal longitudes in `[degrees, minutes, seconds]`. Negative
 years in `Date` are proleptic Gregorian (works back to 5000 BCE). Available
 ayanamsas: `citra`, `revati`, `rohini`, `pushya`, `mula`, `krishnamurti`,
