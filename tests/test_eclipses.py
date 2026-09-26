@@ -223,12 +223,15 @@ class DstRowTailTests(unittest.TestCase):
     self.assertEqual(self._read(22 + 15 / 60, (2026, 3, 28)), "24:15")
 
   def test_bce_instant_uses_the_year_4_offset(self):
-    # datetime cannot hold year -500; the early LMT offset (year 4) applies.
+    # datetime cannot hold year -500; the year-4 tzdb era applies, where the
+    # offset is the observer's longitude/15 (Ujjain meridian), not the seat's LMT.
     kolkata = "Asia/Kolkata"
     early = Date(-500, 1, 30)
-    offset = utc_offset_hours(kolkata, Date(4, 1, 30))
+    ujjain_longitude = 75.7864
+    offset = utc_offset_hours(kolkata, Date(4, 1, 30), longitude=ujjain_longitude)
     jd = gregorian_to_jd(early)
-    self.assertEqual(format_local_hm(jd + (6 - offset) / 24, kolkata, anchor_civil=early), "06:00")
+    self.assertEqual(format_local_hm(jd + (6 - offset) / 24, kolkata, anchor_civil=early, longitude=ujjain_longitude),
+                     "06:00")
 
 
 class EclipseCivilDatesTests(unittest.TestCase):

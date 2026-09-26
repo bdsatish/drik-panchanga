@@ -287,7 +287,7 @@ class Panchanga(wx.Frame):
       lon = city['longitude']
       tzname = city['timezone']
       self.tzone = timezone(tzname)
-      tz_offset = self.compute_timezone_offset()
+      tz_offset = self.compute_timezone_offset(lon)
       self.place = Place(lat, lon, tz_offset)
       self.placeTxt.SetValue(match)
 
@@ -342,7 +342,7 @@ class Panchanga(wx.Frame):
     self.place = Place(lat, lon, tz)
     event.Skip()
 
-  def compute_timezone_offset(self):
+  def compute_timezone_offset(self, longitude=None):
     date = self.parse_date()
     timezone = self.tzone
     # Python datetime has no year <= 0, and early CE dates are clamped to year
@@ -353,6 +353,11 @@ class Panchanga(wx.Frame):
     dt = datetime(max(4, date.year), date.month, date.day)
     # offset from UTC (in hours). Needed especially for DST countries
     tz_offset = timezone.utcoffset(dt, is_dst=True).total_seconds() / 3600.
+    # In that LMT era the tzdb offset is the seat city's, not this place's;
+    # longitude/15 is the observer's own local mean solar time (as in
+    # datetime_helper.utc_offset_hours).
+    if longitude is not None and timezone.tzname(dt, is_dst=True) == "LMT":
+      return longitude / 15.0
     return tz_offset
 
   def gauri_panchanga(self, jd):

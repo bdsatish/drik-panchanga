@@ -143,7 +143,8 @@ def _compute_day_details_unlocked(location, civil, amanta=None, coordinate_selec
   place = place_for_date(location, civil)
   jd = gregorian_to_jd(civil)
   # UT JD -> this day's 24:00+ clock, at the UTC offset in force at each instant.
-  clock = partial(format_local_hm, timezone_name=location.timezone_name, anchor_civil=civil)
+  clock = partial(format_local_hm, timezone_name=location.timezone_name, anchor_civil=civil,
+                  longitude=location.longitude)
 
   sunrise = panchanga.sunrise(jd, place)
   sunset = panchanga.sunset(jd, place)

@@ -68,28 +68,53 @@ def julian_day_from_datetime(value):
   return value.timestamp() / _SECONDS_PER_DAY + _JULIAN_DAY_AT_UNIX_EPOCH
 
 
-def jd_to_local_datetime(jd, timezone_name):
-  """Convert a UT Julian day to local ``datetime`` in ``timezone_name``."""
+def jd_to_local_datetime(jd, timezone_name, longitude=None):
+  """Convert a UT Julian day to local ``datetime`` in ``timezone_name``.
+
+  In the zone's LMT era ``longitude/15`` (the observer's local mean solar
+  time) replaces the tzdb seat's offset, as in ``utc_offset_hours``.
+  """
   utc = datetime.fromtimestamp((jd - _JULIAN_DAY_AT_UNIX_EPOCH) * _SECONDS_PER_DAY, tz=timezone.utc)
-  return utc.astimezone(tzinfo_for(timezone_name))
+  local = utc.astimezone(tzinfo_for(timezone_name))
+  hours = _meridian_offset_hours(local, longitude)
+  if hours == local.utcoffset().total_seconds() / 3600.0:
+    return local
+  return utc.astimezone(timezone(timedelta(hours=hours)))
 
 
-def jd_to_local_civil_date(jd, timezone_name):
+def jd_to_local_civil_date(jd, timezone_name, longitude=None):
   """Convert a UT Julian day to the civil ``Date`` in ``timezone_name``."""
-  local = jd_to_local_datetime(jd, timezone_name)
+  local = jd_to_local_datetime(jd, timezone_name, longitude)
   return Date(local.year, local.month, local.day)
 
 
-def utc_offset_hours(timezone_name, civil):
+def _meridian_offset_hours(when, longitude):
+  """UT offset hours at ``when``; LMT eras use the observer's ``longitude/15``.
+
+  The tzdb's pre-standardization rules carry the reference city's local mean
+  time (``%Z == "LMT"``), not this place's. When the observer's longitude is
+  known, ``longitude / 15`` is their own local mean solar time, so pre-modern
+  dates read the time the sky actually shows there, not the seat city's.
+  """
+  if longitude is not None and when.tzname() == "LMT":
+    return longitude / 15.0
+  return when.utcoffset().total_seconds() / 3600
+
+
+def utc_offset_hours(timezone_name, civil, longitude=None):
   """UTC offset in hours (DST included) at local noon of ``civil``, for the whole civil day.
 
   Python ``datetime`` does not support year 0 or negative years, and early CE
   dates are clamped to year 4: the tzdb rules there preserve the historical
   local mean time offsets that modern standardized offsets obscure, and year 4
   is the earliest leap year, so a 29 February needs no special case.
+
+  In that LMT era the offset is the tzdb seat's, not the observer's: with
+  ``longitude`` given, ``longitude / 15`` (local mean solar time) is used
+  instead. Modern standardized offsets ignore ``longitude`` entirely.
   """
   noon = datetime(max(4, civil.year), civil.month, civil.day, 12, tzinfo=tzinfo_for(timezone_name))
-  return noon.utcoffset().total_seconds() / 3600
+  return _meridian_offset_hours(noon, longitude)
 
 
 def local_range_jds(start_year, start_month, end_year, end_month, timezone_name):
@@ -103,14 +128,14 @@ def local_range_jds(start_year, start_month, end_year, end_month, timezone_name)
   return julian_day_from_datetime(start_local), julian_day_from_datetime(end_local)
 
 
-def format_utc_offset(timezone_name, year, month, day=15):
+def format_utc_offset(timezone_name, year, month, day=15, longitude=None):
   """Return 'UTC+5:30 (IST)' style label for a timezone on a given date."""
   zone = tzinfo_for(timezone_name)
   local = datetime(year, month, day, 12, tzinfo=zone)
   offset = local.utcoffset()
   if offset is None:
     return ""
-  total_seconds = int(offset.total_seconds())
+  total_seconds = int(round(_meridian_offset_hours(local, longitude) * 3600))
   sign = "+" if total_seconds >= 0 else "-"
   total_seconds = abs(total_seconds)
   hours, remainder = divmod(total_seconds, 3600)
@@ -195,28 +220,31 @@ def format_hms_from_jd(jd_ut, civil_jd, timezone_hours, *, show_seconds=False):
   return format_hms((jd_ut - civil_jd) * 24 + timezone_hours, show_seconds=show_seconds)
 
 
-def format_local_hm(jd, timezone_name, anchor_civil=None, show_seconds=False):
+def format_local_hm(jd, timezone_name, anchor_civil=None, show_seconds=False, longitude=None):
   """Format UT ``jd`` as local ``HH:MM`` / ``HH:MM:SS`` past ``anchor_civil`` midnight.
 
   Default ``anchor_civil`` is the event's own local civil date. Pass a calendar
   cell's date so a next-morning event stays ``24:00+`` on that row.
+
+  In the zone's LMT era (pre-modern dates) ``longitude/15`` replaces the tzdb
+  seat's local mean time, as in ``utc_offset_hours``.
   """
   if anchor_civil is None:
-    anchor_civil = jd_to_local_civil_date(jd, timezone_name)
+    anchor_civil = jd_to_local_civil_date(jd, timezone_name, longitude)
   civil_jd = gregorian_to_jd(anchor_civil)
   # datetime stops at year 1; earlier instants read the year-4 zone rules, as utc_offset_hours does.
-  local = jd_to_local_datetime(max(jd, _JULIAN_DAY_AT_YEAR_4), timezone_name)
+  local = jd_to_local_datetime(max(jd, _JULIAN_DAY_AT_YEAR_4), timezone_name, longitude)
   tz_hours = local.utcoffset().total_seconds() / 3600.0
   return format_hms_from_jd(jd, civil_jd, tz_hours, show_seconds=show_seconds)
 
 
-def hindu_day_civil(jd, timezone_name, sunrise_jd=None):
+def hindu_day_civil(jd, timezone_name, sunrise_jd=None, longitude=None):
   """Civil date whose midnight is the 24:00+ origin for ``jd``.
 
   If ``sunrise_jd`` is given and ``jd`` is before it, return the previous
   civil date (``00:05`` formats as ``24:05``). Else the event's own civil date.
   """
-  civil = jd_to_local_civil_date(jd, timezone_name)
+  civil = jd_to_local_civil_date(jd, timezone_name, longitude)
   if sunrise_jd is not None and jd < sunrise_jd:
     return civil - 1
   return civil

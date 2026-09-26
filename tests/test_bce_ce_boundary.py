@@ -215,7 +215,7 @@ to come from the JD/celestial pipeline itself, not from civil-date code.
 
 
 class PlaceForDateProxyTests(BoundaryTestCase):
-  """BCE dates reuse the year-4 tzdb offset (historical LMT), not a modern one."""
+  """BCE dates reuse the year-4 tzdb era, where longitude/15 replaces the seat's LMT."""
 
   def test_bce_proxy_matches_year_four(self):
     bce = place_for_date(KOLKATA, Date(0, 6, 15))
@@ -225,9 +225,16 @@ class PlaceForDateProxyTests(BoundaryTestCase):
     self.assertAlmostEqual(bce.timezone, ce.timezone, places=9)
 
   def test_bce_proxy_is_not_modern_offset(self):
-    # Year 4 Asia/Kolkata keeps the pre-standardisation local mean time
-    # offset (~+5:53); the year-2000 proxy would give standard-time +5:30.
+    # Year 4 Asia/Kolkata is the pre-standardisation LMT era; the year-2000
+    # proxy would give standard-time +5:30.
     self.assertNotAlmostEqual(place_for_date(KOLKATA, Date(0, 6, 15)).timezone, 5.5, places=2)
+
+  def test_pre_modern_uses_longitude_meridian(self):
+    # In the LMT era the tzdb offset is the seat city's (+5:53:28 for
+    # Asia/Kolkata), not the observer's; place_for_date substitutes the
+    # observer's own local mean solar time, longitude/15.
+    place = place_for_date(KOLKATA, Date(0, 6, 15))
+    self.assertAlmostEqual(place.timezone, 75.7864 / 15.0, places=9)
 
   def test_negative_year_does_not_raise(self):
     place = place_for_date(KOLKATA, Date(-100, 6, 15))
@@ -242,7 +249,7 @@ class PlaceForDateProxyTests(BoundaryTestCase):
       with self.subTest(year=year):
         place = place_for_date(KOLKATA, Date(year, 2, 29))
         self.assertAlmostEqual(place.timezone, place_for_date(KOLKATA, Date(4, 6, 15)).timezone, places=9)
-        self.assertGreater(place.timezone, 5.5)  # LMT, not modern +5:30
+        self.assertAlmostEqual(place.timezone, 75.7864 / 15.0, places=9)  # longitude/15, not modern +5:30
 
   def test_bce_leap_day_matches_its_own_year_offset(self):
     # The proxy year shifts the tz lookup date, but within early-CE tzdb rules

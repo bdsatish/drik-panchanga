@@ -206,7 +206,8 @@ def yoga_name(number):
 
 def cell_clock(location, civil):
   """UT JD -> ``'HH:MM'`` on this cell's 24:00+ scale, at the UTC offset in force at that instant."""
-  return partial(format_local_hm, timezone_name=location.timezone_name, anchor_civil=civil)
+  return partial(format_local_hm, timezone_name=location.timezone_name, anchor_civil=civil,
+                 longitude=location.longitude)
 
 
 def day_details(location, civil):
@@ -341,7 +342,7 @@ def draw_header(pdf, location, year, month, amanta, coordinate_selection, year_l
 
   pdf.setFillColor(GREY)
   pdf.setFont(PDF_FONT_ITALIC, 11)
-  tz_label = format_utc_offset(location.timezone_name, year, month)
+  tz_label = format_utc_offset(location.timezone_name, year, month, longitude=location.longitude)
   place_label = f"{location.name}, {tz_label}" if tz_label else location.name
   pdf.drawString(MARGIN, top - 46, place_label)
 
@@ -487,8 +488,10 @@ def draw_cell(pdf, x, y_top, row_h, cell_w, day, civil, location, context, col):
   parana = context.get("ekadashi_parana", {}).get(civil)
   if parana is not None:
     # Hours past this cell's midnight (24:00+ if the window spills past it).
-    start_hm = format_local_hm(parana.parana_jd, location.timezone_name, anchor_civil=civil)
-    end_hm = format_local_hm(parana.parana_end_jd, location.timezone_name, anchor_civil=civil)
+    start_hm = format_local_hm(parana.parana_jd, location.timezone_name, anchor_civil=civil,
+                               longitude=location.longitude)
+    end_hm = format_local_hm(parana.parana_end_jd, location.timezone_name, anchor_civil=civil,
+                             longitude=location.longitude)
     pdf.setFillColor(TEAL)
     pdf.setFont(PDF_FONT_ITALIC, 6.8)
     pdf.drawString(x + 4, line_y, f"Pāraṇā: {start_hm} – {end_hm}")
@@ -509,7 +512,7 @@ def draw_cell(pdf, x, y_top, row_h, cell_w, day, civil, location, context, col):
   for kind, _phase, max_jd in context.get("eclipse_details_by_date", {}).get(civil, []):
     pdf.setFillColor(BROWN)
     pdf.setFont(PDF_FONT_ITALIC, 6.5)
-    hm = format_local_hm(max_jd, location.timezone_name, anchor_civil=civil)
+    hm = format_local_hm(max_jd, location.timezone_name, anchor_civil=civil, longitude=location.longitude)
     pdf.drawString(x + 4, line_y, f"{kind} eclipse")
     line_y -= 8.0
     pdf.drawString(x + 4, line_y, f"max {hm}")
@@ -661,8 +664,9 @@ def collect_context(months, location, festivals_path, amanta=True):
   sunrise_by_date = {record.civil_date: record.sunrise_jd for record in records}
   eclipse_details_by_date = {}
   for kind, phase, max_jd in eclipses:
-    event_civil = jd_to_local_civil_date(max_jd, location.timezone_name)
-    civil = hindu_day_civil(max_jd, location.timezone_name, sunrise_by_date.get(event_civil))
+    event_civil = jd_to_local_civil_date(max_jd, location.timezone_name, longitude=location.longitude)
+    civil = hindu_day_civil(max_jd, location.timezone_name, sunrise_by_date.get(event_civil),
+                            longitude=location.longitude)
     eclipse_details_by_date.setdefault(civil, []).append((kind, phase, max_jd))
   eclipse_dates = set(eclipse_details_by_date)
   return {

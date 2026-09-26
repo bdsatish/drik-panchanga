@@ -535,7 +535,7 @@ def resolve_location(city=None, latitude=None, longitude=None, timezone=None):
   return load_location(city)
 
 
-def format_eclipse_line(eclipses, timezone_name, sunrise_by_date=None):
+def format_eclipse_line(eclipses, timezone_name, sunrise_by_date=None, longitude=None):
   """Compact footer line for eclipses at maximum time.
 
   Optional ``sunrise_by_date`` (civil date -> sunrise UT jd) selects the
@@ -547,14 +547,15 @@ def format_eclipse_line(eclipses, timezone_name, sunrise_by_date=None):
     for kind, phase, maximum_jd in eclipses:
       event_civil = jd_to_local_civil_date(maximum_jd, timezone_name)
       sunrise_jd = sunrise_by_date.get(event_civil)
-      civil = hindu_day_civil(maximum_jd, timezone_name, sunrise_jd)
+      civil = hindu_day_civil(maximum_jd, timezone_name, sunrise_jd, longitude=longitude)
       month_name = calendar.month_abbr[civil.month]
       day = f"{civil.day:02d}"
-      maximum_hm = format_local_hm(maximum_jd, timezone_name, anchor_civil=civil)
+      maximum_hm = format_local_hm(maximum_jd, timezone_name, anchor_civil=civil, longitude=longitude)
       part = kind + " " + month_name + " " + day + " (" + phase + ") maximum phase at " + maximum_hm
       # Sunrise label stays on the event morning's civil day (wall clock of that day).
       if sunrise_jd is not None:
-        part = part + ", sunrise " + format_local_hm(sunrise_jd, timezone_name, anchor_civil=event_civil)
+        part = part + ", sunrise " + format_local_hm(sunrise_jd, timezone_name, anchor_civil=event_civil,
+                                                     longitude=longitude)
       parts.append(part)
     line = "Eclipses: " + "; ".join(parts) + ". Eclipses have a brown wavy underline below Tithi."
   else:
@@ -562,15 +563,18 @@ def format_eclipse_line(eclipses, timezone_name, sunrise_by_date=None):
   return line
 
 
-def eclipse_hindu_date(maximum_jd, timezone_name, sunrise_by_date=None):
+def eclipse_hindu_date(maximum_jd, timezone_name, sunrise_by_date=None, longitude=None):
   """Local civil date of an eclipse maximum (Hindu-day when that morning's sunrise is given)."""
   event_civil = jd_to_local_civil_date(maximum_jd, timezone_name)
-  return hindu_day_civil(maximum_jd, timezone_name, (sunrise_by_date or {}).get(event_civil))
+  return hindu_day_civil(maximum_jd, timezone_name, (sunrise_by_date or {}).get(event_civil), longitude=longitude)
 
 
-def eclipse_civil_dates(eclipses, timezone_name, sunrise_by_date=None):
+def eclipse_civil_dates(eclipses, timezone_name, sunrise_by_date=None, longitude=None):
   """Local civil date of each eclipse maximum (Hindu-day when sunrise given)."""
-  return {eclipse_hindu_date(maximum_jd, timezone_name, sunrise_by_date) for _kind, _phase, maximum_jd in eclipses}
+  return {
+    eclipse_hindu_date(maximum_jd, timezone_name, sunrise_by_date, longitude)
+    for _kind, _phase, maximum_jd in eclipses
+  }
 
 
 def tithi_underline_bounds(x, tithi_column_width):
@@ -636,8 +640,11 @@ def solar_dates_by_date(records):
 
 
 def place_for_date(location, civil):
-  """Build a ``Place`` with the city's UTC offset on the given civil date."""
-  offset = utc_offset_hours(location.timezone_name, civil)
+  """Build a ``Place`` with the city's UTC offset on the given civil date.
+
+  Pre-modern dates (the zone's LMT era) use ``longitude/15`` local solar time.
+  """
+  offset = utc_offset_hours(location.timezone_name, civil, location.longitude)
   return panchanga.Place(location.latitude, location.longitude, offset)
 
 
@@ -904,7 +911,7 @@ def draw_page_header(pdf, location, months, ruleset_version, amanta=True, coordi
                      calendar_years=None, kali_ahargana=None):
   page_width, page_height = landscape(A4)
   start_year, start_month = months[0]
-  tz_label = format_utc_offset(location.timezone_name, start_year, start_month)
+  tz_label = format_utc_offset(location.timezone_name, start_year, start_month, longitude=location.longitude)
   title = f"{location.name} Panchanga: {month_span_label(months)}"
   pdf.setFillColor(INK)
   title_size = fitted_font_size(pdf, title, PDF_FONT_BOLD, 11, 8, page_width - 36, "page title")
@@ -1046,11 +1053,13 @@ def build_pdf(location, start_year, start_month, output_path, festivals_path=Non
     # A maximum before sunrise belongs to the previous day: search one more
     # morning, and drop maxima before the first printed sunrise.
     eclipses = [
-      eclipse for eclipse in find_local_eclipses(eclipse_start_jd, eclipse_end_jd + 1, geopos)
-      if eclipse_hindu_date(eclipse[2], location.timezone_name, sunrise_by_date) in target_dates
+      eclipse for eclipse in find_local_eclipses(eclipse_start_jd, eclipse_end_jd + 1, geopos) if eclipse_hindu_date(
+        eclipse[2], location.timezone_name, sunrise_by_date, longitude=location.longitude) in target_dates
     ]
-    eclipse_line = format_eclipse_line(eclipses, location.timezone_name, sunrise_by_date=sunrise_by_date)
-    eclipse_dates = eclipse_civil_dates(eclipses, location.timezone_name, sunrise_by_date=sunrise_by_date)
+    eclipse_line = format_eclipse_line(eclipses, location.timezone_name, sunrise_by_date=sunrise_by_date,
+                                       longitude=location.longitude)
+    eclipse_dates = eclipse_civil_dates(eclipses, location.timezone_name, sunrise_by_date=sunrise_by_date,
+                                        longitude=location.longitude)
     solar_by_date = solar_dates_by_date(context_records)
     ekadashi_dates = set()
     for value in ekadashi_dates_from_records(context_records):
