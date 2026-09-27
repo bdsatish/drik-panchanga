@@ -44,6 +44,7 @@ class Date(struct('Date', ['year', 'month', 'day'])):
 _SECONDS_PER_DAY = 24 * 60 * 60
 _JULIAN_DAY_AT_UNIX_EPOCH = 2440587.5
 _JULIAN_DAY_AT_YEAR_4 = swe.julday(4, 1, 1)
+_JULIAN_DAY_AT_YEAR_1 = gregorian_to_jd(Date(1, 1, 1))
 
 
 def tzinfo_for(timezone_name):
@@ -70,8 +71,20 @@ def julian_day_from_datetime(value, longitude=None):
   ``utc_offset_hours``.
   """
   zone_hours = value.utcoffset().total_seconds() / 3600
-  return (value.timestamp() / _SECONDS_PER_DAY + _JULIAN_DAY_AT_UNIX_EPOCH +
-          (zone_hours - _meridian_offset_hours(value, longitude)) / 24)
+  days_since_epoch = value.timestamp() / _SECONDS_PER_DAY
+  if days_since_epoch < 0:
+    # ``timestamp()`` goes through the platform C library, which caps out
+    # long before 5000 BCE; recompute the POSIX count from the proleptic JD.
+    days_since_epoch = _julian_day_from_civil(value) - _JULIAN_DAY_AT_UNIX_EPOCH
+  return (days_since_epoch + _JULIAN_DAY_AT_UNIX_EPOCH + (zone_hours - _meridian_offset_hours(value, longitude)) / 24)
+
+
+def _julian_day_from_civil(value):
+  """UT Julian day of a ``datetime``'s calendar wall reading, ignoring its zone."""
+  day_fraction = (value.hour * 3600 + value.minute * 60 + value.second + value.microsecond / 1e6) / _SECONDS_PER_DAY
+  # gregorian_to_jd is the UT JD of 00:00 UT; the civil day starts half a day earlier.
+  return (gregorian_to_jd(Date(value.year, value.month, value.day)) + day_fraction -
+          value.utcoffset().total_seconds() / _SECONDS_PER_DAY)
 
 
 def jd_to_local_datetime(jd, timezone_name, longitude=None):
@@ -79,7 +92,13 @@ def jd_to_local_datetime(jd, timezone_name, longitude=None):
 
   In the zone's LMT era ``longitude/15`` (the observer's local mean solar
   time) replaces the tzdb seat's offset, as in ``utc_offset_hours``.
+
+  Years before 1 CE cannot be ``datetime`` objects, so those come back as
+  ``Date``-like civil dates via ``jd_to_local_civil_date``; callers that
+  need fields should use that helper instead.
   """
+  if jd < _JULIAN_DAY_AT_YEAR_1:
+    raise ValueError(f"Julian day {jd} is before 1 CE; use jd_to_local_civil_date instead of datetime.")
   utc = datetime.fromtimestamp((jd - _JULIAN_DAY_AT_UNIX_EPOCH) * _SECONDS_PER_DAY, tz=timezone.utc)
   local = utc.astimezone(tzinfo_for(timezone_name))
   hours = _meridian_offset_hours(local, longitude)
@@ -89,9 +108,20 @@ def jd_to_local_datetime(jd, timezone_name, longitude=None):
 
 
 def jd_to_local_civil_date(jd, timezone_name, longitude=None):
-  """Convert a UT Julian day to the civil ``Date`` in ``timezone_name``."""
-  local = jd_to_local_datetime(jd, timezone_name, longitude)
-  return Date(local.year, local.month, local.day)
+  """Convert a UT Julian day to the civil ``Date`` in ``timezone_name``.
+
+  Pure Julian-day arithmetic (via ``swe.revjul``), so proleptic Gregorian
+  years <= 0 work; the tzdb offset comes from the year-4 proxy, as in
+  ``utc_offset_hours``.
+  """
+  offset = utc_offset_hours(timezone_name, _proxy_civil(jd, timezone_name), longitude)
+  return Date(*jd_to_gregorian(jd + offset / 24)[:3])
+
+
+def _proxy_civil(jd, timezone_name):
+  """A year >= 1 ``Date`` near ``jd`` for tz lookups: the clamped instant itself."""
+  year, month, day = jd_to_gregorian(max(jd, _JULIAN_DAY_AT_YEAR_4))[:3]
+  return Date(year, month, day)
 
 
 def _meridian_offset_hours(when, longitude):
@@ -126,28 +156,34 @@ def utc_offset_hours(timezone_name, civil, longitude=None):
 def local_range_jds(start_year, start_month, end_year, end_month, timezone_name, longitude=None):
   """UT Julian days covering the printed Gregorian months in local civil time.
 
-  Fixed ``UTC±H[:MM]`` offsets are plain ``datetime.timezone`` values."""
-  timezone_info = tzinfo_for(timezone_name)
+  Pure Julian-day arithmetic (via ``utc_offset_hours``), so proleptic
+  Gregorian years <= 0 work. Fixed ``UTC±H[:MM]`` offsets are plain
+  ``datetime.timezone`` values."""
   last_day = calendar.monthrange(end_year, end_month)[1]
-  start_local = datetime(start_year, start_month, 1, 0, 0, 0, tzinfo=timezone_info)
-  end_local = datetime(end_year, end_month, last_day, 23, 59, 59, tzinfo=timezone_info)
-  return julian_day_from_datetime(start_local, longitude), julian_day_from_datetime(end_local, longitude)
+  start_civil = Date(start_year, start_month, 1)
+  end_civil = Date(end_year, end_month, last_day)
+  # gregorian_to_jd is the UT JD of 00:00 UT, i.e. half a day after local midnight starts it.
+  start_jd = gregorian_to_jd(start_civil) - utc_offset_hours(timezone_name, start_civil, longitude) / 24
+  end_jd = (gregorian_to_jd(end_civil) + 1 - 1 / _SECONDS_PER_DAY -
+            utc_offset_hours(timezone_name, end_civil, longitude) / 24)
+  return start_jd, end_jd
 
 
 def format_utc_offset(timezone_name, year, month, day=15, longitude=None):
-  """Return 'UTC+5:30 (IST)' style label for a timezone on a given date."""
-  zone = tzinfo_for(timezone_name)
-  local = datetime(year, month, day, 12, tzinfo=zone)
-  offset = local.utcoffset()
-  if offset is None:
-    return ""
-  total_seconds = int(round(_meridian_offset_hours(local, longitude) * 3600))
+  """Return 'UTC+5:30 (IST)' style label for a timezone on a given date.
+
+  The abbreviation comes from the year-4 proxy (as in ``utc_offset_hours``),
+  so proleptic Gregorian years <= 0 work."""
+  civil = Date(year, month, day)
+  hours = utc_offset_hours(timezone_name, civil, longitude)
+  total_seconds = int(round(hours * 3600))
   sign = "+" if total_seconds >= 0 else "-"
   total_seconds = abs(total_seconds)
   hours, remainder = divmod(total_seconds, 3600)
   minutes = remainder // 60
   offset_str = f"UTC{sign}{hours}" if minutes == 0 else f"UTC{sign}{hours}:{minutes:02d}"
-  abbr = local.strftime("%Z") or timezone_name
+  proxy = datetime(max(4, year), month, day, 12, tzinfo=tzinfo_for(timezone_name))
+  abbr = proxy.strftime("%Z") or timezone_name
   return f"{offset_str} ({abbr})"
 
 
@@ -239,9 +275,10 @@ def format_local_hm(jd, timezone_name, anchor_civil=None, show_seconds=False, lo
     anchor_civil = jd_to_local_civil_date(jd, timezone_name, longitude)
   civil_jd = gregorian_to_jd(anchor_civil)
   # datetime stops at year 1; earlier instants read the year-4 zone rules, as utc_offset_hours does.
-  local = jd_to_local_datetime(max(jd, _JULIAN_DAY_AT_YEAR_4), timezone_name, longitude)
-  tz_hours = local.utcoffset().total_seconds() / 3600.0
-  return format_hms_from_jd(jd, civil_jd, tz_hours, show_seconds=show_seconds)
+  proxy_jd = max(jd, _JULIAN_DAY_AT_YEAR_4)
+  year, month, day = jd_to_gregorian(proxy_jd)[:3]
+  offset = utc_offset_hours(timezone_name, Date(year, month, day), longitude)
+  return format_hms_from_jd(jd, civil_jd, offset, show_seconds=show_seconds)
 
 
 def hindu_day_civil(jd, timezone_name, sunrise_jd=None, longitude=None):

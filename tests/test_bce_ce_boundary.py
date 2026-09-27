@@ -20,6 +20,8 @@ absent, checked via the ``FLG_SWIEPH`` return flag.
 
 import unittest
 from datetime import datetime
+from pathlib import Path
+from tempfile import TemporaryDirectory
 
 import swisseph as swe
 
@@ -304,6 +306,38 @@ class LongitudeMeridianHelperTests(unittest.TestCase):
 
   def test_fixed_offsets_ignore_longitude(self):
     self.assertEqual(utc_offset_hours("UTC+5:30", Date(-500, 1, 30), longitude=75.78), 5.5)
+
+
+class BcePdfSmokeTests(BoundaryTestCase):
+  """Both PDFs build for a deep-BCE span (regression: datetime year floor)."""
+
+  def test_annual_pdf_builds_at_year_minus_500(self):
+    import generate_panchanga_calendar as annual
+    from generate_panchanga_calendar import load_location
+    with TemporaryDirectory() as directory:
+      output = Path(directory) / "bce.pdf"
+      annual.build_pdf(load_location("Ujjain"), -500, 3, output)
+      self.assertTrue(output.stat().st_size > 0)
+
+  def test_monthly_pdf_builds_at_year_minus_500(self):
+    import generate_monthly_calendar as monthly
+    from generate_panchanga_calendar import load_location
+    with TemporaryDirectory() as directory:
+      output = Path(directory) / "bce.pdf"
+      monthly.build_monthly_pdf(load_location("Ujjain"), -500, 3, output)
+      self.assertTrue(output.stat().st_size > 0)
+
+  def test_civil_date_conversion_reaches_deep_bce(self):
+    # The festival solstice path converts a -500 solstice JD straight to a
+    # civil Date; datetime.fromtimestamp cannot represent that instant.
+    solstice_jd = gregorian_to_jd(Date(-500, 12, 1)) + 20
+    civil = jd_to_local_civil_date(solstice_jd, "Asia/Kolkata")
+    self.assertEqual((civil.year, civil.month), (-500, 12))
+
+  def test_local_range_reaches_deep_bce(self):
+    start, end = local_range_jds(-500, 3, -499, 4, "Asia/Kolkata", 75.7864)
+    self.assertAlmostEqual(start, gregorian_to_jd(Date(-500, 3, 1)) - 75.7864 / 15 / 24, places=9)
+    self.assertGreater(end, start)
 
 
 if __name__ == "__main__":
