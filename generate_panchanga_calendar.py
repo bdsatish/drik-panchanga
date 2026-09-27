@@ -1167,8 +1167,8 @@ def argument_parser():
           "e.g. --place -13.4,70,5.5"))
   parser.add_argument("--start", required=True, metavar="YYYY-MM", help="first of the 14 consecutive calendar months")
   parser.add_argument("-o", "--output", type=Path, help="output PDF path (default: generated from city and range)")
-  parser.add_argument("--month", default="amanta", metavar="SYSTEM",
-                      help=("lunar month reckoning for display: amanta (default) or purnimanta "))
+  parser.add_argument("--month", choices=("amanta", "purnimanta"), default="amanta",
+                      help="lunar month reckoning for display: amanta (default) or purnimanta")
   parser.add_argument(
     "--ayanamsa", default="citra", metavar="NAME", help=("ayanamsa: citra (default), revati, rohini, pushya, mula, "
                                                          "krishnamurti, raman or tropical"))
@@ -1199,7 +1199,6 @@ def main(argv=None):
     location = resolve_location(arguments.city, arguments.place)
     month_system = arguments.month
     coordinate_selection = require_coordinate_selection(arguments.ayanamsa)
-    require_month_system(month_system)
     output_path = arguments.output or default_output_path(location, start_year, start_month, month_system=month_system,
                                                           coordinate_selection=coordinate_selection)
     generated = build_pdf(location, start_year, start_month, output_path, festivals_path=arguments.festivals,

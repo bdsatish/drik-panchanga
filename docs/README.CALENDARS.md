@@ -22,7 +22,7 @@ Common options
 --month amanta|purnimanta
 --ayanamsa citra|revati|rohini|pushya|mula|krishnamurti|raman|tropical
 --festivals FILE.cfg
---output FILE.pdf
+-o, --output FILE.pdf      # short: -o FILE.pdf
 ```
 
 `--place` takes three comma-separated decimal numbers instead of a city name:

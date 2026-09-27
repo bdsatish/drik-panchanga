@@ -55,6 +55,7 @@ from generate_panchanga_calendar import (
   embed_pdf_metadata,
   ensure_pdf_fonts,
   attach_place_values,
+  configure_logging,
   load_location,
   location_slug,
   masa_badges_by_date,
@@ -764,15 +765,17 @@ def argument_parser():
     help=("location as three floats instead of --city: latitude (negative = south), "
           "longitude (east = positive), timezone as UTC offset hours (5.5 = UTC+5:30), "
           "e.g. --place -13.4,70,5.5"))
-  parser.add_argument("--start", required=True, help="first month of the 12-month span, e.g. 2026-06")
+  parser.add_argument("--start", required=True, metavar="YYYY-MM",
+                      help="first month of the 12-month span, e.g. 2026-06")
+  parser.add_argument("-o", "--output", type=Path, help="output PDF path (default: generated from city and range)")
   parser.add_argument("--month", choices=("amanta", "purnimanta"), default="amanta",
-                      help="amānta (default) or pūrṇimānta month labels")
+                      help="lunar month reckoning for display: amanta (default) or purnimanta")
   parser.add_argument(
-    "--ayanamsa", "--coordinate-selection", dest="ayanamsa", default="citra",
-    help=("ayanamsa key (citra / true_chitrapaksha / revati / krishnamurti / "
-          "raman / pushya / mula / tropical)"))
-  parser.add_argument("--output", help="output PDF path")
-  parser.add_argument("--festivals", help=f"path to a festivals.cfg (default: {DEFAULT_FESTIVALS_PATH.name})")
+    "--ayanamsa", default="citra", metavar="NAME", help=("ayanamsa: citra (default), revati, rohini, pushya, mula, "
+                                                         "krishnamurti, raman or tropical"))
+  parser.add_argument(
+    "--festivals", type=Path, default=DEFAULT_FESTIVALS_PATH, help=(f"INI file selecting which festivals to include "
+                                                                    f"(default: {DEFAULT_FESTIVALS_PATH.name})"))
   return parser
 
 
@@ -784,22 +787,20 @@ def _check_reportlab():
 
 
 def main(argv=None):
+  configure_logging()
   _check_reportlab()
   parser = argument_parser()
   args = parser.parse_args(attach_place_values(sys.argv[1:] if argv is None else argv))
-  coordinate_selection = require_coordinate_selection(args.ayanamsa)
   try:
     start_year, start_month = require_start_month(args.start)
     location = resolve_location(args.city, args.place)
-  except ValueError as error:
+    coordinate_selection = require_coordinate_selection(args.ayanamsa)
+    output_path = args.output or default_monthly_output_path(location, start_year, start_month, month_system=args.month,
+                                                             coordinate_selection=coordinate_selection)
+    result = build_monthly_pdf(location, start_year, start_month, output_path, festivals_path=args.festivals,
+                               month_system=args.month, coordinate_selection=coordinate_selection)
+  except (OSError, ValueError, RuntimeError) as error:
     parser.error(str(error))
-  if args.output:
-    output_path = Path(args.output)
-  else:
-    output_path = default_monthly_output_path(location, start_year, start_month, month_system=args.month,
-                                              coordinate_selection=coordinate_selection)
-  result = build_monthly_pdf(location, start_year, start_month, output_path, festivals_path=args.festivals,
-                             month_system=args.month, coordinate_selection=coordinate_selection)
   print(f"Wrote {result}")
   return 0
 
