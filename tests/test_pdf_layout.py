@@ -95,15 +95,17 @@ class PdfLayoutTests(unittest.TestCase):
 
   def test_eclipses_before_sunrise_follow_the_printed_hindu_days(self):
     import generate_panchanga_calendar as calendar_module
-    from datetime import datetime
-    from zoneinfo import ZoneInfo
+    from datetime_helper import Date as CivilDate
+    from datetime_helper import gregorian_to_jd, utc_offset_hours
 
-    from datetime_helper import julian_day_from_datetime
+    def _wall_jd(year, month, day, hour, timezone_name="Europe/Helsinki"):
+      civil = CivilDate(year, month, day)
+      return gregorian_to_jd(civil) + (hour - utc_offset_hours(timezone_name, civil)) / 24
 
-    helsinki = ZoneInfo("Europe/Helsinki")
+    helsinki_tz = "Europe/Helsinki"
     # Printed span is Jun 2026 - Jul 2027; both maxima are at 02:00, before sunrise.
-    before_first_day = julian_day_from_datetime(datetime(2026, 6, 1, 2, 0, tzinfo=helsinki))
-    after_last_day = julian_day_from_datetime(datetime(2027, 8, 1, 2, 0, tzinfo=helsinki))
+    before_first_day = _wall_jd(2026, 6, 1, 2, helsinki_tz)
+    after_last_day = _wall_jd(2027, 8, 1, 2, helsinki_tz)
     with TemporaryDirectory() as directory:
       with mock.patch("generate_panchanga_calendar.find_local_eclipses",
                       return_value=[("Lunar", "Partial", before_first_day), ("Lunar", "Total", after_last_day)]), \

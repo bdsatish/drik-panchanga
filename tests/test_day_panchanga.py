@@ -5,7 +5,7 @@ from threading import Event, Lock, Thread
 from unittest.mock import patch
 
 import panchanga
-from datetime_helper import Date, format_hms_from_jd, gregorian_to_jd
+from datetime_helper import Date, format_local_hm, gregorian_to_jd
 from webapp.day_panchanga import compute_day_panchanga
 
 
@@ -199,5 +199,6 @@ class PreStandardClockTests(unittest.TestCase):
     civil = Date(-500, 6, 15)
     jd = gregorian_to_jd(civil)
     sunrise = panchanga.sunrise(jd, place_for_date(ujjain, civil))
-    expected = format_hms_from_jd(sunrise, jd, ujjain.longitude / 15, show_seconds=True)
+    expected = format_local_hm(sunrise, ujjain.timezone_name, anchor_civil=civil, show_seconds=True,
+                               longitude=ujjain.longitude)
     self.assertEqual(compute_day_panchanga("Ujjain", "15/06/-500")["sunrise"], expected)

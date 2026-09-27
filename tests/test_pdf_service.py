@@ -7,7 +7,7 @@ import sys
 import unittest
 from unittest import mock
 
-from datetime_helper import Date, format_hms_from_jd, gregorian_to_jd
+from datetime_helper import Date, format_hms, gregorian_to_jd
 from webapp import cgi_handlers
 from webapp.app import app
 from webapp.day_panchanga import _interval, compute_day_panchanga
@@ -132,7 +132,7 @@ class CgiGenerationTests(unittest.TestCase):
 class DurmuhurtaRenderingTests(unittest.TestCase):
 
   def test_json_and_ics_share_one_clock(self):
-    clock = lambda jd_ut, show_seconds: format_hms_from_jd(jd_ut, 0.0, 0.0, show_seconds=show_seconds)
+    clock = lambda jd_ut, show_seconds: format_hms(jd_ut * 24, show_seconds=show_seconds)
     self.assertEqual(_interval(10.5 / 24, 11.25 / 24, clock), {"start": "10:30:00", "end": "11:15:00"})
     self.assertEqual(_fmt_interval(10.5 / 24, 11.25 / 24, clock), "10:30:00–11:15:00")
 

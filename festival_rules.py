@@ -4,12 +4,10 @@ import calendar
 import configparser
 import logging
 from collections import namedtuple as struct
-from datetime import datetime, timedelta
 from pathlib import Path
 
 import panchanga
-from datetime_helper import (Date, gregorian_to_jd, jd_to_local_civil_date, julian_day_from_datetime, tzinfo_for,
-                             utc_offset_hours)
+from datetime_helper import (Date, gregorian_to_jd, jd_to_local_civil_date, utc_offset_hours)
 
 log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
@@ -302,9 +300,8 @@ def hindu_day_has_eclipse(civil_date, geopos, timezone_name):
   end_jd = _event_jd_ut(civil_date + 1, geopos, timezone_name, panchanga.sunrise)
   if start_jd is None or end_jd is None:
     log.warning("Sunrise unavailable for %s; eclipse test uses the civil day", civil_date)
-    day_start = datetime(civil_date.year, civil_date.month, civil_date.day, tzinfo=tzinfo_for(timezone_name))
-    start_jd = julian_day_from_datetime(day_start, geopos[0])
-    end_jd = julian_day_from_datetime(day_start + timedelta(days=1), geopos[0])
+    start_jd = gregorian_to_jd(civil_date) - utc_offset_hours(timezone_name, civil_date, geopos[0]) / 24
+    end_jd = gregorian_to_jd(civil_date + 1) - utc_offset_hours(timezone_name, civil_date + 1, geopos[0]) / 24
   for kind, _phase, _maximum_jd in find_local_eclipses(start_jd, end_jd, geopos):
     if kind == "Lunar":
       return True

@@ -14,7 +14,7 @@ import re
 import unittest
 
 import panchanga
-from datetime_helper import Date, format_hms_from_jd, format_local_hm, gregorian_to_jd
+from datetime_helper import Date, format_local_hm, gregorian_to_jd
 from generate_panchanga_calendar import load_location, place_for_date
 from tests import require_swieph
 from webapp.day_panchanga import compute_day_panchanga, parse_civil_date
@@ -210,7 +210,10 @@ class BceDayViewSweepTests(unittest.TestCase):
     civil = parse_civil_date(text)
     jd = gregorian_to_jd(civil)
     sunrise = panchanga.sunrise(jd, place_for_date(location, civil))
-    self.assertEqual(data["sunrise"], format_hms_from_jd(sunrise, jd, location.longitude / 15, show_seconds=True))
+    self.assertEqual(
+      data["sunrise"],
+      format_local_hm(sunrise, location.timezone_name, anchor_civil=civil, show_seconds=True,
+                      longitude=location.longitude))
     for key in ("sunrise", "sunset", "day_duration"):
       self.assertRegex(data[key], TIME)
     for key in ("tithi", "nakshatra", "yoga", "karana"):

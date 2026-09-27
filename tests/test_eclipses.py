@@ -6,9 +6,15 @@ from unittest import mock
 import panchanga
 
 from datetime_helper import (Date, format_hms, format_local_hm, gregorian_to_jd, hindu_day_civil,
-                             jd_to_local_civil_date, julian_day_from_datetime, utc_offset_hours)
+                             jd_to_local_civil_date, utc_offset_hours)
 from festival_rules import hindu_day_has_eclipse, find_local_eclipses
 from generate_panchanga_calendar import eclipse_civil_dates, format_eclipse_line, load_location, place_for_date
+
+
+def _wall_jd(year, month, day, hour, minute, second=0, timezone_name="Asia/Kolkata"):
+  """UT Julian day of a wall-clock reading (replaces datetime-built JDs in tests)."""
+  civil = Date(year, month, day)
+  return gregorian_to_jd(civil) + (hour + minute / 60 + second / 3600 - utc_offset_hours(timezone_name, civil)) / 24
 
 
 def _times(maximum):
@@ -85,12 +91,7 @@ class FormatEclipseLineTests(unittest.TestCase):
     self.assertEqual(format_eclipse_line([], "Asia/Kolkata"), "Eclipses: None")
 
   def test_formats_local_civil_dates_and_maximum_time(self):
-    from datetime import datetime
-    from zoneinfo import ZoneInfo
-
-    ist = ZoneInfo("Asia/Kolkata")
-
-    maximum = julian_day_from_datetime(datetime(2026, 3, 3, 10, 0, tzinfo=ist))
+    maximum = _wall_jd(2026, 3, 3, 10, 0)
     line = format_eclipse_line([("Lunar", "Partial", maximum)], "Asia/Kolkata")
     self.assertEqual(
       line,
@@ -100,13 +101,8 @@ class FormatEclipseLineTests(unittest.TestCase):
     self.assertEqual(jd_to_local_civil_date(maximum, "Asia/Kolkata").isoformat(), "2026-03-03")
 
   def test_includes_sunrise_when_provided(self):
-    from datetime import datetime
-    from zoneinfo import ZoneInfo
-
-    ist = ZoneInfo("Asia/Kolkata")
-
-    maximum = julian_day_from_datetime(datetime(2026, 3, 3, 10, 0, tzinfo=ist))
-    sunrise = julian_day_from_datetime(datetime(2026, 3, 3, 6, 45, tzinfo=ist))
+    maximum = _wall_jd(2026, 3, 3, 10, 0)
+    sunrise = _wall_jd(2026, 3, 3, 6, 45)
     line = format_eclipse_line([("Lunar", "Partial", maximum)], "Asia/Kolkata",
                                sunrise_by_date={Date(2026, 3, 3): sunrise})
     self.assertEqual(
@@ -116,13 +112,9 @@ class FormatEclipseLineTests(unittest.TestCase):
     )
 
   def test_pre_sunrise_maximum_uses_24_plus_on_previous_civil_day(self):
-    from datetime import datetime
-    from zoneinfo import ZoneInfo
-
-    ist = ZoneInfo("Asia/Kolkata")
     # 00:05 on Mar 4 is still the previous Hindu day when sunrise is 06:30.
-    maximum = julian_day_from_datetime(datetime(2026, 3, 4, 0, 5, tzinfo=ist))
-    sunrise = julian_day_from_datetime(datetime(2026, 3, 4, 6, 30, tzinfo=ist))
+    maximum = _wall_jd(2026, 3, 4, 0, 5)
+    sunrise = _wall_jd(2026, 3, 4, 6, 30)
     line = format_eclipse_line([("Lunar", "Partial", maximum)], "Asia/Kolkata",
                                sunrise_by_date={Date(2026, 3, 4): sunrise})
     self.assertEqual(
@@ -142,9 +134,7 @@ class FormatLocalHmTests(unittest.TestCase):
   TZ = "Asia/Kolkata"
 
   def _jd(self, hour, minute, second=0, day=3):
-    from datetime import datetime
-    from zoneinfo import ZoneInfo
-    return julian_day_from_datetime(datetime(2026, 3, day, hour, minute, second, tzinfo=ZoneInfo(self.TZ)))
+    return _wall_jd(2026, 3, day, hour, minute, second, self.TZ)
 
   def test_truncates_below_half_minute(self):
     self.assertEqual(format_local_hm(self._jd(23, 59, 29), self.TZ), "23:59")
@@ -237,18 +227,13 @@ class DstRowTailTests(unittest.TestCase):
 class EclipseCivilDatesTests(unittest.TestCase):
 
   def test_marks_only_local_date_of_maximum(self):
-    from datetime import datetime
-    from zoneinfo import ZoneInfo
-
-    ist = ZoneInfo("Asia/Kolkata")
-
-    maximum = julian_day_from_datetime(datetime(2026, 3, 4, 0, 5, tzinfo=ist))
+    maximum = _wall_jd(2026, 3, 4, 0, 5)
     eclipse = ("Lunar", "Partial", maximum)
     # Without sunrise: civil date of the maximum itself.
     dates = eclipse_civil_dates([eclipse], "Asia/Kolkata")
     self.assertEqual(dates, {Date(2026, 3, 4)})
     # With sunrise after the maximum: previous Hindu day.
-    sunrise = julian_day_from_datetime(datetime(2026, 3, 4, 6, 30, tzinfo=ist))
+    sunrise = _wall_jd(2026, 3, 4, 6, 30)
     dates = eclipse_civil_dates([eclipse], "Asia/Kolkata", sunrise_by_date={Date(2026, 3, 4): sunrise})
     self.assertEqual(dates, {Date(2026, 3, 3)})
 
@@ -273,9 +258,7 @@ class HinduDayHasEclipseTests(unittest.TestCase):
   geopos = (75.0, 23.0, 0.0)  # Ujjain-ish
 
   def _maximum_jd(self, year, month, day, hour, minute):
-    from datetime import datetime
-    from zoneinfo import ZoneInfo
-    return julian_day_from_datetime(datetime(year, month, day, hour, minute, tzinfo=ZoneInfo("Asia/Kolkata")))
+    return _wall_jd(year, month, day, hour, minute)
 
   def _lunar_at(self, maximum):
     return mock.patch("festival_rules.panchanga.swe.lun_eclipse_when_loc", return_value=(
