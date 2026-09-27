@@ -55,7 +55,6 @@ from generate_panchanga_calendar import (
   embed_pdf_metadata,
   ensure_pdf_fonts,
   attach_place_values,
-  configure_logging,
   load_location,
   location_slug,
   masa_badges_by_date,
@@ -787,7 +786,6 @@ def _check_reportlab():
 
 
 def main(argv=None):
-  configure_logging()
   _check_reportlab()
   parser = argument_parser()
   args = parser.parse_args(attach_place_values(sys.argv[1:] if argv is None else argv))

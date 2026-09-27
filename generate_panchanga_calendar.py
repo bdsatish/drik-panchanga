@@ -93,20 +93,15 @@ else:
   SANKRANTI_INK = FESTIVAL_INK = EKADASHI_MARK = PRADOSHAM_MARK = None
   SANKASHTI_MARK = ECLIPSE_MARK = None
 
-
-def configure_logging():
-  """Attach a stderr WARNING handler once (safe to call from every entrypoint).
-
-  Skipped when ``unittest`` is already loaded so the test suite stays quiet.
-  ``logging.basicConfig`` itself is a no-op if the root logger already has handlers.
-  """
-  if "unittest" not in sys.modules:
-    logging.basicConfig(
-      level=logging.WARNING,
-      format="%(name)s: %(levelname)s: %(message)s",
-      stream=sys.stderr,
-    )
-
+# ``basicConfig`` is a no-op when handlers already exist, so every entrypoint
+# gets a stderr WARNING handler for free; skipped under unittest so the suite
+# stays quiet.
+if "unittest" not in sys.modules:
+  logging.basicConfig(
+    level=logging.WARNING,
+    format="%(name)s: %(levelname)s: %(message)s",
+    stream=sys.stderr,
+  )
 
 _SANSKRIT_NAMES = None
 _CITY_LOCATIONS = None
@@ -1190,7 +1185,6 @@ def _check_reportlab():
 
 
 def main(argv=None):
-  configure_logging()
   parser = argument_parser()
   arguments = parser.parse_args(attach_place_values(sys.argv[1:] if argv is None else argv))
   _check_reportlab()

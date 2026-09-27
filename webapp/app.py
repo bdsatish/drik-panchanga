@@ -27,7 +27,6 @@ if str(_REPO_ROOT) not in sys.path:
 
 from generate_panchanga_calendar import (
   city_locations,
-  configure_logging,
   load_location,
   location_slug,
   require_coordinate_selection,
@@ -40,7 +39,6 @@ from webapp.day_panchanga import compute_day_panchanga
 from webapp.pdf_service import generate_pdf
 from webapp.ics_service import generate_ics
 
-configure_logging()
 app = Flask(__name__)
 log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())

@@ -23,9 +23,8 @@ from webapp.app import (
 )
 from webapp.day_panchanga import compute_day_panchanga
 from webapp.pdf_service import generate_pdf
-from generate_panchanga_calendar import configure_logging, require_coordinate_selection
+from generate_panchanga_calendar import require_coordinate_selection
 
-configure_logging()
 PROJECT_ROOT = _REPO_ROOT
 log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
