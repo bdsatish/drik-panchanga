@@ -1,9 +1,15 @@
 """Manual ``LAT,LON,TZ`` place across the CLI and web stack."""
 
+import sys
 import unittest
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from unittest import mock
 
 from datetime_helper import format_utc_offset
-from generate_panchanga_calendar import argument_parser, attach_place_values, load_custom_location, resolve_location
+from generate_monthly_calendar import argument_parser as monthly_argument_parser
+from generate_panchanga_calendar import (Location, argument_parser as annual_argument_parser, attach_place_values,
+                                         load_custom_location, resolve_location)
 from webapp.app import app
 from webapp.day_panchanga import compute_day_panchanga
 
@@ -16,6 +22,7 @@ class CustomLocationTests(unittest.TestCase):
     self.assertEqual(location.timezone_name, "UTC+5:30")
     self.assertEqual(format_utc_offset("UTC+5:30", 2026, 3), "UTC+5:30 (UTC+05:30)")
     self.assertEqual(resolve_location("Bengaluru, IN", " ").name, "Bengaluru, IN")
+    self.assertEqual(resolve_location("Bengaluru, IN", None).name, "Bengaluru, IN")
 
   def test_southern_western_place(self):
     location = resolve_location(place=" -33.87 , -70.5 , -3.5 ")
@@ -46,13 +53,23 @@ class CustomLocationTests(unittest.TestCase):
       compute_day_panchanga("", "21/04/2023")
 
   def test_rejects_bad_place(self):
-    for place in ("12.97,77.59", "1,2,3,4", "a,2,3", "95,2,3", "1,2,15", "12.97,,5.5"):
-      with self.subTest(place=place), self.assertRaises(ValueError):
+    for place in ("12.97", "12.97,77.59", "1,2,3,4"):
+      with self.subTest(place=place), self.assertRaisesRegex(ValueError, "three comma-separated"):
         resolve_location(place=place)
+    bad_values = (("a,2,3", "Latitude 'a' must be a number"), ("12.97,,5.5", "Longitude '' must be a number"),
+                  ("95,2,3", "Latitude '95' is out of range"), ("1,200,3", "Longitude '200' is out of range"),
+                  ("1,2,15", "Timezone '15' is out of range"))
+    for place, message in bad_values:
+      with self.subTest(place=place), self.assertRaisesRegex(ValueError, message):
+        resolve_location(place=place)
+
+  def test_requires_city_or_place(self):
+    with self.assertRaisesRegex(ValueError, "City is required"):
+      resolve_location(None)
 
   def test_cli_accepts_negative_latitude(self):
     argv = attach_place_values(["--place", "-13.4,70,5.5", "--start", "2026-06"])
-    arguments = argument_parser().parse_args(argv)
+    arguments = annual_argument_parser().parse_args(argv)
     self.assertEqual(resolve_location(arguments.city, arguments.place).name, "13.40S, 70.00E (UTC+5:30)")
 
 
@@ -80,6 +97,149 @@ class CustomLocationWebTests(unittest.TestCase):
       "start": "2026-03",
     })
     self.assertEqual(response.status_code, 200)
+
+
+class AttachPlaceValuesTests(unittest.TestCase):
+  """--place must survive argparse despite a leading negative latitude."""
+
+  def test_glues_negative_value_to_flag(self):
+    self.assertEqual(attach_place_values(["--place", "-13.4,70,5.5", "--start", "2026-03"]),
+                     ["--place=-13.4,70,5.5", "--start", "2026-03"])
+
+  def test_leaves_positive_values_alone(self):
+    argv = ["--place", "12.97,77.59,5.5"]
+    self.assertEqual(attach_place_values(argv), ["--place=12.97,77.59,5.5"])
+
+  def test_no_place_flag(self):
+    argv = ["--city", "Helsinki", "--start", "2026-03"]
+    self.assertEqual(attach_place_values(argv), argv)
+
+
+class PlaceSpecFormsTests(unittest.TestCase):
+  """LAT,LON,TZ accept every float() spelling: integers, x.0, +sign, zero."""
+
+  def test_three_floats(self):
+    location = resolve_location(place="-13.4,70,5.5")
+    self.assertEqual((location.latitude, location.longitude, location.timezone_name), (-13.4, 70.0, "UTC+5:30"))
+    self.assertEqual(location.name, "13.40S, 70.00E (UTC+5:30)")
+
+  def test_negative_longitude_west(self):
+    location = resolve_location(place="40.71,-74.0,-5")
+    self.assertEqual((location.latitude, location.longitude, location.timezone_name), (40.71, -74.0, "UTC-5"))
+
+  def test_pure_integers(self):
+    location = resolve_location(place="13,77,5")
+    self.assertEqual((location.latitude, location.longitude, location.timezone_name), (13.0, 77.0, "UTC+5"))
+
+  def test_explicit_plus_sign(self):
+    location = resolve_location(place="+13.4,+70,+5.5")
+    self.assertEqual((location.latitude, location.longitude, location.timezone_name), (13.4, 70.0, "UTC+5:30"))
+
+  def test_zeroes(self):
+    location = resolve_location(place="0,0,0")
+    self.assertEqual((location.latitude, location.longitude, location.timezone_name), (0.0, 0.0, "UTC+0"))
+
+  def test_mixed_forms_in_one_spec(self):
+    location = resolve_location(place="-33.87,+151.2,10")
+    self.assertEqual((location.latitude, location.longitude, location.timezone_name), (-33.87, 151.2, "UTC+10"))
+
+  def test_integer_spec_resolves_like_float_spec(self):
+    self.assertEqual(resolve_location(place="13,77,-5"), resolve_location(place="13.0,77.0,-5.0"))
+
+  def test_offset_names_parse_back(self):
+    from datetime_helper import fixed_offset_name, tzinfo_for
+    self.assertEqual(fixed_offset_name(-5.0), "UTC-5")
+    self.assertEqual(fixed_offset_name(10.0), "UTC+10")
+    self.assertEqual(fixed_offset_name(0.0), "UTC+0")
+    self.assertEqual(fixed_offset_name(-5.5), "UTC-5:30")
+    # The generated names must parse back into real tzinfo objects.
+    for name, hours in (("UTC-5", -5), ("UTC+10", 10), ("UTC+0", 0)):
+      self.assertEqual(int(tzinfo_for(name).utcoffset(None).total_seconds()) // 3600, hours)
+
+
+class PlaceCliTests(unittest.TestCase):
+  """Both PDF CLIs accept --place instead of --city."""
+
+  def test_annual_place_and_start_parse(self):
+    parser = annual_argument_parser()
+    arguments = parser.parse_args(attach_place_values(["--place", "-13.4,70,5.5", "--start", "2026-03"]))
+    self.assertEqual(arguments.place, "-13.4,70,5.5")
+    self.assertIsNone(arguments.city)
+
+  def test_annual_city_remains_accepted_without_place(self):
+    parser = annual_argument_parser()
+    arguments = parser.parse_args(["--city", "Helsinki", "--start", "2026-03"])
+    self.assertEqual(arguments.city, "Helsinki")
+    self.assertIsNone(arguments.place)
+
+  def test_monthly_place_and_start_parse(self):
+    parser = monthly_argument_parser()
+    arguments = parser.parse_args(attach_place_values(["--place", "-13.4,70,5.5", "--start", "2026-03"]))
+    self.assertEqual(arguments.place, "-13.4,70,5.5")
+    self.assertIsNone(arguments.city)
+
+  def test_monthly_city_remains_accepted_without_place(self):
+    parser = monthly_argument_parser()
+    arguments = parser.parse_args(["--city", "Helsinki", "--start", "2026-03"])
+    self.assertEqual(arguments.city, "Helsinki")
+    self.assertIsNone(arguments.place)
+
+
+class MainIntegrationTests(unittest.TestCase):
+  """main() must resolve --place into the Location used for PDF generation."""
+
+  def test_monthly_main_uses_place(self):
+    import generate_monthly_calendar as monthly
+    captured = {}
+    with TemporaryDirectory() as directory:
+      output = Path(directory) / "out.pdf"
+
+      def fake_build(location, *args, **kwargs):
+        captured["location"] = location
+        return output
+
+      with mock.patch.object(monthly, "build_monthly_pdf", side_effect=fake_build), \
+           mock.patch.object(monthly, "default_monthly_output_path", return_value=output), \
+           mock.patch.object(sys, "stdout", mock.Mock()):
+        self.assertEqual(monthly.main(["--place", "-13.4,70,5.5", "--start", "2026-03"]), 0)
+    location = captured["location"]
+    self.assertIsInstance(location, Location)
+    self.assertEqual((location.latitude, location.longitude, location.timezone_name), (-13.4, 70.0, "UTC+5:30"))
+
+  def test_monthly_main_errors_without_city_or_place(self):
+    import generate_monthly_calendar as monthly
+    with mock.patch.object(sys, "stderr", mock.Mock()), self.assertRaises(SystemExit):
+      monthly.main(["--start", "2026-03"])
+
+  def test_annual_main_uses_place(self):
+    import generate_panchanga_calendar as annual
+    location_holder = {}
+    real_load = annual.load_custom_location
+
+    with TemporaryDirectory() as directory:
+      output = Path(directory) / "out.pdf"
+
+      def spy_load(latitude, longitude, timezone):
+        location = real_load(latitude, longitude, timezone)
+        location_holder["location"] = location
+        return location
+
+      def fake_build(location, *args, **kwargs):
+        location_holder["built"] = location
+        return output
+
+      with mock.patch.object(annual, "load_custom_location", side_effect=spy_load), \
+           mock.patch.object(annual, "build_pdf", side_effect=fake_build), \
+           mock.patch.object(sys, "stdout", mock.Mock()):
+        annual.main(["--place", "-13.4,70,5.5", "--start", "2026-03"])
+    location = location_holder["location"]
+    self.assertEqual((location.latitude, location.longitude, location.timezone_name), (-13.4, 70.0, "UTC+5:30"))
+    self.assertIs(location_holder.get("built"), location)
+
+  def test_annual_main_errors_without_city_or_place(self):
+    import generate_panchanga_calendar as annual
+    with mock.patch.object(sys, "stderr", mock.Mock()), self.assertRaises(SystemExit):
+      annual.main(["--start", "2026-03"])
 
 
 if __name__ == "__main__":
