@@ -361,13 +361,13 @@ def special_weekday_dates(pradosham_dates, sankashti_dates):
 
 
 def require_start_month(text):
-  """Parse ``YYYY-MM`` or raise ``ValueError``."""
-  match = re.fullmatch(r"(\d{4})-(\d{2})", text or "")
+  """Parse ``YYYY-MM`` (astronomical year, ``-500`` = 500 BCE) or raise ``ValueError``."""
+  match = re.fullmatch(r"(-?\d{1,4})-(\d{2})", text or "")
   if not match:
-    raise ValueError("start month must use YYYY-MM format")
+    raise ValueError("start month must use YYYY-MM format (negative year for BCE, e.g. -500-03)")
   year, month = (int(part) for part in match.groups())
   if not 1 <= month <= 12:
-    raise ValueError("start month must use YYYY-MM format")
+    raise ValueError("start month must use YYYY-MM format (negative year for BCE, e.g. -500-03)")
   return year, month
 
 
@@ -540,16 +540,21 @@ def resolve_location(city=None, place=None):
   return load_location(city)
 
 
-def attach_place_values(argv):
-  """Glue ``--place`` to its value (``--place -1,2,3`` -> ``--place=-1,2,3``).
+# Options whose value may start with a minus (a south latitude, a BCE year).
+NEGATIVE_LEADING_OPTIONS = ("--place", "--start")
 
-  argparse would otherwise read the leading ``-`` of a negative latitude as
-  the start of another option.
+
+def attach_option_values(argv, options=NEGATIVE_LEADING_OPTIONS):
+  """Glue a value to its flag when the value starts with a minus.
+
+  ``--start -500-03`` becomes ``--start=-500-03``: argparse would otherwise
+  read the leading ``-`` of a BCE year or a south latitude as the start of
+  another option. Values that do not start with ``-`` are left untouched.
   """
   argv = list(argv)
   for index, item in enumerate(argv):
-    if item == "--place" and index + 1 < len(argv):
-      argv[index] = "--place=" + argv[index + 1]
+    if item in options and index + 1 < len(argv) and argv[index + 1].startswith("-"):
+      argv[index] = item + "=" + argv[index + 1]
       del argv[index + 1]
   return argv
 
@@ -1160,7 +1165,8 @@ def argument_parser():
     help=("location as three floats instead of --city: latitude (negative = south), "
           "longitude (east = positive), timezone as UTC offset hours (5.5 = UTC+5:30), "
           "e.g. --place -13.4,70,5.5"))
-  parser.add_argument("--start", required=True, metavar="YYYY-MM", help="first of the 14 consecutive calendar months")
+  parser.add_argument("--start", required=True, metavar="YYYY-MM",
+                      help="first of the 14 consecutive calendar months; prefix a BCE year with '-' (e.g. -500-03)")
   parser.add_argument("-o", "--output", type=Path, help="output PDF path (default: generated from city and range)")
   parser.add_argument("--month", choices=("amanta", "purnimanta"), default="amanta",
                       help="lunar month reckoning for display: amanta (default) or purnimanta")
@@ -1186,7 +1192,7 @@ def _check_reportlab():
 
 def main(argv=None):
   parser = argument_parser()
-  arguments = parser.parse_args(attach_place_values(sys.argv[1:] if argv is None else argv))
+  arguments = parser.parse_args(attach_option_values(sys.argv[1:] if argv is None else argv))
   _check_reportlab()
   try:
     start_year, start_month = require_start_month(arguments.start)

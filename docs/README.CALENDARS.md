@@ -19,6 +19,7 @@ Common options
 --city "Ujjain, IN"      # data/cities.json; country code disambiguates
 --place -13.4,70,5.5     # instead of --city: LAT,LON,TZ (see below)
 --start 2026-06          # first month of the span (14 or 12 months)
+--start -500-03          # BCE: prefix the astronomical year with '-'
 --month amanta|purnimanta
 --ayanamsa citra|revati|rohini|pushya|mula|krishnamurti|raman|tropical
 --festivals FILE.cfg

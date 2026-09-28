@@ -108,7 +108,13 @@ Two layouts, usable either from a repository checkout
 ```
 drik-panchanga-short --city Ujjain --start 2026-06    # one-page A4, 14 months
 drik-panchanga-long  --city Ujjain --start 2026-03    # 12-page wall calendar
+drik-panchanga-short --city Ujjain --start -500-03    # BCE: '-' prefixes the year
 ```
+
+`--start` takes astronomical years, as the day view does: year `0` is 1 BCE and
+a BCE year is written with a leading minus (`-500-03` is 501 BCE March). A value
+that starts with `-` must follow its flag directly, as above, or be attached
+with `=`.
 
 Both accept `--month amanta|purnimanta`, `--ayanamsa` (citra, revati, rohini,
 pushya, mula, krishnamurti, raman, tropical), `--festivals FILE.cfg`, and

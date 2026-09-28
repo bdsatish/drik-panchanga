@@ -54,7 +54,7 @@ from generate_panchanga_calendar import (
   display_masa,
   embed_pdf_metadata,
   ensure_pdf_fonts,
-  attach_place_values,
+  attach_option_values,
   load_location,
   location_slug,
   masa_badges_by_date,
@@ -765,7 +765,7 @@ def argument_parser():
           "longitude (east = positive), timezone as UTC offset hours (5.5 = UTC+5:30), "
           "e.g. --place -13.4,70,5.5"))
   parser.add_argument("--start", required=True, metavar="YYYY-MM",
-                      help="first month of the 12-month span, e.g. 2026-06")
+                      help="first month of the 12-month span, e.g. 2026-06; prefix a BCE year with '-' (e.g. -500-03)")
   parser.add_argument("-o", "--output", type=Path, help="output PDF path (default: generated from city and range)")
   parser.add_argument("--month", choices=("amanta", "purnimanta"), default="amanta",
                       help="lunar month reckoning for display: amanta (default) or purnimanta")
@@ -788,7 +788,7 @@ def _check_reportlab():
 def main(argv=None):
   _check_reportlab()
   parser = argument_parser()
-  args = parser.parse_args(attach_place_values(sys.argv[1:] if argv is None else argv))
+  args = parser.parse_args(attach_option_values(sys.argv[1:] if argv is None else argv))
   try:
     start_year, start_month = require_start_month(args.start)
     location = resolve_location(args.city, args.place)
