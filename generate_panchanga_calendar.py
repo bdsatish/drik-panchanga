@@ -362,7 +362,7 @@ def special_weekday_dates(pradosham_dates, sankashti_dates):
 
 def require_start_month(text):
   """Parse ``YYYY-MM`` (astronomical year: 0 = 1 BCE, ``-500-03`` = March 501 BCE) or raise ``ValueError``."""
-  match = re.fullmatch(r"(-?\d{1,4})-(\d{2})", text or "")
+  match = re.fullmatch(r"(-\d{1,4}|\d{4})-(\d{2})", text or "")
   if not match:
     raise ValueError("start month must use YYYY-MM format (negative year for BCE, e.g. -500-03)")
   year, month = (int(part) for part in match.groups())

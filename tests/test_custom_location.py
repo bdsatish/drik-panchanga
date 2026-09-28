@@ -129,18 +129,18 @@ class BceStartMonthTests(unittest.TestCase):
     self.assertEqual(require_start_month("2026-03"), (2026, 3))
     self.assertEqual(require_start_month("-500-03"), (-500, 3))
     self.assertEqual(require_start_month("-0500-03"), (-500, 3))  # same year, zero-padded
-    self.assertEqual(require_start_month("0-01"), (0, 1))  # year 0 = 1 BCE
     self.assertEqual(require_start_month("-5000-12"), (-5000, 12))  # oldest supported year
-    self.assertEqual(require_start_month("500-03"), (500, 3))  # short CE form
+    self.assertEqual(require_start_month("0000-01"), (0, 1))  # zero still works
 
   def test_rejects_malformed_and_out_of_range(self):
-    for text in ("2026-3", "2026-13", "2026-00", "-50000-03", "-03", "abc-03", "", None, "2026", "202603"):
+    for text in ("2026-3", "2026-13", "2026-00", "-50000-03", "-03", "abc-03", "", None, "2026", "202603", "26-06",
+                 "500-03", "0-01"):
       with self.subTest(text=text), self.assertRaisesRegex(ValueError, "YYYY-MM"):
         require_start_month(text)
 
   def test_filename_round_trips_through_the_parser(self):
     # default_output_path formats with {:04d}; the result must parse back.
-    for year in (2026, 500, 0, -500, -5000):
+    for year in (2026, 500, 0, -500, -5000, -1):
       with self.subTest(year=year):
         formatted = f"{year:04d}-03"
         self.assertEqual(require_start_month(formatted), (year, 3))
