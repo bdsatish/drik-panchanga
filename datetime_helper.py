@@ -186,12 +186,12 @@ def to_hms(decimal_hours):
   satisfies ``0 <= m < 60`` and ``0 <= s < 60``, while ``h`` may be negative
   or exceed 24 (the callers' "hours past midnight" convention).
   """
-  sign = -1 if decimal_hours < 0 else 1
-  a = abs(decimal_hours)
-  total_seconds = int(round(a * 3600))
+  total_seconds = int(round(decimal_hours * 3600))
+  sign = -1 if total_seconds < 0 else 1
+  total_seconds = abs(total_seconds)
   hours, rem = divmod(total_seconds, 3600)
   minutes, seconds = divmod(rem, 60)
-  return [sign * hours, minutes, seconds]
+  return [sign * hours, sign * minutes, sign * seconds]
 
 
 def format_hms(hms, *, show_seconds=False):
