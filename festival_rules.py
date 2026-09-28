@@ -352,14 +352,15 @@ def _month_runs(records, month_of):
   return runs
 
 
-def _dates_per_month(runs, month, pick, fallback_month=None):
+def _dates_per_month(runs, month, pick, fallback_month=None, fallback_pick=None):
   """``pick(records)`` for each ``month`` run; runs where it finds nothing are dropped.
 
-  With ``fallback_month``, such a run (a kṣaya month) takes ``pick`` of the
-  nearest ``fallback_month`` run instead, at most two runs away since an adhika
-  month can sit between them. Deciding per run keeps one year's kṣaya from
-  borrowing, or hiding, another year's date. The first and last runs may be
-  cut by the window edge, so finding nothing there does not prove a kṣaya.
+  With ``fallback_month``, such a run (a kṣaya month) takes ``fallback_pick``
+  (default ``pick``) of the nearest ``fallback_month`` run instead, at most two
+  runs away since an adhika month can sit between them. Deciding per run keeps
+  one year's kṣaya from borrowing, or hiding, another year's date. The first
+  and last runs may be cut by the window edge, so finding nothing there does
+  not prove a kṣaya.
   """
   dates = []
   for index, (name, run) in enumerate(runs):
@@ -369,16 +370,19 @@ def _dates_per_month(runs, month, pick, fallback_month=None):
     if date is None and fallback_month is not None and 0 < index < len(runs) - 1:
       for offset in (1, -1, 2, -2):
         if 0 <= index + offset < len(runs) and runs[index + offset][0] == fallback_month:
-          date = pick(runs[index + offset][1])
+          date = (fallback_pick or pick)(runs[index + offset][1])
           break
     if date is not None:
       dates.append(date)
   return dates
 
 
-def _nakshatra_date(records, nakshatra):
-  """First civil date with ``nakshatra`` at sunrise in ``records``, or ``None``."""
-  return next((record.civil_date for record in records if record.nakshatra == nakshatra), None)
+def _nakshatra_date(records, nakshatra, last=False):
+  """First civil date of the first (or ``last``) run of sunrises with ``nakshatra``, or ``None``."""
+  dates = resolve_vriddhi_dates([record.civil_date for record in records if record.nakshatra == nakshatra])
+  if not dates:
+    return None
+  return dates[-1] if last else dates[0]
 
 
 def _nija_nakshatra_dates(records, masa, nakshatra, fallback_masa=None):
@@ -421,12 +425,15 @@ def select_onam_dates(records):
 
     Same sunrise/vriddhi/kshaya-fallback pattern as Rig Upakarma, but keyed on
     solar rasi (Simha then Kanya) rather than lunar masa, with no eclipse test.
+    When Sravana reaches sunrise twice in one Simha month, Onam is the later
+    one (2024: 15 Sep, not 19 Aug).
     """
   SIMHA_RAASI = 5
   KANYA_RAASI = 6
 
   runs = _month_runs(records, lambda record: panchanga.raasi(record.sunrise_jd))
-  return _dates_per_month(runs, SIMHA_RAASI, lambda run: _nakshatra_date(run, SRAVANA_NAKSHATRA), KANYA_RAASI)
+  return _dates_per_month(runs, SIMHA_RAASI, lambda run: _nakshatra_date(run, SRAVANA_NAKSHATRA, last=True),
+                          KANYA_RAASI, fallback_pick=lambda run: _nakshatra_date(run, SRAVANA_NAKSHATRA))
 
 
 def select_vaikuntha_ekadashi_dates(records):

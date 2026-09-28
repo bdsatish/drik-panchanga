@@ -109,9 +109,11 @@ These have dedicated selectors (dispatch by catalog name):
   wavy eclipse mark keeps a date and its cell in agreement; using the
   maximum's moment avoids interval arithmetic.
 * **Onam** -- sunrise nakshatra Sravana (`22`) while the Sun is in Simha
-  (raasi 5); if none that month, the first one in Kanya (raasi 6). Same
-  vriddhi / kshaya-fallback pattern as Rig Upakarma, but keyed on solar rasi
-  rather than lunar masa, and with no eclipse test.
+  (raasi 5); if none that month, the first one in Kanya (raasi 6). When
+  Sravana reaches sunrise twice in one Simha month, the later is Onam (2024:
+  15 Sep, not 19 Aug). Same vriddhi / kshaya-fallback pattern as Rig
+  Upakarma, but keyed on solar rasi rather than lunar masa, and with no
+  eclipse test.
 * **Vaikuntha Ekadashi** -- a Margashirsha or Pausha Shukla Ekadashi upavasa
   day while the Sun is in Dhanur at sunrise. If none qualify, the PDF prints
   `None`.

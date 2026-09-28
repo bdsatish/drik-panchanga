@@ -962,6 +962,16 @@ class OnamTests(unittest.TestCase):
     with mock.patch("festival_rules.panchanga.raasi", side_effect=lambda jd: 4 if jd < 10.0 else 5 if jd < 20.0 else 6):
       self.assertEqual(select_onam_dates(records), [Date(2030, 9, 16)])
 
+  def test_second_sravana_in_one_simha_month_is_onam(self):
+    records = [
+      festival_record(Date(2024, 8, 19), "S15", masa="5", is_adhika=False, nakshatra=22, sunrise_jd=10.0),
+      festival_record(Date(2024, 8, 20), "K1", masa="5", is_adhika=False, nakshatra=23, sunrise_jd=11.0),
+      festival_record(Date(2024, 9, 15), "S12", masa="6", is_adhika=False, nakshatra=22, sunrise_jd=12.0),
+      festival_record(Date(2024, 9, 16), "S13", masa="6", is_adhika=False, nakshatra=22, sunrise_jd=13.0),
+    ]
+    with mock.patch("festival_rules.panchanga.raasi", return_value=5):
+      self.assertEqual(select_onam_dates(records), [Date(2024, 9, 15)])
+
   def test_simha_kshaya_does_not_borrow_across_years(self):
     # A cut Simha month at the window edge proves nothing, and one year's
     # kshaya takes its own Kanya date, not another year's.
