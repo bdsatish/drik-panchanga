@@ -25,8 +25,8 @@ from tempfile import TemporaryDirectory
 import swisseph as swe
 
 import panchanga
-from datetime_helper import (Date, dst_transitions, format_utc_offset, gregorian_to_jd, jd_to_local_civil_date,
-                             jd_to_local_hms, local_range_jds, utc_offset_hours)
+from datetime_helper import (Date, dst_transitions, format_local_hm, format_utc_offset, gregorian_to_jd,
+                             jd_to_local_civil_date, local_range_jds, utc_offset_hours)
 from tests import local_hms, require_swieph
 from panchanga import (Place, ahargana, elapsed_year, lunar_longitude, reset_ayanamsa_mode, set_chosen_ayanamsa,
                        set_nakshatra_system, solar_longitude, vaara)
@@ -275,8 +275,9 @@ class LongitudeMeridianHelperTests(unittest.TestCase):
 
   def test_round_trip_in_the_lmt_era(self):
     jd = gregorian_to_jd(Date(1800, 3, 1)) + (23 + 50 / 60 - self.LONGITUDE / 15) / 24
-    civil, hms = jd_to_local_hms(jd, "Asia/Kolkata", self.LONGITUDE)
-    self.assertEqual((civil.day, hms[0], hms[1]), (1, 23, 50))
+    self.assertEqual(
+      format_local_hm(jd, "Asia/Kolkata", anchor_civil=Date(1800, 3, 1), show_seconds=True, longitude=self.LONGITUDE),
+      "23:50:00")
     self.assertEqual(jd_to_local_civil_date(jd, "Asia/Kolkata", self.LONGITUDE), Date(1800, 3, 1))
 
   def test_month_range_starts_at_local_mean_midnight(self):

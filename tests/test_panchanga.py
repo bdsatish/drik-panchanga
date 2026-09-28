@@ -521,14 +521,16 @@ class HelperMathTests(PanchangaTestCase):
     self.assertEqual(format_hms(-(25 + 53 / 60) / 60), "-00:26")
     self.assertEqual(format_hms(-(25 + 53 / 60) / 60, show_seconds=True), "-00:25:53")
 
-  def test_date_arithmetic_weekday_and_isoformat(self):
+  def test_date_arithmetic_and_weekday(self):
     self.assertEqual(Date(2026, 1, 31) + 1, Date(2026, 2, 1))
     self.assertEqual(Date(2024, 3, 1) - 1, Date(2024, 2, 29))
     self.assertEqual(Date(0, 3, 1) - 1, Date(0, 2, 29))  # year 0 = 1 BCE, a leap year
     self.assertEqual(Date(1, 1, 1) - 1, Date(0, 12, 31))
     self.assertEqual(Date(2026, 3, 1) - Date(2026, 2, 1), 28)
     self.assertEqual(Date(2026, 9, 28).weekday(), 0)  # a Monday
-    self.assertEqual(Date(-500, 1, 30).isoformat(), "-500-01-30")
+    # A BCE date survives arithmetic with its fields intact.
+    self.assertEqual(Date(-500, 1, 30) + 1, Date(-500, 1, 31))
+    self.assertEqual(Date(-500, 1, 30) - 1, Date(-500, 1, 29))
 
   def test_format_hms_from_jd_keeps_24_00(self):
     # civil_jd = UTC midnight of the local civil day; local = civil + tz/24.

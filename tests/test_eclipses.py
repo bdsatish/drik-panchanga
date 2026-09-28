@@ -98,7 +98,7 @@ class FormatEclipseLineTests(unittest.TestCase):
       "Eclipses: Lunar Mar 03 (Partial) maximum phase at 10:00. "
       "Eclipses have a brown wavy underline below Tithi.",
     )
-    self.assertEqual(jd_to_local_civil_date(maximum, "Asia/Kolkata").isoformat(), "2026-03-03")
+    self.assertEqual(jd_to_local_civil_date(maximum, "Asia/Kolkata"), Date(2026, 3, 3))
 
   def test_includes_sunrise_when_provided(self):
     maximum = _wall_jd(2026, 3, 3, 10, 0)
@@ -179,7 +179,7 @@ class FormatLocalHmTests(unittest.TestCase):
     # The date label beside this time must stay on the event's own civil day.
     jd = self._jd(23, 59, 50)
     self.assertEqual(format_local_hm(jd, self.TZ), "24:00")
-    self.assertEqual(jd_to_local_civil_date(jd, self.TZ).isoformat(), "2026-03-03")
+    self.assertEqual(jd_to_local_civil_date(jd, self.TZ), Date(2026, 3, 3))
 
 
 class DstRowTailTests(unittest.TestCase):

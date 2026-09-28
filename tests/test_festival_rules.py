@@ -9,7 +9,7 @@ from unittest import mock
 
 import panchanga
 
-from datetime_helper import Date, gregorian_to_jd, jd_to_local_hms
+from datetime_helper import Date, format_local_hm, gregorian_to_jd, jd_to_local_civil_date
 from festival_rules import (
   DayRecord,
   FESTIVAL_RULES,
@@ -1444,15 +1444,15 @@ class EkadashiParanaTests(unittest.TestCase):
     entry = mapping[parana_day]
     self.assertEqual(entry.upavasa_date, upavasa)
     self.assertEqual(entry.case, "vriddhi")
-    civil, hms = jd_to_local_hms(entry.parana_jd, location.timezone_name)
-    self.assertEqual(civil, parana_day)
+    self.assertEqual(jd_to_local_civil_date(entry.parana_jd, location.timezone_name), parana_day)
     # Ekādaśī ends shortly after sunrise; the four-ghaṭikā window ends around 09:00.
-    self.assertEqual(hms[0], 7)
-    self.assertGreaterEqual(hms[1], 20)
-    _end_civil, end_hms = jd_to_local_hms(entry.parana_end_jd, location.timezone_name)
-    self.assertEqual(end_hms[0], 9)
-    self.assertGreaterEqual(end_hms[1], 0)
-    self.assertLessEqual(end_hms[1], 2)
+    parana_hm = format_local_hm(entry.parana_jd, location.timezone_name, show_seconds=True)
+    self.assertTrue(parana_hm.startswith("07:"), parana_hm)
+    self.assertGreaterEqual(int(parana_hm[3:5]), 20)
+    end_hm = format_local_hm(entry.parana_end_jd, location.timezone_name, show_seconds=True)
+    self.assertEqual(int(end_hm[:2]), 9)
+    self.assertGreaterEqual(int(end_hm[3:5]), 0)
+    self.assertLessEqual(int(end_hm[3:5]), 2)
 
   def test_ujjain_normal_live(self):
     location = load_location("Ujjain")

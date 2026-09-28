@@ -36,9 +36,6 @@ class Date(struct('Date', ['year', 'month', 'day'])):
     """Monday = 0 ... Sunday = 6, as ``datetime.date.weekday``."""
     return floor(self._noon_jd()) % 7
 
-  def isoformat(self):
-    return f"{self.year:04d}-{self.month:02d}-{self.day:02d}"
-
 
 # Julian day <-> civil/local time (IANA time zones, DST-aware).
 #
@@ -74,8 +71,7 @@ def utc_offset_hours(timezone_name, civil, longitude=None):
 
   Day-granular: one offset per civil date, as the calendar cells bake their
   times. For the offset in force at a specific instant (a row's DST-crossing
-  tail) use ``format_local_hm`` / ``jd_to_local_hms``, which resolve it per
-  instant.
+  tail) ``format_local_hm`` resolves it per instant.
 
   The tzdb lookup runs on the year-4 proxy for BCE dates: the rules there
   preserve the historical local mean time offsets that modern standardized
@@ -124,20 +120,6 @@ def jd_to_local_civil_date(jd, timezone_name, longitude=None):
   """
   local = jd + _instant_offset_hours(jd, timezone_name, longitude) / 24
   return Date(*jd_to_gregorian(local)[:3])
-
-
-def jd_to_local_hms(jd, timezone_name, longitude=None):
-  """``(civil Date, [hours, minutes, seconds])`` wall reading of a UT Julian day.
-
-  Any proleptic year; the offset is the instant's own, so DST-transition
-  instants read the clock in force then. Fractional seconds are rounded.
-  Everyday clocks want ``format_local_hm`` instead; this is for callers that
-  need the civil date and the fields.
-  """
-  local = jd + _instant_offset_hours(jd, timezone_name, longitude) / 24
-  year, month, day, hours = jd_to_gregorian(local)
-  hour, remainder = divmod(round(hours * 3600), 3600)
-  return Date(year, month, day), [hour, remainder // 60, remainder % 60]
 
 
 def local_range_jds(start_year, start_month, end_year, end_month, timezone_name, longitude=None):
