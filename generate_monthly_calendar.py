@@ -764,8 +764,9 @@ def argument_parser():
     help=("location as three floats instead of --city: latitude (negative = south), "
           "longitude (east = positive), timezone as UTC offset hours (5.5 = UTC+5:30), "
           "e.g. --place -13.4,70,5.5"))
-  parser.add_argument("--start", required=True, metavar="YYYY-MM",
-                      help="first month of the 12-month span, e.g. 2026-06; prefix a BCE year with '-' (e.g. -500-03)")
+  parser.add_argument(
+    "--start", required=True, metavar="YYYY-MM", help=("first month of the 12-month span, e.g. 2026-06; "
+                                                       "astronomical year: 0 = 1 BCE, -500-03 = March 501 BCE"))
   parser.add_argument("-o", "--output", type=Path, help="output PDF path (default: generated from city and range)")
   parser.add_argument("--month", choices=("amanta", "purnimanta"), default="amanta",
                       help="lunar month reckoning for display: amanta (default) or purnimanta")
