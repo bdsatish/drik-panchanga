@@ -6,7 +6,8 @@ landscape sheet). Each page is a classic Sunday-first month grid. Every
 day cell shows the tithi and nakshatra at sunrise with their end times;
 when a tithi or nakshatra is skipped (leap), both names and both end
 times are printed. Saṅkrānti days carry the rāśi name, festivals are
-listed inline, and locally visible eclipses get a wavy underline.
+listed inline, and locally visible eclipses are printed as their kind
+and maximum time.
 
 Timings use hours past civil midnight on the Hindu day (sunrise to
 sunrise). Values at or after 24:00 are past midnight; ``00:xx`` appears
