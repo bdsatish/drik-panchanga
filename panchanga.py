@@ -1172,13 +1172,6 @@ def pratah_sandhya(jd, place):
 
 
 def varjyam(jd, place):
-  # Starting ghat (in the nakshatra's duration) for the varjyam period.
-  # Index 0 is unused; positions 1..27 correspond to nakshatras 1..27.
-  # References:
-  #   http://www.reliableastrology.com/nakVishGhati.htm
-  #   https://www.drikpanchang.com/tutorials/panchang-utilities/nakshatra-thyajyam.html
-  varjyam_start_ghatis = (0, 50, 24, 30, 40, 14, 21, 30, 20, 32, 30, 20, 18, 21, 20, 14, 14, 10, 14, 56, 24, 20, 10, 10,
-                          18, 16, 24, 30)
   """Varjyam (Vishaghati) timings for the day.
 
   Returns a list of [start, end] UT JDs for all varjyam periods that
@@ -1187,6 +1180,13 @@ def varjyam(jd, place):
   Returns an empty list if either sunrise anchor falls outside the day's
   expected window (sentinel-garbage protection).
   """
+  # Starting ghat (in the nakshatra's duration) for the varjyam period.
+  # Index 0 is unused; positions 1..27 correspond to nakshatras 1..27.
+  # References:
+  #   http://www.reliableastrology.com/nakVishGhati.htm
+  #   https://www.drikpanchang.com/tutorials/panchang-utilities/nakshatra-thyajyam.html
+  varjyam_start_ghatis = (0, 50, 24, 30, 40, 14, 21, 30, 20, 32, 30, 20, 18, 21, 20, 14, 14, 10, 14, 56, 24, 20, 10, 10,
+                          18, 16, 24, 30)
   srise1 = sunrise(jd, place)
   srise2 = sunrise(jd + 1, place)
   if srise1 < jd - 1 or srise1 > jd + 2 or srise2 < jd - 1 or srise2 > jd + 2:
