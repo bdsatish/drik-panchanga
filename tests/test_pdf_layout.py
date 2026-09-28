@@ -58,8 +58,9 @@ class PdfLayoutTests(unittest.TestCase):
 
   def test_month_ranges_cross_january_and_december(self):
     cases = {
-      (2026, 1): ((2027, 2), (2025, 12), (2027, 3)),
-      (2026, 12): ((2028, 1), (2026, 11), (2028, 2)),
+      (2026, 1): ((2027, 2), (2025, 10), (2027, 5)),
+      (2026, 12): ((2028, 1), (2026, 9), (2028, 4)),
+      (-500, 2): ((-499, 3), (-501, 11), (-499, 6)),
     }
     for start, expected in cases.items():
       with self.subTest(start=start):
@@ -69,9 +70,9 @@ class PdfLayoutTests(unittest.TestCase):
         self.assertEqual(len(months), 14)
         self.assertEqual(months[0], start)
         self.assertEqual(months[-1], last_month)
-        self.assertEqual(len(context), 16)
+        self.assertEqual(len(context), 20)
         self.assertEqual(context[0], first_context)
-        self.assertEqual(context[1:-1], months)
+        self.assertEqual(context[3:-3], months)
         self.assertEqual(context[-1], last_context)
 
   def test_month_header_shows_the_full_year_before_1000_ce(self):

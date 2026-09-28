@@ -1134,9 +1134,11 @@ class VaikunthaEkadashiTests(unittest.TestCase):
     vaikuntha_marker, vaikuntha_dates = entries_by_name(entries)["Vaikuntha Ekadashi"]
     self.assertEqual(vaikuntha_dates, "None")
     self.assertNotIn(vaikuntha_marker, [n for nums in by_date.values() for n in nums])
-    self.assertEqual(select_vaikuntha_ekadashi_dates(records), [])
-    margasira = select_plain_tithi_dates(records, 9, "S11")
-    pausha = select_plain_tithi_dates(records, 10, "S11")
+    # The context margin reaches Dec 2085, which has its own Vaikuntha Ekadashi.
+    in_print = lambda dates: [civil_date for civil_date in dates if civil_date in target_dates]
+    self.assertEqual(in_print(select_vaikuntha_ekadashi_dates(records)), [])
+    margasira = in_print(select_plain_tithi_dates(records, 9, "S11"))
+    pausha = in_print(select_plain_tithi_dates(records, 10, "S11"))
     self.assertEqual(margasira, [Date(2086, 12, 16)])
     self.assertEqual(pausha, [Date(2087, 1, 15)])
     records_by_date = {record.civil_date: record for record in records}

@@ -36,9 +36,9 @@ class MonthSequenceTests(unittest.TestCase):
 
   def test_context_months_adds_buffer(self):
     ctx = context_months(2026, 3)
-    self.assertEqual(len(ctx), 14)
-    self.assertEqual(ctx[0], (2026, 2))
-    self.assertEqual(ctx[-1], (2027, 3))
+    self.assertEqual(len(ctx), 18)
+    self.assertEqual(ctx[0], (2025, 12))
+    self.assertEqual(ctx[-1], (2027, 5))
 
 
 class BuildPdfTests(unittest.TestCase):

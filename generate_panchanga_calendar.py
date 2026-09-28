@@ -25,6 +25,9 @@ from datetime_helper import (Date, fixed_offset_name, format_local_hm, format_ut
                              hindu_day_civil, jd_to_local_civil_date, local_range_jds, utc_offset_hours)
 
 MONTH_COUNT = 14
+# Festival fallbacks read a neighbouring month, possibly past an adhika month,
+# so a kṣaya month cut by the window edge must lie three months off the print span.
+CONTEXT_MARGIN_MONTHS = 3
 DEFAULT_CITIES_PATH = Path(__file__).parent / "data" / "cities.json"
 DEFAULT_FESTIVALS_PATH = Path(__file__).parent / "config" / "festivals.cfg"
 DEFAULT_NAMES_PATH = Path(__file__).parent / "data" / "sanskrit_names.json"
@@ -258,13 +261,15 @@ def month_range(start_year, start_month):
   return _month_sequence(start_year, start_month, MONTH_COUNT)
 
 
+def context_month_sequence(start_year, start_month, count):
+  """``count`` printed months from ``start_year``/``start_month`` plus ``CONTEXT_MARGIN_MONTHS`` on each side."""
+  year, month = divmod(start_year * 12 + start_month - 1 - CONTEXT_MARGIN_MONTHS, 12)
+  return _month_sequence(year, month + 1, count + 2 * CONTEXT_MARGIN_MONTHS)
+
+
 def context_month_range(start_year, start_month):
-  """Sixteen months: one before the print span through one after (``MONTH_COUNT + 2``)."""
-  if start_month == 1:
-    year, month = start_year - 1, 12
-  else:
-    year, month = start_year, start_month - 1
-  return _month_sequence(year, month, MONTH_COUNT + 2)
+  """The fourteen printed months with the context margin on each side."""
+  return context_month_sequence(start_year, start_month, MONTH_COUNT)
 
 
 def month_system_label(amanta):

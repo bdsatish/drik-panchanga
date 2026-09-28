@@ -50,6 +50,7 @@ from generate_panchanga_calendar import (
   PDF_FONT_ITALIC,
   RULESET_VERSION,
   _month_sequence as month_sequence,
+  context_month_sequence,
   coordinate_selection_label,
   daily_records,
   display_masa,
@@ -79,7 +80,6 @@ log.addHandler(logging.NullHandler())
 
 MONTHLY_LAYOUT_VERSION = "Wall-Grid-1.0"
 MONTHLY_MONTH_COUNT = 12
-CONTEXT_MONTH_COUNT = MONTHLY_MONTH_COUNT + 2
 
 PAGE_W = PAGE_H = None
 MARGIN = 34
@@ -188,11 +188,7 @@ def ekadashi_name(record, amanta=True):
 
 
 def context_months(start_year, start_month):
-  if start_month == 1:
-    year, month = start_year - 1, 12
-  else:
-    year, month = start_year, start_month - 1
-  return month_sequence(year, month, CONTEXT_MONTH_COUNT)
+  return context_month_sequence(start_year, start_month, MONTHLY_MONTH_COUNT)
 
 
 def tithi_name(number):
