@@ -181,7 +181,10 @@ def ics_calendar():
 @app.errorhandler(400)
 def bad_request(error):
   message = getattr(error, "description", None) or "Bad request"
-  if request.accept_mimetypes.quality("application/json") > 0 or request.path.startswith("/api/"):
+  # Browsers also send ``*/*``, which matches JSON; a failed PDF form must still
+  # show the page with its error, so JSON only when preferred over HTML.
+  wants_json = request.accept_mimetypes.best_match(["text/html", "application/json"]) == "application/json"
+  if wants_json or request.path.startswith("/api/"):
     return jsonify({"error": message}), 400
   return render_template("index.html", error=message), 400
 

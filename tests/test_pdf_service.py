@@ -64,6 +64,25 @@ class FlaskGenerationTests(unittest.TestCase):
     self.assertEqual(response.status_code, 400)
     self.assertIn(b"Invalid request", response.data)
 
+  def test_form_error_answers_html_to_a_browser(self):
+    # A browser's ``*/*;q=0.8`` also matches JSON; the failed form must still
+    # render the page with its error, and only a JSON-preferring client or an
+    # /api/ path gets JSON.
+    browser = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+    cases = {
+      browser: "text/html",
+      "*/*": "text/html",
+      "application/json": "application/json",
+      "application/json;q=0": "text/html"
+    }
+    for accept, mimetype in cases.items():
+      with self.subTest(accept=accept):
+        with mock.patch("webapp.app.generate_pdf", side_effect=ValueError("Invalid request")):
+          response = app.test_client().post("/generate", headers={"Accept": accept})
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.mimetype, mimetype)
+        self.assertIn(b"Invalid request", response.data)
+
 
 class CgiGenerationTests(unittest.TestCase):
 
