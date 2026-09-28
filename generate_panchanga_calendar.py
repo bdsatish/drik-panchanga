@@ -1135,7 +1135,7 @@ def build_pdf(location, start_year, start_month, output_path, festivals_path=Non
       pradosham_dates, sankashti_dates = special_weekday_dates(pradosham_dates, sankashti_dates)
     calendar_years = calendar_year_label(header_records, amanta=amanta)
     kali_ahargana = kali_ahargana_range(months)
-    masa_badges = masa_badges_by_date(context_records, amanta=amanta)
+    masa_badges = masa_badges_by_date(target_records, amanta=amanta)
 
     page_width, page_height = landscape(A4)
     output_path = Path(output_path)
