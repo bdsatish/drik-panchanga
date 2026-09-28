@@ -652,8 +652,9 @@ def tithi(jd, place):
   approx_end = inverse_lagrange(x, y, degrees_left)
   answer = [int(today), rise + approx_end]
 
-  # 5. Check for skipped tithi
-  moon_phase_tmrw = lunar_phase(rise + 1)
+  # 5. Check for skipped tithi at the next sunrise, not ``rise + 1``: sunrise
+  # drifts by minutes a day (hours near the polar circles).
+  moon_phase_tmrw = lunar_phase(sunrise(jd + 1, place))
   tomorrow = ceil(moon_phase_tmrw / 12)
   isSkipped = (tomorrow - today) % 30 > 1
   if isSkipped:
@@ -687,10 +688,9 @@ def nakshatra(jd, place):
   approx_end = inverse_lagrange(x, y, nakshatra_end_point(nak))
   answer = [int(nak), rise + approx_end]
 
-  # 4. Check for skipped nakshatra. Classify the raw (wrapped) longitude:
-  # ``nakshatra_pada`` expects [0, 360), and ``longitudes`` must stay wrapped
-  # here even though ``y`` above is unwrapped.
-  nak_tmrw = nakshatra_pada(longitudes[-1])[0]  # ignore pada
+  # 4. Check for skipped nakshatra at the next sunrise (see ``tithi``).
+  # ``nakshatra_pada`` expects a wrapped [0, 360) longitude, not ``y``.
+  nak_tmrw = nakshatra_pada(lunar_longitude(sunrise(jd + 1, place)))[0]  # ignore pada
   isSkipped = (nak_tmrw - nak) % 27 > 1
   if isSkipped:
     leap_nak = nak + 1
@@ -732,9 +732,10 @@ def yoga(jd, place):
   approx_end = inverse_lagrange(x, y, degrees_left)
   answer = [int(yog), rise + approx_end]
 
-  # 5. Check for skipped yoga
-  lunar_long_tmrw = lunar_longitude(rise + 1)
-  solar_long_tmrw = solar_longitude(rise + 1)
+  # 5. Check for skipped yoga at the next sunrise (see ``tithi``)
+  next_rise = sunrise(jd + 1, place)
+  lunar_long_tmrw = lunar_longitude(next_rise)
+  solar_long_tmrw = solar_longitude(next_rise)
   total_tmrw = (lunar_long_tmrw + solar_long_tmrw) % 360
   tomorrow = ceil(total_tmrw * 27 / 360)
   isSkipped = (tomorrow - yog) % 27 > 1

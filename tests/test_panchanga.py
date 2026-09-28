@@ -315,6 +315,35 @@ class YogaTests(PanchangaTestCase):
     self.assertEqual(result[0], 16)
 
 
+class SkipAtNextSunriseTests(PanchangaTestCase):
+  """A skip is judged at the next sunrise, which drifts from ``sunrise + 24 h``.
+
+  Each date had a skip either missed (the next sunrise shows two steps on) or
+  invented (the second element ends after the next sunrise).
+  """
+
+  def assert_hands_off(self, func, count, civil, place, skipped):
+    jd = gregorian_to_jd(civil)
+    today, tomorrow = func(jd, place), func(jd + 1, place)
+    self.assertEqual(len(today) == 4, skipped)
+    if skipped:
+      self.assertLess(today[3], sunrise(jd + 1, place))
+    last = today[-2]
+    self.assertIn(tomorrow[0], (last, last % count + 1))
+
+  def test_tithi(self):
+    self.assert_hands_off(tithi, 30, Date(2020, 12, 11), ujjain, skipped=True)
+    self.assert_hands_off(tithi, 30, Date(2003, 4, 22), ujjain, skipped=False)
+
+  def test_nakshatra(self):
+    self.assert_hands_off(nakshatra, 27, Date(2023, 8, 25), helsinki, skipped=True)
+    self.assert_hands_off(nakshatra, 27, Date(2022, 4, 15), helsinki, skipped=False)
+
+  def test_yoga(self):
+    self.assert_hands_off(yoga, 27, Date(2021, 8, 22), helsinki, skipped=True)
+    self.assert_hands_off(yoga, 27, Date(2021, 4, 24), helsinki, skipped=False)
+
+
 class MasaTests(PanchangaTestCase):
   """Masa computation with amanta and purnimanta systems."""
 
