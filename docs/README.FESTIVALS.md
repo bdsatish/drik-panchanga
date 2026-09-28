@@ -26,8 +26,9 @@ pinned to either section: you may move any catalog name between them. Placement
 controls scope: `yes` in `[festivals]` enables it in both PDFs, while `yes` in
 `[extra]` enables it only in the monthly PDF. Use `no` to disable it in that
 section. Every catalog name must appear in one of the two sections. Values may
-be `yes`/`no` (also `true`/`false`, `1`/`0`, `on`/`off`). Unknown names are
-rejected when the monthly selection is loaded. Override the path with
+be `yes`/`no` (also `true`/`false`, `1`/`0`, `on`/`off`, in any case); any
+other value, such as a typo like `yse`, is an error rather than a silent `no`.
+Unknown names are rejected when the monthly selection is loaded. Override the path with
 `--festivals FILE.cfg` if needed.
 
 The shipped defaults are a regional compromise; edit the cfg to match your

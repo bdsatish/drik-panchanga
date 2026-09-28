@@ -65,7 +65,9 @@ def load_festival_selection(path, include_extra=False):
   The ``[festivals]`` section is shared by both calendar formats.  The
   optional ``[extra]`` section is considered only when ``include_extra`` is
   true (the monthly calendar); annual-calendar callers therefore ignore it.
-  Extra names must not overlap with names in ``[festivals]``.
+  Extra names must not overlap with names in ``[festivals]``. Values are
+  configparser booleans (yes/no, true/false, on/off, 1/0); anything else is
+  an error rather than a silently disabled festival.
   """
   parser = configparser.ConfigParser(strict=True)
   parser.optionxform = str  # preserve festival name case
@@ -91,6 +93,9 @@ def load_festival_selection(path, include_extra=False):
   # monthly caller; the annual caller intentionally does not inspect it.
   if include_extra or not parser.has_section("extra"):
     missing = [name for name in catalog if name not in set(selected_names)]
+  not_boolean = [
+    f"{name} = {raw!r}" for name, raw in selected_items if raw.strip().lower() not in parser.BOOLEAN_STATES
+  ]
 
   problems = []
   if unknown:
@@ -101,10 +106,12 @@ def load_festival_selection(path, include_extra=False):
     problems.append("overlap between [festivals] and [extra]: " + ", ".join(overlap))
   if missing:
     problems.append("missing: " + ", ".join(missing))
+  if not_boolean:
+    problems.append("not yes/no: " + ", ".join(not_boolean))
   if problems:
     raise ValueError(f"Bad festival selection in {path} ({'; '.join(problems)})")
 
-  return [name for name, raw in selected_items if raw.strip().casefold() in ("yes", "true", "1", "on")]
+  return [name for name, raw in selected_items if parser.BOOLEAN_STATES[raw.strip().lower()]]
 
 
 def format_festival_dates(dates):

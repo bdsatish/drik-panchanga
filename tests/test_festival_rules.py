@@ -352,6 +352,34 @@ class FestivalSelectionTests(unittest.TestCase):
       with self.assertRaisesRegex(ValueError, "missing: Ugadi"):
         load_festival_selection(path)
 
+  def write_selection(self, directory, values, extra=()):
+    """``festivals.cfg`` with every catalog name ``yes`` unless ``values`` or ``[extra]`` says otherwise."""
+    extra = dict(extra)
+    lines = ["[festivals]"]
+    lines.extend(f"{name} = {values.get(name, 'yes')}" for name in all_festival_names() if name not in extra)
+    if extra:
+      lines.extend(["", "[extra]"] + [f"{name} = {value}" for name, value in extra.items()])
+    path = Path(directory) / "festivals.cfg"
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return path
+
+  def test_value_typo_raises_instead_of_disabling(self):
+    # "yse" used to read as "no" and silently drop the festival.
+    with TemporaryDirectory() as directory:
+      path = self.write_selection(directory, {"Ugadi": "yse", "Rama Navami": ""}, extra={"Janmashtami": "maybe"})
+      with self.assertRaisesRegex(ValueError, r"not yes/no: Ugadi = 'yse', Rama Navami = ''\)"):
+        load_festival_selection(path)
+      with self.assertRaisesRegex(ValueError, r"not yes/no: .*, Janmashtami = 'maybe'\)"):
+        load_festival_selection(path, include_extra=True)
+
+  def test_values_accept_configparser_booleans(self):
+    values = {"Ugadi": "No", "Deepavali": "off", "Onam": "YES", "Guru Purnima": "1", "Rama Navami": "true"}
+    with TemporaryDirectory() as directory:
+      enabled = load_festival_selection(self.write_selection(directory, values))
+    self.assertNotIn("Ugadi", enabled)
+    self.assertNotIn("Deepavali", enabled)
+    self.assertTrue({"Onam", "Guru Purnima", "Rama Navami"} <= set(enabled))
+
 
 class CanonicalRecordsTests(unittest.TestCase):
 
