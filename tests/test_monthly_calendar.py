@@ -756,8 +756,19 @@ class EkadashiNameTests(unittest.TestCase):
     }
     pdf = mock.Mock()
     pdf.stringWidth = lambda text, font, size: len(text) * size * 0.5
+    parana_start, parana_end = parana.parana_jd, parana.parana_end_jd
+
+    def fake_local_hm(jd, timezone_name, **kwargs):
+      # The parana window is the only call whose result is asserted; the
+      # sun/moon/varjyam lines format through the same helper.
+      if jd == parana_start:
+        return "05:47"
+      if jd == parana_end:
+        return "07:23"
+      return "00:00"
+
     with mock.patch("generate_monthly_calendar.day_details", return_value=([("S12", "20:00")], [], [])), \
-         mock.patch("generate_monthly_calendar.format_local_hm", side_effect=["05:47", "07:23"]):
+         mock.patch("generate_monthly_calendar.format_local_hm", side_effect=fake_local_hm):
       draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 26, civil, location, context, col=0)
     drawn = [c.args[2] for c in pdf.drawString.call_args_list]
     self.assertIn("Pāraṇā: 05:47 – 07:23", drawn)

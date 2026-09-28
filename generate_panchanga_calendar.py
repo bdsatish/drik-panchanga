@@ -267,6 +267,20 @@ def context_month_sequence(start_year, start_month, count):
   return _month_sequence(year, month + 1, count + 2 * CONTEXT_MARGIN_MONTHS)
 
 
+def require_supported_span(start_year, start_month, month_count):
+  """Reject a span whose months reach December 9999 or beyond.
+
+  Local-time conversions past 9999-12-31 raise a bare "year 10000 is out of
+  range" deep in the stack; catch it here so the error names the requested
+  start month instead. A span ending in December 9999 is rejected too: for
+  east-offset zones a late-UT event on the last day spills into year 10000.
+  """
+  last_year, last_month = _month_sequence(start_year, start_month, month_count)[-1]
+  if (last_year, last_month) >= (9999, 12):
+    raise ValueError(
+      f"Start month {start_year:04d}-{start_month:02d} would extend past year 9999, the last supported date.")
+
+
 def context_month_range(start_year, start_month):
   """The fourteen printed months with the context margin on each side."""
   return context_month_sequence(start_year, start_month, MONTH_COUNT)
@@ -891,7 +905,12 @@ def draw_month(pdf, year, month, records_by_date, masa_badges, festivals_by_date
       marker_bottom = row_y + 1.8
       pdf.setFont(PDF_FONT_BOLD, marker_size)
       for marker_index, number in enumerate(festival_numbers):
-        pdf.drawRightString(x + tithi_column_width - 1.0, marker_bottom + marker_index * marker_spacing, str(number))
+        baseline = marker_bottom + marker_index * marker_spacing
+        # On masa-start days the badge owns the top-right; keep the
+        # superscripts below it instead of colliding.
+        if is_masa_start and baseline > row_y + 5.5:
+          break
+        pdf.drawRightString(x + tithi_column_width - 1.0, baseline, str(number))
 
   bottom = rows_top - 31 * ROW_HEIGHT
   pdf.setStrokeColor(GRID)
@@ -1054,6 +1073,7 @@ def build_pdf(location, start_year, start_month, output_path, festivals_path=Non
     recurring = require_recurring(recurring)
     panchanga.set_coordinate_selection(coordinate_selection)
     months = month_range(start_year, start_month)
+    require_supported_span(start_year, start_month, MONTH_COUNT)
     range_start = Date(start_year, start_month, 1)
     end_year, end_month = months[-1]
     range_end = Date(end_year, end_month, calendar.monthrange(end_year, end_month)[1])
@@ -1115,7 +1135,7 @@ def build_pdf(location, start_year, start_month, output_path, festivals_path=Non
       pradosham_dates, sankashti_dates = special_weekday_dates(pradosham_dates, sankashti_dates)
     calendar_years = calendar_year_label(header_records, amanta=amanta)
     kali_ahargana = kali_ahargana_range(months)
-    masa_badges = masa_badges_by_date(target_records, amanta=amanta)
+    masa_badges = masa_badges_by_date(context_records, amanta=amanta)
 
     page_width, page_height = landscape(A4)
     output_path = Path(output_path)

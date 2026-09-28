@@ -65,6 +65,7 @@ from generate_panchanga_calendar import (
   require_coordinate_selection,
   require_month_system,
   require_start_month,
+  require_supported_span,
   resolve_festivals,
   resolve_location,
   sanskrit_names,
@@ -437,8 +438,12 @@ def draw_cell(pdf, x, y_top, row_h, cell_w, day, civil, location, context, col):
   if record is None:
     return
   line_y = y_top - 25
+  # The sun/moon/varjyam block is drawn at the cell bottom after all content.
+  # Cap content lines so the two never overlap on a busy day.
+  bottom_lines = sun_moon_lines(location, civil) + varjyam_lines(location, civil)
+  min_line_y = y_bottom + 4 + 7.0 * len(bottom_lines) + 2.0
 
-  if raasi_num is not None:
+  if raasi_num is not None and line_y >= min_line_y:
     zodiac_index = (int(raasi_num) - 1) % 12
     raasi_name = sanskrit_names().get("zodiac", {}).get(str(zodiac_index), str(raasi_num)).capitalize()
     solar_label = f"{raasi_name} {solar_day}"
@@ -461,31 +466,39 @@ def draw_cell(pdf, x, y_top, row_h, cell_w, day, civil, location, context, col):
   # never to garbage end times.
   tithi_lines, naks_lines, yoga_names = details if details else ([], [], [])
   for code, end_hm in tithi_lines:
+    if line_y < min_line_y:
+      break
     pdf.setFillColor(INK)
     pdf.setFont(PDF_FONT, 6.8)
     pdf.drawString(x + 4, line_y, f"{masa_prefix} {code} {end_hm}")
     line_y -= 8.0
   for name, end_hm in naks_lines:
+    if line_y < min_line_y:
+      break
     pdf.setFillColor(NAKS_INK)
     pdf.setFont(PDF_FONT, 6.5)
     pdf.drawString(x + 4, line_y, f"{name} {end_hm}")
     line_y -= 8.0
   for name in yoga_names:
+    if line_y < min_line_y:
+      break
     pdf.setFillColor(YOGA_INK)
     pdf.setFont(PDF_FONT_ITALIC, 6.5)
     pdf.drawString(x + 4, line_y, name)
     line_y -= 8.0
-  if is_ekadashi:
+  if is_ekadashi and line_y >= min_line_y:
     ek_name = ekadashi_name(record, amanta=context.get("amanta", True))
     if ek_name:
       pdf.setFillColor(TEAL)
       pdf.setFont(PDF_FONT_ITALIC, 6.8)
       max_text_w = cell_w - 10
       for wrapped in _wrap_lines(pdf, ek_name, PDF_FONT_ITALIC, 6.8, max_text_w):
+        if line_y < min_line_y:
+          break
         pdf.drawString(x + 4, line_y, wrapped)
         line_y -= 8.0
   parana = context.get("ekadashi_parana", {}).get(civil)
-  if parana is not None:
+  if parana is not None and line_y >= min_line_y:
     # Hours past this cell's midnight (24:00+ if the window spills past it).
     start_hm = format_local_hm(parana.parana_jd, location.timezone_name, anchor_civil=civil,
                                longitude=location.longitude)
@@ -500,25 +513,32 @@ def draw_cell(pdf, x, y_top, row_h, cell_w, day, civil, location, context, col):
     pdf.setFillColor(CRIMSON)
     pdf.setFont(PDF_FONT_ITALIC, 6.8)
     for wrapped in _wrap_lines(pdf, name, PDF_FONT_ITALIC, 6.8, max_text_w):
+      if line_y < min_line_y:
+        break
       pdf.drawString(x + 4, line_y, wrapped)
       line_y -= 8.0
   for label in context.get("dst_labels_by_date", {}).get(civil, []):
+    if line_y < min_line_y:
+      break
     pdf.setFillColor(GREY)
     pdf.setFont(PDF_FONT, 5.5)
     pdf.drawString(x + 4, line_y, label)
     line_y -= 7.0
 
   for kind, _phase, max_jd in context.get("eclipse_details_by_date", {}).get(civil, []):
+    if line_y < min_line_y:
+      break
     pdf.setFillColor(BROWN)
     pdf.setFont(PDF_FONT_ITALIC, 6.5)
     hm = format_local_hm(max_jd, location.timezone_name, anchor_civil=civil, longitude=location.longitude)
     pdf.drawString(x + 4, line_y, f"{kind} eclipse")
     line_y -= 8.0
+    if line_y < min_line_y:
+      break
     pdf.drawString(x + 4, line_y, f"max {hm}")
     line_y -= 8.0
 
   bottom_y = y_bottom + 4
-  bottom_lines = sun_moon_lines(location, civil) + varjyam_lines(location, civil)
   for i, text in enumerate(bottom_lines):
     pdf.setFillColor(RED if text.startswith("Varjyam") else GREY)
     # 5.5 (not 5.8): the Sun line now carries the pratah sandhya bracket and
@@ -708,6 +728,7 @@ def _build_monthly_pdf_unlocked(location, start_year, start_month, output_path, 
   panchanga.set_coordinate_selection(coordinate_selection)
 
   months = month_sequence(start_year, start_month, MONTHLY_MONTH_COUNT)
+  require_supported_span(start_year, start_month, MONTHLY_MONTH_COUNT)
   context = collect_context(context_months(start_year, start_month), location, Path(festivals_path), amanta=amanta)
 
   output_path = Path(output_path)
