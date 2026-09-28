@@ -787,9 +787,9 @@ def _check_reportlab():
 
 
 def main(argv=None):
-  _check_reportlab()
   parser = argument_parser()
   args = parser.parse_args(attach_option_values(sys.argv[1:] if argv is None else argv))
+  _check_reportlab()
   try:
     start_year, start_month = require_start_month(args.start)
     location = resolve_location(args.city, args.place)
