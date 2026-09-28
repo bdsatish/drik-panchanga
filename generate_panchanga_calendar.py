@@ -788,6 +788,13 @@ def draw_day_column(pdf, x, top, width):
     pdf.line(x, y, x + width, y)
 
 
+def month_header_label(year, month):
+  """``Mar '26`` for four-digit CE years; the full year before 1000 CE (``Mar 50``, ``Mar -500``)."""
+  if year >= 1000:
+    return f"{calendar.month_abbr[month]} '{year % 100:02d}"
+  return f"{calendar.month_abbr[month]} {year}"
+
+
 def draw_month(pdf, year, month, records_by_date, masa_badges, festivals_by_date, ekadashi_dates, eclipse_dates,
                solar_by_date, x, top, width, pradosham_dates=(), sankashti_dates=()):
   tithi_column_width = width * TITHI_COLUMN_RATIO
@@ -796,8 +803,7 @@ def draw_month(pdf, year, month, records_by_date, masa_badges, festivals_by_date
 
   pdf.setFillColor(ACCENT)
   pdf.rect(x, top - MONTH_HEADER_HEIGHT, width, MONTH_HEADER_HEIGHT, stroke=0, fill=1)
-  draw_centered(pdf, f"{calendar.month_abbr[month]} '{str(year)[2:]}", x + width / 2, top - 14, PDF_FONT_BOLD, 8.0,
-                white)
+  draw_centered(pdf, month_header_label(year, month), x + width / 2, top - 14, PDF_FONT_BOLD, 8.0, white)
 
   header_top = top - MONTH_HEADER_HEIGHT
   pdf.setFillColor(HexColor("#E2E7EF"))

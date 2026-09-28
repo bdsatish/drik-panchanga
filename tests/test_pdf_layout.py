@@ -44,6 +44,7 @@ from generate_panchanga_calendar import (
   fitted_font_size,
   kali_ahargana_range,
   load_location,
+  month_header_label,
   month_range,
   sankranti_key_line,
   solar_dates_by_date,
@@ -72,6 +73,13 @@ class PdfLayoutTests(unittest.TestCase):
         self.assertEqual(context[0], first_context)
         self.assertEqual(context[1:-1], months)
         self.assertEqual(context[-1], last_context)
+
+  def test_month_header_shows_the_full_year_before_1000_ce(self):
+    # ``str(year)[2:]`` printed "Mar '" for year 50 and "Mar '00" for -500.
+    cases = {2026: "Mar '26", 1000: "Mar '00", 999: "Mar 999", 50: "Mar 50", 0: "Mar 0", -500: "Mar -500"}
+    for year, label in cases.items():
+      with self.subTest(year=year):
+        self.assertEqual(month_header_label(year, 3), label)
 
   def test_generated_calendar_has_exactly_one_page(self):
     import generate_panchanga_calendar as calendar_module
