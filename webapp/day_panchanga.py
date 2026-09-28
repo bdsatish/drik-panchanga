@@ -38,6 +38,9 @@ def parse_civil_date(text):
     day, month, year = int(parts[0]), int(parts[1]), int(parts[2])
   except ValueError:
     raise ValueError("Date must be DD/MM/YYYY (year 0 = 1 BCE, -1 = 2 BCE).") from None
+  # Same four-digit span as ``require_start_month``; the ephemeris ends near -13000.
+  if not -9999 <= year <= 9999:
+    raise ValueError(f"Year {year} is out of range (-9999 to 9999).")
   # swe.julday would silently roll 31/4 or 30/2 into the next month.
   if not panchanga.swe.date_conversion(year, month, day)[0]:
     raise ValueError(f"Invalid date {text!r}")

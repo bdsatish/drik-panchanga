@@ -105,7 +105,10 @@ def _instant_offset_hours(jd, timezone_name, longitude=None):
     return utc_offset_hours(timezone_name, _proxy_civil(jd), longitude)
   year, month, day, hours = jd_to_gregorian(jd)
   utc = datetime(year, month, day, tzinfo=timezone.utc) + timedelta(seconds=round(hours * 3600))
-  local = utc.astimezone(tzinfo_for(timezone_name))
+  try:
+    local = utc.astimezone(tzinfo_for(timezone_name))
+  except OverflowError:  # the local time falls in year 10000
+    raise ValueError(f"Time {utc:%Y-%m-%d %H:%M} UTC is past the last supported local date, 9999-12-31.") from None
   if longitude is not None and local.tzname() == "LMT":
     return longitude / 15.0
   return local.utcoffset().total_seconds() / 3600

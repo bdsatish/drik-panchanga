@@ -177,6 +177,18 @@ class DayPanchangaMasaRituTests(unittest.TestCase):
     self.assertEqual(parse_civil_date("18/01/0"), Date(0, 1, 18))
     self.assertEqual(parse_civil_date("29/02/0"), Date(0, 2, 29))
 
+  def test_out_of_range_years_are_client_errors(self):
+    # Past the ephemeris (-13000) raised swisseph.Error, and a time in year
+    # 10000 raised OverflowError: both answered 500 instead of 400.
+    from webapp.app import app
+    client = app.test_client()
+    for date in ("01/01/-13000", "01/01/10000", "31/12/9999"):
+      with self.subTest(date=date):
+        response = client.get(f"/api/panchanga?city=Ujjain&date={date}")
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("error", response.get_json())
+    self.assertEqual(client.get("/api/panchanga.ics?city=Ujjain&start=9999-12").status_code, 400)
+
 
 class DstClockTests(unittest.TestCase):
   """Day view: a Hindu-day tail crossing a DST change reads the clock."""
