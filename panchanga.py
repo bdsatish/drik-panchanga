@@ -1302,16 +1302,21 @@ def ascendant(jd, place):
   """Lagna (=ascendant) calculation at any given time & place"""
   lat, lon, tz = place
   jd_utc = jd - (tz / 24.)
-  set_ayanamsa_mode()  # needed for swe.houses_ex()
+  # swe.houses_ex honours the sidereal flag with the currently set ayanamsa;
+  # in tropical mode no ayanamsa applies, so leave the sid mode untouched.
+  sidereal = coordinate_flag == swe.FLG_SIDEREAL
+  if sidereal:
+    set_ayanamsa_mode()
 
   # returns two arrays, cusps and ascmc, where ascmc[0] = Ascendant
-  lagna = swe.houses_ex(jd_utc, lat, lon, flags=swe.FLG_SIDEREAL)[1][0]
+  lagna = swe.houses_ex(jd_utc, lat, lon, flags=coordinate_flag)[1][0]
   # 12 zodiac signs span 360°, so each one takes 30°
   # 0 = Mesha, 1 = Vrishabha, ..., 11 = Meena
   constellation = int(lagna / 30)
   coordinates = to_dms(lagna % 30)
 
-  reset_ayanamsa_mode()
+  if sidereal:
+    reset_ayanamsa_mode()
   return [constellation, coordinates, nakshatra_pada(lagna)]
 
 
