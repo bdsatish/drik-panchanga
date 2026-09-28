@@ -437,25 +437,16 @@ def draw_cell(pdf, x, y_top, row_h, cell_w, day, civil, location, context, col):
 
   if record is None:
     return
-  line_y = y_top - 25
-  # The sun/moon/varjyam block is drawn at the cell bottom after all content.
-  # Cap content lines so the two never overlap on a busy day.
-  bottom_lines = sun_moon_lines(location, civil) + varjyam_lines(location, civil)
-  min_line_y = y_bottom + 4 + 7.0 * len(bottom_lines) + 2.0
-
-  if raasi_num is not None and line_y >= min_line_y:
+  # Content lines, top down: (advance to the next line, [(text, font, size, color), ...]).
+  lines = []
+  if raasi_num is not None:
     zodiac_index = (int(raasi_num) - 1) % 12
     raasi_name = sanskrit_names().get("zodiac", {}).get(str(zodiac_index), str(raasi_num)).capitalize()
-    solar_label = f"{raasi_name} {solar_day}"
+    solar_parts = [(f"{raasi_name} {solar_day}", PDF_FONT, 6.8, INK)]
     shraddha_tithi = context.get("shraddha_tithis", {}).get(civil)
-    pdf.setFont(PDF_FONT, 6.8)
-    pdf.setFillColor(INK)
-    pdf.drawString(x + 4, line_y, solar_label)
     if shraddha_tithi is not None:
-      pdf.setFillColor(BROWN)
-      solar_label_width = pdf.stringWidth(solar_label, PDF_FONT, 6.8)
-      pdf.drawString(x + 4 + solar_label_width, line_y, f" / [{tithi_code(shraddha_tithi)}]")
-    line_y -= 8.0
+      solar_parts.append((f" / [{tithi_code(shraddha_tithi)}]", PDF_FONT, 6.8, BROWN))
+    lines.append((8.0, solar_parts))
 
   masa_display = display_masa(record, amanta=context.get("amanta", True))
   masa_name = sanskrit_names().get("masas", {}).get(masa_display.lstrip("A"), masa_display.lstrip("A"))
@@ -466,77 +457,51 @@ def draw_cell(pdf, x, y_top, row_h, cell_w, day, civil, location, context, col):
   # never to garbage end times.
   tithi_lines, naks_lines, yoga_names = details if details else ([], [], [])
   for code, end_hm in tithi_lines:
-    if line_y < min_line_y:
-      break
-    pdf.setFillColor(INK)
-    pdf.setFont(PDF_FONT, 6.8)
-    pdf.drawString(x + 4, line_y, f"{masa_prefix} {code} {end_hm}")
-    line_y -= 8.0
+    lines.append((8.0, [(f"{masa_prefix} {code} {end_hm}", PDF_FONT, 6.8, INK)]))
   for name, end_hm in naks_lines:
-    if line_y < min_line_y:
-      break
-    pdf.setFillColor(NAKS_INK)
-    pdf.setFont(PDF_FONT, 6.5)
-    pdf.drawString(x + 4, line_y, f"{name} {end_hm}")
-    line_y -= 8.0
+    lines.append((8.0, [(f"{name} {end_hm}", PDF_FONT, 6.5, NAKS_INK)]))
   for name in yoga_names:
-    if line_y < min_line_y:
-      break
-    pdf.setFillColor(YOGA_INK)
-    pdf.setFont(PDF_FONT_ITALIC, 6.5)
-    pdf.drawString(x + 4, line_y, name)
-    line_y -= 8.0
-  if is_ekadashi and line_y >= min_line_y:
+    lines.append((8.0, [(name, PDF_FONT_ITALIC, 6.5, YOGA_INK)]))
+  max_text_w = cell_w - 10
+  if is_ekadashi:
     ek_name = ekadashi_name(record, amanta=context.get("amanta", True))
     if ek_name:
-      pdf.setFillColor(TEAL)
-      pdf.setFont(PDF_FONT_ITALIC, 6.8)
-      max_text_w = cell_w - 10
       for wrapped in _wrap_lines(pdf, ek_name, PDF_FONT_ITALIC, 6.8, max_text_w):
-        if line_y < min_line_y:
-          break
-        pdf.drawString(x + 4, line_y, wrapped)
-        line_y -= 8.0
+        lines.append((8.0, [(wrapped, PDF_FONT_ITALIC, 6.8, TEAL)]))
   parana = context.get("ekadashi_parana", {}).get(civil)
-  if parana is not None and line_y >= min_line_y:
+  if parana is not None:
     # Hours past this cell's midnight (24:00+ if the window spills past it).
     start_hm = format_local_hm(parana.parana_jd, location.timezone_name, anchor_civil=civil,
                                longitude=location.longitude)
     end_hm = format_local_hm(parana.parana_end_jd, location.timezone_name, anchor_civil=civil,
                              longitude=location.longitude)
-    pdf.setFillColor(TEAL)
-    pdf.setFont(PDF_FONT_ITALIC, 6.8)
-    pdf.drawString(x + 4, line_y, f"Pāraṇā: {start_hm} – {end_hm}")
-    line_y -= 7.5
-  max_text_w = cell_w - 10
+    lines.append((7.5, [(f"Pāraṇā: {start_hm} – {end_hm}", PDF_FONT_ITALIC, 6.8, TEAL)]))
   for name in festivals:
-    pdf.setFillColor(CRIMSON)
-    pdf.setFont(PDF_FONT_ITALIC, 6.8)
     for wrapped in _wrap_lines(pdf, name, PDF_FONT_ITALIC, 6.8, max_text_w):
-      if line_y < min_line_y:
-        break
-      pdf.drawString(x + 4, line_y, wrapped)
-      line_y -= 8.0
+      lines.append((8.0, [(wrapped, PDF_FONT_ITALIC, 6.8, CRIMSON)]))
   for label in context.get("dst_labels_by_date", {}).get(civil, []):
-    if line_y < min_line_y:
-      break
-    pdf.setFillColor(GREY)
-    pdf.setFont(PDF_FONT, 5.5)
-    pdf.drawString(x + 4, line_y, label)
-    line_y -= 7.0
-
+    lines.append((7.0, [(label, PDF_FONT, 5.5, GREY)]))
   for kind, _phase, max_jd in context.get("eclipse_details_by_date", {}).get(civil, []):
-    if line_y < min_line_y:
-      break
-    pdf.setFillColor(BROWN)
-    pdf.setFont(PDF_FONT_ITALIC, 6.5)
     hm = format_local_hm(max_jd, location.timezone_name, anchor_civil=civil, longitude=location.longitude)
-    pdf.drawString(x + 4, line_y, f"{kind} eclipse")
-    line_y -= 8.0
-    if line_y < min_line_y:
-      break
-    pdf.drawString(x + 4, line_y, f"max {hm}")
-    line_y -= 8.0
+    lines.append((8.0, [(f"{kind} eclipse", PDF_FONT_ITALIC, 6.5, BROWN)]))
+    lines.append((8.0, [(f"max {hm}", PDF_FONT_ITALIC, 6.5, BROWN)]))
+
+  # A busy day shrinks its line spacing and type together, so every line
+  # still fits above the sun/moon/varjyam block at the cell bottom.
+  bottom_lines = sun_moon_lines(location, civil) + varjyam_lines(location, civil)
+  line_y = y_top - 25
+  room = line_y - (y_bottom + 4 + 7.0 * len(bottom_lines) + 2.0)
+  span = sum(advance for advance, _parts in lines[:-1])
+  scale = room / span if span > room else 1.0
+  for advance, parts in lines:
+    part_x = x + 4
+    for index, (text, font, size, color) in enumerate(parts):
+      pdf.setFillColor(color)
+      pdf.setFont(font, size * scale)
+      pdf.drawString(part_x, line_y, text)
+      if index + 1 < len(parts):
+        part_x += pdf.stringWidth(text, font, size * scale)
+    line_y -= advance * scale
 
   bottom_y = y_bottom + 4
   for i, text in enumerate(bottom_lines):
