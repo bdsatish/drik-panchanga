@@ -137,7 +137,7 @@ def vimsottari_antara(maha_lord, bhukti_lord, start_date):
 
 
 def where_occurs(jd, some_dict):
-  """Returns minimum key such that some_dict[key] < jd"""
+  """Returns the maximum (last) key such that some_dict[key] < jd"""
   # It is assumed that the dict is sorted in ascending order
   # i.e. some_dict[i] < some_dict[j]  where i < j
   for key in reversed(some_dict.keys()):
@@ -182,7 +182,7 @@ if __name__ == "__main__":
     bhuktis = vimsottari_bhukti(i, dashas[i])
     for j in bhuktis:
       jd = bhuktis[j]
-      y, m, d, h = swe.revjul(round(jd + tz))
+      y, m, d, h = swe.revjul(round(jd + tz / 24))
       print('%8s: %04d-%02d-%02d\t%.6lf' % (get_planet_name(j), y, m, d, jd))
 
   jd = 2456950  # Some random date, ex: current date
@@ -190,5 +190,5 @@ if __name__ == "__main__":
   print("---- JD %d falls in %s dasa/%s bhukti -----" % (jd, get_planet_name(i), get_planet_name(j)))
   for k in antara:
     jd = antara[k]
-    y, m, d, h = swe.revjul(round(jd + tz))
+    y, m, d, h = swe.revjul(round(jd + tz / 24))
     print('%8s: %04d-%02d-%02d\t%.6lf' % (get_planet_name(k), y, m, d, jd))
