@@ -9,7 +9,7 @@ from unittest import mock
 from datetime_helper import format_utc_offset
 from generate_monthly_calendar import argument_parser as monthly_argument_parser
 from generate_panchanga_calendar import (Location, argument_parser as annual_argument_parser, attach_option_values,
-                                         load_custom_location, require_start_month, resolve_location)
+                                         load_custom_location, load_location, require_start_month, resolve_location)
 from webapp.app import app
 from webapp.day_panchanga import compute_day_panchanga
 
@@ -159,10 +159,16 @@ class BceStartMonthTests(unittest.TestCase):
         annual.main(["--city", "Ujjain", "--start=-500-03", "--output", str(output)])
       self.assertTrue(output.stat().st_size > 0)
 
-  def test_ics_endpoint_accepts_a_bce_start(self):
+  def test_ics_endpoint_rejects_a_bce_start(self):
+    # iCalendar DATE values allow only four-digit years, so a BCE span
+    # cannot be exported. The endpoint must say so (400), not emit
+    # DTSTART;VALUE=DATE:-5000301 that calendar apps reject.
+    from webapp.ics_service import generate_ics
+    with self.assertRaisesRegex(ValueError, "four-digit years"):
+      generate_ics(load_location("Ujjain"), -500, 3)
     response = app.test_client().get("/api/panchanga.ics?city=Ujjain&start=-500-03")
-    self.assertEqual(response.status_code, 200)
-    self.assertIn(b"BEGIN:VCALENDAR", response.data)
+    self.assertEqual(response.status_code, 400)
+    self.assertIn(b"four-digit years", response.data)
 
   def test_pdf_endpoint_accepts_a_bce_start(self):
     response = app.test_client().post("/generate", data={

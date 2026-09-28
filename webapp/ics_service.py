@@ -70,6 +70,8 @@ def _fmt_interval(start, end, clock):
 
 def generate_ics(location, start_year, start_month, month_system="amanta", coordinate_selection="citra"):
   """Generate a feed while holding coordinate state for the full span."""
+  if start_year < 1:
+    raise ValueError("ICS dates require year 1 CE or later (the iCalendar format allows only four-digit years).")
   with panchanga.coordinate_calculation_lock:
     amanta = require_month_system(month_system)
     month_key = "amanta" if amanta else "purnimanta"
