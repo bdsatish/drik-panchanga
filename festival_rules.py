@@ -221,21 +221,24 @@ def select_tithi_dates(records, tithi, masa=None, allow_adhika=False):
 
 
 def select_plain_tithi_dates(records, masa, tithi, allow_adhika=False):
-  """Civil days for a plain masa+tithi festival (adhika-preferring when allowed)."""
+  """Civil days for a plain masa+tithi festival.
+
+  With ``allow_adhika``, a year with an adhika ``masa`` keeps the adhika date
+  and drops the nija month that follows it; other years keep their nija date.
+  """
   matches = select_tithi_dates(records, tithi, masa=masa, allow_adhika=allow_adhika)
-  if not allow_adhika or not matches:
-    selected = matches
-  else:
-    records_by_date = {}
-    for record in records:
-      records_by_date[record.civil_date] = record
-    adhika_matches = []
-    for civil_date in matches:
-      record = records_by_date[civil_date]
-      if record.is_adhika or record.masa.startswith("A"):
-        adhika_matches.append(civil_date)
-    selected = adhika_matches if adhika_matches else matches
-  return selected
+  if not allow_adhika:
+    return matches
+  nija, adhika = str(masa), "A" + str(masa)
+  after_adhika = False
+  nija_after_adhika = set()
+  for record in sorted(records, key=lambda record: record.civil_date):
+    if record.masa == nija:
+      if after_adhika:
+        nija_after_adhika.add(record.civil_date)
+    else:
+      after_adhika = record.masa == adhika
+  return [civil_date for civil_date in matches if civil_date not in nija_after_adhika]
 
 
 def select_varamahalakshmi_dates(records):

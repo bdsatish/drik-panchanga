@@ -75,8 +75,8 @@ sunrise.
 - If the tithi is skipped between sunrises (kshaya), the later civil day is kept.
 
 Adhika (intercalary) masas are skipped for ordinary festivals. Ugadi is the
-exception: when both adhika and nija Chaitra `S1` occur, only the adhika date is
-marked.
+exception: in a year with both adhika and nija Chaitra `S1`, only the adhika date
+is marked; other years keep their nija date.
 
 Most numbered festivals are plain lunar-masa + tithi pairs under that rule (for
 example Rama Navami = Chaitra `S9`, Deepavali = Ashvina `K15`). The catalog

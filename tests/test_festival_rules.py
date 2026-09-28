@@ -407,6 +407,18 @@ class SelectPlainTithiTests(unittest.TestCase):
     ]
     self.assertEqual(select_plain_tithi_dates(records, 1, "S1", allow_adhika=True), [Date(2030, 4, 9)])
 
+  def test_ugadi_adhika_year_does_not_hide_another_year(self):
+    # Adhika Chaitra 2029 used to drop the nija Ugadi of 2028 from the same span.
+    records = [
+      festival_record(Date(2028, 3, 26), "K15", masa="12"),
+      festival_record(Date(2028, 3, 27), "S1", masa="1"),
+      festival_record(Date(2029, 3, 15), "K15", masa="12"),
+      festival_record(Date(2029, 3, 16), "S1", masa="A1", is_adhika=True),
+      festival_record(Date(2029, 4, 15), "S1", masa="1"),
+    ]
+    self.assertEqual(select_plain_tithi_dates(records, 1, "S1", allow_adhika=True),
+                     [Date(2028, 3, 27), Date(2029, 3, 16)])
+
   def test_vriddhi_keeps_former_of_consecutive_matches(self):
     records = [
       festival_record(Date(2030, 8, 14), "K8", masa="5", is_adhika=False, nakshatra=1, sunrise_jd=0.0),
