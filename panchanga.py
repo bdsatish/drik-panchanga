@@ -370,9 +370,15 @@ def inverse_lagrange(x, y, ya):
 
 
 def nakshatra_end_point(nakshatra_number):
-  """Given nakshatra_number [1..27] return the longitude at which it ends"""
-  end = garga_end_points[nakshatra_number] if nakshatra_system == 'unequal' else nakshatra_number * 360 / 27
-  return end
+  """Given nakshatra_number [1..28] return the longitude at which it ends.
+
+  28 is Asvini past the 360° wrap: a skip out of Revati on an unwrapped window.
+  """
+  if nakshatra_system != 'unequal':
+    return nakshatra_number * 360 / 27
+  if nakshatra_number > 27:
+    return 360 + garga_end_points[nakshatra_number - 27]
+  return garga_end_points[nakshatra_number]
 
 
 def nakshatra_pada(longitude):

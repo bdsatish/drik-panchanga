@@ -343,6 +343,15 @@ class SkipAtNextSunriseTests(PanchangaTestCase):
     self.assert_hands_off(yoga, 27, Date(2021, 8, 22), helsinki, skipped=True)
     self.assert_hands_off(yoga, 27, Date(2021, 4, 24), helsinki, skipped=False)
 
+  def test_garga_skip_out_of_revati(self):
+    # Used to raise IndexError: the skipped Asvini is nakshatra 28 on the unwrapped window.
+    set_nakshatra_system('garga')
+    self.addCleanup(set_nakshatra_system)
+    jd = gregorian_to_jd(Date(2032, 11, 15))
+    result = nakshatra(jd, ujjain)
+    self.assertEqual(result[0::2], [27, 1])
+    self.assertLess(result[3], sunrise(jd + 1, ujjain))
+
 
 class MasaTests(PanchangaTestCase):
   """Masa computation with amanta and purnimanta systems."""
@@ -911,9 +920,11 @@ class CalendarUtilityTests(PanchangaTestCase):
 
   def test_nakshatra_end_point_equal_and_unequal(self):
     self.assertAlmostEqual(nakshatra_end_point(1), 360 / 27)
+    self.assertAlmostEqual(nakshatra_end_point(28), 360 + 360 / 27)
     set_nakshatra_system("unequal")
     self.addCleanup(set_nakshatra_system, "equal")
     self.assertAlmostEqual(nakshatra_end_point(1), 13 + 20 / 60)
+    self.assertAlmostEqual(nakshatra_end_point(28), 360 + 13 + 20 / 60)
 
 
 class EphemerisCacheTests(PanchangaTestCase):
