@@ -121,6 +121,12 @@ class AttachOptionValuesTests(unittest.TestCase):
     self.assertEqual(attach_option_values(["--city", "Ujjain", "--start", "-500-03"]),
                      ["--city", "Ujjain", "--start=-500-03"])
 
+  def test_leaves_a_flag_after_a_flag_alone(self):
+    # --start with no value must error as a missing value, not as
+    # "--start=--city" plus "unrecognized arguments: Ujjain".
+    argv = ["--start", "--city", "Ujjain"]
+    self.assertEqual(attach_option_values(argv), argv)
+
 
 class BceStartMonthTests(unittest.TestCase):
   """``--start`` accepts astronomical years, as the day view and the API already do."""

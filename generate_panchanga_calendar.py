@@ -545,16 +545,19 @@ NEGATIVE_LEADING_OPTIONS = ("--place", "--start")
 
 
 def attach_option_values(argv, options=NEGATIVE_LEADING_OPTIONS):
-  """Glue a value to its flag when the value starts with a minus.
+  """Glue a value to its flag when the value starts with a single minus.
 
   ``--start -500-03`` becomes ``--start=-500-03``: argparse would otherwise
   read the leading ``-`` of a BCE year or a south latitude as the start of
-  another option. Values that do not start with ``-`` are left untouched.
+  another option. Values that do not start with ``-`` are left untouched, as
+  are values starting with ``--``: ``--start --city`` must stay split so
+  argparse reports the missing value instead of ``unrecognized arguments``.
   """
   argv = list(argv)
   for index, item in enumerate(argv):
-    if item in options and index + 1 < len(argv) and argv[index + 1].startswith("-"):
-      argv[index] = item + "=" + argv[index + 1]
+    following = argv[index + 1] if index + 1 < len(argv) else ""
+    if item in options and following.startswith("-") and not following.startswith("--"):
+      argv[index] = item + "=" + following
       del argv[index + 1]
   return argv
 
