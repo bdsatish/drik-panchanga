@@ -319,8 +319,6 @@ def postpone_upakarma_if_eclipse(primary, fallback, geopos, timezone_name):
     The eclipse is tested against the Hindu day (``[sunrise, next sunrise)``)
     that begins on the primary date, matching the printed eclipse mark.
     """
-  if not primary:
-    return list(fallback)
   if geopos is not None and timezone_name is None:
     log.error("Upakarma eclipse check skipped: no timezone name")
     return list(primary)
@@ -342,42 +340,60 @@ def select_yajur_upakarma_dates(records, geopos=None, timezone_name=None):
   return postpone_upakarma_if_eclipse(primary, fallback, geopos, timezone_name)
 
 
-def _nija_nakshatra_dates(records, masa, nakshatra):
+def _month_runs(records, month_of):
+  """Date-ordered ``[(month, records), ...]``, one entry per run of equal ``month_of(record)``."""
+  runs = []
+  for record in sorted(records, key=lambda record: record.civil_date):
+    month = month_of(record)
+    if runs and runs[-1][0] == month:
+      runs[-1][1].append(record)
+    else:
+      runs.append((month, [record]))
+  return runs
+
+
+def _dates_per_month(runs, month, pick, fallback_month=None):
+  """``pick(records)`` for each ``month`` run; runs where it finds nothing are dropped.
+
+  With ``fallback_month``, such a run (a kṣaya month) takes ``pick`` of the
+  nearest ``fallback_month`` run instead, at most two runs away since an adhika
+  month can sit between them. Deciding per run keeps one year's kṣaya from
+  borrowing, or hiding, another year's date. The first and last runs may be
+  cut by the window edge, so finding nothing there does not prove a kṣaya.
+  """
+  dates = []
+  for index, (name, run) in enumerate(runs):
+    if name != month:
+      continue
+    date = pick(run)
+    if date is None and fallback_month is not None and 0 < index < len(runs) - 1:
+      for offset in (1, -1, 2, -2):
+        if 0 <= index + offset < len(runs) and runs[index + offset][0] == fallback_month:
+          date = pick(runs[index + offset][1])
+          break
+    if date is not None:
+      dates.append(date)
+  return dates
+
+
+def _nakshatra_date(records, nakshatra):
+  """First civil date with ``nakshatra`` at sunrise in ``records``, or ``None``."""
+  return next((record.civil_date for record in records if record.nakshatra == nakshatra), None)
+
+
+def _nija_nakshatra_dates(records, masa, nakshatra, fallback_masa=None):
   """First non-adhika civil date with ``nakshatra`` in each lunar ``masa`` month.
 
     The nakshatra cycle is shorter than a long lunar month, so the same
     nakshatra can reach sunrise twice in one masa (e.g. Bhadrapada Hasta on
     2026-09-13 and 2026-10-10). Only the first day is the nija observance,
     which also keeps the former sunrise when vriddhi repeats it next day.
+    With ``fallback_masa``, a month where the nakshatra is kṣaya takes the
+    neighbouring nija ``fallback_masa`` month's date instead.
     """
-  dates = []
-  masa_code = str(masa)
-  month_has_date = False
-  for record in sorted(records, key=lambda record: record.civil_date):
-    if record.masa != masa_code:
-      month_has_date = False
-      continue
-    if record.is_adhika:
-      continue
-    if record.nakshatra != nakshatra:
-      continue
-    if month_has_date:
-      continue
-    month_has_date = True
-    dates.append(record.civil_date)
-  return dates
-
-
-def _sravana_nakshatra_in_raasi_dates(records, raasi):
-  """Sravana-nakshatra sunrises in solar ``raasi``, vriddhi-resolved."""
-  dates = []
-  for record in records:
-    if record.nakshatra != SRAVANA_NAKSHATRA:
-      continue
-    if panchanga.raasi(record.sunrise_jd) != raasi:
-      continue
-    dates.append(record.civil_date)
-  return resolve_vriddhi_dates(dates)
+  runs = _month_runs(records, lambda record: record.masa)
+  pick = lambda run: _nakshatra_date(run, nakshatra)
+  return _dates_per_month(runs, str(masa), pick, None if fallback_masa is None else str(fallback_masa))
 
 
 def select_rig_upakarma_dates(records, geopos=None, timezone_name=None):
@@ -388,20 +404,20 @@ def select_rig_upakarma_dates(records, geopos=None, timezone_name=None):
   # Madhwas use Sravana-S05 instead (e.g. SRS Mutt: 03-08-2022)
   # Smartas use the former civil date when there is Kshaya nakshatra
   # (e.g. Sringeri: 11-08-2022)
-  primary = _nija_nakshatra_dates(records, 5, SRAVANA_NAKSHATRA)
+  primary = _nija_nakshatra_dates(records, 5, SRAVANA_NAKSHATRA, fallback_masa=6)
   fallback = _nija_nakshatra_dates(records, 6, SRAVANA_NAKSHATRA)
   return postpone_upakarma_if_eclipse(primary, fallback, geopos, timezone_name)
 
 
 def select_sama_upakarma_dates(records, geopos=None, timezone_name=None):
   """Nija Bhadrapada Hasta, preponed to Sravana Hasta on kshaya / local lunar eclipse."""
-  primary = _nija_nakshatra_dates(records, 6, HASTA_NAKSHATRA)
+  primary = _nija_nakshatra_dates(records, 6, HASTA_NAKSHATRA, fallback_masa=5)
   fallback = _nija_nakshatra_dates(records, 5, HASTA_NAKSHATRA)
   return postpone_upakarma_if_eclipse(primary, fallback, geopos, timezone_name)
 
 
 def select_onam_dates(records):
-  """Sravana-nakshatra sunrise in Simha; if none, try Kanya. Vriddhi keeps former.
+  """Sravana-nakshatra sunrise in Simha; if none that month, the first in Kanya. Vriddhi keeps former.
 
     Same sunrise/vriddhi/kshaya-fallback pattern as Rig Upakarma, but keyed on
     solar rasi (Simha then Kanya) rather than lunar masa, with no eclipse test.
@@ -409,9 +425,8 @@ def select_onam_dates(records):
   SIMHA_RAASI = 5
   KANYA_RAASI = 6
 
-  primary = _sravana_nakshatra_in_raasi_dates(records, SIMHA_RAASI)
-  selected = primary if primary else _sravana_nakshatra_in_raasi_dates(records, KANYA_RAASI)
-  return selected
+  runs = _month_runs(records, lambda record: panchanga.raasi(record.sunrise_jd))
+  return _dates_per_month(runs, SIMHA_RAASI, lambda run: _nakshatra_date(run, SRAVANA_NAKSHATRA), KANYA_RAASI)
 
 
 def select_vaikuntha_ekadashi_dates(records):

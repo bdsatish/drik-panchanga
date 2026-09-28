@@ -816,8 +816,10 @@ class RigUpakarmaTests(unittest.TestCase):
     self.assertEqual(select_rig_upakarma_dates(records), [Date(2030, 8, 10)])
 
   def test_kshaya_sravana_postpones_to_bhadrapada(self):
-    # Sravana masa skips nakshatra 22 between sunrises (21 -> 23).
+    # Sravana masa skips nakshatra 22 between sunrises (21 -> 23). The Ashadha
+    # row shows the whole Sravana month, so the skip is not a window edge.
     records = [
+      festival_record(Date(2022, 7, 28), "K15", masa="4", is_adhika=False, nakshatra=9, sunrise_jd=0.0),
       festival_record(Date(2022, 8, 11), "S14", masa="5", is_adhika=False, nakshatra=21, sunrise_jd=0.0),
       festival_record(Date(2022, 8, 12), "S15", masa="5", is_adhika=False, nakshatra=23, sunrise_jd=0.0),
       festival_record(Date(2022, 9, 8), "S11", masa="6", is_adhika=False, nakshatra=22, sunrise_jd=0.0),
@@ -831,6 +833,19 @@ class RigUpakarmaTests(unittest.TestCase):
       festival_record(Date(2030, 9, 8), "S11", masa="6", is_adhika=False, nakshatra=22, sunrise_jd=0.0),
     ]
     self.assertEqual(select_rig_upakarma_dates(records), [Date(2030, 8, 10)])
+
+  def test_kshaya_year_falls_back_even_when_another_year_has_sravana(self):
+    # 2022 has no Sravana-nakshatra sunrise in Sravana masa; 2021's date used
+    # to suppress the fallback, dropping Rig Upakarma 2022 from the span.
+    records = [
+      festival_record(Date(2021, 8, 21), "S14", masa="5", nakshatra=22),
+      festival_record(Date(2021, 9, 17), "S11", masa="6", nakshatra=22),
+      festival_record(Date(2022, 7, 28), "K15", masa="4", nakshatra=9),
+      festival_record(Date(2022, 8, 11), "S14", masa="5", nakshatra=21),
+      festival_record(Date(2022, 8, 12), "S15", masa="5", nakshatra=23),
+      festival_record(Date(2022, 9, 8), "S11", masa="6", nakshatra=22),
+    ]
+    self.assertEqual(select_rig_upakarma_dates(records), [Date(2021, 8, 21), Date(2022, 9, 8)])
 
   def test_eclipse_on_sravana_day_postpones_to_bhadrapada(self):
     records = [
@@ -863,6 +878,20 @@ class SamaUpakarmaTests(unittest.TestCase):
       festival_record(Date(2030, 9, 8), "S11", masa="6", is_adhika=False, nakshatra=13, sunrise_jd=0.0),
     ]
     self.assertEqual(select_sama_upakarma_dates(records), [Date(2030, 9, 8)])
+
+  def test_fallback_needs_this_year_bhadrapada_to_be_kshaya(self):
+    # 2011 Bhadrapada has no Hasta sunrise, so Sravana Hasta stands in. 2012
+    # Bhadrapada is cut by the window end: its Sravana Hasta must not print.
+    records = [
+      festival_record(Date(2011, 8, 4), "S5", masa="5", nakshatra=13),
+      festival_record(Date(2011, 9, 1), "S3", masa="6", nakshatra=12),
+      festival_record(Date(2011, 9, 2), "S4", masa="6", nakshatra=14),
+      festival_record(Date(2011, 10, 1), "S4", masa="7", nakshatra=15),
+      festival_record(Date(2012, 7, 25), "S7", masa="5", nakshatra=13),
+      festival_record(Date(2012, 8, 18), "S1", masa="A6", is_adhika=True, nakshatra=9),
+      festival_record(Date(2012, 9, 17), "S1", masa="6", nakshatra=12),
+    ]
+    self.assertEqual(select_sama_upakarma_dates(records), [Date(2011, 8, 4)])
 
   def test_keeps_only_the_first_hasta_of_one_bhadrapada_month(self):
     # Hasta reaches sunrise twice in one Bhadrapada (2026: 13 Sep and
@@ -925,12 +954,30 @@ class OnamTests(unittest.TestCase):
 
   def test_missing_simha_falls_back_to_kanya(self):
     records = [
+      festival_record(Date(2030, 8, 15), "S5", masa="5", is_adhika=False, nakshatra=19, sunrise_jd=5.0),
       festival_record(Date(2030, 8, 20), "S5", masa="5", is_adhika=False, nakshatra=21, sunrise_jd=10.0),
       festival_record(Date(2030, 8, 21), "S6", masa="5", is_adhika=False, nakshatra=23, sunrise_jd=11.0),
       festival_record(Date(2030, 9, 16), "S10", masa="6", is_adhika=False, nakshatra=22, sunrise_jd=20.0),
     ]
-    with mock.patch("festival_rules.panchanga.raasi", side_effect=lambda jd: 5 if jd < 20.0 else 6):
+    with mock.patch("festival_rules.panchanga.raasi", side_effect=lambda jd: 4 if jd < 10.0 else 5 if jd < 20.0 else 6):
       self.assertEqual(select_onam_dates(records), [Date(2030, 9, 16)])
+
+  def test_simha_kshaya_does_not_borrow_across_years(self):
+    # A cut Simha month at the window edge proves nothing, and one year's
+    # kshaya takes its own Kanya date, not another year's.
+    raasi_by_jd = {1.0: 5, 2.0: 6, 3.0: 4, 4.0: 5, 5.0: 5, 6.0: 6, 7.0: 7, 8.0: 5}
+    records = [
+      festival_record(Date(2029, 9, 1), "S5", masa="6", nakshatra=21, sunrise_jd=1.0),
+      festival_record(Date(2029, 9, 20), "S5", masa="6", nakshatra=22, sunrise_jd=2.0),
+      festival_record(Date(2030, 8, 10), "S5", masa="5", nakshatra=20, sunrise_jd=3.0),
+      festival_record(Date(2030, 8, 20), "S5", masa="5", nakshatra=21, sunrise_jd=4.0),
+      festival_record(Date(2030, 8, 21), "S6", masa="5", nakshatra=23, sunrise_jd=5.0),
+      festival_record(Date(2030, 9, 16), "S10", masa="6", nakshatra=22, sunrise_jd=6.0),
+      festival_record(Date(2030, 10, 20), "S10", masa="7", nakshatra=1, sunrise_jd=7.0),
+      festival_record(Date(2031, 8, 25), "S5", masa="5", nakshatra=22, sunrise_jd=8.0),
+    ]
+    with mock.patch("festival_rules.panchanga.raasi", side_effect=raasi_by_jd.get):
+      self.assertEqual(select_onam_dates(records), [Date(2030, 9, 16), Date(2031, 8, 25)])
 
   def test_prefers_simha_over_kanya(self):
     records = [
