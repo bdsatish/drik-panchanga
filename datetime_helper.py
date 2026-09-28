@@ -182,9 +182,11 @@ def dst_transitions(timezone_name, year, month, longitude=None):
 def to_hms(decimal_hours):
   """For durations and local civil times: split decimal hours to ``[h, m, s]``.
 
-  Rounds to the nearest second with a full carry cascade: the result always
-  satisfies ``0 <= m < 60`` and ``0 <= s < 60``, while ``h`` may be negative
-  or exceed 24 (the callers' "hours past midnight" convention).
+  Rounds to the nearest second with a full carry cascade: ``abs(m) < 60`` and
+  ``abs(s) < 60``, and all three components carry the sign of the input, so
+  ``format_hms`` reads a negative value back unchanged (``-1.5`` gives
+  ``[-1, -30, 0]``, shown as ``-01:30``). ``h`` may exceed 24 (the callers'
+  "hours past midnight" convention).
   """
   total_seconds = int(round(decimal_hours * 3600))
   sign = -1 if total_seconds < 0 else 1
