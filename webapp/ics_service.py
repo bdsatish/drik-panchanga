@@ -10,6 +10,7 @@ from generate_panchanga_calendar import (
   month_range,
   month_system_label,
   require_month_system,
+  require_supported_span,
 )
 from webapp.day_panchanga import (
   _compute_day_details_unlocked,
@@ -72,6 +73,7 @@ def generate_ics(location, start_year, start_month, month_system="amanta", coord
   """Generate a feed while holding coordinate state for the full span."""
   if start_year < 1:
     raise ValueError("ICS dates require year 1 CE or later (the iCalendar format allows only four-digit years).")
+  require_supported_span(start_year, start_month, 14)
   with panchanga.coordinate_calculation_lock:
     amanta = require_month_system(month_system)
     month_key = "amanta" if amanta else "purnimanta"

@@ -174,14 +174,14 @@ def ics_calendar():
     abort(400, description=str(error))
   name = (f"panchanga-{location_slug(location.name)}-{coordinate_selection}-{month_key}-"
           f"{start_year:04d}-{start_month:02d}.ics")
-  return send_file(io.BytesIO(ics_text.encode("utf-8")), mimetype="text/calendar; charset=utf-8", as_attachment=True,
+  return send_file(io.BytesIO(ics_text.encode("utf-8")), mimetype="text/calendar", as_attachment=True,
                    download_name=name, max_age=0)
 
 
 @app.errorhandler(400)
 def bad_request(error):
   message = getattr(error, "description", None) or "Bad request"
-  if request.accept_mimetypes.best == "application/json" or request.path.startswith("/api/"):
+  if request.accept_mimetypes.quality("application/json") > 0 or request.path.startswith("/api/"):
     return jsonify({"error": message}), 400
   return render_template("index.html", error=message), 400
 
