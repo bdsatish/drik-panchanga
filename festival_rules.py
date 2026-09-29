@@ -24,7 +24,7 @@ def _event_jd_ut(civil_date, geopos, timezone_name, getter):
 
 
 def _sunset_jd_ut(civil_date, geopos, timezone_name):
-  """Sunset as UT JD, or None if the sun does not set (polar day/night)."""
+  """Sunset as UT JD, or None if it falls outside the day's band."""
   return _event_jd_ut(civil_date, geopos, timezone_name, panchanga.sunset)
 
 
@@ -294,17 +294,12 @@ def hindu_day_has_eclipse(civil_date, geopos, timezone_name):
 
     The Hindu day runs ``[sunrise, next sunrise)``, not midnight to midnight:
     an eclipse before that morning's sunrise belongs to the previous date, the
-    same date the printed eclipse mark sits on. If a sunrise is unavailable,
-    fall back to the civil window rather than silently dropping the eclipse.
+    same date the printed eclipse mark sits on.
     """
   if geopos is None:
     return False
   start_jd = _event_jd_ut(civil_date, geopos, timezone_name, panchanga.sunrise)
   end_jd = _event_jd_ut(civil_date + 1, geopos, timezone_name, panchanga.sunrise)
-  if start_jd is None or end_jd is None:
-    log.warning("Sunrise unavailable for %s; eclipse test uses the civil day", civil_date)
-    start_jd = gregorian_to_jd(civil_date) - utc_offset_hours(timezone_name, civil_date, geopos[0]) / 24
-    end_jd = gregorian_to_jd(civil_date + 1) - utc_offset_hours(timezone_name, civil_date + 1, geopos[0]) / 24
   for kind, _phase, _maximum_jd in find_local_eclipses(start_jd, end_jd, geopos):
     if kind == "Lunar":
       return True
@@ -811,9 +806,7 @@ def classify_ekadashi_upavasa(records_by_date, upavasa_date):
   prevails at the next sunrise; kṣaya means sunrise on the upavāsa day is not
   already tithi 11.
   """
-  record = records_by_date.get(upavasa_date)
-  if record is None:
-    raise KeyError(f"no DayRecord for upavasa date {upavasa_date}")
+  record = records_by_date[upavasa_date]
   if record.tithi not in EKADASHI_TITHIS:
     return "kshaya"
   following = records_by_date.get(upavasa_date + 1)

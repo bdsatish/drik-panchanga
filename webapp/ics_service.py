@@ -22,14 +22,16 @@ import panchanga
 
 
 def _utf8_cut(data, limit):
+  """Largest cut at or below ``limit`` that does not split a UTF-8 character.
+
+  The input is always valid UTF-8 (it came from ``str.encode("utf-8")``), so
+  stepping back over continuation bytes is enough; the cut lands on the
+  previous character boundary at the worst case.
+  """
   cut = min(limit, len(data))
-  while cut:
-    try:
-      data[:cut].decode("utf-8")
-      return cut
-    except UnicodeDecodeError:
-      cut -= 1
-  raise ValueError("Cannot fold invalid UTF-8 content")
+  while cut < len(data) and data[cut] & 0xC0 == 0x80:  # continuation byte
+    cut -= 1
+  return cut
 
 
 def _fold(line):

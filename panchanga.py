@@ -1170,7 +1170,8 @@ def varjyam(jd, place):
   overlap with the day (sunrise to next sunrise).
 
   Returns an empty list if either sunrise anchor falls outside the day's
-  expected window (sentinel-garbage protection).
+  expected window: at extreme latitude the next day's sunrise can land past
+  ``jd + 2``, where the window maths would interpolate on a bogus span.
   """
   # Starting ghat (in the nakshatra's duration) for the varjyam period.
   # Index 0 is unused; positions 1..27 correspond to nakshatras 1..27.

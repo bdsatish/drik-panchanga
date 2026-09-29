@@ -25,9 +25,8 @@ import panchanga
 from datetime_helper import (Date, fixed_offset_name, format_local_hm, format_utc_offset, gregorian_to_jd,
                              hindu_day_civil, jd_to_local_civil_date, local_range_jds, utc_offset_hours)
 
-# Whole lunar years are 12, 13 or 14 Gregorian months; only these bounds are
-# fixed, the printed span comes from the year's two Ugadis.
-LUNAR_YEAR_MIN_MONTHS = 12
+# A lunar year prints 12, 13 or 14 Gregorian months; the resolver's search
+# windows use the longest of those.
 LUNAR_YEAR_MAX_MONTHS = 14
 # How far past the printed days the builders read records. The solar day number
 # counts from the last saṅkrānti (a solar month can be 32 sunrises long), an
@@ -294,10 +293,6 @@ def ugadi_dates(months, location, year=None):
   return sorted(date for date in dates if year is None or date.year == year)
 
 
-def _count_word(n):
-  return {2: "two", 3: "three"}.get(n, str(n))
-
-
 def lunar_year_boundaries(start_year, location, coordinate_selection="citra"):
   """``(Ugadi, last Phālguna day)`` of the lunar year named by ``start_year``.
 
@@ -318,8 +313,10 @@ def lunar_year_boundaries(start_year, location, coordinate_selection="citra"):
       raise ValueError(f"Gregorian year {_format_year(start_year)} has no Ugadi at {where}.")
     if len(ugadis) > 1:
       found = " and ".join(_format_date(date) for date in ugadis)
-      raise ValueError(f"Gregorian year {_format_year(start_year)} has {_count_word(len(ugadis))} Ugadis at {where}: "
-                       f"{found}. Only a year with a single Ugadi has a lunar year.")
+      # A Gregorian year is at most 366 days and a lunar year at least 354,
+      # so three Ugadis cannot fit: `len(ugadis)` here is always two.
+      raise ValueError(f"Gregorian year {_format_year(start_year)} has two Ugadis at {where}: {found}. "
+                       f"Only a year with a single Ugadi has a lunar year.")
     ugadi = ugadis[0]
     # Any Ugadi after this one closes the span. The single-Ugadi check above
     # already ruled out start_year, so the next one sits in start_year + 1
@@ -327,8 +324,6 @@ def lunar_year_boundaries(start_year, location, coordinate_selection="citra"):
     # month always reach it.
     later = ugadi_dates(_month_sequence(ugadi.year, ugadi.month, LUNAR_YEAR_MAX_MONTHS), location)
     following = [date for date in later if date > ugadi]
-    if not following:
-      raise ValueError(f"No next Ugadi after {_format_date(ugadi)} at {where}.")
     last_day = following[0] - 1
   return ugadi, last_day
 
@@ -482,8 +477,7 @@ def require_coordinate_selection(text):
 
 
 def ayanamsa_label(key):
-  if key == "tropical":
-    raise ValueError("Tropical mode has no ayanāṃśa label.")
+  """Ayanāṃśa display name; callers check for tropical before asking."""
   return AYANAMSA_OPTIONS[key]
 
 
@@ -1176,14 +1170,9 @@ def build_pdf(location, months, output_path, festivals_path=None, month_system="
     amanta = require_month_system(month_system)
     recurring = require_recurring(recurring)
     panchanga.set_coordinate_selection(coordinate_selection)
-    if not LUNAR_YEAR_MIN_MONTHS <= len(months) <= LUNAR_YEAR_MAX_MONTHS:
-      raise ValueError(
-        f"A lunar year prints {LUNAR_YEAR_MIN_MONTHS} to {LUNAR_YEAR_MAX_MONTHS} months, got {len(months)}.")
     pad_start, pad_end = record_span(months)
     start_year, start_month = months[0]
     end_year, end_month = months[-1]
-    range_start = Date(start_year, start_month, 1)
-    range_end = Date(end_year, end_month, calendar.monthrange(end_year, end_month)[1])
     printed_months = set(months)
     header_year, header_month = months[len(months) // 2]
 
@@ -1226,18 +1215,19 @@ def build_pdf(location, months, output_path, festivals_path=None, month_system="
     eclipse_dates = eclipse_civil_dates(eclipses, location.timezone_name, sunrise_by_date=sunrise_by_date,
                                         longitude=location.longitude)
     solar_by_date = solar_dates_by_date(context_records)
-    ekadashi_dates = set()
-    for value in ekadashi_dates_from_records(context_records):
-      if range_start <= value <= range_end:
-        ekadashi_dates.add(value)
-    pradosham_dates = set()
-    for value in select_pradosham_dates(context_records, geopos=geopos, timezone_name=location.timezone_name):
-      if range_start <= value <= range_end:
-        pradosham_dates.add(value)
-    sankashti_dates = set()
-    for value in select_sankashti_chaturthi_dates(context_records, geopos=geopos, timezone_name=location.timezone_name):
-      if range_start <= value <= range_end:
-        sankashti_dates.add(value)
+    # The printed months are contiguous, so a day range and this date set
+    # filter the same records; the pad days fall outside it.
+    ekadashi_dates = {value for value in ekadashi_dates_from_records(context_records) if value in target_dates}
+    pradosham_dates = {
+      value
+      for value in select_pradosham_dates(context_records, geopos=geopos, timezone_name=location.timezone_name)
+      if value in target_dates
+    }
+    sankashti_dates = {
+      value
+      for value in select_sankashti_chaturthi_dates(context_records, geopos=geopos,
+                                                    timezone_name=location.timezone_name) if value in target_dates
+    }
     if recurring == "specials":
       pradosham_dates, sankashti_dates = special_weekday_dates(pradosham_dates, sankashti_dates)
     calendar_years = calendar_year_label(header_records)

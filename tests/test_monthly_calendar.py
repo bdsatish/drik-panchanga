@@ -207,19 +207,19 @@ class SunMoonTests(unittest.TestCase):
     self.assertRegex(sun_lines[0], r"^Sun: \(\d\d:\d\d –\) \d\d:\d\d – \d\d:\d\d$")
     self.assertTrue(all("-59" not in line for line in lines))
 
-  def test_sun_moon_lines_render_sunset_only(self):
-    # The mirror case: no sunrise, but a sunset worth printing.
-    with mock.patch("generate_monthly_calendar.panchanga.sunrise", return_value=0.0):
-      lines = sun_moon_lines(load_location("Ujjain"), Date(2026, 6, 1))
-    sun_lines = [line for line in lines if line.startswith("Sun:")]
-    self.assertEqual(len(sun_lines), 1)
-    self.assertRegex(sun_lines[0], r"^Sun: -- – \d\d:\d\d$")
+  def test_sun_moon_lines_render_the_out_of_band_sunset(self):
+    # Live case at extreme latitude (82.5N, 62.3W, UTC-5): the sun first dips
+    # below the horizon late on 3 Sep 1500, so that day's sunset sits past the
+    # band check and prints --.
+    from generate_panchanga_calendar import resolve_location
+    lines = sun_moon_lines(resolve_location(place="82.5,-62.3,-5"), Date(1500, 9, 3))
+    self.assertEqual([line for line in lines if line.startswith("Sun:")], ["Sun: (21:49 –) 23:22 – --"])
 
-  def test_sun_moon_lines_omit_sun_when_both_are_missing(self):
-    with mock.patch("generate_monthly_calendar.panchanga.sunrise", return_value=0.0), mock.patch(
-        "generate_monthly_calendar.panchanga.sunset", return_value=0.0):
-      lines = sun_moon_lines(load_location("Ujjain"), Date(2026, 6, 1))
-    self.assertFalse([line for line in lines if line.startswith("Sun:")])
+  def test_sun_moon_lines_always_render_a_sun_line(self):
+    # sunrise() and sunset() always return an anchor (the transit fallback),
+    # so the Sun line is never dropped, even on a polar day or night.
+    lines = sun_moon_lines(load_location("Murmansk, RU"), Date(2026, 12, 21))
+    self.assertEqual(len([line for line in lines if line.startswith("Sun:")]), 1)
 
 
 class DstClockTests(unittest.TestCase):
@@ -305,9 +305,10 @@ class CellDrawTests(unittest.TestCase):
     self.assertIn("Śrāvaṇa K15 08:24", drawn_text)
     self.assertIn("Śrāvaṇa S1 28:31", drawn_text)
 
-  def test_no_sunrise_cell_renders_marker_and_no_end_times(self):
-    # day_details returns None at a polar day/night; the cell must show a
-    # marker instead of garbage end times like '-59069077:35'.
+  def test_day_details_polar_day_yields_lines_not_none(self):
+    # day_details never returns None: panchanga.sunrise() anchors every day,
+    # so draw_cell can unpack its 3-tuple directly. At a polar winter day the
+    # lines still carry real end times, never sentinel garbage.
     ensure_pdf_fonts()
     pdf = mock.Mock()
     from festival_rules import DayRecord
@@ -324,11 +325,10 @@ class CellDrawTests(unittest.TestCase):
       "pradosham": set(),
       "sankashti": set(),
     }
-    with mock.patch("generate_monthly_calendar.day_details", return_value=None):
-      draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 21, Date(2026, 6, 21), load_location("Ujjain"), context, col=0)
+    details = day_details(load_location("Murmansk, RU"), Date(2026, 6, 21))
+    self.assertTrue(all(part is not None for part in details))
+    draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 21, Date(2026, 6, 21), load_location("Murmansk, RU"), context, col=0)
     drawn_text = [c.args[2] for c in pdf.drawString.call_args_list]
-    # Graceful degradation: a None from day_details renders an empty cell,
-    # never garbage end times.
     self.assertFalse([text for text in drawn_text if "-59" in text])
 
   def test_masa_start_fill_is_drawn(self):

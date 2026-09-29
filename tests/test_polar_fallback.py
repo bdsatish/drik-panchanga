@@ -196,15 +196,14 @@ class GuardedPathTests(unittest.TestCase):
       recovered = panchanga._transit_jd(jd, mur)
     self.assertTrue(jd < recovered + mur.timezone / 24 < jd + 1.0)
 
-  def test_day_details_none_renders_empty_cell(self):
-    # Covered in test_monthly_calendar: draw_cell with day_details -> None
-    # renders empty, never sentinel garbage. Assert the contract here too
-    # via the generator API level.
+  def test_day_details_always_returns_a_tuple(self):
+    # day_details is anchored by panchanga.sunrise()'s transit fallback, so
+    # it computes for every place and date; the cell unpacks it directly.
     from generate_monthly_calendar import day_details
     from generate_panchanga_calendar import Location
     location = Location("Murmansk, RU", 68.97, 33.08, "Europe/Moscow")
     details = day_details(location, __import__("datetime").date(2026, 12, 20))
-    self.assertIsNotNone(details)  # the normal path never returns None
+    self.assertTrue(isinstance(details, tuple) and len(details) == 3)
 
 
 if __name__ == "__main__":

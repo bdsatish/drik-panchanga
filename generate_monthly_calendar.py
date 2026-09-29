@@ -49,8 +49,6 @@ from generate_panchanga_calendar import (
   ADHIKA_ROW,
   DEFAULT_CITIES_PATH,
   DEFAULT_FESTIVALS_PATH,
-  LUNAR_YEAR_MAX_MONTHS,
-  LUNAR_YEAR_MIN_MONTHS,
   PDF_YEAR_MAX,
   PDF_YEAR_MIN,
   MASA_START_ROW,
@@ -105,13 +103,6 @@ if HexColor is not None:
   GRID_LINE = HexColor("#A8A8A8")
   RED = HexColor("#A8321F")
   TEAL = HexColor("#0E6E62")
-else:
-  INK = GREY = LIGHT = GRID_LINE = RED = TEAL = None
-  PURPLE = INDIGO = SAFFRON = CRIMSON = BROWN = None
-  NAKS_INK = YOGA_INK = None
-  _GREY_AAAAAA = None
-
-if HexColor is not None:
   PURPLE = HexColor("#6A287E")
   INDIGO = HexColor("#3F51B5")
   SAFFRON = HexColor("#F3D9A9")
@@ -121,6 +112,7 @@ if HexColor is not None:
   YOGA_INK = HexColor("#2F4F4F")
   _GREY_AAAAAA = HexColor("#AAAAAA")
 else:
+  INK = GREY = LIGHT = GRID_LINE = RED = TEAL = None
   PURPLE = INDIGO = SAFFRON = CRIMSON = BROWN = None
   NAKS_INK = YOGA_INK = _GREY_AAAAAA = None
 
@@ -254,33 +246,29 @@ def day_details(location, civil):
 def sun_moon_lines(location, civil):
   """``Sun: rise–set`` and ``Moon: rise–set`` lines for one civil day.
 
-  Sunrise and sunset are checked independently: near the polar circle one can
-  exist while the other does not, and the available half is still worth
-  printing. A missing end shows as ``--``.
+  ``sunrise()`` and ``sunset()`` always return an anchor: above the polar
+  circles they fall back to the meridian transit. A sunset can still land
+  outside the day's band at extreme latitude, and prints as ``--`` then.
 
   The Sun line prefixes the pratah sandhya start in brackets —
   ``Sun: (05:12 –) 06:07 – 18:29`` — sandhya runs from that moment to the
-  sunrise that follows. IndUni-H has no arrow glyph, so the en-dash stands in
-  for ``→``; if sandhya cannot be computed the bracket is dropped.
+  sunrise that follows. IndUni-H has no arrow glyph, so the en-dash stands
+  in for ``→``.
   """
   place = place_for_date(location, civil)
   jd = gregorian_to_jd(civil)
   clock = cell_clock(location, civil)
   lines = []
-  # Swiss Ephemeris returns a 0.0 sentinel for a failed rise/set lookup
-  # (polar day/night); range-check each event separately before formatting,
-  # else a missing one prints a nonsense time like ``-59069097:00``.
+  # The band check rejects a sunset outside this day's horizon (see the
+  # varjyam guard in panchanga); the sunrise anchor is always in band.
   rise = panchanga.sunrise(jd, place)
   set_ = panchanga.sunset(jd, place)
-  rise_text = clock(rise) if jd - 1 <= rise <= jd + 2 else "--"
+  rise_text = clock(rise)
   set_text = clock(set_) if jd - 1 <= set_ <= jd + 2 else "--"
-  if rise_text != "--" or set_text != "--":
-    sandhya_prefix = ""
-    if rise_text != "--":
-      ps_start, _ps_end = panchanga.pratah_sandhya(jd, place)
-      if jd - 1 <= ps_start <= jd + 2:
-        sandhya_prefix = f"({clock(ps_start)} –) "
-    lines.append(f"Sun: {sandhya_prefix}{rise_text} – {set_text}")
+  # Sandhya starts within two ghaṭis before this day's sunrise, which always
+  # sits in the band, so the start needs no check of its own.
+  ps_start, _ps_end = panchanga.pratah_sandhya(jd, place)
+  lines.append(f"Sun: ({clock(ps_start)} –) {rise_text} – {set_text}")
   parts = []
   for event in (panchanga.moonrise(jd, place), panchanga.moonset(jd, place)):
     if event is not None and jd - 1 <= event <= jd + 2:
@@ -457,10 +445,7 @@ def draw_cell(pdf, x, y_top, row_h, cell_w, day, civil, location, context, col):
   masa_name = sanskrit_names().get("masas", {}).get(masa_display.lstrip("A"), masa_display.lstrip("A"))
   masa_prefix = f"A.{masa_name}" if masa_display.startswith("A") else masa_name
   details = day_details(location, civil)
-  # day_details always computes (panchanga.sunrise has no failure mode),
-  # but an exception or unexpected None must degrade to a marked cell,
-  # never to garbage end times.
-  tithi_lines, naks_lines, yoga_names = details if details else ([], [], [])
+  tithi_lines, naks_lines, yoga_names = details
   for code, end_hm in tithi_lines:
     lines.append((8.0, [(f"{masa_prefix} {code} {end_hm}", PDF_FONT, 6.8, INK)]))
   for name, end_hm in naks_lines:
@@ -539,9 +524,6 @@ def rahu_kala_table_lines(location, year, month):
     windows.setdefault(civil.weekday(), []).append((clock(start), clock(end)))
   lines = []
   for weekday in (6, 0, 1, 2, 3, 4, 5):
-    if weekday not in windows:
-      lines.append(f"{labels[weekday]} --")
-      continue
     starts = [start for start, _end in windows[weekday]]
     ends = [end for _start, end in windows[weekday]]
     lines.append(f"{labels[weekday]} {min(starts)}-{max(ends)}")
@@ -650,9 +632,8 @@ def collect_context(months, location, festivals_path, amanta=True):
   dst_labels_by_date = {}
   for year, month in months:
     for day, label in dst_transitions(location.timezone_name, year, month, location.longitude).items():
-      civil = Date(year, month, day)
-      if civil in target_dates:
-        dst_labels_by_date.setdefault(civil, []).append(label)
+      # dst_transitions only returns days of this printed month.
+      dst_labels_by_date.setdefault(Date(year, month, day), []).append(label)
   eclipses = find_local_eclipses(records[0].sunrise_jd, records[-1].sunrise_jd + 1, geopos)
   sunrise_by_date = {record.civil_date: record.sunrise_jd for record in records}
   eclipse_details_by_date = {}
@@ -701,9 +682,6 @@ def _build_monthly_pdf_unlocked(location, months, output_path, festivals_path=No
     festivals_path = DEFAULT_FESTIVALS_PATH
   panchanga.set_coordinate_selection(coordinate_selection)
 
-  if not LUNAR_YEAR_MIN_MONTHS <= len(months) <= LUNAR_YEAR_MAX_MONTHS:
-    raise ValueError(
-      f"A lunar year prints {LUNAR_YEAR_MIN_MONTHS} to {LUNAR_YEAR_MAX_MONTHS} months, got {len(months)}.")
   context = collect_context(months, location, Path(festivals_path), amanta=amanta)
 
   output_path = Path(output_path)
