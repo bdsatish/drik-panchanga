@@ -423,7 +423,8 @@ def nakshatra_pada_unequal_system(longitude):
 
 
 # @lru_cache memoizes expensive Swiss Ephemeris calls (longitudes, rise/set,
-# new/full moon). Cache sizes fit one 14-month PDF build while bounding memory
+# new/full moon). Cache sizes fit one lunar-year PDF build (up to 14 printed
+# months plus the day pad) while bounding memory
 # for long-running web servers that serve many distinct (city, date) queries.
 @lru_cache(maxsize=65536)
 def _planet_longitude_cached(ayanamsa, coord_flag, jd, planet):

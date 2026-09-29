@@ -4,10 +4,16 @@ Calendar PDFs — details
 Two PDF layouts share the same computation, colours, and markers:
 
 * **One-page** (`generate_panchanga_calendar.py` / `drik-panchanga-short`):
-  14 consecutive months on a single A4 landscape sheet.
+  one lunar year on a single A4 landscape sheet.
 * **Monthly wall calendar** (`generate_monthly_calendar.py` /
-  `drik-panchanga-long`): one A4 portrait grid page per month, 12 pages,
-  with wider rows suited for reading a full month at a glance.
+  `drik-panchanga-long`): one A4 portrait grid page per month of the lunar
+  year, with wider rows suited for reading a full month at a glance.
+
+Both layouts print the same span, and its length is never fixed. The
+amānta cāndramāna year that `--start YYYY` names runs from the month
+containing that year's **Ugadi** (Chaitra S1; adhika Chaitra when present)
+through the month containing the **last day of Phālguna** — 12, 13 or 14
+whole Gregorian months.
 
 The monthly calendar shares the computation and festival/eclipse markers with
 the one-page calendar, with its own palette.
@@ -18,13 +24,22 @@ Common options
 ```
 --city "Ujjain, IN"      # data/cities.json; country code disambiguates
 --place -13.4,70,5.5     # instead of --city: LAT,LON,TZ (see below)
---start 2026-06          # first month of the span (14 or 12 months)
---start -500-03          # BCE: prefix the astronomical year with '-'
+--start 2026             # Gregorian year holding the lunar year's Ugadi
+--start=-0500            # BCE: prefix the astronomical year with '-'
 --month amanta|purnimanta
 --ayanamsa citra|revati|rohini|pushya|mula|krishnamurti|raman|tropical
 --festivals FILE.cfg
 -o, --output FILE.pdf      # short: -o FILE.pdf
 ```
+
+`--start` takes an astronomical year (year `0000` is 1 BCE) and the lunar year
+in it; the month is never asked for. PDF and iCal years run `-3300 ... 3300`
+for every ayanāṃśa — in sidereal modes Ugadi drifts about a day later every
+70–80 years, so a few years before about -2950 hold two Ugadis (or none) and
+are refused with a message naming the dates. Because whole months print, the
+first month also shows the previous year's Phālguna and the last month the next
+year's Chaitra, with their festivals; consecutive years share one month.
+`--month purnimanta` changes only the māsa labels and badges, not the span.
 
 `--place` takes three comma-separated decimal numbers instead of a city name:
 latitude (negative = south), longitude (east = positive), and the timezone as a
@@ -122,14 +137,15 @@ Festival dates themselves do not flip with `--month`: the catalog uses fixed
 amānta month numbers so a named observance stays on the same civil day in
 both display modes.
 
-Example: Ujjain, March 2026 through March 2027
-----------------------------------------------
+Example: Ujjain, lunar year 2026 (March 2026 – April 2027)
+---------------------------------------------------------
 
-One-page layout:
+`--start 2026` resolves to Ugadi 20 Mar 2026 through 6 Apr 2027, so the
+fourteen printed months are March 2026 to April 2027:
 
-![Ujjain Panchanga, March 2026 through March 2027](../samples/ujjain_panchanga_mar2026_mar2027.png)
+![Ujjain Panchanga, March 2026 through April 2027](../samples/ujjain_panchanga_mar2026_apr2027.png)
 
-Monthly layout (March 2026 page):
+Monthly layout (first page of the same year, March 2026):
 
 <img
   src="../samples/ujjain_monthly_march2026.png"

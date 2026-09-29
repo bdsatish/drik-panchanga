@@ -14,12 +14,17 @@ pip install "drik-panchanga[pdf]"   # + reportlab, PDF console scripts
 
 With the `[pdf]` extra, two console commands are available:
 
-- `drik-panchanga-short` — one-page A4 landscape panchanga for 14 months
-- `drik-panchanga-long` — 12-page A4 portrait wall calendar
+- `drik-panchanga-short` — one-page A4 landscape panchanga for one lunar year
+- `drik-panchanga-long` — A4 portrait wall calendar, one page per month of the
+  lunar year
+
+`--start YYYY` prints the cāndramāna year whose Ugadi falls in Gregorian year
+`YYYY`, from the month containing Ugadi through the month containing the last
+Phālguna day (12–14 months; years `-3300 ... 3300`).
 
 ```bash
-drik-panchanga-short --city "Bengaluru, IN" --start 2026-06
-drik-panchanga-short --place -13.4,70,5.5 --start 2026-06  # lat, lon, UTC offset hours
+drik-panchanga-short --city "Bengaluru, IN" --start 2026
+drik-panchanga-short --place -13.4,70,5.5 --start 2026  # lat, lon, UTC offset hours
 ```
 
 ## Ephemeris data

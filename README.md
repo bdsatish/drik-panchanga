@@ -106,15 +106,24 @@ Two layouts, usable either from a repository checkout
 (`python generate_*.py ...`) or after `pip install "drik-panchanga[pdf]"`:
 
 ```
-drik-panchanga-short --city Ujjain --start 2026-06    # one-page A4, 14 months
-drik-panchanga-long  --city Ujjain --start 2026-03    # 12-page wall calendar
-drik-panchanga-short --city Ujjain --start -500-03    # BCE: '-' prefixes the year
+drik-panchanga-short --city Ujjain --start 2026    # one-page A4, one lunar year
+drik-panchanga-long  --city Ujjain --start 2026    # wall calendar, one page per month
+drik-panchanga-short --city Ujjain --start=-500    # BCE: '-' prefixes the year
 ```
 
-`--start` takes astronomical years, as the day view does: year `0` is 1 BCE and
-a BCE year is written with a leading minus (`-500-03` is 501 BCE March). A value
-that starts with `-` must follow its flag directly, as above, or be attached
-with `=`.
+`--start YYYY` picks the lunar (cāndramāna) year whose **Ugadi** falls in the
+Gregorian year `YYYY`: printing runs from the month containing that Ugadi
+(Chaitra S1; adhika Chaitra when the year has one) through the month containing
+the last day of Phālguna — 12, 13 or 14 whole Gregorian months, never a fixed
+count. `--month purnimanta` changes māsa labels only; the span stays the amānta
+Chaitra→Phālguna year.
+
+`YYYY` is an astronomical year, as the day view uses: `0000` is 1 BCE and a BCE
+year carries a leading minus (`-0500` is 501 BCE). The PDF and iCal exports
+accept `-3300 ... 3300` (iCal from 1 CE), for every ayanāṃśa; in sidereal modes
+a few years before about -2950 hold zero or two Ugadis and are refused by name.
+A value that starts with `-` must follow its flag directly, as above, or be
+attached with `=`.
 
 Both accept `--month amanta|purnimanta`, `--ayanamsa` (citra, revati, rohini,
 pushya, mula, krishnamurti, raman, tropical), `--festivals FILE.cfg`, and
@@ -138,8 +147,8 @@ Offline, from a repository checkout:
 python -m webapp.app    # then open http://127.0.0.1:8765/
 ```
 
-Enter a city, then look up a day's panchanga, download either calendar PDF,
-or export the 14-month span as iCal (.ics). Alternatively switch to
+Enter a city, then look up a day's panchanga, download either calendar PDF, or
+export the lunar year as iCal (.ics). Alternatively switch to
 Coordinates and enter decimal latitude/longitude plus a UTC offset in hours
 (e.g. `5.5`, no DST) — useful for places missing from `data/cities.json`.
 The app sends them as one `place=LAT,LON,TZ` field, parsed the same way as
