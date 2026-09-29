@@ -539,14 +539,14 @@ def resolve_city_key(city, locations):
     raise ValueError("City is required.")
 
   folded = query.casefold()
+  # No two cities.json keys differ only by case (tests/test_data_files.py
+  # locks this), so a full-key match is unique when it exists.
   exact = []
   for name in locations:
     if name.casefold() == folded:
       exact.append(name)
   if len(exact) == 1:
     return exact[0]
-  if len(exact) > 1:
-    raise ValueError(f"City {city!r} matches multiple keys: {', '.join(sorted(exact))}")
 
   bare = []
   for name in locations:

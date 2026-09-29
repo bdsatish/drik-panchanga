@@ -585,12 +585,12 @@ def _moon_event_in_window(jd, place, rise=True):
   """First moonrise/moonset in ``[sunrise(jd), sunrise(jd+1))`` as a UT JD, or ``None``.
 
   At high latitudes the Moon can rise (or set) twice in one civil day; when
-  the first falls before sunrise, the second is looked up too.
+  the first falls before sunrise, the second is looked up too. Successive
+  sunrise anchors advance (measured: the smallest gap at extreme latitude is
+  0.017 d), so the window is always open.
   """
   window_start = sunrise(jd, place)
   window_end = sunrise(jd + 1, place)
-  if window_end <= window_start:
-    window_end = window_start + 1.0
   finder = moonrise_jd if rise else moonset_jd
   next_midnight = jd + 1 - place.timezone / 24.
   candidates = []

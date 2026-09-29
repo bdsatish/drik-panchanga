@@ -257,10 +257,13 @@ def select_varamahalakshmi_dates(records):
 
 
 def find_local_eclipses(start_jd, end_jd, geopos):
-  """Locally visible partial/total/annular eclipses with maximum in ``[start_jd, end_jd)``."""
-  if end_jd <= start_jd:
-    return []
+  """Locally visible partial/total/annular eclipses with maximum in ``[start_jd, end_jd)``.
 
+  Every caller passes a forward window (sunrise anchors advance each day,
+  and the builders span whole months). An empty or reversed range would
+  still find nothing: the ``start_jd <= maximum < end_jd`` filter below is
+  unsatisfiable.
+  """
   searches = (("Lunar", panchanga.swe.lun_eclipse_when_loc), ("Solar", panchanga.swe.sol_eclipse_when_loc))
   found = []
   for kind, finder in searches:
@@ -458,6 +461,8 @@ def _sunset_tithi_skipped(records, geopos, timezone_name):
   ordered = sorted(records, key=lambda r: r.civil_date)
   kshaya_dates = []
   for record, following in zip(ordered, ordered[1:]):
+    # Same contract as select_kshaya_dates: callers may pass a sparse record
+    # list, and a kṣaya is only between two consecutive sunrises.
     if following.civil_date != record.civil_date + 1:
       continue
     sunset_jd = _sunset_jd_ut(record.civil_date, geopos, timezone_name)
@@ -519,6 +524,7 @@ def _moonrise_tithi_skipped(records, geopos, timezone_name, target_tithi):
   ordered = sorted(records, key=lambda r: r.civil_date)
   kshaya_dates = []
   for record, following in zip(ordered, ordered[1:]):
+    # Same contract as select_kshaya_dates: a gap is never a kṣaya.
     if following.civil_date != record.civil_date + 1:
       continue
     moonrise_jd = _moonrise_jd_ut(record.civil_date, geopos, timezone_name)

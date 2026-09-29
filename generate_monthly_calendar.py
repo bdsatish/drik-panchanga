@@ -171,21 +171,20 @@ def ekadashi_name(record, amanta=True):
   The paksa comes from the sunrise tithi prefix, so kshaya days whose
   sunrise is already Dvadasi still resolve. Names are stored amanta-based
   (sukla and krsna of the same lunar month share one entry); purnimanta
-  krsna shifts back by one, adhika uses the ``adhika`` key.
+  krsna shifts back by one, adhika uses the ``adhika`` key. The data
+  contract test (tests/test_data_files.py) pins that every month and the
+  adhika entry carry both paksha names, so no missing-name branch lives
+  here.
   """
   paksha = "S" if record.tithi.startswith("S") else "K"
   masa = display_masa(record, amanta=amanta)
-  names = sanskrit_names().get("ekadashis", {})
+  names = sanskrit_names()["ekadashis"]
   if masa.startswith("A"):
-    base = names.get("adhika", {}).get(paksha)
-    return f"{base} Ekādaśī" if base else None
+    return f"{names['adhika'][paksha]} Ekādaśī"
   month = int(masa)
   if not amanta and paksha == "K":
     month = month - 1 if month > 1 else 12
-  base = names.get(str(month), {}).get(paksha)
-  if base is None:
-    return None
-  return f"{base} Ekādaśī"
+  return f"{names[str(month)][paksha]} Ekādaśī"
 
 
 def month_dates(months):
@@ -455,9 +454,8 @@ def draw_cell(pdf, x, y_top, row_h, cell_w, day, civil, location, context, col):
   max_text_w = cell_w - 10
   if is_ekadashi:
     ek_name = ekadashi_name(record, amanta=context.get("amanta", True))
-    if ek_name:
-      for wrapped in _wrap_lines(pdf, ek_name, PDF_FONT_ITALIC, 6.8, max_text_w):
-        lines.append((8.0, [(wrapped, PDF_FONT_ITALIC, 6.8, TEAL)]))
+    for wrapped in _wrap_lines(pdf, ek_name, PDF_FONT_ITALIC, 6.8, max_text_w):
+      lines.append((8.0, [(wrapped, PDF_FONT_ITALIC, 6.8, TEAL)]))
   parana = context.get("ekadashi_parana", {}).get(civil)
   if parana is not None:
     # Hours past this cell's midnight (24:00+ if the window spills past it).
