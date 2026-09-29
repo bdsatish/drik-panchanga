@@ -306,18 +306,20 @@ def lunar_year_boundaries(start_year, location, coordinate_selection="citra"):
   -2950 can hold two or none (§2.1 of the plan); both are refused by name.
 
   Both windows are scanned under one coordinate lock and mode, so the result
-  never depends on a selection some other caller left set globally.
+  never depends on a selection some other caller left set globally. Whether a
+  year fails the single-Ugadi rule depends on the mode, so every error names
+  the ayanāṃśa as well as the place.
   """
   with panchanga.coordinate_calculation_lock:
     panchanga.set_coordinate_selection(coordinate_selection)
+    where = f"{location.name} ({coordinate_selection_label(coordinate_selection)})"
     ugadis = ugadi_dates(_month_sequence(start_year - 1, 11, LUNAR_YEAR_MAX_MONTHS), location, start_year)
     if not ugadis:
-      raise ValueError(f"Gregorian year {_format_year(start_year)} has no Ugadi at {location.name}.")
+      raise ValueError(f"Gregorian year {_format_year(start_year)} has no Ugadi at {where}.")
     if len(ugadis) > 1:
       found = " and ".join(_format_date(date) for date in ugadis)
-      raise ValueError(
-        f"Gregorian year {_format_year(start_year)} has {_count_word(len(ugadis))} Ugadis at {location.name}: "
-        f"{found}. Only a year with a single Ugadi has a lunar year.")
+      raise ValueError(f"Gregorian year {_format_year(start_year)} has {_count_word(len(ugadis))} Ugadis at {where}: "
+                       f"{found}. Only a year with a single Ugadi has a lunar year.")
     ugadi = ugadis[0]
     # A lunar year is 354–385 days, so the next Ugadi is inside 14 months from
     # the month this one falls in.
@@ -326,7 +328,7 @@ def lunar_year_boundaries(start_year, location, coordinate_selection="citra"):
     later = ugadi_dates(_month_sequence(ugadi.year, ugadi.month, LUNAR_YEAR_MAX_MONTHS), location)
     following = [date for date in later if date > ugadi]
     if not following:
-      raise ValueError(f"No next Ugadi after {_format_date(ugadi)} at {location.name}.")
+      raise ValueError(f"No next Ugadi after {_format_date(ugadi)} at {where}.")
     last_day = following[0] - 1
   return ugadi, last_day
 

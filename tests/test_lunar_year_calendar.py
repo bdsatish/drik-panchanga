@@ -128,20 +128,26 @@ class RangeEdgeTests(unittest.TestCase):
           months = lunar_year_months(year, location, mode)
           self.assertTrue(12 <= len(months) <= 14)
 
-  def test_revati_minus_3298_names_both_ugadis(self):
+  def test_revati_minus_3298_names_both_ugadis_and_the_mode(self):
+    # Whether a year fails the single-Ugadi rule depends on the ayanāṃśa,
+    # so the error must carry it: -3298 resolves fine under Citra.
     location = load_location(UJJAIN)
+    self.assertTrue(lunar_year_months(-3298, location, "citra"))
     with self.assertRaises(ValueError) as caught:
       lunar_year_months(-3298, location, "revati")
     message = str(caught.exception)
     self.assertIn("two Ugadis", message)
+    self.assertIn("Revati-paksha", message)
     self.assertIn("-3298-01-11", message)
     self.assertIn("-3298-12-31", message)
 
-  def test_revati_minus_3297_names_no_ugadi(self):
+  def test_revati_minus_3297_names_no_ugadi_and_the_mode(self):
     location = load_location(UJJAIN)
     with self.assertRaises(ValueError) as caught:
       lunar_year_months(-3297, location, "revati")
-    self.assertIn("no Ugadi", str(caught.exception))
+    message = str(caught.exception)
+    self.assertIn("no Ugadi", message)
+    self.assertIn("Revati-paksha", message)
 
   def test_tropical_never_fails_in_range(self):
     location = load_location(UJJAIN)
