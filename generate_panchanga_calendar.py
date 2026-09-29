@@ -298,31 +298,37 @@ def _count_word(n):
   return {0: "no", 1: "one", 2: "two", 3: "three"}.get(n, str(n))
 
 
-def lunar_year_boundaries(start_year, location):
+def lunar_year_boundaries(start_year, location, coordinate_selection="citra"):
   """``(Ugadi, last Phālguna day)`` of the lunar year named by ``start_year``.
 
   The Gregorian year ``start_year`` must hold exactly one Ugadi. Sidereal
   Ugadi drifts about a day later every 70–80 years, so years before about
   -2950 can hold two or none (§2.1 of the plan); both are refused by name.
+
+  Both windows are scanned under one coordinate lock and mode, so the result
+  never depends on a selection some other caller left set globally.
   """
-  ugadis = ugadi_dates(_month_sequence(start_year - 1, 11, LUNAR_YEAR_MAX_MONTHS), location, start_year)
-  if not ugadis:
-    raise ValueError(f"Gregorian year {_format_year(start_year)} has no Ugadi at {location.name}.")
-  if len(ugadis) > 1:
-    found = " and ".join(_format_date(date) for date in ugadis)
-    raise ValueError(
-      f"Gregorian year {_format_year(start_year)} has {_count_word(len(ugadis))} Ugadis at {location.name}: {found}. "
-      f"Only a year with a single Ugadi has a lunar year.")
-  ugadi = ugadis[0]
-  # A lunar year is 354–385 days, so the next Ugadi is inside 14 months from
-  # the month this one falls in.
-  # Any Ugadi later than this one: the next year's number is what closes the
-  # span, and it may sit in ``start_year`` or in ``start_year + 1``.
-  later = ugadi_dates(_month_sequence(ugadi.year, ugadi.month, LUNAR_YEAR_MAX_MONTHS), location)
-  following = [date for date in later if date > ugadi]
-  if not following:
-    raise ValueError(f"No next Ugadi after {_format_date(ugadi)} at {location.name}.")
-  return ugadi, following[0] - 1
+  with panchanga.coordinate_calculation_lock:
+    panchanga.set_coordinate_selection(coordinate_selection)
+    ugadis = ugadi_dates(_month_sequence(start_year - 1, 11, LUNAR_YEAR_MAX_MONTHS), location, start_year)
+    if not ugadis:
+      raise ValueError(f"Gregorian year {_format_year(start_year)} has no Ugadi at {location.name}.")
+    if len(ugadis) > 1:
+      found = " and ".join(_format_date(date) for date in ugadis)
+      raise ValueError(
+        f"Gregorian year {_format_year(start_year)} has {_count_word(len(ugadis))} Ugadis at {location.name}: "
+        f"{found}. Only a year with a single Ugadi has a lunar year.")
+    ugadi = ugadis[0]
+    # A lunar year is 354–385 days, so the next Ugadi is inside 14 months from
+    # the month this one falls in.
+    # Any Ugadi later than this one: the next year's number is what closes the
+    # span, and it may sit in ``start_year`` or in ``start_year + 1``.
+    later = ugadi_dates(_month_sequence(ugadi.year, ugadi.month, LUNAR_YEAR_MAX_MONTHS), location)
+    following = [date for date in later if date > ugadi]
+    if not following:
+      raise ValueError(f"No next Ugadi after {_format_date(ugadi)} at {location.name}.")
+    last_day = following[0] - 1
+  return ugadi, last_day
 
 
 def lunar_year_months(start_year, location, coordinate_selection="citra"):
@@ -331,9 +337,7 @@ def lunar_year_months(start_year, location, coordinate_selection="citra"):
   Whole months are printed: the first month also holds the previous Phālguna,
   the last month the next Chaitra. The length is 12, 13 or 14 months.
   """
-  with panchanga.coordinate_calculation_lock:
-    panchanga.set_coordinate_selection(coordinate_selection)
-    ugadi, last_day = lunar_year_boundaries(start_year, location)
+  ugadi, last_day = lunar_year_boundaries(start_year, location, coordinate_selection)
   first_year, first_month = ugadi.year, ugadi.month
   count = (last_day.year - first_year) * 12 + (last_day.month - first_month) + 1
   return _month_sequence(first_year, first_month, count)

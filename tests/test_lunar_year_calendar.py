@@ -69,7 +69,7 @@ class ResolverFixtureTests(unittest.TestCase):
   def test_measured_spans(self):
     for year, (ugadi, last, first_month, end_month, count) in FIXTURES.items():
       with self.subTest(year=year):
-        got_ugadi, got_last = lunar_year_boundaries(year, self.location)
+        got_ugadi, got_last = lunar_year_boundaries(year, self.location, "citra")
         self.assertEqual(got_ugadi, ugadi)
         self.assertEqual(got_last, last)
         months = lunar_year_months(year, self.location)
@@ -78,8 +78,21 @@ class ResolverFixtureTests(unittest.TestCase):
         self.assertEqual(len(months), count)
 
   def test_2029_starts_on_the_adhika_chaitra_ugadi(self):
-    ugadi, _last = lunar_year_boundaries(2029, self.location)
+    # Citra explicitly: a leaked global mode must not decide the answer.
+    ugadi, _last = lunar_year_boundaries(2029, self.location, "citra")
     self.assertEqual(ugadi, Date(2029, 3, 16))
+
+  def test_boundaries_do_not_depend_on_the_global_mode(self):
+    # Regression: the resolver used to read whatever mode the previous test
+    # left set, so a tropical leak made Citra fixtures resolve tropical dates.
+    # Both windows are now scanned under one mode.
+    import panchanga
+    self.addCleanup(panchanga.set_coordinate_selection, "citra")
+    panchanga.set_coordinate_selection("tropical")
+    ugadi, last = lunar_year_boundaries(2029, self.location, "citra")
+    self.assertEqual(ugadi, Date(2029, 3, 16))
+    self.assertEqual(last, Date(2030, 4, 2))  # tropical's year ends 2030-03-04
+    self.assertEqual(lunar_year_months(2029, self.location, "citra")[0], (2029, 3))
 
   def test_consecutive_years_share_the_ugadi_month(self):
     # Plan §2.2: the month of Ugadi YYYY+1 is the last month of year YYYY
