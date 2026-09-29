@@ -22,7 +22,6 @@ midnight sun), not as a wrap of 24:00.
 
 import argparse
 import calendar
-import logging
 import sys
 from datetime import datetime
 from functools import partial
@@ -82,9 +81,6 @@ from generate_panchanga_calendar import (
 )
 from datetime_helper import (Date, dst_transitions, format_local_hm, format_utc_offset, gregorian_to_jd,
                              hindu_day_civil, jd_to_local_civil_date)
-
-log = logging.getLogger(__name__)
-log.addHandler(logging.NullHandler())
 
 MONTHLY_LAYOUT_VERSION = "Wall-Grid-1.0"
 
@@ -168,13 +164,12 @@ _TITHI_NAMES = {
 def ekadashi_name(record, amanta=True):
   """Vrat name for a teal-cell record, e.g. ``Kāmikā Ekādaśī``.
 
-  The paksa comes from the sunrise tithi prefix, so kshaya days whose
+  The paksha comes from the sunrise tithi prefix, so kshaya days whose
   sunrise is already Dvadasi still resolve. Names are stored amanta-based
   (sukla and krsna of the same lunar month share one entry); purnimanta
-  krsna shifts back by one, adhika uses the ``adhika`` key. The data
-  contract test (tests/test_data_files.py) pins that every month and the
-  adhika entry carry both paksha names, so no missing-name branch lives
-  here.
+  krsna shifts back by one, adhika uses the ``adhika`` key. Every month
+  1-12 and adhika carries both paksha names, a data invariant pinned by
+  tests/test_data_files.py.
   """
   paksha = "S" if record.tithi.startswith("S") else "K"
   masa = display_masa(record, amanta=amanta)

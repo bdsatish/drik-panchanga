@@ -5,7 +5,6 @@ an ``_unlocked`` helper that does the real work. Hold the lock for the whole
 request so ayanāṃśa / tropical mode stays stable under concurrent web use.
 """
 
-import logging
 import math
 from functools import partial
 
@@ -21,9 +20,6 @@ from generate_panchanga_calendar import (
   resolve_location,
   sanskrit_names,
 )
-
-log = logging.getLogger(__name__)
-log.addHandler(logging.NullHandler())
 
 
 def parse_civil_date(text):

@@ -1215,8 +1215,8 @@ def build_pdf(location, months, output_path, festivals_path=None, month_system="
     eclipse_dates = eclipse_civil_dates(eclipses, location.timezone_name, sunrise_by_date=sunrise_by_date,
                                         longitude=location.longitude)
     solar_by_date = solar_dates_by_date(context_records)
-    # The printed months are contiguous, so a day range and this date set
-    # filter the same records; the pad days fall outside it.
+    # Markers are drawn on printed days only; pad days are read to make the
+    # first and last pages right and never appear in these sets.
     ekadashi_dates = {value for value in ekadashi_dates_from_records(context_records) if value in target_dates}
     pradosham_dates = {
       value

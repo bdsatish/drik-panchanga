@@ -14,7 +14,12 @@ log.addHandler(logging.NullHandler())
 
 
 def _event_jd_ut(civil_date, geopos, timezone_name, getter):
-  """UT JD of a local event, or None if outside the day's band."""
+  """UT JD of a local event, or ``None``.
+
+  ``None`` means the getter returned none (no moonrise in the Hindu day) or
+  an instant outside the ``[jd - 1, jd + 2]`` band. Sunrise and sunset always
+  return an anchor, so for them only the band can give ``None``.
+  """
   place = _place_for_civil(civil_date, geopos, timezone_name)
   jd = gregorian_to_jd(civil_date)
   event = getter(jd, place)
@@ -257,13 +262,7 @@ def select_varamahalakshmi_dates(records):
 
 
 def find_local_eclipses(start_jd, end_jd, geopos):
-  """Locally visible partial/total/annular eclipses with maximum in ``[start_jd, end_jd)``.
-
-  Every caller passes a forward window (sunrise anchors advance each day,
-  and the builders span whole months). An empty or reversed range would
-  still find nothing: the ``start_jd <= maximum < end_jd`` filter below is
-  unsatisfiable.
-  """
+  """Locally visible partial/total/annular eclipses with maximum in ``[start_jd, end_jd)``."""
   searches = (("Lunar", panchanga.swe.lun_eclipse_when_loc), ("Solar", panchanga.swe.sol_eclipse_when_loc))
   found = []
   for kind, finder in searches:

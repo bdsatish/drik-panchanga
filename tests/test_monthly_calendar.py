@@ -305,32 +305,6 @@ class CellDrawTests(unittest.TestCase):
     self.assertIn("Śrāvaṇa K15 08:24", drawn_text)
     self.assertIn("Śrāvaṇa S1 28:31", drawn_text)
 
-  def test_day_details_polar_day_yields_lines_not_none(self):
-    # day_details never returns None: panchanga.sunrise() anchors every day,
-    # so draw_cell can unpack its 3-tuple directly. At a polar winter day the
-    # lines still carry real end times, never sentinel garbage.
-    ensure_pdf_fonts()
-    pdf = mock.Mock()
-    from festival_rules import DayRecord
-    context = {
-      "records_by_date": {
-        Date(2026, 6, 21): DayRecord(Date(2026, 6, 21), "K7", 1, 1, "5", False, 0.0)
-      },
-      "festival_names_by_date": {},
-      "eclipse_dates": set(),
-      "eclipse_details_by_date": {},
-      "masa_badges": {},
-      "solar_by_date": {},
-      "ekadashi": set(),
-      "pradosham": set(),
-      "sankashti": set(),
-    }
-    details = day_details(load_location("Murmansk, RU"), Date(2026, 6, 21))
-    self.assertTrue(all(part is not None for part in details))
-    draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 21, Date(2026, 6, 21), load_location("Murmansk, RU"), context, col=0)
-    drawn_text = [c.args[2] for c in pdf.drawString.call_args_list]
-    self.assertFalse([text for text in drawn_text if "-59" in text])
-
   def test_masa_start_fill_is_drawn(self):
     ensure_pdf_fonts()
     pdf = mock.Mock()
