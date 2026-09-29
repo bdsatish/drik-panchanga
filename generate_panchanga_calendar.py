@@ -321,10 +321,10 @@ def lunar_year_boundaries(start_year, location, coordinate_selection="citra"):
       raise ValueError(f"Gregorian year {_format_year(start_year)} has {_count_word(len(ugadis))} Ugadis at {where}: "
                        f"{found}. Only a year with a single Ugadi has a lunar year.")
     ugadi = ugadis[0]
-    # A lunar year is 354–385 days, so the next Ugadi is inside 14 months from
-    # the month this one falls in.
-    # Any Ugadi later than this one: the next year's number is what closes the
-    # span, and it may sit in ``start_year`` or in ``start_year + 1``.
+    # Any Ugadi after this one closes the span. The single-Ugadi check above
+    # already ruled out start_year, so the next one sits in start_year + 1
+    # -- and a lunar year is 354-385 days, so 14 months from this Ugadi's
+    # month always reach it.
     later = ugadi_dates(_month_sequence(ugadi.year, ugadi.month, LUNAR_YEAR_MAX_MONTHS), location)
     following = [date for date in later if date > ugadi]
     if not following:

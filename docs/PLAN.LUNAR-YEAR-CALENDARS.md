@@ -249,7 +249,12 @@ ICS:      panchanga-{city}-{coordinate}-{amanta|purnimanta}-{YYYY}.ics
 
 Examples: `ujjain-in_panchanga_2026-03_to_2027-04.pdf` (this is the name CI
 checks today), and `ujjain-in_panchanga_wall_2026-03_to_2027-04.pdf` (CI
-checks `…_wall_2026-03_to_2027-02.pdf` today).
+checks `..._wall_2026-03_to_2027-02.pdf` today).
+
+A BCE span is padded like `--start`: month years render as `-0500-02`, so
+`--start=-500` at Ujjain names
+`ujjain-in_panchanga_-0500-02_to_-0499-02.pdf`. `require_start_year` reads
+the padded year back.
 
 The resolved months in the PDF name make two runs diffable when Ugadi’s
 month shifts under a different ayanāṃśa. `webapp/app.py` builds the ICS name

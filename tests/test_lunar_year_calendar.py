@@ -14,6 +14,8 @@ The rules under test (docs/PLAN.LUNAR-YEAR-CALENDARS.md):
 import calendar
 import unittest
 
+import generate_panchanga_calendar as annual
+import generate_monthly_calendar as monthly
 from datetime_helper import Date
 from generate_panchanga_calendar import (
   DEFAULT_FESTIVALS_PATH,
@@ -198,6 +200,21 @@ class FooterFestivalTests(unittest.TestCase):
     # printed because the span ends on a whole month boundary.
     self.assertIn("Ugadi", names.get(Date(2026, 3, 20), []))
     self.assertIn("Ugadi", names.get(Date(2027, 4, 7), []))
+
+
+class BceFilenameTests(unittest.TestCase):
+  """Plan §3.4: a BCE span pads its years, like --start does."""
+
+  def test_padded_month_years_and_a_round_trip(self):
+    location = load_location(UJJAIN)
+    months = lunar_year_months(-500, location)
+    self.assertEqual(months[0], (-500, 2))
+    self.assertEqual(months[-1], (-499, 2))
+    self.assertEqual(annual.default_output_path(location, months).name, "ujjain-in_panchanga_-0500-02_to_-0499-02.pdf")
+    self.assertEqual(
+      monthly.default_monthly_output_path(location, months).name, "ujjain-in_panchanga_wall_-0500-02_to_-0499-02.pdf")
+    # require_start_year reads the padded year back: -0500 is 501 BCE.
+    self.assertEqual(require_start_year("-0500"), -500)
 
 
 if __name__ == "__main__":
