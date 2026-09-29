@@ -47,10 +47,9 @@ from festival_rules import (
 )
 from generate_panchanga_calendar import (
   DEFAULT_FESTIVALS_PATH,
-  context_month_range,
+  _month_sequence,
   daily_records,
   load_location,
-  month_range,
 )
 
 
@@ -1078,7 +1077,7 @@ class YajurUpakarmaTests(unittest.TestCase):
     # 08-27 and does not move Upakarma on 08-28.
     location = load_location("Helsinki")
     panchanga.set_chosen_ayanamsa("citra")
-    months = list(month_range(2026, 5))
+    months = _month_sequence(2026, 5, 14)
     records = daily_records(months, location)
     geopos = (location.longitude, location.latitude, 0.0)
 
@@ -1099,7 +1098,7 @@ class YajurUpakarmaTests(unittest.TestCase):
     # on, so the postpone wiring itself is pinned against the nija-S15 dates.
     location = load_location("Helsinki")
     panchanga.set_chosen_ayanamsa("citra")
-    months = list(month_range(2026, 5))
+    months = _month_sequence(2026, 5, 14)
     records = daily_records(months, location)
     geopos = (location.longitude, location.latitude, 0.0)
 
@@ -1148,8 +1147,9 @@ class VaikunthaEkadashiTests(unittest.TestCase):
     """Tirupati 2086: no Margasira/Pausha S11 while the Sun is in Dhanur."""
     location = load_location("Tirupati")
     panchanga.set_chosen_ayanamsa("citra")
-    months = list(month_range(2086, 3))
-    context_months = list(context_month_range(2086, 3))
+    months = _month_sequence(2086, 3, 14)
+    # 3 months of context on each side, as the old context_month_range gave.
+    context_months = _month_sequence(2085, 12, 20)
     records = daily_records(context_months, location)
     target_month_set = set(months)
     target_dates = {
@@ -1742,12 +1742,12 @@ class PradoshamRealLocationTests(unittest.TestCase):
     """Pradosham occurs roughly twice per month in Ujjain (Shukla + Krishna Trayodashi)."""
     location = load_location("Ujjain")
     panchanga.set_chosen_ayanamsa("citra")
-    months = list(month_range(2026, 1))
+    months = _month_sequence(2026, 1, 14)
     records = daily_records(months, location)
     geopos = (location.longitude, location.latitude, 0.0)
 
     dates = select_pradosham_dates(records, geopos=geopos, timezone_name=location.timezone_name)
-    # Filter to January 2026 only (month_range returns 14 months)
+    # Filter to January 2026 only (the fixture spans 14 months)
     jan_dates = [d for d in dates if d.year == 2026 and d.month == 1]
     # January 2026 has 2-3 Pradoshams depending on lunar cycle alignment
     self.assertIn(len(jan_dates), [2, 3])
@@ -1756,7 +1756,7 @@ class PradoshamRealLocationTests(unittest.TestCase):
     """Pradosham calculation should not crash for high-latitude locations."""
     location = load_location("Helsinki")
     panchanga.set_chosen_ayanamsa("citra")
-    months = list(month_range(2026, 6))
+    months = _month_sequence(2026, 6, 14)
     records = daily_records(months, location)
     geopos = (location.longitude, location.latitude, 0.0)
 
@@ -1768,7 +1768,7 @@ class PradoshamRealLocationTests(unittest.TestCase):
     """Pradosham should handle December to January transition."""
     location = load_location("Ujjain")
     panchanga.set_chosen_ayanamsa("citra")
-    months = list(month_range(2026, 12))
+    months = _month_sequence(2026, 12, 14)
     records = daily_records(months, location)
     geopos = (location.longitude, location.latitude, 0.0)
 
@@ -1787,12 +1787,12 @@ class SankashtiChaturthiRealLocationTests(unittest.TestCase):
     """Sankashti Chaturthi occurs roughly once per month in Ujjain (Krishna Paksha)."""
     location = load_location("Ujjain")
     panchanga.set_chosen_ayanamsa("citra")
-    months = list(month_range(2026, 1))
+    months = _month_sequence(2026, 1, 14)
     records = daily_records(months, location)
     geopos = (location.longitude, location.latitude, 0.0)
 
     dates = select_sankashti_chaturthi_dates(records, geopos=geopos, timezone_name=location.timezone_name)
-    # Filter to January 2026 only (month_range returns 14 months)
+    # Filter to January 2026 only (the fixture spans 14 months)
     jan_dates = [d for d in dates if d.year == 2026 and d.month == 1]
     # January 2026 should have 1 Sankashti Chaturthi (Krishna Paksha only)
     self.assertEqual(len(jan_dates), 1)
@@ -1801,7 +1801,7 @@ class SankashtiChaturthiRealLocationTests(unittest.TestCase):
     """Sankashti Chaturthi calculation should not crash for high-latitude locations."""
     location = load_location("Helsinki")
     panchanga.set_chosen_ayanamsa("citra")
-    months = list(month_range(2026, 6))
+    months = _month_sequence(2026, 6, 14)
     records = daily_records(months, location)
     geopos = (location.longitude, location.latitude, 0.0)
 
@@ -1813,7 +1813,7 @@ class SankashtiChaturthiRealLocationTests(unittest.TestCase):
     """Sankashti Chaturthi should work with US timezones."""
     location = load_location("Los Angeles, US")
     panchanga.set_chosen_ayanamsa("citra")
-    months = list(month_range(2026, 1))
+    months = _month_sequence(2026, 1, 14)
     records = daily_records(months, location)
     geopos = (location.longitude, location.latitude, 0.0)
 
@@ -1826,7 +1826,7 @@ class SankashtiChaturthiRealLocationTests(unittest.TestCase):
     """Sankashti Chaturthi should occur in consecutive months without gaps."""
     location = load_location("Ujjain")
     panchanga.set_chosen_ayanamsa("citra")
-    months = list(month_range(2026, 1))
+    months = _month_sequence(2026, 1, 14)
     records = daily_records(months, location)
     geopos = (location.longitude, location.latitude, 0.0)
 
@@ -1887,7 +1887,7 @@ class UjjainFestivalGoldenTests(unittest.TestCase):
   def setUpClass(cls):
     panchanga.set_chosen_ayanamsa("citra")
     cls.location = load_location(cls.LOCATION_NAME)
-    cls.months = list(month_range(2026, 1))
+    cls.months = _month_sequence(2026, 1, 14)
     cls.records = daily_records(cls.months, cls.location)
     cls.enabled = load_festival_selection(DEFAULT_FESTIVALS_PATH)
     cls.geopos = (cls.location.longitude, cls.location.latitude, 0.0)

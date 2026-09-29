@@ -161,7 +161,7 @@ def handle_generate():
   """POST generate.py with city + start + optional month → PDF attachment."""
   method = os.environ.get("REQUEST_METHOD", "GET").upper()
   if method != "POST":
-    write_error("Use POST with form fields city and start (YYYY-MM).", status="405 Method Not Allowed")
+    write_error("Use POST with form fields city and start (YYYY).", status="405 Method Not Allowed")
     return
 
   # Build the whole response before emitting anything: once headers are on the

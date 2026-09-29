@@ -22,8 +22,10 @@ from generate_panchanga_calendar import (
   lunar_year_boundaries,
   lunar_year_months,
   load_location,
+  record_span,
   require_start_year,
 )
+from generate_monthly_calendar import collect_context
 
 UJJAIN = "Ujjain, IN"
 
@@ -134,6 +136,49 @@ class RangeEdgeTests(unittest.TestCase):
       with self.subTest(year=year):
         months = lunar_year_months(year, location, "tropical")
         self.assertTrue(12 <= len(months) <= 14)
+
+
+class PadTests(unittest.TestCase):
+  """The 32/1-day pad replaces the old three-month context margin."""
+
+  def test_solar_day_at_the_first_printed_day(self):
+    # Kumbha saṅkrānti falls on 2026-02-12, so 2026-03-01 is solar day 17 —
+    # right only because the records start 32 days earlier.
+    location = load_location(UJJAIN)
+    months = lunar_year_months(2026, location)
+    context = collect_context(months, location, DEFAULT_FESTIVALS_PATH)
+    raasi, solar_day, is_sankranti = context["solar_by_date"][Date(2026, 3, 1)]
+    self.assertEqual((raasi, solar_day, is_sankranti), (11, 17, False))
+
+  def test_parana_on_the_first_printed_day_keeps_its_upavasa(self):
+    # 1905 prints April first: the pāraṇā on 1905-04-01 belongs to the
+    # Ekādaśī upavāsa of 1905-03-31, two days before the printed span.
+    location = load_location(UJJAIN)
+    months = lunar_year_months(1905, location)
+    self.assertEqual(months[0], (1905, 4))
+    context = collect_context(months, location, DEFAULT_FESTIVALS_PATH)
+    parana = context["ekadashi_parana"][Date(1905, 4, 1)]
+    self.assertEqual(parana.upavasa_date, Date(1905, 3, 31))
+
+  def test_record_span_width(self):
+    # 32 days before the first printed day, one after the last.
+    first, last = record_span([(2026, 3)])
+    self.assertEqual(first, Date(2026, 1, 28))
+    self.assertEqual(last, Date(2026, 4, 1))
+
+
+class FooterFestivalTests(unittest.TestCase):
+  """Printed days outside the lunar year still show their festivals (plan §2.2)."""
+
+  def test_ugadi_prints_in_the_edge_months_of_the_2026_span(self):
+    location = load_location(UJJAIN)
+    months = lunar_year_months(2026, location)
+    context = collect_context(months, location, DEFAULT_FESTIVALS_PATH)
+    names = context["festival_names_by_date"]
+    # 2026-03-20 is the year's own Ugadi; 2027-04-07 is next year's Ugadi,
+    # printed because the span ends on a whole month boundary.
+    self.assertIn("Ugadi", names.get(Date(2026, 3, 20), []))
+    self.assertIn("Ugadi", names.get(Date(2027, 4, 7), []))
 
 
 if __name__ == "__main__":

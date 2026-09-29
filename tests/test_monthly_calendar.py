@@ -1,4 +1,4 @@
-"""Regression tests for the 12-month wall-grid panchanga PDF."""
+"""Regression tests for the lunar-year wall-grid panchanga PDF."""
 
 from io import BytesIO
 from pathlib import Path
@@ -14,7 +14,6 @@ from generate_monthly_calendar import (
   argument_parser,
   build_monthly_pdf,
   collect_context,
-  context_months,
   day_details,
   default_monthly_output_path,
   draw_cell,
@@ -25,7 +24,7 @@ from generate_monthly_calendar import (
   sun_moon_lines,
   tithi_name,
 )
-from generate_panchanga_calendar import DEFAULT_FESTIVALS_PATH, _month_sequence as month_sequence
+from generate_panchanga_calendar import DEFAULT_FESTIVALS_PATH, _month_sequence as month_sequence, lunar_year_months
 
 
 class MonthSequenceTests(unittest.TestCase):
@@ -34,68 +33,88 @@ class MonthSequenceTests(unittest.TestCase):
     months = month_sequence(2026, 11, 4)
     self.assertEqual(months, [(2026, 11), (2026, 12), (2027, 1), (2027, 2)])
 
-  def test_context_months_adds_buffer(self):
-    ctx = context_months(2026, 3)
-    self.assertEqual(len(ctx), 18)
-    self.assertEqual(ctx[0], (2025, 12))
-    self.assertEqual(ctx[-1], (2027, 5))
-
 
 class BuildPdfTests(unittest.TestCase):
 
-  def test_generates_exactly_twelve_pages(self):
+  def test_generates_one_page_per_printed_month(self):
+    months = lunar_year_months(2026, load_location("Helsinki"))
+    self.assertEqual(len(months), 14)
     with TemporaryDirectory() as directory:
       output = Path(directory) / "calendar.pdf"
       with mock.patch("generate_monthly_calendar.find_local_eclipses", return_value=[]):
-        build_monthly_pdf(load_location("Helsinki"), 2026, 6, output)
+        build_monthly_pdf(load_location("Helsinki"), months, output)
       document = output.read_bytes()
     page_objects = re.findall(rb"/Type\s*/Page\b", document)
-    self.assertEqual(len(page_objects), 12)
+    self.assertEqual(len(page_objects), len(months))
     self.assertIn(RULESET_VERSION.encode("ascii"), document)
 
-  def test_pdf_metadata_contains_title(self):
+  def test_purnimanta_prints_the_same_months(self):
+    # The span comes from amānta records; ``--month`` only changes display.
+    location = load_location("Helsinki")
+    months = lunar_year_months(2026, location)
     with TemporaryDirectory() as directory:
       output = Path(directory) / "calendar.pdf"
       with mock.patch("generate_monthly_calendar.find_local_eclipses", return_value=[]):
-        build_monthly_pdf(load_location("Ujjain"), 2026, 6, output)
+        build_monthly_pdf(location, months, output, month_system="purnimanta")
+      document = output.read_bytes()
+    self.assertEqual(len(re.findall(rb"/Type\s*/Page\b", document)), len(months))
+
+  def test_pdf_metadata_contains_title(self):
+    location = load_location("Ujjain")
+    months = lunar_year_months(2026, location)
+    with TemporaryDirectory() as directory:
+      output = Path(directory) / "calendar.pdf"
+      with mock.patch("generate_monthly_calendar.find_local_eclipses", return_value=[]):
+        build_monthly_pdf(location, months, output)
       document = output.read_bytes()
     # Title/subject live in the uncompressed Info dict; page streams are flate-encoded.
-    self.assertIn(b"Ujjain, IN Panchanga June 2026 to May 2027", document)
+    self.assertIn(b"Ujjain, IN Panchanga March 2026 to April 2027", document)
     self.assertIn(RULESET_VERSION.encode("ascii"), document)
 
   def test_default_output_path(self):
-    path = default_monthly_output_path(load_location("Helsinki"), 2026, 3)
-    self.assertEqual(path.name, "helsinki-fi_panchanga_wall_2026-03_to_2027-02.pdf")
+    location = load_location("Helsinki")
+    path = default_monthly_output_path(location, lunar_year_months(2026, location))
+    self.assertEqual(path.name, "helsinki-fi_panchanga_wall_2026-03_to_2027-04.pdf")
 
   def test_purnimanta_filename_suffix(self):
-    path = default_monthly_output_path(load_location("Helsinki"), 2026, 3, month_system="purnimanta")
-    self.assertEqual(path.name, "helsinki-fi_panchanga_wall_2026-03_to_2027-02_purnimanta.pdf")
+    location = load_location("Helsinki")
+    months = lunar_year_months(2026, location)
+    path = default_monthly_output_path(location, months, month_system="purnimanta")
+    self.assertEqual(path.name, "helsinki-fi_panchanga_wall_2026-03_to_2027-04_purnimanta.pdf")
 
   def test_ayanamsa_filename_suffix(self):
-    path = default_monthly_output_path(load_location("Helsinki"), 2026, 3, coordinate_selection="raman")
-    self.assertEqual(path.name, "helsinki-fi_panchanga_wall_2026-03_to_2027-02_raman.pdf")
+    location = load_location("Helsinki")
+    months = lunar_year_months(2026, location)
+    path = default_monthly_output_path(location, months, coordinate_selection="raman")
+    self.assertEqual(path.name, "helsinki-fi_panchanga_wall_2026-03_to_2027-04_raman.pdf")
 
   def test_tropical_filename_suffix(self):
-    path = default_monthly_output_path(load_location("Helsinki"), 2026, 3, coordinate_selection="tropical")
-    self.assertEqual(path.name, "helsinki-fi_panchanga_wall_2026-03_to_2027-02_tropical.pdf")
+    # lunar_year_months sets the global coordinate selection; restore it so a
+    # tropical resolve here cannot leak into later date-computation tests.
+    import panchanga
+    self.addCleanup(panchanga.set_coordinate_selection, "citra")
+    location = load_location("Helsinki")
+    months = lunar_year_months(2026, location, "tropical")
+    path = default_monthly_output_path(location, months, coordinate_selection="tropical")
+    self.assertEqual(path.name, "helsinki-fi_panchanga_wall_2026-03_to_2027-03_tropical.pdf")
 
 
 class CliTests(unittest.TestCase):
 
   def test_cli_defaults(self):
     parser = argument_parser()
-    arguments = parser.parse_args(["--city", "Helsinki", "--start", "2026-03"])
+    arguments = parser.parse_args(["--city", "Helsinki", "--start", "2026"])
     self.assertEqual(arguments.month, "amanta")
     self.assertEqual(arguments.ayanamsa, "citra")
 
   def test_cli_accepts_purnimanta(self):
     parser = argument_parser()
-    arguments = parser.parse_args(["--city", "Helsinki", "--start", "2026-03", "--month", "purnimanta"])
+    arguments = parser.parse_args(["--city", "Helsinki", "--start", "2026", "--month", "purnimanta"])
     self.assertEqual(arguments.month, "purnimanta")
 
   def test_cli_accepts_ayanamsa(self):
     parser = argument_parser()
-    arguments = parser.parse_args(["--city", "Helsinki", "--start", "2026-03", "--ayanamsa", "revati"])
+    arguments = parser.parse_args(["--city", "Helsinki", "--start", "2026", "--ayanamsa", "revati"])
     self.assertEqual(arguments.ayanamsa, "revati")
 
 

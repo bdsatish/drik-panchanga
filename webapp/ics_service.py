@@ -1,4 +1,4 @@
-"""ICS export: daily all-day events for a 14-month panchanga span."""
+"""ICS export: daily all-day events for the months of one lunar year."""
 
 from calendar import monthrange
 from datetime import datetime, timezone
@@ -7,10 +7,9 @@ from datetime_helper import Date, format_hms
 from generate_panchanga_calendar import (
   coordinate_selection_label,
   location_slug,
-  month_range,
+  lunar_year_months,
   month_system_label,
   require_month_system,
-  require_supported_span,
 )
 from webapp.day_panchanga import (
   _compute_day_details_unlocked,
@@ -69,12 +68,16 @@ def _fmt_interval(start, end, clock):
   return f"{clock(start, show_seconds=True)}–{clock(end, show_seconds=True)}"
 
 
-def generate_ics(location, start_year, start_month, month_system="amanta", coordinate_selection="citra"):
-  """Generate a feed while holding coordinate state for the full span."""
+def generate_ics(location, start_year, month_system="amanta", coordinate_selection="citra"):
+  """Generate the lunar year of Ugadi in ``start_year`` while holding coordinate state.
+
+  Whole Gregorian months are exported, from the month containing Ugadi (adhika
+  Chaitra when present) through the month containing the last Phālguna day.
+  """
   if start_year < 1:
     raise ValueError("ICS dates require year 1 CE or later (the iCalendar format allows only four-digit years).")
-  require_supported_span(start_year, start_month, 14)
   with panchanga.coordinate_calculation_lock:
+    months = lunar_year_months(start_year, location, coordinate_selection)
     amanta = require_month_system(month_system)
     month_key = "amanta" if amanta else "purnimanta"
     dtstamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
@@ -90,7 +93,7 @@ def generate_ics(location, start_year, start_month, month_system="amanta", coord
       "X-WR-CALNAME:" + cal_name,
       "X-WR-CALDESC:" + cal_desc,
     ]
-    for year, month in month_range(start_year, start_month):
+    for year, month in months:
       for day in range(1, monthrange(year, month)[1] + 1):
         civil = Date(year, month, day)
         d = _ics_date(civil)

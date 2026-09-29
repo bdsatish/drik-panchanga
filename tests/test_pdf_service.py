@@ -23,19 +23,19 @@ class PdfServiceTests(unittest.TestCase):
   def test_validates_required_fields(self):
     with self.assertRaisesRegex(ValueError, "City is required"):
       generate_pdf({})
-    with self.assertRaisesRegex(ValueError, "start month must use YYYY-MM"):
+    with self.assertRaisesRegex(ValueError, "start year must be YYYY"):
       generate_pdf({"city": "Helsinki"})
 
   def test_generates_bytes_with_shared_defaults(self):
 
-    def fake_build(_location, _year, _month, output_path, **_kwargs):
+    def fake_build(_location, _months, output_path, **_kwargs):
       Path(output_path).write_bytes(b"%PDF-shared")
       return Path(output_path)
 
     with mock.patch("webapp.pdf_service.build_pdf", side_effect=fake_build) as build:
       content, filename = generate_pdf({
         "city": "Helsinki",
-        "start": "2026-03",
+        "start": "2026",
       })
 
     self.assertEqual(content, b"%PDF-shared")
@@ -50,7 +50,7 @@ class FlaskGenerationTests(unittest.TestCase):
     with mock.patch("webapp.app.generate_pdf", return_value=(b"%PDF-flask", "calendar.pdf")) as generate:
       response = app.test_client().post("/generate", data={
         "city": "Helsinki",
-        "start": "2026-03",
+        "start": "2026",
       })
 
     self.assertEqual(response.status_code, 200)
@@ -91,7 +91,7 @@ class CgiGenerationTests(unittest.TestCase):
     with mock.patch.dict(os.environ, {"REQUEST_METHOD": "POST"}, clear=True), \
             mock.patch.object(
                 cgi_handlers, "_parse_urlencoded_post",
-                return_value={"city": "Helsinki", "start": "2026-03"}), \
+                return_value={"city": "Helsinki", "start": "2026"}), \
             mock.patch.object(
                 cgi_handlers, "generate_pdf",
                 return_value=(b"%PDF-cgi", "calendar.pdf")) as generate, \
@@ -120,7 +120,7 @@ class CgiGenerationTests(unittest.TestCase):
     with mock.patch.dict(os.environ, {"REQUEST_METHOD": "POST"}, clear=True), \
             mock.patch.object(
                 cgi_handlers, "_parse_urlencoded_post",
-                return_value={"city": "Helsinki", "start": "2026-03"}), \
+                return_value={"city": "Helsinki", "start": "2026"}), \
             mock.patch.object(
                 cgi_handlers, "generate_pdf",
                 return_value=(b"%PDF-cgi", "calendar.pdf")), \
@@ -168,20 +168,21 @@ def unfold_ics(text):
 class IcsServiceTests(unittest.TestCase):
 
   def test_describes_varjyam_for_every_day(self):
-    ics = unfold_ics(generate_ics(load_location("Tirupati"), 2026, 1))
+    ics = unfold_ics(generate_ics(load_location("Tirupati"), 2026))
     self.assertEqual(ics.count("Varjyam:"), ics.count("BEGIN:VEVENT"))
-    # 01:02:03 and 04:05:06 IST on the 1 January row.
-    jan1 = gregorian_to_jd(Date(2026, 1, 1))
-    stub = [(jan1 + (1 + 2 / 60 + 3 / 3600 - 5.5) / 24, jan1 + (4 + 5 / 60 + 6 / 3600 - 5.5) / 24)]
+    # 01:02:03 and 04:05:06 IST on 1 March 2026, the first printed row
+    # (the lunar year starts in Ugadi's month).
+    anchor = gregorian_to_jd(Date(2026, 3, 1))
+    stub = [(anchor + (1 + 2 / 60 + 3 / 3600 - 5.5) / 24, anchor + (4 + 5 / 60 + 6 / 3600 - 5.5) / 24)]
     with mock.patch.object(panchanga, "varjyam", return_value=stub):
-      stubbed = unfold_ics(generate_ics(load_location("Tirupati"), 2026, 1))
+      stubbed = unfold_ics(generate_ics(load_location("Tirupati"), 2026))
     self.assertIn("Varjyam: 01:02:03–04:05:06", stubbed)
     with mock.patch.object(panchanga, "varjyam", return_value=[]):
-      empty = unfold_ics(generate_ics(load_location("Tirupati"), 2026, 1))
+      empty = unfold_ics(generate_ics(load_location("Tirupati"), 2026))
     self.assertIn("Varjyam: —", empty)
 
   def test_generates_valid_ics_structure(self):
-    ics = generate_ics(load_location("Helsinki"), 2026, 1)
+    ics = generate_ics(load_location("Helsinki"), 2026)
     self.assertTrue(ics.startswith("BEGIN:VCALENDAR\r\n"))
     self.assertIn("VERSION:2.0", ics)
     self.assertIn("CALSCALE:GREGORIAN", ics)
@@ -202,10 +203,13 @@ class IcsServiceTests(unittest.TestCase):
 
   def test_ics_respects_tropical_mode(self):
     loc = load_location("Tirupati")
-    sid = generate_ics(loc, 2026, 1, coordinate_selection="citra")
-    trop = generate_ics(loc, 2026, 1, coordinate_selection="tropical")
-    self.assertEqual(sid.count("BEGIN:VEVENT"), trop.count("BEGIN:VEVENT"))
-    self.assertEqual(sid.count("BEGIN:VEVENT"), 424)
+    sid = generate_ics(loc, 2026, coordinate_selection="citra")
+    trop = generate_ics(loc, 2026, coordinate_selection="tropical")
+    # Sidereal Ugadi 2026 sits in March and the next one in April: 14 months,
+    # 426 days. Tropical Ugadi stays in March and the next falls in March
+    # too: 13 months, 396 days.
+    self.assertEqual(sid.count("BEGIN:VEVENT"), 426)
+    self.assertEqual(trop.count("BEGIN:VEVENT"), 396)
 
     def first_description(text):
       lines = text.split("\r\n")
@@ -224,22 +228,22 @@ class IcsServiceTests(unittest.TestCase):
     self.assertNotEqual(first_description(sid), first_description(trop))
 
   def test_ics_event_count_matches_month_span(self):
-    ics = generate_ics(load_location("Tirupati"), 2026, 6)
+    ics = generate_ics(load_location("Tirupati"), 2026)
     self.assertGreater(ics.count("BEGIN:VEVENT"), 400)
-    self.assertLessEqual(ics.count("BEGIN:VEVENT"), 435)
+    self.assertLessEqual(ics.count("BEGIN:VEVENT"), 426)
 
   def test_ics_metadata_is_selection_aware(self):
     loc = load_location("Tirupati")
-    sid = generate_ics(loc, 2026, 1, coordinate_selection="citra")
-    trop = generate_ics(loc, 2026, 1, coordinate_selection="tropical")
+    sid = generate_ics(loc, 2026, coordinate_selection="citra")
+    trop = generate_ics(loc, 2026, coordinate_selection="tropical")
     self.assertIn("X-WR-CALDESC:Chitra-paksha · Amānta", sid)
     self.assertIn("X-WR-CALDESC:Tropical (Sāyana) · Amānta", trop)
 
   def test_ics_uid_differs_by_selection_and_month_system(self):
     loc = load_location("Tirupati")
-    sid = generate_ics(loc, 2026, 1, coordinate_selection="citra")
-    trop = generate_ics(loc, 2026, 1, coordinate_selection="tropical")
-    purni = generate_ics(loc, 2026, 1, coordinate_selection="citra", month_system="purnimanta")
+    sid = generate_ics(loc, 2026, coordinate_selection="citra")
+    trop = generate_ics(loc, 2026, coordinate_selection="tropical")
+    purni = generate_ics(loc, 2026, coordinate_selection="citra", month_system="purnimanta")
 
     def first_uid(text):
       return next(line for line in text.split("\r\n") if line.startswith("UID:"))
@@ -248,7 +252,7 @@ class IcsServiceTests(unittest.TestCase):
     self.assertNotEqual(first_uid(sid), first_uid(purni))
 
   def test_ics_flask_filename_is_selection_aware(self):
-    response = app.test_client().get("/api/panchanga.ics?city=Helsinki&start=2026-03&ayanamsa=tropical")
+    response = app.test_client().get("/api/panchanga.ics?city=Helsinki&start=2026&ayanamsa=tropical")
     self.assertEqual(response.status_code, 200)
     disposition = response.headers["Content-Disposition"]
     self.assertIn("tropical", disposition)
@@ -264,10 +268,10 @@ class IcsServiceTests(unittest.TestCase):
     names = set()
     for spelling in spellings:
       with self.subTest(city=spelling):
-        response = client.get(f"/api/panchanga.ics?city={spelling}&start=2026-03")
+        response = client.get(f"/api/panchanga.ics?city={spelling}&start=2026")
         self.assertEqual(response.status_code, 200)
         disposition = response.headers["Content-Disposition"]
-        self.assertIn("panchanga-helsinki-fi-citra-amanta-2026-03.ics", disposition)
+        self.assertIn("panchanga-helsinki-fi-citra-amanta-2026.ics", disposition)
         self.assertNotIn(",", disposition.split("filename=")[-1])  # no raw comma
         names.add(disposition)
     self.assertEqual(len(names), 1)
@@ -275,20 +279,20 @@ class IcsServiceTests(unittest.TestCase):
   def test_ics_flask_filename_matches_the_uid_slug(self):
     # The download name and the calendar's own UID must agree.
     import re
-    response = app.test_client().get("/api/panchanga.ics?city=helsinki,fi&start=2026-03")
+    response = app.test_client().get("/api/panchanga.ics?city=helsinki,fi&start=2026")
     disposition = response.headers["Content-Disposition"]
     uid = re.search(r"@([A-Za-z0-9._-]+)", response.data.decode())
     self.assertIn(f"-{uid.group(1)}-", disposition)
 
   def test_ics_flask_endpoint_returns_calendar(self):
-    response = app.test_client().get("/api/panchanga.ics?city=Helsinki&start=2026-03")
+    response = app.test_client().get("/api/panchanga.ics?city=Helsinki&start=2026")
     self.assertEqual(response.status_code, 200)
     self.assertEqual(response.mimetype, "text/calendar")
     self.assertIn(b"BEGIN:VCALENDAR", response.data)
     self.assertIn(b"BEGIN:VEVENT", response.data)
 
   def test_ics_flask_endpoint_rejects_bad_city(self):
-    response = app.test_client().get("/api/panchanga.ics?city=NoSuchPlace&start=2026-03")
+    response = app.test_client().get("/api/panchanga.ics?city=NoSuchPlace&start=2026")
     self.assertEqual(response.status_code, 400)
 
 

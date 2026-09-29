@@ -9,7 +9,7 @@ from unittest import mock
 from datetime_helper import format_utc_offset
 from generate_monthly_calendar import argument_parser as monthly_argument_parser
 from generate_panchanga_calendar import (Location, argument_parser as annual_argument_parser, attach_option_values,
-                                         load_custom_location, load_location, require_start_month, resolve_location)
+                                         load_custom_location, load_location, require_start_year, resolve_location)
 from webapp.app import app
 from webapp.day_panchanga import compute_day_panchanga
 
@@ -68,7 +68,7 @@ class CustomLocationTests(unittest.TestCase):
       resolve_location(None)
 
   def test_cli_accepts_negative_latitude(self):
-    argv = attach_option_values(["--place", "-13.4,70,5.5", "--start", "2026-06"])
+    argv = attach_option_values(["--place", "-13.4,70,5.5", "--start", "2026"])
     arguments = annual_argument_parser().parse_args(argv)
     self.assertEqual(resolve_location(arguments.city, arguments.place).name, "13.40S, 70.00E (UTC+5:30)")
 
@@ -87,14 +87,14 @@ class CustomLocationWebTests(unittest.TestCase):
     self.assertEqual(response.status_code, 400)
 
   def test_ics(self):
-    response = app.test_client().get("/api/panchanga.ics?place=12.97,77.59,5.5&start=2026-03")
+    response = app.test_client().get("/api/panchanga.ics?place=12.97,77.59,5.5&start=2026")
     self.assertEqual(response.status_code, 200)
     self.assertIn(b"BEGIN:VCALENDAR", response.data)
 
   def test_pdf(self):
     response = app.test_client().post("/generate", data={
       "place": "12.97,77.59,5.5",
-      "start": "2026-03",
+      "start": "2026",
     })
     self.assertEqual(response.status_code, 200)
 
@@ -103,23 +103,23 @@ class AttachOptionValuesTests(unittest.TestCase):
   """A value that starts with a minus must survive argparse."""
 
   def test_glues_negative_value_to_flag(self):
-    self.assertEqual(attach_option_values(["--place", "-13.4,70,5.5", "--start", "2026-03"]),
-                     ["--place=-13.4,70,5.5", "--start", "2026-03"])
+    self.assertEqual(attach_option_values(["--place", "-13.4,70,5.5", "--start", "2026"]),
+                     ["--place=-13.4,70,5.5", "--start", "2026"])
 
   def test_leaves_positive_values_alone(self):
     # A value that does not start with '-' needs no glue: argparse is happy
     # with a split flag and value, so argv is left byte-identical.
-    argv = ["--place", "12.97,77.59,5.5", "--start", "2026-03"]
+    argv = ["--place", "12.97,77.59,5.5", "--start", "2026"]
     self.assertEqual(attach_option_values(argv), argv)
 
   def test_no_place_flag(self):
-    argv = ["--city", "Helsinki", "--start", "2026-03"]
+    argv = ["--city", "Helsinki", "--start", "2026"]
     self.assertEqual(attach_option_values(argv), argv)
 
   def test_glues_a_bce_start_year(self):
-    # argparse would read the leading '-' of -500-03 as another option.
-    self.assertEqual(attach_option_values(["--city", "Ujjain", "--start", "-500-03"]),
-                     ["--city", "Ujjain", "--start=-500-03"])
+    # argparse would read the leading '-' of -500 as another option.
+    self.assertEqual(attach_option_values(["--city", "Ujjain", "--start", "-500"]),
+                     ["--city", "Ujjain", "--start=-500"])
 
   def test_leaves_a_flag_after_a_flag_alone(self):
     # --start with no value must error as a missing value, not as
@@ -128,41 +128,57 @@ class AttachOptionValuesTests(unittest.TestCase):
     self.assertEqual(attach_option_values(argv), argv)
 
 
-class BceStartMonthTests(unittest.TestCase):
-  """``--start`` accepts astronomical years, as the day view and the API already do."""
+class BceStartYearTests(unittest.TestCase):
+  """``--start`` takes an astronomical lunar year, as the day view and the API already do."""
 
   def test_parses_ce_bce_year_zero_and_padded_forms(self):
-    self.assertEqual(require_start_month("2026-03"), (2026, 3))
-    self.assertEqual(require_start_month("-500-03"), (-500, 3))
-    self.assertEqual(require_start_month("-0500-03"), (-500, 3))  # same year, zero-padded
-    self.assertEqual(require_start_month("-5000-12"), (-5000, 12))  # oldest supported year
-    self.assertEqual(require_start_month("0000-01"), (0, 1))  # zero still works
+    self.assertEqual(require_start_year("2026"), 2026)
+    self.assertEqual(require_start_year("-500"), -500)
+    self.assertEqual(require_start_year("-0500"), -500)  # same year, zero-padded
+    self.assertEqual(require_start_year("-3300"), -3300)  # oldest supported year
+    self.assertEqual(require_start_year("0000"), 0)  # zero still works
+    self.assertEqual(require_start_year("3300"), 3300)  # newest supported year
 
   def test_rejects_malformed_and_out_of_range(self):
-    for text in ("2026-3", "2026-13", "2026-00", "-50000-03", "-03", "abc-03", "", None, "2026", "202603", "26-06",
-                 "500-03", "0-01"):
-      with self.subTest(text=text), self.assertRaisesRegex(ValueError, "YYYY-MM"):
-        require_start_month(text)
+    # A negative year may keep 1–4 digits (-3 = 4 BCE); a positive year must
+    # carry four digits, so 26 cannot be read as 26 CE or 2026.
+    for text in ("2026-3", "abc", "", None, "202603", "26", "500", "0", "+500"):
+      with self.subTest(text=text), self.assertRaises(ValueError):
+        require_start_year(text)
+
+  def test_rejects_a_start_month_with_a_hint(self):
+    # Scripts that still pass 2026-03 must fail loudly, pointing at the year.
+    for text in ("2026-03", "-500-03", "0000-01"):
+      with self.subTest(text=text), self.assertRaisesRegex(ValueError, "not YYYY-MM"):
+        require_start_year(text)
+
+  def test_rejects_years_outside_the_pdf_range(self):
+    # The ephemeris and the day view reach further; the PDF/ICS products do not.
+    for text in ("3301", "-3301", "-5000", "9999"):
+      with self.subTest(text=text), self.assertRaisesRegex(ValueError, "out of range.*-3300 to 3300"):
+        require_start_year(text)
 
   def test_filename_round_trips_through_the_parser(self):
-    # default_output_path formats with {:04d}; the result must parse back.
-    for year in (2026, 500, 0, -500, -5000, -1):
+    # The names default_output_path builds carry months in the same grammar;
+    # their year part must parse back through require_start_year.
+    from generate_panchanga_calendar import _format_month
+    for year in (2026, 500, 0, -500, -3300, -1):
       with self.subTest(year=year):
-        formatted = f"{year:04d}-03"
-        self.assertEqual(require_start_month(formatted), (year, 3))
+        formatted = _format_month(year, 3)
+        self.assertEqual(require_start_year(formatted.rsplit("-", 1)[0]), year)
 
   def test_both_parsers_accept_a_bce_start(self):
     for parser in (annual_argument_parser(), monthly_argument_parser()):
-      arguments = parser.parse_args(attach_option_values(["--city", "Ujjain", "--start", "-500-03"]))
-      self.assertEqual(arguments.start, "-500-03")
-      self.assertEqual(require_start_month(arguments.start), (-500, 3))
+      arguments = parser.parse_args(attach_option_values(["--city", "Ujjain", "--start", "-500"]))
+      self.assertEqual(arguments.start, "-500")
+      self.assertEqual(require_start_year(arguments.start), -500)
 
   def test_cli_builds_a_bce_pdf(self):
     import generate_panchanga_calendar as annual
     with TemporaryDirectory() as directory:
       output = Path(directory) / "bce.pdf"
       with mock.patch.object(sys, "stdout", mock.Mock()):
-        annual.main(["--city", "Ujjain", "--start=-500-03", "--output", str(output)])
+        annual.main(["--city", "Ujjain", "--start=-500", "--output", str(output)])
       self.assertTrue(output.stat().st_size > 0)
 
   def test_ics_endpoint_rejects_a_bce_start(self):
@@ -171,15 +187,15 @@ class BceStartMonthTests(unittest.TestCase):
     # DTSTART;VALUE=DATE:-5000301 that calendar apps reject.
     from webapp.ics_service import generate_ics
     with self.assertRaisesRegex(ValueError, "four-digit years"):
-      generate_ics(load_location("Ujjain"), -500, 3)
-    response = app.test_client().get("/api/panchanga.ics?city=Ujjain&start=-500-03")
+      generate_ics(load_location("Ujjain"), -500)
+    response = app.test_client().get("/api/panchanga.ics?city=Ujjain&start=-500")
     self.assertEqual(response.status_code, 400)
     self.assertIn(b"four-digit years", response.data)
 
   def test_pdf_endpoint_accepts_a_bce_start(self):
     response = app.test_client().post("/generate", data={
       "city": "Ujjain",
-      "start": "-500-03",
+      "start": "-500",
     })
     self.assertEqual(response.status_code, 200)
 
@@ -231,25 +247,25 @@ class PlaceCliTests(unittest.TestCase):
 
   def test_annual_place_and_start_parse(self):
     parser = annual_argument_parser()
-    arguments = parser.parse_args(attach_option_values(["--place", "-13.4,70,5.5", "--start", "2026-03"]))
+    arguments = parser.parse_args(attach_option_values(["--place", "-13.4,70,5.5", "--start", "2026"]))
     self.assertEqual(arguments.place, "-13.4,70,5.5")
     self.assertIsNone(arguments.city)
 
   def test_annual_city_remains_accepted_without_place(self):
     parser = annual_argument_parser()
-    arguments = parser.parse_args(["--city", "Helsinki", "--start", "2026-03"])
+    arguments = parser.parse_args(["--city", "Helsinki", "--start", "2026"])
     self.assertEqual(arguments.city, "Helsinki")
     self.assertIsNone(arguments.place)
 
   def test_monthly_place_and_start_parse(self):
     parser = monthly_argument_parser()
-    arguments = parser.parse_args(attach_option_values(["--place", "-13.4,70,5.5", "--start", "2026-03"]))
+    arguments = parser.parse_args(attach_option_values(["--place", "-13.4,70,5.5", "--start", "2026"]))
     self.assertEqual(arguments.place, "-13.4,70,5.5")
     self.assertIsNone(arguments.city)
 
   def test_monthly_city_remains_accepted_without_place(self):
     parser = monthly_argument_parser()
-    arguments = parser.parse_args(["--city", "Helsinki", "--start", "2026-03"])
+    arguments = parser.parse_args(["--city", "Helsinki", "--start", "2026"])
     self.assertEqual(arguments.city, "Helsinki")
     self.assertIsNone(arguments.place)
 
@@ -268,9 +284,10 @@ class MainIntegrationTests(unittest.TestCase):
         return output
 
       with mock.patch.object(monthly, "build_monthly_pdf", side_effect=fake_build), \
+           mock.patch.object(monthly, "lunar_year_months", return_value=[(2026, 3)] * 14), \
            mock.patch.object(monthly, "default_monthly_output_path", return_value=output), \
            mock.patch.object(sys, "stdout", mock.Mock()):
-        self.assertEqual(monthly.main(["--place", "-13.4,70,5.5", "--start", "2026-03"]), 0)
+        self.assertEqual(monthly.main(["--place", "-13.4,70,5.5", "--start", "2026"]), 0)
     location = captured["location"]
     self.assertIsInstance(location, Location)
     self.assertEqual((location.latitude, location.longitude, location.timezone_name), (-13.4, 70.0, "UTC+5:30"))
@@ -278,7 +295,7 @@ class MainIntegrationTests(unittest.TestCase):
   def test_monthly_main_errors_without_city_or_place(self):
     import generate_monthly_calendar as monthly
     with mock.patch.object(sys, "stderr", mock.Mock()), self.assertRaises(SystemExit):
-      monthly.main(["--start", "2026-03"])
+      monthly.main(["--start", "2026"])
 
   def test_annual_main_uses_place(self):
     import generate_panchanga_calendar as annual
@@ -298,9 +315,10 @@ class MainIntegrationTests(unittest.TestCase):
         return output
 
       with mock.patch.object(annual, "load_custom_location", side_effect=spy_load), \
+           mock.patch.object(annual, "lunar_year_months", return_value=[(2026, 3)] * 14), \
            mock.patch.object(annual, "build_pdf", side_effect=fake_build), \
            mock.patch.object(sys, "stdout", mock.Mock()):
-        annual.main(["--place", "-13.4,70,5.5", "--start", "2026-03"])
+        annual.main(["--place", "-13.4,70,5.5", "--start", "2026"])
     location = location_holder["location"]
     self.assertEqual((location.latitude, location.longitude, location.timezone_name), (-13.4, 70.0, "UTC+5:30"))
     self.assertIs(location_holder.get("built"), location)
@@ -308,7 +326,7 @@ class MainIntegrationTests(unittest.TestCase):
   def test_annual_main_errors_without_city_or_place(self):
     import generate_panchanga_calendar as annual
     with mock.patch.object(sys, "stderr", mock.Mock()), self.assertRaises(SystemExit):
-      annual.main(["--start", "2026-03"])
+      annual.main(["--start", "2026"])
 
 
 if __name__ == "__main__":

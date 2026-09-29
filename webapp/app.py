@@ -31,8 +31,9 @@ from generate_panchanga_calendar import (
   location_slug,
   require_coordinate_selection,
   require_month_system,
-  require_start_month,
+  require_start_year,
   resolve_location,
+  _format_year,
 )
 from panchanga import sweph_version
 from webapp.day_panchanga import compute_day_panchanga
@@ -163,17 +164,18 @@ def ics_calendar():
   start = (request.args.get("start") or "").strip()
   try:
     location = resolve_location(city, request.args.get("place"))
-    start_year, start_month = require_start_month(start)
+    start_year = require_start_year(start)
     month = (request.args.get("month") or "amanta").strip()
     amanta = require_month_system(month)
     month_key = "amanta" if amanta else "purnimanta"
     coordinate_selection = require_coordinate_selection((request.args.get("ayanamsa") or "").strip() or None)
-    ics_text = generate_ics(location, start_year, start_month, month_system=month,
-                            coordinate_selection=coordinate_selection)
+    ics_text = generate_ics(location, start_year, month_system=month, coordinate_selection=coordinate_selection)
   except (OSError, ValueError, RuntimeError) as error:
     abort(400, description=str(error))
+  # The lunar year is what ``start`` names, so the resolved months add nothing
+  # here; the coordinate and month system are already in the name.
   name = (f"panchanga-{location_slug(location.name)}-{coordinate_selection}-{month_key}-"
-          f"{start_year:04d}-{start_month:02d}.ics")
+          f"{_format_year(start_year)}.ics")
   return send_file(io.BytesIO(ics_text.encode("utf-8")), mimetype="text/calendar", as_attachment=True,
                    download_name=name, max_age=0)
 

@@ -87,7 +87,6 @@
 
     input[type="text"],
     input[type="number"],
-    input[type="month"],
     select {
       width: 100%;
       padding: 0.7rem 0.85rem;
@@ -461,13 +460,14 @@
         <input type="hidden" name="ayanamsa" id="pdf-ayanamsa" value="citra">
         <input type="hidden" name="layout" id="pdf-layout" value="one-page">
         <div class="field">
-          <label for="start">First month</label>
-          <input id="start" name="start" type="month" required>
-          <p class="hint">One-page layout prints fourteen consecutive months;
-            monthly layout prints twelve pages (one month per A4 portrait page).</p>
+          <label for="start">Lunar year (Ugadi in)</label>
+          <input id="start" name="start" type="text" inputmode="numeric" pattern="-?\d{1,4}" required
+                 placeholder="2026">
+          <p class="hint">One-page layout prints the lunar year (Ugadi through Phālguna) on one
+            sheet; monthly layout prints one A4 portrait page per Gregorian month (12–14 pages).</p>
         </div>
         <button type="submit" id="submit-btn" data-layout="one-page">Generate one-page PDF</button>
-        <button type="submit" id="monthly-btn" data-layout="monthly">Generate monthly PDF (12 pages)</button>
+        <button type="submit" id="monthly-btn" data-layout="monthly">Generate monthly PDF</button>
         <button type="button" id="ics-btn">Export iCal (.ics)</button>
         <p class="status" id="status" aria-live="polite"></p>
       </form>
@@ -570,10 +570,7 @@
       }
 
       if (!startInput.value) {
-        const now = new Date();
-        const y = now.getFullYear();
-        const m = String(now.getMonth() + 1).padStart(2, "0");
-        startInput.value = `${y}-${m}`;
+        startInput.value = String(new Date().getFullYear());
       }
       if (!dateInput.value) {
         const now = new Date();
@@ -847,7 +844,7 @@
         if (!loc) return;
         const start = startInput.value || "";
         if (!start) {
-          status.textContent = "Pick a first month.";
+          status.textContent = "Pick a lunar year.";
           return;
         }
         const ayanamsa = ayanamsaParams();

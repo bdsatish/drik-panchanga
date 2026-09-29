@@ -1,13 +1,18 @@
 #!/usr/bin/env python3
-"""12-month panchanga wall calendar: one A4 portrait grid page per month.
+"""Lunar-year panchanga wall calendar: one A4 portrait grid page per month.
 
-Distinct from ``generate_panchanga_calendar.py`` (14 months on a single
-landscape sheet). Each page is a classic Sunday-first month grid. Every
+Distinct from ``generate_panchanga_calendar.py`` (the same lunar year on a
+single landscape sheet). Each page is a classic Sunday-first month grid. Every
 day cell shows the tithi and nakshatra at sunrise with their end times;
 when a tithi or nakshatra is skipped (leap), both names and both end
 times are printed. Saṅkrānti days carry the rāśi name, festivals are
 listed inline, and locally visible eclipses are printed as their kind
 and maximum time.
+
+The span is one cāndramāna year: the Gregorian months from the month
+containing Ugadi (amānta Chaitra S1, adhika Chaitra when present) through
+the month containing the last day of Phālguna — 12 to 14 pages, set by
+``--start YYYY``.
 
 Timings use hours past civil midnight on the Hindu day (sunrise to
 sunrise). Values at or after 24:00 are past midnight; ``00:xx`` appears
@@ -44,34 +49,39 @@ from generate_panchanga_calendar import (
   ADHIKA_ROW,
   DEFAULT_CITIES_PATH,
   DEFAULT_FESTIVALS_PATH,
+  LUNAR_YEAR_MAX_MONTHS,
+  LUNAR_YEAR_MIN_MONTHS,
+  PDF_YEAR_MAX,
+  PDF_YEAR_MIN,
   MASA_START_ROW,
   PDF_FONT,
   PDF_FONT_BOLD,
   PDF_FONT_ITALIC,
   RULESET_VERSION,
-  _month_sequence as month_sequence,
-  context_month_sequence,
   coordinate_selection_label,
-  daily_records,
+  daily_records_between,
   display_masa,
   embed_pdf_metadata,
   ensure_pdf_fonts,
   attach_option_values,
   load_location,
   location_slug,
+  lunar_year_months,
   masa_badges_by_date,
   month_system_label,
   place_for_date,
+  record_span,
   require_coordinate_selection,
   require_month_system,
-  require_start_month,
-  require_supported_span,
+  require_start_year,
   resolve_festivals,
   resolve_location,
   sanskrit_names,
   solar_dates_by_date,
   timing_key_line,
   tithi_code,
+  _format_month,
+  _format_year,
 )
 from datetime_helper import (Date, dst_transitions, format_local_hm, format_utc_offset, gregorian_to_jd,
                              hindu_day_civil, jd_to_local_civil_date)
@@ -80,7 +90,6 @@ log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
 
 MONTHLY_LAYOUT_VERSION = "Wall-Grid-1.0"
-MONTHLY_MONTH_COUNT = 12
 
 PAGE_W = PAGE_H = None
 MARGIN = 34
@@ -188,8 +197,13 @@ def ekadashi_name(record, amanta=True):
   return f"{base} Ekādaśī"
 
 
-def context_months(start_year, start_month):
-  return context_month_sequence(start_year, start_month, MONTHLY_MONTH_COUNT)
+def month_dates(months):
+  """Every civil date inside the printed Gregorian ``months``."""
+  dates = set()
+  for year, month in months:
+    for day in range(1, calendar.monthrange(year, month)[1] + 1):
+      dates.add(Date(year, month, day))
+  return dates
 
 
 def tithi_name(number):
@@ -627,11 +641,19 @@ def draw_footer(pdf, location, coordinate_selection, page_index, total):
 
 
 def collect_context(months, location, festivals_path, amanta=True):
-  records = daily_records(months, location)
+  """Everything a printed month needs, read over ``months`` plus ``record_span``'s day pad.
+
+  Only the printed months are *labelled* (targets, festival dates, māsa
+  badges); the pad days are read so the solar day count, pāraṇa and vṛddhi /
+  kṣaya checks are right on the first and last pages.
+  """
+  pad_start, pad_end = record_span(months)
+  records = daily_records_between(pad_start, pad_end, location)
+  target_dates = month_dates(months)
+  printed = [record for record in records if record.civil_date in target_dates]
   geopos = (location.longitude, location.latitude, 0.0)
   from generate_panchanga_calendar import load_festival_selection
   enabled_names = load_festival_selection(festivals_path, include_extra=True)
-  target_dates = {record.civil_date for record in records}
   festivals_by_date, festival_entries = resolve_festivals(
     records, target_dates, geopos=geopos, timezone_name=location.timezone_name, enabled_names=enabled_names)
   lookup = {marker: name for marker, _label, name in festival_entries}
@@ -662,7 +684,7 @@ def collect_context(months, location, festivals_path, amanta=True):
     "dst_labels_by_date": dst_labels_by_date,
     "eclipse_dates": eclipse_dates,
     "eclipse_details_by_date": eclipse_details_by_date,
-    "masa_badges": masa_badges_by_date(records, amanta=amanta),
+    "masa_badges": masa_badges_by_date(printed, amanta=amanta),
     "amanta": amanta,
     "solar_by_date": solar_dates_by_date(records),
     "ekadashi": {d
@@ -677,27 +699,29 @@ def collect_context(months, location, festivals_path, amanta=True):
   }
 
 
-def build_monthly_pdf(location, start_year, start_month, output_path, festivals_path=None, month_system="amanta",
+def build_monthly_pdf(location, months, output_path, festivals_path=None, month_system="amanta",
                       coordinate_selection="citra"):
   with panchanga.coordinate_calculation_lock:
-    return _build_monthly_pdf_unlocked(location, start_year, start_month, output_path, festivals_path=festivals_path,
+    return _build_monthly_pdf_unlocked(location, months, output_path, festivals_path=festivals_path,
                                        month_system=month_system, coordinate_selection=coordinate_selection)
 
 
-def _build_monthly_pdf_unlocked(location, start_year, start_month, output_path, festivals_path=None,
-                                month_system="amanta", coordinate_selection="citra"):
+def _build_monthly_pdf_unlocked(location, months, output_path, festivals_path=None, month_system="amanta",
+                                coordinate_selection="citra"):
   ensure_pdf_fonts()
   amanta = require_month_system(month_system)
   if festivals_path is None:
     festivals_path = DEFAULT_FESTIVALS_PATH
   panchanga.set_coordinate_selection(coordinate_selection)
 
-  months = month_sequence(start_year, start_month, MONTHLY_MONTH_COUNT)
-  require_supported_span(start_year, start_month, MONTHLY_MONTH_COUNT)
-  context = collect_context(context_months(start_year, start_month), location, Path(festivals_path), amanta=amanta)
+  if not LUNAR_YEAR_MIN_MONTHS <= len(months) <= LUNAR_YEAR_MAX_MONTHS:
+    raise ValueError(
+      f"A lunar year prints {LUNAR_YEAR_MIN_MONTHS} to {LUNAR_YEAR_MAX_MONTHS} months, got {len(months)}.")
+  context = collect_context(months, location, Path(festivals_path), amanta=amanta)
 
   output_path = Path(output_path)
   pdf = canvas.Canvas(str(output_path), pagesize=A4, initialFontName=PDF_FONT)
+  start_year, start_month = months[0]
   end_year, end_month = months[-1]
   embed_pdf_metadata(
     pdf,
@@ -714,15 +738,15 @@ def _build_monthly_pdf_unlocked(location, start_year, start_month, output_path, 
     year_label = year_label_for_month(amanta, year, month, context["records_by_date"])
     draw_header(pdf, location, year, month, amanta, coordinate_selection, year_label)
     draw_grid(pdf, year, month, location, context)
-    draw_footer(pdf, location, coordinate_selection, index, MONTHLY_MONTH_COUNT)
+    draw_footer(pdf, location, coordinate_selection, index, len(months))
     pdf.showPage()
   pdf.save()
   return output_path
 
 
-def default_monthly_output_path(location, start_year, start_month, month_system="amanta", coordinate_selection="citra"):
+def default_monthly_output_path(location, months, month_system="amanta", coordinate_selection="citra"):
   amanta = require_month_system(month_system)
-  months = month_sequence(start_year, start_month, MONTHLY_MONTH_COUNT)
+  start_year, start_month = months[0]
   end_year, end_month = months[-1]
   parts = []
   if not amanta:
@@ -733,13 +757,13 @@ def default_monthly_output_path(location, start_year, start_month, month_system=
     parts.append(coordinate_selection)
   suffix = ("_" + "_".join(parts)) if parts else ""
   return Path(f"{location_slug(location.name)}_panchanga_wall_"
-              f"{start_year:04d}-{start_month:02d}_to_"
-              f"{end_year:04d}-{end_month:02d}{suffix}.pdf")
+              f"{_format_month(start_year, start_month)}_to_"
+              f"{_format_month(end_year, end_month)}{suffix}.pdf")
 
 
 def argument_parser():
-  parser = argparse.ArgumentParser(description=("Generate a 12-month wall-calendar panchanga PDF "
-                                                "(one A4 portrait grid page per month)."))
+  parser = argparse.ArgumentParser(description=("Generate a wall-calendar panchanga PDF for one lunar year "
+                                                "(one A4 portrait grid page per Gregorian month)."))
   parser.add_argument("--city", help=(f'city as listed in {DEFAULT_CITIES_PATH.name} '
                                       '(e.g. "Helsinki, FI" or Helsinki,FI)'))
   parser.add_argument(
@@ -748,8 +772,10 @@ def argument_parser():
           "longitude (east = positive), timezone as UTC offset hours (5.5 = UTC+5:30), "
           "e.g. --place -13.4,70,5.5"))
   parser.add_argument(
-    "--start", required=True, metavar="YYYY-MM", help=("first month of the 12-month span, e.g. 2026-06; "
-                                                       "astronomical year: 0 = 1 BCE, -500-03 = March 501 BCE"))
+    "--start", required=True, metavar="YYYY",
+    help=(f"Gregorian year of the Ugadi that opens the lunar year, e.g. 2026; "
+          f"astronomical year: 0000 = 1 BCE, -0500 = 501 BCE; "
+          f"{_format_year(PDF_YEAR_MIN)} to {_format_year(PDF_YEAR_MAX)}"))
   parser.add_argument("-o", "--output", type=Path, help="output PDF path (default: generated from city and range)")
   parser.add_argument("--month", choices=("amanta", "purnimanta"), default="amanta",
                       help="lunar month reckoning for display: amanta (default) or purnimanta")
@@ -774,13 +800,14 @@ def main(argv=None):
   args = parser.parse_args(attach_option_values(sys.argv[1:] if argv is None else argv))
   _check_reportlab()
   try:
-    start_year, start_month = require_start_month(args.start)
+    start_year = require_start_year(args.start)
     location = resolve_location(args.city, args.place)
     coordinate_selection = require_coordinate_selection(args.ayanamsa)
-    output_path = args.output or default_monthly_output_path(location, start_year, start_month, month_system=args.month,
+    months = lunar_year_months(start_year, location, coordinate_selection)
+    output_path = args.output or default_monthly_output_path(location, months, month_system=args.month,
                                                              coordinate_selection=coordinate_selection)
-    result = build_monthly_pdf(location, start_year, start_month, output_path, festivals_path=args.festivals,
-                               month_system=args.month, coordinate_selection=coordinate_selection)
+    result = build_monthly_pdf(location, months, output_path, festivals_path=args.festivals, month_system=args.month,
+                               coordinate_selection=coordinate_selection)
   except (OSError, ValueError, RuntimeError) as error:
     parser.error(str(error))
   print(f"Wrote {result}")

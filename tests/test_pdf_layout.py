@@ -26,11 +26,12 @@ from generate_panchanga_calendar import (
   RULESET_VERSION,
   SANKRANTI_INK,
   TITHI_COLUMN_RATIO,
+  _month_sequence,
   argument_parser,
   build_pdf,
   calendar_year_label,
-  context_month_range,
   daily_records,
+  daily_records_between,
   default_output_path,
   display_masa,
   draw_month,
@@ -44,8 +45,9 @@ from generate_panchanga_calendar import (
   fitted_font_size,
   kali_ahargana_range,
   load_location,
+  lunar_year_months,
   month_header_label,
-  month_range,
+  record_span,
   sankranti_key_line,
   solar_dates_by_date,
   tithi_display_parts,
@@ -56,24 +58,31 @@ from generate_panchanga_calendar import (
 
 class PdfLayoutTests(unittest.TestCase):
 
-  def test_month_ranges_cross_january_and_december(self):
-    cases = {
-      (2026, 1): ((2027, 2), (2025, 10), (2027, 5)),
-      (2026, 12): ((2028, 1), (2026, 9), (2028, 4)),
-      (-500, 2): ((-499, 3), (-501, 11), (-499, 6)),
-    }
-    for start, expected in cases.items():
-      with self.subTest(start=start):
-        months = month_range(*start)
-        context = context_month_range(*start)
-        last_month, first_context, last_context = expected
-        self.assertEqual(len(months), 14)
-        self.assertEqual(months[0], start)
-        self.assertEqual(months[-1], last_month)
-        self.assertEqual(len(context), 20)
-        self.assertEqual(context[0], first_context)
-        self.assertEqual(context[3:-3], months)
-        self.assertEqual(context[-1], last_context)
+  def test_record_span_pads_the_printed_months(self):
+    # 32 days lead in for the solar day count (a solar month can be 32
+    # sunrises); one day out catches a pre-sunrise eclipse on the last day.
+    months = [(2026, 3), (2026, 4)]
+    first, last = record_span(months)
+    self.assertEqual(first, Date(2026, 1, 28))
+    self.assertEqual(last, Date(2026, 5, 1))
+
+  def test_lunar_year_span_is_whole_months_with_a_day_pad(self):
+    # The resolver picks the months; the pad is what the builders read.
+    months = lunar_year_months(2026, load_location("Ujjain"))
+    self.assertEqual(months[0], (2026, 3))
+    self.assertEqual(months[-1], (2027, 4))
+    self.assertEqual(len(months), 14)
+    first, last = record_span(months)
+    self.assertLess(first, Date(2026, 3, 1))
+    self.assertGreater(last, Date(2027, 4, 30))
+
+  def test_daily_records_between_matches_the_month_form(self):
+    location = load_location("Bengaluru")
+    months = [(2026, 1), (2026, 2)]
+    from_date = Date(2026, 1, 1)
+    to_date = Date(2026, 2, 28)
+    self.assertEqual([r.civil_date for r in daily_records(months, location)],
+                     [r.civil_date for r in daily_records_between(from_date, to_date, location)])
 
   def test_month_header_shows_the_full_year_before_1000_ce(self):
     # ``str(year)[2:]`` printed "Mar '" for year 50 and "Mar '00" for -500.
@@ -90,7 +99,7 @@ class PdfLayoutTests(unittest.TestCase):
       with mock.patch("generate_panchanga_calendar.find_local_eclipses", return_value=[
         ("Lunar", "Partial", 2461103.0419131187),
       ]), mock.patch("generate_panchanga_calendar.draw_page_footer", wraps=calendar_module.draw_page_footer) as footer:
-        build_pdf(load_location("Helsinki"), 2026, 6, output)
+        build_pdf(load_location("Helsinki"), _month_sequence(2026, 6, 14), output)
       document = output.read_bytes()
 
     page_objects = re.findall(rb"/Type\s*/Page\b", document)
@@ -120,7 +129,7 @@ class PdfLayoutTests(unittest.TestCase):
                       return_value=[("Lunar", "Partial", before_first_day), ("Lunar", "Total", after_last_day)]), \
            mock.patch("generate_panchanga_calendar.draw_page_footer",
                       wraps=calendar_module.draw_page_footer) as footer:
-        build_pdf(load_location("Helsinki"), 2026, 6, Path(directory) / "calendar.pdf")
+        build_pdf(load_location("Helsinki"), _month_sequence(2026, 6, 14), Path(directory) / "calendar.pdf")
     eclipse_line = footer.call_args.kwargs["eclipse_line"]
     self.assertIn("Lunar Jul 31 (Total) maximum phase at 26:00", eclipse_line)
     self.assertNotIn("May 31", eclipse_line)
@@ -128,40 +137,52 @@ class PdfLayoutTests(unittest.TestCase):
 
   def test_cli_defaults_festivals_path(self):
     parser = argument_parser()
-    arguments = parser.parse_args(["--city", "Helsinki", "--start", "2026-03"])
+    arguments = parser.parse_args(["--city", "Helsinki", "--start", "2026"])
     self.assertFalse(hasattr(arguments, "festival_policy"))
     self.assertEqual(arguments.festivals, DEFAULT_FESTIVALS_PATH)
 
   def test_default_filename_has_no_policy_suffix(self):
-    path = default_output_path(load_location("Helsinki"), 2026, 3)
+    months = lunar_year_months(2026, load_location("Helsinki"))
+    path = default_output_path(load_location("Helsinki"), months)
     self.assertEqual(path.name, "helsinki-fi_panchanga_2026-03_to_2027-04.pdf")
 
   def test_purnimanta_filename_suffix(self):
-    path = default_output_path(load_location("Helsinki"), 2026, 3, month_system="purnimanta")
+    months = lunar_year_months(2026, load_location("Helsinki"))
+    path = default_output_path(load_location("Helsinki"), months, month_system="purnimanta")
     self.assertEqual(path.name, "helsinki-fi_panchanga_2026-03_to_2027-04_purnimanta.pdf")
 
   def test_ayanamsa_filename_suffix(self):
-    path = default_output_path(load_location("Helsinki"), 2026, 3, coordinate_selection="raman")
+    months = lunar_year_months(2026, load_location("Helsinki"))
+    path = default_output_path(load_location("Helsinki"), months, coordinate_selection="raman")
     self.assertEqual(path.name, "helsinki-fi_panchanga_2026-03_to_2027-04_raman.pdf")
 
   def test_tropical_filename_suffix(self):
-    path = default_output_path(load_location("Helsinki"), 2026, 3, coordinate_selection="tropical")
-    self.assertEqual(path.name, "helsinki-fi_panchanga_2026-03_to_2027-04_tropical.pdf")
+    months = lunar_year_months(2026, load_location("Helsinki"), "tropical")
+    path = default_output_path(load_location("Helsinki"), months, coordinate_selection="tropical")
+    self.assertTrue(path.name.startswith("helsinki-fi_panchanga_"))
+    self.assertTrue(path.name.endswith("_tropical.pdf"))
 
   def test_cli_accepts_month_system(self):
     parser = argument_parser()
-    arguments = parser.parse_args(["--city", "Helsinki", "--start", "2026-03", "--month", "purnimanta"])
+    arguments = parser.parse_args(["--city", "Helsinki", "--start", "2026", "--month", "purnimanta"])
     self.assertEqual(arguments.month, "purnimanta")
 
   def test_cli_accepts_ayanamsa(self):
     parser = argument_parser()
-    arguments = parser.parse_args(["--city", "Helsinki", "--start", "2026-03", "--ayanamsa", "revati"])
+    arguments = parser.parse_args(["--city", "Helsinki", "--start", "2026", "--ayanamsa", "revati"])
     self.assertEqual(arguments.ayanamsa, "revati")
 
   def test_cli_accepts_tropical_ayanamsa(self):
     parser = argument_parser()
-    arguments = parser.parse_args(["--city", "Helsinki", "--start", "2026-03", "--ayanamsa", "tropical"])
+    arguments = parser.parse_args(["--city", "Helsinki", "--start", "2026", "--ayanamsa", "tropical"])
     self.assertEqual(arguments.ayanamsa, "tropical")
+
+  def test_cli_rejects_a_start_month(self):
+    # Old scripts must fail loudly, not read 2026-03 as the year 2026.
+    import sys
+    from generate_panchanga_calendar import main
+    with mock.patch.object(sys, "stderr", mock.Mock()), self.assertRaises(SystemExit):
+      main(["--city", "Helsinki", "--start", "2026-03"])
 
   def test_parse_coordinate_selection_accepts_sidereal_and_tropical_modes(self):
     from generate_panchanga_calendar import (
@@ -192,9 +213,9 @@ class PdfLayoutTests(unittest.TestCase):
       output = Path(directory) / "calendar.pdf"
       with mock.patch("generate_panchanga_calendar.find_local_eclipses", return_value=[]), \
               mock.patch(
-                  "generate_panchanga_calendar.daily_records",
-                  wraps=calendar_module.daily_records) as records_mock:
-        build_pdf(load_location("Bengaluru"), 2023, 3, output, month_system="purnimanta")
+                  "generate_panchanga_calendar.daily_records_between",
+                  wraps=calendar_module.daily_records_between) as records_mock:
+        build_pdf(load_location("Bengaluru"), _month_sequence(2023, 3, 14), output, month_system="purnimanta")
       document = output.read_bytes()
     self.assertEqual(records_mock.call_count, 1)
     # Subject is uncompressed in the Info dict; page content streams are flate-encoded.
@@ -224,7 +245,7 @@ class PdfLayoutTests(unittest.TestCase):
       mock_panchanga.samvatsara_north_modern.assert_called_with(2450000.0, 1)
 
   def test_pdf_subtitle_has_kali_ahargana_range(self):
-    months = list(month_range(2026, 6))
+    months = list(_month_sequence(2026, 6, 14))
     self.assertEqual(kali_ahargana_range(months), (1872727, 1873152))
 
     pdf = mock.Mock()
@@ -558,7 +579,7 @@ class TimezoneInHeaderTests(unittest.TestCase):
 
   def test_annual_header_includes_timezone(self):
     location = load_location("Ujjain")
-    months = list(month_range(2026, 3))
+    months = list(_month_sequence(2026, 3, 14))
     pdf = mock.Mock()
     pdf.stringWidth.return_value = 60.0
     with mock.patch("generate_panchanga_calendar.fitted_font_size", return_value=10):
@@ -571,7 +592,7 @@ class TimezoneInHeaderTests(unittest.TestCase):
 
   def test_annual_header_timezone_respects_dst(self):
     location = load_location("Helsinki")
-    months = list(month_range(2026, 6))
+    months = list(_month_sequence(2026, 6, 14))
     pdf = mock.Mock()
     pdf.stringWidth.return_value = 60.0
     with mock.patch("generate_panchanga_calendar.fitted_font_size", return_value=10):

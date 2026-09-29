@@ -110,7 +110,7 @@ trap cleanup EXIT
 curl -fsS --max-time 120 \
   -X POST \
   -F "city=Bengaluru, IN" \
-  -F "start=2026-03" \
+  -F "start=2026" \
   -F "month=amanta" \
   -o "${pdf_tmp}" \
   "${BASE_URL}/generate"
@@ -129,7 +129,7 @@ echo "smoke: POST /generate (purnimanta)"
 curl -fsS --max-time 180 \
   -X POST \
   -F "city=Bengaluru, IN" \
-  -F "start=2023-03" \
+  -F "start=2023" \
   -F "month=purnimanta" \
   -o "${pdf_tmp}" \
   "${BASE_URL}/generate"
@@ -146,7 +146,7 @@ echo "smoke: POST /generate (monthly layout)"
 curl -fsS --max-time 180 \
   -X POST \
   -F "city=Bengaluru, IN" \
-  -F "start=2026-03" \
+  -F "start=2026" \
   -F "month=amanta" \
   -F "layout=monthly" \
   -o "${pdf_tmp}" \

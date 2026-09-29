@@ -306,22 +306,26 @@ class LongitudeMeridianHelperTests(unittest.TestCase):
 
 
 class BcePdfSmokeTests(BoundaryTestCase):
-  """Both PDFs build for a deep-BCE span (regression: datetime year floor)."""
+  """Both PDFs build for a deep-BCE lunar year (regression: datetime year floor)."""
 
   def test_annual_pdf_builds_at_year_minus_500(self):
     import generate_panchanga_calendar as annual
-    from generate_panchanga_calendar import load_location
+    from generate_panchanga_calendar import load_location, lunar_year_months
+    location = load_location("Ujjain")
+    months = lunar_year_months(-500, location)
     with TemporaryDirectory() as directory:
       output = Path(directory) / "bce.pdf"
-      annual.build_pdf(load_location("Ujjain"), -500, 3, output)
+      annual.build_pdf(location, months, output)
       self.assertTrue(output.stat().st_size > 0)
 
   def test_monthly_pdf_builds_at_year_minus_500(self):
     import generate_monthly_calendar as monthly
-    from generate_panchanga_calendar import load_location
+    from generate_panchanga_calendar import load_location, lunar_year_months
+    location = load_location("Ujjain")
+    months = lunar_year_months(-500, location)
     with TemporaryDirectory() as directory:
       output = Path(directory) / "bce.pdf"
-      monthly.build_monthly_pdf(load_location("Ujjain"), -500, 3, output)
+      monthly.build_monthly_pdf(location, months, output)
       self.assertTrue(output.stat().st_size > 0)
 
   def test_civil_date_conversion_reaches_deep_bce(self):

@@ -25,11 +25,6 @@ import panchanga
 from datetime_helper import (Date, fixed_offset_name, format_local_hm, format_utc_offset, gregorian_to_jd,
                              hindu_day_civil, jd_to_local_civil_date, local_range_jds, utc_offset_hours)
 
-MONTH_COUNT = 14
-# Festival fallbacks read a neighbouring month, possibly past an adhika month,
-# so a kṣaya month cut by the window edge must lie three months off the print span.
-CONTEXT_MARGIN_MONTHS = 3
-
 # Whole lunar years are 12, 13 or 14 Gregorian months; only these bounds are
 # fixed, the printed span comes from the year's two Ugadis.
 LUNAR_YEAR_MIN_MONTHS = 12
@@ -273,36 +268,6 @@ def _month_sequence(start_year, start_month, count):
   return months
 
 
-def month_range(start_year, start_month):
-  """Fourteen consecutive Gregorian months starting at ``start_year``/``start_month``."""
-  return _month_sequence(start_year, start_month, MONTH_COUNT)
-
-
-def context_month_sequence(start_year, start_month, count):
-  """``count`` printed months from ``start_year``/``start_month`` plus ``CONTEXT_MARGIN_MONTHS`` on each side."""
-  year, month = divmod(start_year * 12 + start_month - 1 - CONTEXT_MARGIN_MONTHS, 12)
-  return _month_sequence(year, month + 1, count + 2 * CONTEXT_MARGIN_MONTHS)
-
-
-def require_supported_span(start_year, start_month, month_count):
-  """Reject a span whose months reach December 9999 or beyond.
-
-  Local-time conversions past 9999-12-31 raise a bare "year 10000 is out of
-  range" deep in the stack; catch it here so the error names the requested
-  start month instead. A span ending in December 9999 is rejected too: for
-  east-offset zones a late-UT event on the last day spills into year 10000.
-  """
-  last_year, last_month = _month_sequence(start_year, start_month, month_count)[-1]
-  if (last_year, last_month) >= (9999, 12):
-    raise ValueError(
-      f"Start month {start_year:04d}-{start_month:02d} would extend past year 9999, the last supported date.")
-
-
-def context_month_range(start_year, start_month):
-  """The fourteen printed months with the context margin on each side."""
-  return context_month_sequence(start_year, start_month, MONTH_COUNT)
-
-
 def _format_month(year, month):
   """``-0500-03`` for a ``(year, month)`` pair, in the ``--start`` grammar."""
   return (f"-{abs(year):04d}-{month:02d}" if year < 0 else f"{year:04d}-{month:02d}")
@@ -479,17 +444,6 @@ def special_weekday_dates(pradosham_dates, sankashti_dates):
   soma_shani = {day for day in pradosham_dates if day.weekday() in (0, 5)}
   angaraki = {day for day in sankashti_dates if day.weekday() == 1}
   return soma_shani, angaraki
-
-
-def require_start_month(text):
-  """Parse ``YYYY-MM`` (astronomical year: 0 = 1 BCE, ``-500-03`` = March 501 BCE) or raise ``ValueError``."""
-  match = re.fullmatch(r"(-\d{1,4}|\d{4})-(\d{2})", text or "")
-  if not match:
-    raise ValueError("start month must use YYYY-MM format (negative year for BCE, e.g. -500-03)")
-  year, month = (int(part) for part in match.groups())
-  if not 1 <= month <= 12:
-    raise ValueError("start month must use YYYY-MM format (negative year for BCE, e.g. -500-03)")
-  return year, month
 
 
 def require_start_year(text):
@@ -688,7 +642,7 @@ NEGATIVE_LEADING_OPTIONS = ("--place", "--start")
 def attach_option_values(argv, options=NEGATIVE_LEADING_OPTIONS):
   """Glue a value to its flag when the value starts with a single minus.
 
-  ``--start -500-03`` becomes ``--start=-500-03``: argparse would otherwise
+  ``--start -0500`` becomes ``--start=-0500``: argparse would otherwise
   read the leading ``-`` of a BCE year or a south latitude as the start of
   another option. Values that do not start with ``-`` are left untouched, as
   are values starting with ``--``: ``--start --city`` must stay split so
@@ -1200,23 +1154,31 @@ def draw_page_footer(pdf, festival_entries, eclipse_line="Eclipses: None", recur
     pdf.drawString(18, FOOTER_KEY_TOP - (index + 1) * FOOTER_KEY_LINE_HEIGHT, line)
 
 
-def build_pdf(location, start_year, start_month, output_path, festivals_path=None, month_system="amanta",
-              coordinate_selection="citra", recurring="specials"):
-  """Build a calendar while holding coordinate state for the full document."""
+def build_pdf(location, months, output_path, festivals_path=None, month_system="amanta", coordinate_selection="citra",
+              recurring="specials"):
+  """Build a calendar for the printed ``months`` of one lunar year.
+
+  Coordinate state is held for the whole document. Records are read for the
+  printed months plus ``record_span``'s day pad, so the solar day count and
+  tithis that run past a sunrise are right on the first and last pages.
+  """
   with panchanga.coordinate_calculation_lock:
     ensure_pdf_fonts()
     amanta = require_month_system(month_system)
     recurring = require_recurring(recurring)
     panchanga.set_coordinate_selection(coordinate_selection)
-    months = month_range(start_year, start_month)
-    require_supported_span(start_year, start_month, MONTH_COUNT)
-    range_start = Date(start_year, start_month, 1)
+    if not LUNAR_YEAR_MIN_MONTHS <= len(months) <= LUNAR_YEAR_MAX_MONTHS:
+      raise ValueError(
+        f"A lunar year prints {LUNAR_YEAR_MIN_MONTHS} to {LUNAR_YEAR_MAX_MONTHS} months, got {len(months)}.")
+    pad_start, pad_end = record_span(months)
+    start_year, start_month = months[0]
     end_year, end_month = months[-1]
+    range_start = Date(start_year, start_month, 1)
     range_end = Date(end_year, end_month, calendar.monthrange(end_year, end_month)[1])
+    printed_months = set(months)
     header_year, header_month = months[len(months) // 2]
 
-    context_months = context_month_range(start_year, start_month)
-    context_records = daily_records(context_months, location)
+    context_records = daily_records_between(pad_start, pad_end, location)
     records_by_date = {}
     target_records = []
     target_dates = set()
@@ -1226,7 +1188,7 @@ def build_pdf(location, start_year, start_month, output_path, festivals_path=Non
       civil_date = record.civil_date
       records_by_date[civil_date] = record
       sunrise_by_date[civil_date] = record.sunrise_jd
-      if range_start <= civil_date <= range_end:
+      if (civil_date.year, civil_date.month) in printed_months:
         target_records.append(record)
         target_dates.add(civil_date)
         if (civil_date.year, civil_date.month) == (header_year, header_month):
@@ -1309,8 +1271,13 @@ def build_pdf(location, start_year, start_month, output_path, festivals_path=Non
     return output_path
 
 
-def default_output_path(location, start_year, start_month, month_system="amanta", coordinate_selection="citra"):
-  months = month_range(start_year, start_month)
+def default_output_path(location, months, month_system="amanta", coordinate_selection="citra"):
+  """Filename for the printed lunar-year span, e.g. ``..._2026-03_to_2027-04.pdf``.
+
+  The resolved months are in the name so two runs are diffable when Ugadi
+  moves across a month boundary under another ayanāṃśa.
+  """
+  start_year, start_month = months[0]
   end_year, end_month = months[-1]
   parts = []
   amanta = require_month_system(month_system)
@@ -1322,12 +1289,14 @@ def default_output_path(location, start_year, start_month, month_system="amanta"
     parts.append(coordinate_selection)
   suffix = ("_" + "_".join(parts)) if parts else ""
   return Path(f"{location_slug(location.name)}_panchanga_"
-              f"{start_year:04d}-{start_month:02d}_to_"
-              f"{end_year:04d}-{end_month:02d}{suffix}.pdf")
+              f"{_format_month(start_year, start_month)}_to_"
+              f"{_format_month(end_year, end_month)}{suffix}.pdf")
 
 
 def argument_parser():
-  parser = argparse.ArgumentParser(description=("Generate a one-page A4 panchanga for 14 consecutive months."))
+  parser = argparse.ArgumentParser(
+    description=("Generate a one-page A4 panchanga for one lunar year: the Ugadi in --start "
+                 "through the end of Phalguna, as 12 to 14 Gregorian months."))
   parser.add_argument("--city", help=(f"city as listed in {DEFAULT_CITIES_PATH.name} "
                                       f'(e.g. "Helsinki, FI" or Helsinki,FI)'))
   parser.add_argument(
@@ -1336,8 +1305,10 @@ def argument_parser():
           "longitude (east = positive), timezone as UTC offset hours (5.5 = UTC+5:30), "
           "e.g. --place -13.4,70,5.5"))
   parser.add_argument(
-    "--start", required=True, metavar="YYYY-MM", help=("first of the 14 consecutive calendar months, e.g. 2026-06; "
-                                                       "astronomical year: 0 = 1 BCE, -500-03 = March 501 BCE"))
+    "--start", required=True, metavar="YYYY",
+    help=(f"Gregorian year of the Ugadi that opens the lunar year, e.g. 2026; "
+          f"astronomical year: 0000 = 1 BCE, -0500 = 501 BCE; "
+          f"{_format_year(PDF_YEAR_MIN)} to {_format_year(PDF_YEAR_MAX)}"))
   parser.add_argument("-o", "--output", type=Path, help="output PDF path (default: generated from city and range)")
   parser.add_argument("--month", choices=("amanta", "purnimanta"), default="amanta",
                       help="lunar month reckoning for display: amanta (default) or purnimanta")
@@ -1366,15 +1337,15 @@ def main(argv=None):
   arguments = parser.parse_args(attach_option_values(sys.argv[1:] if argv is None else argv))
   _check_reportlab()
   try:
-    start_year, start_month = require_start_month(arguments.start)
+    start_year = require_start_year(arguments.start)
     location = resolve_location(arguments.city, arguments.place)
     month_system = arguments.month
     coordinate_selection = require_coordinate_selection(arguments.ayanamsa)
-    output_path = arguments.output or default_output_path(location, start_year, start_month, month_system=month_system,
+    months = lunar_year_months(start_year, location, coordinate_selection)
+    output_path = arguments.output or default_output_path(location, months, month_system=month_system,
                                                           coordinate_selection=coordinate_selection)
-    generated = build_pdf(location, start_year, start_month, output_path, festivals_path=arguments.festivals,
-                          month_system=month_system, coordinate_selection=coordinate_selection,
-                          recurring=arguments.recurring)
+    generated = build_pdf(location, months, output_path, festivals_path=arguments.festivals, month_system=month_system,
+                          coordinate_selection=coordinate_selection, recurring=arguments.recurring)
   except (OSError, ValueError, RuntimeError) as error:
     parser.error(str(error))
   print(generated.resolve())

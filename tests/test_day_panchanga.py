@@ -187,7 +187,11 @@ class DayPanchangaMasaRituTests(unittest.TestCase):
         response = client.get(f"/api/panchanga?city=Ujjain&date={date}")
         self.assertEqual(response.status_code, 400)
         self.assertIn("error", response.get_json())
-    self.assertEqual(client.get("/api/panchanga.ics?city=Ujjain&start=9999-12").status_code, 400)
+    # ICS keeps the PDF range: a year beyond 3300 is a 400 from the range
+    # check, and the old YYYY-MM spelling is a 400 from the parser.
+    response = client.get("/api/panchanga.ics?city=Ujjain&start=9999")
+    self.assertEqual(response.status_code, 400)
+    self.assertIn(b"out of range", response.data)
 
 
 class DstClockTests(unittest.TestCase):
