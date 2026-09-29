@@ -121,12 +121,6 @@ def covering_months_and_data(year=2030, start_month=1):
   return sequential_month_data(append_solar_coverage_rows(covering_tithi_rows()), year, start_month)
 
 
-def covering_month_data(year=2030, month=1):
-  """Synthetic month_data containing every catalog festival once."""
-  _months, month_data = covering_months_and_data(year, month)
-  return month_data
-
-
 def sequential_month_data(row_specs, year=2030, start_month=1):
   """Pack ``day_row``-like specs into valid civil months (day field ignored)."""
   month_data = {}

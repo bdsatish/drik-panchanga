@@ -189,10 +189,7 @@ class GuardedPathTests(unittest.TestCase):
     real = panchanga._transit_jd(jd, mur)
 
     def overshooting_search(jd_ut, body, geopos, rsmi):
-
-      class _R:  # res=0 with a transit 2 h past window_end
-        pass
-
+      # res=0 with a transit 2 h past window_end
       return (0, [real + 2.0 / 24], 0)
 
     with mock.patch.object(swe, "rise_trans", side_effect=overshooting_search):

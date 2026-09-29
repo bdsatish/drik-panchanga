@@ -39,10 +39,11 @@ class DayPanchangaMasaRituTests(unittest.TestCase):
 
   def test_shared_day_details_contains_common_intervals(self):
     from generate_panchanga_calendar import load_location
-    from webapp.day_panchanga import compute_day_details, parse_civil_date
+    from webapp.day_panchanga import _compute_day_details_unlocked, parse_civil_date
 
-    details = compute_day_details(load_location("Bengaluru"), parse_civil_date("21/04/2023"), amanta=True,
-                                  coordinate_selection="citra")
+    with panchanga.coordinate_calculation_lock:
+      details = _compute_day_details_unlocked(load_location("Bengaluru"), parse_civil_date("21/04/2023"), amanta=True,
+                                              coordinate_selection="citra")
     self.assertEqual(len(details["rahu_kala"]), 2)
     self.assertEqual(len(details["durmuhurta"]), 2)
     self.assertEqual(details["varjyam"], panchanga.varjyam(details["jd"], details["place"]))

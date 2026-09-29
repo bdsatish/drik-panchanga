@@ -364,7 +364,7 @@ class MasaBadgeTests(unittest.TestCase):
     self.assertEqual(self.draw_badge("3", False)[0], "3")
 
   def test_wide_badge_shrinks_instead_of_overrunning_the_tithi(self):
-    plain_text, plain_size = self.draw_badge("3", False)
+    _plain, plain_size = self.draw_badge("3", False)
     wide_text, wide_size = self.draw_badge("A12", True)
     self.assertEqual(wide_text, "A12")
     self.assertLess(wide_size, plain_size)

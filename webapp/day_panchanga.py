@@ -122,15 +122,6 @@ def drik_ayana_label(ritu_num):
   return label
 
 
-def compute_day_details(location, civil, amanta=None, coordinate_selection=None):
-  """Compute one day while holding the shared coordinate-state lock.
-
-    Lock here, then ``_compute_day_details_unlocked`` does the astronomy.
-    """
-  with panchanga.coordinate_calculation_lock:
-    return _compute_day_details_unlocked(location, civil, amanta=amanta, coordinate_selection=coordinate_selection)
-
-
 def _compute_day_details_unlocked(location, civil, amanta=None, coordinate_selection=None):
   """Compute all mode-sensitive panchanga fields for one civil day.
 
