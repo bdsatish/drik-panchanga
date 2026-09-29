@@ -89,12 +89,8 @@ def probe_moon_event(jd, place, civil, clock, rise=True):
   swe = panchanga.swe
   t0 = jd - place.timezone / 24.0
   flag = swe.CALC_RISE if rise else swe.CALC_SET
-  try:
-    rc, times = swe.rise_trans(t0, swe.MOON, geopos=(place.longitude, place.latitude, 0.0),
-                               rsmi=panchanga._rise_flags + flag)
-  except Exception as error:
-    log.error("Moon %s probe failed: %s", "rise" if rise else "set", error)
-    return None, "unavailable"
+  rc, times = swe.rise_trans(t0, swe.MOON, geopos=(place.longitude, place.latitude, 0.0),
+                             rsmi=panchanga._rise_flags + flag)
   if rc != 0:
     altitude = body_altitude_at_local_noon(swe.MOON, civil.year, civil.month, civil.day, place)
     if altitude > 0.5:

@@ -587,31 +587,22 @@ def _moon_event_in_window(jd, place, rise=True):
   At high latitudes the Moon can rise (or set) twice in one civil day; when
   the first falls before sunrise, the second is looked up too.
   """
-  try:
-    window_start = sunrise(jd, place)
-    window_end = sunrise(jd + 1, place)
-  except Exception:
-    return None
+  window_start = sunrise(jd, place)
+  window_end = sunrise(jd + 1, place)
   if window_end <= window_start:
     window_end = window_start + 1.0
   finder = moonrise_jd if rise else moonset_jd
   next_midnight = jd + 1 - place.timezone / 24.
   candidates = []
   for day_jd in (jd - 1, jd, jd + 1):
-    try:
-      event = finder(day_jd, place)
-    except Exception:
-      continue
+    event = finder(day_jd, place)
     # Reject SE failed-lookup sentinels (same band as monthly sun/moon lines).
     if not (day_jd - 1 <= event <= day_jd + 2):
       continue
     if window_start <= event < window_end:
       candidates.append(event)
     elif day_jd == jd and event < window_start:
-      try:
-        later = _next_moon_event_jd(event, place, rise)
-      except Exception:
-        continue
+      later = _next_moon_event_jd(event, place, rise)
       if later is not None and later < next_midnight and window_start <= later < window_end:
         candidates.append(later)
   if not candidates:

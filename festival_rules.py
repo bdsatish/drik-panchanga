@@ -14,13 +14,10 @@ log.addHandler(logging.NullHandler())
 
 
 def _event_jd_ut(civil_date, geopos, timezone_name, getter):
-  """UT JD of a local event, or None if missing / sentinel."""
+  """UT JD of a local event, or None if outside the day's band."""
   place = _place_for_civil(civil_date, geopos, timezone_name)
   jd = gregorian_to_jd(civil_date)
-  try:
-    event = getter(jd, place)
-  except Exception:
-    return None
+  event = getter(jd, place)
   if event is None or not jd - 1 <= event <= jd + 2:
     return None
   return event
@@ -269,11 +266,7 @@ def find_local_eclipses(start_jd, end_jd, geopos):
   for kind, finder in searches:
     search_jd = start_jd - 1.0
     while search_jd < end_jd + 2.0:
-      try:
-        flags, times, _ = finder(search_jd, geopos)
-      except Exception as error:
-        log.error("Eclipse search for %s failed at JD %s: %s", kind, search_jd, error)
-        break
+      flags, times, _ = finder(search_jd, geopos)
       maximum = times[0]
       if not maximum or maximum <= search_jd:
         break
@@ -793,10 +786,7 @@ def shraddha_tithi_at_aparahna(record, geopos, timezone_name):
   """
   jd = gregorian_to_jd(record.civil_date)
   place = _place_for_civil(record.civil_date, geopos, timezone_name)
-  try:
-    daylight_hours = panchanga.day_duration(jd, place)[0]
-  except Exception:
-    return None
+  daylight_hours = panchanga.day_duration(jd, place)[0]
   if daylight_hours <= 0:
     return None
   aparahna_start_jd = record.sunrise_jd + (daylight_hours / 24.0) * 3 / 5

@@ -267,35 +267,26 @@ def sun_moon_lines(location, civil):
   jd = gregorian_to_jd(civil)
   clock = cell_clock(location, civil)
   lines = []
-  try:
-    # Swiss Ephemeris returns a 0.0 sentinel for a failed rise/set lookup
-    # (polar day/night); range-check each event separately before formatting,
-    # else a missing one prints a nonsense time like ``-59069097:00``.
-    rise = panchanga.sunrise(jd, place)
-    set_ = panchanga.sunset(jd, place)
-    rise_text = clock(rise) if jd - 1 <= rise <= jd + 2 else "--"
-    set_text = clock(set_) if jd - 1 <= set_ <= jd + 2 else "--"
-    if rise_text != "--" or set_text != "--":
-      sandhya_prefix = ""
-      if rise_text != "--":
-        try:
-          ps_start, _ps_end = panchanga.pratah_sandhya(jd, place)
-          if jd - 1 <= ps_start <= jd + 2:
-            sandhya_prefix = f"({clock(ps_start)} –) "
-        except Exception as sandhya_exc:
-          log.debug("pratah sandhya unavailable %s: %s", civil, sandhya_exc)
-      lines.append(f"Sun: {sandhya_prefix}{rise_text} – {set_text}")
-  except Exception as exc:
-    log.debug("sun times unavailable %s: %s", civil, exc)
-  try:
-    parts = []
-    for event in (panchanga.moonrise(jd, place), panchanga.moonset(jd, place)):
-      if event is not None and jd - 1 <= event <= jd + 2:
-        parts.append(clock(event))
-    if parts:
-      lines.append("Moon: " + " – ".join(parts))
-  except Exception as exc:
-    log.debug("moon times unavailable %s: %s", civil, exc)
+  # Swiss Ephemeris returns a 0.0 sentinel for a failed rise/set lookup
+  # (polar day/night); range-check each event separately before formatting,
+  # else a missing one prints a nonsense time like ``-59069097:00``.
+  rise = panchanga.sunrise(jd, place)
+  set_ = panchanga.sunset(jd, place)
+  rise_text = clock(rise) if jd - 1 <= rise <= jd + 2 else "--"
+  set_text = clock(set_) if jd - 1 <= set_ <= jd + 2 else "--"
+  if rise_text != "--" or set_text != "--":
+    sandhya_prefix = ""
+    if rise_text != "--":
+      ps_start, _ps_end = panchanga.pratah_sandhya(jd, place)
+      if jd - 1 <= ps_start <= jd + 2:
+        sandhya_prefix = f"({clock(ps_start)} –) "
+    lines.append(f"Sun: {sandhya_prefix}{rise_text} – {set_text}")
+  parts = []
+  for event in (panchanga.moonrise(jd, place), panchanga.moonset(jd, place)):
+    if event is not None and jd - 1 <= event <= jd + 2:
+      parts.append(clock(event))
+  if parts:
+    lines.append("Moon: " + " – ".join(parts))
   return lines
 
 
@@ -305,11 +296,8 @@ def varjyam_lines(location, civil):
   jd = gregorian_to_jd(civil)
   clock = cell_clock(location, civil)
   lines = []
-  try:
-    for start, end in panchanga.varjyam(jd, place):
-      lines.append(f"Varjyam: {clock(start)} – {clock(end)}")
-  except Exception as exc:
-    log.debug("varjyam unavailable %s: %s", civil, exc)
+  for start, end in panchanga.varjyam(jd, place):
+    lines.append(f"Varjyam: {clock(start)} – {clock(end)}")
   return lines
 
 
@@ -544,14 +532,10 @@ def rahu_kala_table_lines(location, year, month):
   days = calendar.monthrange(year, month)[1]
   for day in range(1, days + 1):
     civil = Date(year, month, day)
-    try:
-      place = place_for_date(location, civil)
-      jd = gregorian_to_jd(civil)
-      clock = cell_clock(location, civil)
-      start, end = panchanga.trikalam(jd, place, option="rahu")
-    except Exception as exc:
-      log.debug("rahu kala unavailable %s: %s", civil, exc)
-      continue
+    place = place_for_date(location, civil)
+    jd = gregorian_to_jd(civil)
+    clock = cell_clock(location, civil)
+    start, end = panchanga.trikalam(jd, place, option="rahu")
     windows.setdefault(civil.weekday(), []).append((clock(start), clock(end)))
   lines = []
   for weekday in (6, 0, 1, 2, 3, 4, 5):
