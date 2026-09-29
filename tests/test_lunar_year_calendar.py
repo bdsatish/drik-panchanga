@@ -1,0 +1,140 @@
+"""Lunar-year bounds for the PDF calendars: parser, resolver, pad, edge cases.
+
+The rules under test (docs/PLAN.LUNAR-YEAR-CALENDARS.md):
+
+* ``--start YYYY`` names the Gregorian year holding the year's Ugadi; the
+  span runs from Ugadi's month through the month holding the last Phālguna
+  day (12–14 whole months).
+* PDFs and ICS accept years ``-3300 ... 3300``; a year with zero or two
+  Ugadis is refused by name.
+* The builders read a 32-day lead-in and one day past the span, not
+  context months.
+"""
+
+import calendar
+import unittest
+
+from datetime_helper import Date
+from generate_panchanga_calendar import (
+  DEFAULT_FESTIVALS_PATH,
+  PDF_YEAR_MAX,
+  PDF_YEAR_MIN,
+  lunar_year_boundaries,
+  lunar_year_months,
+  load_location,
+  require_start_year,
+)
+
+UJJAIN = "Ujjain, IN"
+
+# Measured at Ujjain, Citra-paksha (plan §2).
+FIXTURES = {
+  2026: (Date(2026, 3, 20), Date(2027, 4, 6), (2026, 3), (2027, 4), 14),
+  2027: (Date(2027, 4, 7), Date(2028, 3, 26), (2027, 4), (2028, 3), 12),
+  2028: (Date(2028, 3, 27), Date(2029, 3, 15), (2028, 3), (2029, 3), 13),
+  2029: (Date(2029, 3, 16), Date(2030, 4, 2), (2029, 3), (2030, 4), 14),
+  2030: (Date(2030, 4, 3), Date(2031, 3, 23), (2030, 4), (2031, 3), 12),
+}
+
+
+class StartYearParserTests(unittest.TestCase):
+  """Grammar cases for ``--start YYYY``."""
+
+  def test_accepts_plain_and_bce_years(self):
+    for text, expected in (("2026", 2026), ("0000", 0), ("0500", 500), ("-0500", -500), ("-500", -500),
+                           ("-3300", -3300), ("3300", 3300)):
+      with self.subTest(text=text):
+        self.assertEqual(require_start_year(text), expected)
+
+  def test_rejects_a_start_month(self):
+    for text in ("2026-03", "-500-03", "0000-01"):
+      with self.subTest(text=text), self.assertRaisesRegex(ValueError, "not YYYY-MM"):
+        require_start_year(text)
+
+  def test_rejects_years_outside_the_range(self):
+    for text in ("-3301", "3301", "-5000", "9999"):
+      with self.subTest(text=text), self.assertRaisesRegex(ValueError, r"-3300 to 3300"):
+        require_start_year(text)
+
+
+class ResolverFixtureTests(unittest.TestCase):
+  """The five measured lunar years from the plan's table."""
+
+  @classmethod
+  def setUpClass(cls):
+    cls.location = load_location(UJJAIN)
+
+  def test_measured_spans(self):
+    for year, (ugadi, last, first_month, end_month, count) in FIXTURES.items():
+      with self.subTest(year=year):
+        got_ugadi, got_last = lunar_year_boundaries(year, self.location)
+        self.assertEqual(got_ugadi, ugadi)
+        self.assertEqual(got_last, last)
+        months = lunar_year_months(year, self.location)
+        self.assertEqual(months[0], first_month)
+        self.assertEqual(months[-1], end_month)
+        self.assertEqual(len(months), count)
+
+  def test_2029_starts_on_the_adhika_chaitra_ugadi(self):
+    ugadi, _last = lunar_year_boundaries(2029, self.location)
+    self.assertEqual(ugadi, Date(2029, 3, 16))
+
+  def test_consecutive_years_share_the_ugadi_month(self):
+    # Plan §2.2: the month of Ugadi YYYY+1 is the last month of year YYYY
+    # and the first month of year YYYY+1.
+    this = lunar_year_months(2026, self.location)
+    nxt = lunar_year_months(2027, self.location)
+    self.assertEqual(this[-1], nxt[0])
+
+  def test_every_fixture_covers_ugadi_and_stops_before_next_ugadi(self):
+    for year, (ugadi, last, _f, _e, _c) in FIXTURES.items():
+      months = lunar_year_months(year, self.location)
+      first_day = Date(months[0][0], months[0][1], 1)
+      end_year, end_month = months[-1]
+      last_day = Date(end_year, end_month, calendar.monthrange(end_year, end_month)[1])
+      self.assertLessEqual(first_day, ugadi)
+      self.assertLessEqual(last, last_day)
+      # The whole printed span is 12–14 months and under 385 + pad days.
+      self.assertTrue(12 <= len(months) <= 14)
+      self.assertLessEqual(last_day - first_day, 365 + 31 + 31 + 3)
+      self.assertLess(ugadi, last)
+
+
+class RangeEdgeTests(unittest.TestCase):
+  """-3300 and 3300 resolve; the first failing year at Ujjain is -3298."""
+
+  MODES = ("citra", "revati", "rohini", "pushya", "mula", "krishnamurti", "raman", "tropical")
+
+  def test_edges_resolve_for_every_mode(self):
+    location = load_location(UJJAIN)
+    for year in (PDF_YEAR_MIN, PDF_YEAR_MAX):
+      for mode in self.MODES:
+        with self.subTest(year=year, mode=mode):
+          months = lunar_year_months(year, location, mode)
+          self.assertTrue(12 <= len(months) <= 14)
+
+  def test_revati_minus_3298_names_both_ugadis(self):
+    location = load_location(UJJAIN)
+    with self.assertRaises(ValueError) as caught:
+      lunar_year_months(-3298, location, "revati")
+    message = str(caught.exception)
+    self.assertIn("two Ugadis", message)
+    self.assertIn("-3298-01-11", message)
+    self.assertIn("-3298-12-31", message)
+
+  def test_revati_minus_3297_names_no_ugadi(self):
+    location = load_location(UJJAIN)
+    with self.assertRaises(ValueError) as caught:
+      lunar_year_months(-3297, location, "revati")
+    self.assertIn("no Ugadi", str(caught.exception))
+
+  def test_tropical_never_fails_in_range(self):
+    location = load_location(UJJAIN)
+    for year in (-3300, -1500, 0, 1500, 3300):
+      with self.subTest(year=year):
+        months = lunar_year_months(year, location, "tropical")
+        self.assertTrue(12 <= len(months) <= 14)
+
+
+if __name__ == "__main__":
+  unittest.main()

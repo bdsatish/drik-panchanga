@@ -19,7 +19,8 @@ except ImportError:
   HexColor = white = A4 = landscape = canvas = None
 
 from festival_rules import (DayRecord, ekadashi_dates_from_records, find_local_eclipses, load_festival_selection,
-                            resolve_festivals, select_pradosham_dates, select_sankashti_chaturthi_dates)
+                            resolve_festivals, select_plain_tithi_dates, select_pradosham_dates,
+                            select_sankashti_chaturthi_dates)
 import panchanga
 from datetime_helper import (Date, fixed_offset_name, format_local_hm, format_utc_offset, gregorian_to_jd,
                              hindu_day_civil, jd_to_local_civil_date, local_range_jds, utc_offset_hours)
@@ -28,6 +29,22 @@ MONTH_COUNT = 14
 # Festival fallbacks read a neighbouring month, possibly past an adhika month,
 # so a kṣaya month cut by the window edge must lie three months off the print span.
 CONTEXT_MARGIN_MONTHS = 3
+
+# Whole lunar years are 12, 13 or 14 Gregorian months; only these bounds are
+# fixed, the printed span comes from the year's two Ugadis.
+LUNAR_YEAR_MIN_MONTHS = 12
+LUNAR_YEAR_MAX_MONTHS = 14
+# How far past the printed days the builders read records. The solar day number
+# counts from the last saṅkrānti (a solar month can be 32 sunrises long), an
+# Ekādaśī pāraṇa on the first day needs the upavāsa before it, and vṛddhi /
+# kṣaya checks need the previous sunrise. One day after the last printed day
+# catches a pre-sunrise eclipse that belongs to that day.
+RECORD_PAD_DAYS_BEFORE = 32
+RECORD_PAD_DAYS_AFTER = 1
+# The PDFs and ICS run to the deep-BCE range the tests lock; the day view does
+# not share this limit.
+PDF_YEAR_MIN = -3300
+PDF_YEAR_MAX = 3300
 DEFAULT_CITIES_PATH = Path(__file__).parent / "data" / "cities.json"
 DEFAULT_FESTIVALS_PATH = Path(__file__).parent / "config" / "festivals.cfg"
 DEFAULT_NAMES_PATH = Path(__file__).parent / "data" / "sanskrit_names.json"
@@ -286,6 +303,91 @@ def context_month_range(start_year, start_month):
   return context_month_sequence(start_year, start_month, MONTH_COUNT)
 
 
+def _format_month(year, month):
+  """``-0500-03`` for a ``(year, month)`` pair, in the ``--start`` grammar."""
+  return (f"-{abs(year):04d}-{month:02d}" if year < 0 else f"{year:04d}-{month:02d}")
+
+
+def _format_year(year):
+  return f"-{abs(year):04d}" if year < 0 else f"{year:04d}"
+
+
+def _format_date(civil):
+  """``-0500-03-15`` for a ``Date``, in the ``--start`` grammar."""
+  return f"{_format_year(civil.year)}-{civil.month:02d}-{civil.day:02d}"
+
+
+def ugadi_dates(months, location, year=None):
+  """Sorted Ugadi dates from records over ``months``, optionally in Gregorian ``year``.
+
+  Amānta Chaitra S1, with the adhika Chaitra rule the Ugadi festival uses
+  (adhika wins over the nija month that follows it), so calendar bounds and
+  the festival line cannot disagree.
+  """
+  records = daily_records(months, location)
+  dates = select_plain_tithi_dates(records, 1, "S1", allow_adhika=True)
+  return sorted(date for date in dates if year is None or date.year == year)
+
+
+def _count_word(n):
+  return {0: "no", 1: "one", 2: "two", 3: "three"}.get(n, str(n))
+
+
+def lunar_year_boundaries(start_year, location):
+  """``(Ugadi, last Phālguna day)`` of the lunar year named by ``start_year``.
+
+  The Gregorian year ``start_year`` must hold exactly one Ugadi. Sidereal
+  Ugadi drifts about a day later every 70–80 years, so years before about
+  -2950 can hold two or none (§2.1 of the plan); both are refused by name.
+  """
+  ugadis = ugadi_dates(_month_sequence(start_year - 1, 11, LUNAR_YEAR_MAX_MONTHS), location, start_year)
+  if not ugadis:
+    raise ValueError(f"Gregorian year {_format_year(start_year)} has no Ugadi at {location.name}.")
+  if len(ugadis) > 1:
+    found = " and ".join(_format_date(date) for date in ugadis)
+    raise ValueError(
+      f"Gregorian year {_format_year(start_year)} has {_count_word(len(ugadis))} Ugadis at {location.name}: {found}. "
+      f"Only a year with a single Ugadi has a lunar year.")
+  ugadi = ugadis[0]
+  # A lunar year is 354–385 days, so the next Ugadi is inside 14 months from
+  # the month this one falls in.
+  # Any Ugadi later than this one: the next year's number is what closes the
+  # span, and it may sit in ``start_year`` or in ``start_year + 1``.
+  later = ugadi_dates(_month_sequence(ugadi.year, ugadi.month, LUNAR_YEAR_MAX_MONTHS), location)
+  following = [date for date in later if date > ugadi]
+  if not following:
+    raise ValueError(f"No next Ugadi after {_format_date(ugadi)} at {location.name}.")
+  return ugadi, following[0] - 1
+
+
+def lunar_year_months(start_year, location, coordinate_selection="citra"):
+  """Gregorian months of the lunar year that starts at Ugadi in ``start_year``.
+
+  Whole months are printed: the first month also holds the previous Phālguna,
+  the last month the next Chaitra. The length is 12, 13 or 14 months.
+  """
+  with panchanga.coordinate_calculation_lock:
+    panchanga.set_coordinate_selection(coordinate_selection)
+    ugadi, last_day = lunar_year_boundaries(start_year, location)
+  first_year, first_month = ugadi.year, ugadi.month
+  count = (last_day.year - first_year) * 12 + (last_day.month - first_month) + 1
+  return _month_sequence(first_year, first_month, count)
+
+
+def record_span(months):
+  """First and last civil date a builder must read for the printed ``months``.
+
+  ``RECORD_PAD_DAYS_BEFORE`` leads in for the solar day count and for tithis
+  that run past a day's sunrise; ``RECORD_PAD_DAYS_AFTER`` catches a
+  pre-sunrise eclipse that belongs to the last printed day.
+  """
+  year, month = months[0]
+  first = Date(year, month, 1) - RECORD_PAD_DAYS_BEFORE
+  year, month = months[-1]
+  last = Date(year, month, calendar.monthrange(year, month)[1]) + RECORD_PAD_DAYS_AFTER
+  return first, last
+
+
 def month_system_label(amanta):
   return "Amānta" if amanta else "Pūrṇimānta"
 
@@ -388,6 +490,26 @@ def require_start_month(text):
   if not 1 <= month <= 12:
     raise ValueError("start month must use YYYY-MM format (negative year for BCE, e.g. -500-03)")
   return year, month
+
+
+def require_start_year(text):
+  """Parse the ``--start`` lunar year (astronomical: ``0000`` = 1 BCE) or raise ``ValueError``.
+
+  Positive years keep four digits, so ``26`` cannot be 26 CE or 2026. Only
+  ``PDF_YEAR_MIN ... PDF_YEAR_MAX`` is accepted for the PDF and ICS products.
+  """
+  if re.fullmatch(r"(-\d{1,4}|\d{4})-\d{2}", text or ""):
+    raise ValueError("start year must use YYYY format, not YYYY-MM: the first month comes from "
+                     "Ugadi, so pass the year alone (e.g. --start 2026)")
+  match = re.fullmatch(r"(-\d{1,4}|\d{4})", text or "")
+  if not match:
+    raise ValueError(f"start year must be YYYY or -YYYY, e.g. 2026 or {_format_year(-500)} for 501 BCE")
+  year = int(match.group(1))
+  if not PDF_YEAR_MIN <= year <= PDF_YEAR_MAX:
+    raise ValueError(
+      f"Start year {_format_year(year)} is out of range ({_format_year(PDF_YEAR_MIN)} to {_format_year(PDF_YEAR_MAX)})."
+    )
+  return year
 
 
 def require_coordinate_selection(text):
@@ -726,22 +848,36 @@ def tithi_font(is_sukla):
   return PDF_FONT_BOLD if is_sukla else PDF_FONT_BOLD_ITALIC
 
 
+def daily_records_between(first, last, location):
+  """Canonical amānta sunrise records for every civil date from ``first`` to ``last``.
+
+  ``first`` and ``last`` are ``Date`` values, both included; the range may
+  start or end mid-month, which is what the day pad (§4.5 of the lunar-year
+  plan) needs.
+  """
+  result = []
+  date = first
+  while date <= last:
+    place = place_for_date(location, date)
+    jd = gregorian_to_jd(date)
+    tithi_number = panchanga.tithi(jd, place)[0]
+    nakshatra_number = panchanga.nakshatra(jd, place)[0]
+    yoga_number = panchanga.yoga(jd, place)[0]
+    masa_number, is_adhika = panchanga.masa(jd, place, amanta=True, tithi_number=tithi_number)
+    result.append(
+      DayRecord(date, tithi_code(tithi_number), nakshatra_number, yoga_number, masa_code(masa_number, is_adhika),
+                is_adhika, panchanga.sunrise(jd, place)))
+    date = date + 1
+  return result
+
+
 def daily_records(months, location):
   """Canonical amānta sunrise records for ordered Gregorian ``months``."""
-  result = []
-  for year, month in months:
-    for day in range(1, calendar.monthrange(year, month)[1] + 1):
-      date = Date(year, month, day)
-      place = place_for_date(location, date)
-      jd = gregorian_to_jd(date)
-      tithi_number = panchanga.tithi(jd, place)[0]
-      nakshatra_number = panchanga.nakshatra(jd, place)[0]
-      yoga_number = panchanga.yoga(jd, place)[0]
-      masa_number, is_adhika = panchanga.masa(jd, place, amanta=True, tithi_number=tithi_number)
-      result.append(
-        DayRecord(date, tithi_code(tithi_number), nakshatra_number, yoga_number, masa_code(masa_number, is_adhika),
-                  is_adhika, panchanga.sunrise(jd, place)))
-  return result
+  year, month = months[0]
+  first = Date(year, month, 1)
+  year, month = months[-1]
+  last = Date(year, month, calendar.monthrange(year, month)[1])
+  return daily_records_between(first, last, location)
 
 
 def display_masa(record, amanta=True):
