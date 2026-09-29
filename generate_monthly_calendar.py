@@ -64,7 +64,6 @@ from generate_panchanga_calendar import (
   embed_pdf_metadata,
   ensure_pdf_fonts,
   attach_option_values,
-  load_location,
   location_slug,
   lunar_year_months,
   masa_badges_by_date,
@@ -331,8 +330,12 @@ def _wrap_lines(pdf, text, font, size, max_width):
   return lines if lines else [text]
 
 
-def year_label_for_month(amanta, year, month, records_by_date):
-  """Webapp-style era label for mid-month: ``Parābhava 1948, Siddhārthī 2083, Kali (elapsed) 5127``."""
+def year_label_for_month(year, month, records_by_date):
+  """Webapp-style era label for mid-month: ``Parābhava 1948, Siddhārthī 2083, Kali (elapsed) 5127``.
+
+  Samvatsara comes from the record's canonical amānta māsa, so the label is
+  the same under either display system.
+  """
   days = calendar.monthrange(year, month)[1]
   civil = Date(year, month, min(15, days))
   record = records_by_date.get(civil)
@@ -628,7 +631,7 @@ def draw_grid(pdf, year, month, location, context):
       draw_cell(pdf, x, y_top, row_h, cell_w, day, civil, location, context, col)
 
 
-def draw_footer(pdf, location, coordinate_selection, page_index, total):
+def draw_footer(pdf, page_index, total):
   pdf.setFillColor(GREY)
   pdf.setFont(PDF_FONT_ITALIC, 6.0)
   note_marks = ("Green: māsa; gold: adhika; saffron: saṅkrānti; teal: ekādaśī; "
@@ -735,10 +738,10 @@ def _build_monthly_pdf_unlocked(location, months, output_path, festivals_path=No
   for index, (year, month) in enumerate(months, start=1):
     pdf.setFillColor(white)
     pdf.rect(0, 0, PAGE_W, PAGE_H, stroke=0, fill=1)
-    year_label = year_label_for_month(amanta, year, month, context["records_by_date"])
+    year_label = year_label_for_month(year, month, context["records_by_date"])
     draw_header(pdf, location, year, month, amanta, coordinate_selection, year_label)
     draw_grid(pdf, year, month, location, context)
-    draw_footer(pdf, location, coordinate_selection, index, len(months))
+    draw_footer(pdf, index, len(months))
     pdf.showPage()
   pdf.save()
   return output_path

@@ -347,7 +347,7 @@ def bisection_search(func, start, stop):
   fval = func(found)
   if round(fval, 6) != 0:  # expected func(x) = 0 for converged solution
     print(f"{func.__name__}({found}) = {fval} != 0")
-    print(f"WARNING: convergence likely failed; answer is unreliable.")
+    print("WARNING: convergence likely failed; answer is unreliable.")
 
   return found
 

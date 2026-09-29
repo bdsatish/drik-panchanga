@@ -48,7 +48,6 @@ from generate_panchanga_calendar import (
   lunar_year_months,
   month_header_label,
   record_span,
-  sankranti_key_line,
   solar_dates_by_date,
   tithi_display_parts,
   tithi_font,
@@ -228,9 +227,9 @@ class PdfLayoutTests(unittest.TestCase):
     ]
     self.assertEqual(calendar_year_label(records), "1948 Parābhava | 2083 Siddhārthī | 5127 Kali (elapsed)")
 
-  def test_calendar_year_label_uses_underlying_month_for_purnimanta(self):
-    # Underlying month 1 (Caitra), Krsna paksha -> purnimanta displays as 2 (Vaisakha).
-    # Samvatsara must use the underlying month, not the display month.
+  def test_calendar_year_label_uses_underlying_month(self):
+    # The record carries the canonical amānta month 1 (Caitra); the label
+    # uses it whatever the display system would show.
     records = [
       DayRecord(Date(2026, 4, 15), "K20", 1, 1, "1", False, 0.0),
     ]
@@ -239,7 +238,7 @@ class PdfLayoutTests(unittest.TestCase):
       mock_panchanga.elapsed_year.return_value = (5127, 1948, 2083)
       mock_panchanga.samvatsara.return_value = 1
       mock_panchanga.samvatsara_north_modern.return_value = 1
-      calendar_year_label(records, amanta=False)
+      calendar_year_label(records)
       mock_panchanga.elapsed_year.assert_called_with(2450000.0, 1)
       mock_panchanga.samvatsara.assert_called_with(2450000.0, 1)
       mock_panchanga.samvatsara_north_modern.assert_called_with(2450000.0, 1)

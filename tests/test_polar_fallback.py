@@ -204,7 +204,6 @@ class GuardedPathTests(unittest.TestCase):
     # renders empty, never sentinel garbage. Assert the contract here too
     # via the generator API level.
     from generate_monthly_calendar import day_details
-    mur = Place(68.97, 33.08, 3.0)
     from generate_panchanga_calendar import Location
     location = Location("Murmansk, RU", 68.97, 33.08, "Europe/Moscow")
     details = day_details(location, __import__("datetime").date(2026, 12, 20))

@@ -1,6 +1,5 @@
 """Regression tests for the lunar-year wall-grid panchanga PDF."""
 
-from io import BytesIO
 from pathlib import Path
 import re
 from tempfile import TemporaryDirectory
@@ -9,7 +8,6 @@ from unittest import mock
 
 from datetime_helper import Date, gregorian_to_jd
 from generate_monthly_calendar import (
-  MONTHLY_LAYOUT_VERSION,
   RULESET_VERSION,
   argument_parser,
   build_monthly_pdf,
@@ -20,11 +18,15 @@ from generate_monthly_calendar import (
   draw_header,
   ekadashi_name,
   ensure_pdf_fonts,
-  load_location,
   sun_moon_lines,
   tithi_name,
 )
-from generate_panchanga_calendar import DEFAULT_FESTIVALS_PATH, _month_sequence as month_sequence, lunar_year_months
+from generate_panchanga_calendar import (
+  DEFAULT_FESTIVALS_PATH,
+  _month_sequence as month_sequence,
+  load_location,
+  lunar_year_months,
+)
 
 
 class MonthSequenceTests(unittest.TestCase):
@@ -396,7 +398,6 @@ class RahuKalaTableTests(unittest.TestCase):
     from generate_monthly_calendar import rahu_kala_table_lines
     lines = rahu_kala_table_lines(load_location("Ujjain"), 2026, 6)
     self.assertEqual([line.split()[0] for line in lines], ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"])
-    import re
     for line in lines:
       self.assertRegex(line, r"^(Su|Mo|Tu|We|Th|Fr|Sa) \d{2}:\d{2}-\d{2}:\d{2}$")
 
@@ -451,25 +452,25 @@ class YearLabelTests(unittest.TestCase):
     panchanga.set_coordinate_selection("citra")
     civil = Date(2026, 6, 15)
     records_by_date = {civil: DayRecord(civil, "K15", 5, 7, "3", False, 0.0)}
-    label = year_label_for_month(True, 2026, 6, records_by_date)
+    label = year_label_for_month(2026, 6, records_by_date)
     self.assertEqual(label, "Parābhava 1948, Siddhārthī 2083, Kali (elapsed) 5127")
 
   def test_year_label_is_none_without_record(self):
     from generate_monthly_calendar import year_label_for_month
-    self.assertIsNone(year_label_for_month(True, 2026, 6, {}))
+    self.assertIsNone(year_label_for_month(2026, 6, {}))
 
-  def test_year_label_uses_underlying_month_for_purnimanta(self):
+  def test_year_label_uses_underlying_month(self):
     from festival_rules import DayRecord
     from generate_monthly_calendar import year_label_for_month
     import panchanga
-    # Underlying month 1 (Caitra), Krsna paksha -> purnimanta displays as 2 (Vaisakha).
-    # Year label must use the underlying month, not the display month.
+    # The record carries the canonical amānta month 1 (Caitra); the label
+    # must use it, whatever the display system would show.
     civil = Date(2026, 4, 15)
     records_by_date = {civil: DayRecord(civil, "K20", 1, 1, "1", False, 0.0)}
     with mock.patch.object(panchanga, "elapsed_year", return_value=(5127, 1948, 2083)) as mock_elapsed, \
          mock.patch.object(panchanga, "samvatsara", return_value=1) as mock_samvatsara, \
          mock.patch.object(panchanga, "samvatsara_north_modern", return_value=1) as mock_north:
-      label = year_label_for_month(False, 2026, 4, records_by_date)
+      year_label_for_month(2026, 4, records_by_date)
       mock_elapsed.assert_called_with(mock.ANY, 1)
       mock_samvatsara.assert_called_with(mock.ANY, 1)
       mock_north.assert_called_with(mock.ANY, 1)
@@ -846,7 +847,7 @@ class FooterLegendTests(unittest.TestCase):
   def test_footer_omits_parana_legend(self):
     from generate_monthly_calendar import draw_footer
     pdf = mock.Mock()
-    draw_footer(pdf, load_location("Ujjain"), "citra", 1, 12)
+    draw_footer(pdf, 1, 12)
     notes = " ".join(c.args[2] for c in pdf.drawString.call_args_list if len(c.args) >= 3)
     self.assertNotIn("Pāraṇā", notes)
     self.assertIn("śrāddha tithi (aparāhṇa)", notes)
@@ -854,8 +855,7 @@ class FooterLegendTests(unittest.TestCase):
   def test_footer_mentions_sankashti(self):
     from generate_monthly_calendar import draw_footer
     pdf = mock.Mock()
-    location = load_location("Ujjain")
-    draw_footer(pdf, location, "citra", 1, 12)
+    draw_footer(pdf, 1, 12)
     drawn_text = [c.args[2] for c in pdf.drawString.call_args_list]
     footer_note = [t for t in drawn_text if "saṅkaṣṭahara" in t]
     self.assertEqual(len(footer_note), 1)
@@ -864,8 +864,7 @@ class FooterLegendTests(unittest.TestCase):
   def test_footer_mentions_pradosham(self):
     from generate_monthly_calendar import draw_footer
     pdf = mock.Mock()
-    location = load_location("Ujjain")
-    draw_footer(pdf, location, "citra", 1, 12)
+    draw_footer(pdf, 1, 12)
     drawn_text = [c.args[2] for c in pdf.drawString.call_args_list]
     footer_note = [t for t in drawn_text if "pradoṣam" in t]
     self.assertEqual(len(footer_note), 1)
@@ -874,8 +873,7 @@ class FooterLegendTests(unittest.TestCase):
   def test_footer_uses_compact_marker_wording(self):
     from generate_monthly_calendar import draw_footer
     pdf = mock.Mock()
-    location = load_location("Ujjain")
-    draw_footer(pdf, location, "citra", 1, 12)
+    draw_footer(pdf, 1, 12)
     drawn_text = [c.args[2] for c in pdf.drawString.call_args_list]
     time_note = [t for t in drawn_text if "After 24:00" in t]
     mark_note = [t for t in drawn_text if "Green: māsa" in t]

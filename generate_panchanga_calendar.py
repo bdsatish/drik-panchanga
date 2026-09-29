@@ -295,7 +295,7 @@ def ugadi_dates(months, location, year=None):
 
 
 def _count_word(n):
-  return {0: "no", 1: "one", 2: "two", 3: "three"}.get(n, str(n))
+  return {2: "two", 3: "three"}.get(n, str(n))
 
 
 def lunar_year_boundaries(start_year, location, coordinate_selection="citra"):
@@ -721,7 +721,6 @@ def draw_tithi_underline(pdf, x, row_y, tithi_column_width, color, wavy=False):
 
   pdf.setStrokeColor(color)
   pdf.setLineWidth(0.65)
-  right = left + underline_width
   baseline = row_y + 1.7
   step = underline_width / 6
   amplitude = 0.8
@@ -1040,8 +1039,12 @@ def kali_ahargana_range(months):
   return int(panchanga.ahargana(start_jd)), int(panchanga.ahargana(end_jd))
 
 
-def calendar_year_label(records, amanta=True):
-  """Return era and samvatsara labels for a representative calendar month."""
+def calendar_year_label(records):
+  """Return era and samvatsara labels for a representative calendar month.
+
+  Samvatsara comes from the record's canonical amānta māsa, so the label is
+  the same under either display system.
+  """
   representative = records[len(records) // 2]
   civil = representative.civil_date
   masa_num = int(representative.masa.lstrip("A"))
@@ -1237,7 +1240,7 @@ def build_pdf(location, months, output_path, festivals_path=None, month_system="
         sankashti_dates.add(value)
     if recurring == "specials":
       pradosham_dates, sankashti_dates = special_weekday_dates(pradosham_dates, sankashti_dates)
-    calendar_years = calendar_year_label(header_records, amanta=amanta)
+    calendar_years = calendar_year_label(header_records)
     kali_ahargana = kali_ahargana_range(months)
     masa_badges = masa_badges_by_date(target_records, amanta=amanta)
 

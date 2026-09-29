@@ -72,10 +72,6 @@ def _emit(headers, body=b"", status=None):
   sys.stdout.buffer.write(b"".join(chunks))
 
 
-def write_headers(headers, status=None):
-  _emit(headers, status=status)
-
-
 def write_text(body, content_type="text/plain; charset=utf-8", status=None):
   data = body.encode("utf-8")
   _emit([
