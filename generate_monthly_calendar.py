@@ -127,38 +127,19 @@ _MONTH_NAMES_EN = [
   "December",
 ]
 
-_TITHI_NAMES = {
-  1: "Pratipadā",
-  2: "Dvitīyā",
-  3: "Tṛtīyā",
-  4: "Caturthī",
-  5: "Pañcamī",
-  6: "Ṣaṣṭhī",
-  7: "Saptamī",
-  8: "Aṣṭamī",
-  9: "Navamī",
-  10: "Daśamī",
-  11: "Ekādaśī",
-  12: "Dvādaśī",
-  13: "Trayodaśī",
-  14: "Caturdaśī",
-  15: "Pūrṇimā",
-  16: "Pratipadā",
-  17: "Dvitīyā",
-  18: "Tṛtīyā",
-  19: "Caturthī",
-  20: "Pañcamī",
-  21: "Ṣaṣṭhī",
-  22: "Saptamī",
-  23: "Aṣṭamī",
-  24: "Navamī",
-  25: "Daśamī",
-  26: "Ekādaśī",
-  27: "Dvādaśī",
-  28: "Trayodaśī",
-  29: "Caturdaśī",
-  30: "Amāvāsyā",
-}
+# Tithi stems for the printed index, derived from the shared sanskrit-names
+# data so the PDF and the web/ICS surfaces read one source.
+_PAKSHA_PREFIXES = ("Śukla pakṣa ", "Kṛṣṇa pakṣa ")
+
+
+def _tithi_stem(json_name):
+  for prefix in _PAKSHA_PREFIXES:
+    if json_name.startswith(prefix):
+      return json_name[len(prefix):].capitalize()
+  return json_name
+
+
+_TITHI_NAMES = {int(number): _tithi_stem(name) for number, name in sanskrit_names()["tithis"].items()}
 
 
 def ekadashi_name(record, amanta=True):
