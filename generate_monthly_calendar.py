@@ -20,7 +20,6 @@ only when that day's sunrise anchor itself sits after midnight (polar
 midnight sun), not as a wrap of 24:00.
 """
 
-import argparse
 import calendar
 import sys
 from datetime import datetime
@@ -46,10 +45,7 @@ import panchanga
 
 from generate_panchanga_calendar import (
   ADHIKA_ROW,
-  DEFAULT_CITIES_PATH,
   DEFAULT_FESTIVALS_PATH,
-  PDF_YEAR_MAX,
-  PDF_YEAR_MIN,
   MASA_START_ROW,
   PDF_FONT,
   PDF_FONT_BOLD,
@@ -69,6 +65,9 @@ from generate_panchanga_calendar import (
   record_span,
   require_coordinate_selection,
   require_month_system,
+  _output_path_suffix,
+  check_reportlab,
+  common_argument_parser,
   require_start_year,
   resolve_festivals,
   resolve_location,
@@ -77,7 +76,6 @@ from generate_panchanga_calendar import (
   timing_key_line,
   tithi_code,
   _format_month,
-  _format_year,
 )
 from datetime_helper import (Date, dst_transitions, format_local_hm, format_utc_offset, gregorian_to_jd,
                              hindu_day_civil, jd_to_local_civil_date)
@@ -684,54 +682,22 @@ def _build_monthly_pdf_unlocked(location, months, output_path, festivals_path=No
 
 
 def default_monthly_output_path(location, months, month_system="amanta", coordinate_selection="citra"):
-  amanta = require_month_system(month_system)
   start_year, start_month = months[0]
   end_year, end_month = months[-1]
-  parts = []
-  if not amanta:
-    parts.append("purnimanta")
-  if coordinate_selection == "tropical":
-    parts.append("tropical")
-  elif coordinate_selection != "citra":
-    parts.append(coordinate_selection)
-  suffix = ("_" + "_".join(parts)) if parts else ""
+  suffix = _output_path_suffix(month_system, coordinate_selection)
   return Path(f"{location_slug(location.name)}_panchanga_wall_"
               f"{_format_month(start_year, start_month)}_to_"
               f"{_format_month(end_year, end_month)}{suffix}.pdf")
 
 
 def argument_parser():
-  parser = argparse.ArgumentParser(description=("Generate a wall-calendar panchanga PDF for one lunar year "
-                                                "(one A4 portrait grid page per Gregorian month)."))
-  parser.add_argument("--city", help=(f'city as listed in {DEFAULT_CITIES_PATH.name} '
-                                      '(e.g. "Helsinki, FI" or Helsinki,FI)'))
-  parser.add_argument(
-    "--place", metavar="LAT,LON,TZ",
-    help=("location as three floats instead of --city: latitude (negative = south), "
-          "longitude (east = positive), timezone as UTC offset hours (5.5 = UTC+5:30), "
-          "e.g. --place -13.4,70,5.5"))
-  parser.add_argument(
-    "--start", required=True, metavar="YYYY",
-    help=(f"Gregorian year of the Ugadi that opens the lunar year, e.g. 2026; "
-          f"astronomical year: 0000 = 1 BCE, -0500 = 501 BCE; "
-          f"{_format_year(PDF_YEAR_MIN)} to {_format_year(PDF_YEAR_MAX)}"))
-  parser.add_argument("-o", "--output", type=Path, help="output PDF path (default: generated from city and range)")
-  parser.add_argument("--month", choices=("amanta", "purnimanta"), default="amanta",
-                      help="lunar month reckoning for display: amanta (default) or purnimanta")
-  parser.add_argument(
-    "--ayanamsa", default="citra", metavar="NAME", help=("ayanamsa: citra (default), revati, rohini, pushya, mula, "
-                                                         "krishnamurti, raman or tropical"))
-  parser.add_argument(
-    "--festivals", type=Path, default=DEFAULT_FESTIVALS_PATH, help=(f"INI file selecting which festivals to include "
-                                                                    f"(default: {DEFAULT_FESTIVALS_PATH.name})"))
+  parser = common_argument_parser(description=("Generate a wall-calendar panchanga PDF for one lunar year "
+                                               "(one A4 portrait grid page per Gregorian month)."))
   return parser
 
 
 def _check_reportlab():
-  if canvas is None:
-    raise ImportError(
-      "drik-panchanga[pdf] is required for PDF generation. "
-      "Install it with: pip install drik-panchanga[pdf]", )
+  check_reportlab()
 
 
 def main(argv=None):

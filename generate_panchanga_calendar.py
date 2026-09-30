@@ -1270,6 +1270,18 @@ def build_pdf(location, months, output_path, festivals_path=None, month_system="
     return output_path
 
 
+def _output_path_suffix(month_system, coordinate_selection):
+  """Filename suffix encoding non-default month system and ayanāṃśa choices."""
+  parts = []
+  if not require_month_system(month_system):
+    parts.append("purnimanta")
+  if coordinate_selection == "tropical":
+    parts.append("tropical")
+  elif coordinate_selection != "citra":
+    parts.append(coordinate_selection)
+  return ("_" + "_".join(parts)) if parts else ""
+
+
 def default_output_path(location, months, month_system="amanta", coordinate_selection="citra"):
   """Filename for the printed lunar-year span, e.g. ``..._2026-03_to_2027-04.pdf``.
 
@@ -1278,24 +1290,15 @@ def default_output_path(location, months, month_system="amanta", coordinate_sele
   """
   start_year, start_month = months[0]
   end_year, end_month = months[-1]
-  parts = []
-  amanta = require_month_system(month_system)
-  if not amanta:
-    parts.append("purnimanta")
-  if coordinate_selection == "tropical":
-    parts.append("tropical")
-  elif coordinate_selection != "citra":
-    parts.append(coordinate_selection)
-  suffix = ("_" + "_".join(parts)) if parts else ""
+  suffix = _output_path_suffix(month_system, coordinate_selection)
   return Path(f"{location_slug(location.name)}_panchanga_"
               f"{_format_month(start_year, start_month)}_to_"
               f"{_format_month(end_year, end_month)}{suffix}.pdf")
 
 
-def argument_parser():
-  parser = argparse.ArgumentParser(
-    description=("Generate a one-page A4 panchanga for one lunar year: the Ugadi in --start "
-                 "through the end of Phalguna, as 12 to 14 Gregorian months."))
+def common_argument_parser(description):
+  """The options shared by both PDF generator CLIs; callers add their own."""
+  parser = argparse.ArgumentParser(description=description)
   parser.add_argument("--city", help=(f"city as listed in {DEFAULT_CITIES_PATH.name} "
                                       f'(e.g. "Helsinki, FI" or Helsinki,FI)'))
   parser.add_argument(
@@ -1317,6 +1320,13 @@ def argument_parser():
   parser.add_argument(
     "--festivals", type=Path, default=DEFAULT_FESTIVALS_PATH, help=(f"INI file selecting which festivals to include "
                                                                     f"(default: {DEFAULT_FESTIVALS_PATH.name})"))
+  return parser
+
+
+def argument_parser():
+  parser = common_argument_parser(
+    description=("Generate a one-page A4 panchanga for one lunar year: the Ugadi in --start "
+                 "through the end of Phalguna, as 12 to 14 Gregorian months."))
   parser.add_argument(
     "--recurring", default="specials", metavar="MODE", help=(
       "annual T-cell underlines for Pradosham/Sankashtahara Chaturthi: specials (default, Mon/Sat and Tue only) or all"
@@ -1324,11 +1334,15 @@ def argument_parser():
   return parser
 
 
-def _check_reportlab():
+def check_reportlab():
   if canvas is None:
     raise ImportError(
       "drik-panchanga[pdf] is required for PDF generation. "
       "Install it with: pip install drik-panchanga[pdf]", )
+
+
+def _check_reportlab():
+  check_reportlab()
 
 
 def main(argv=None):
