@@ -147,12 +147,8 @@ def format_utc_offset(timezone_name, year, month, day=15, longitude=None):
   The abbreviation comes from the year-4 proxy (as in ``utc_offset_hours``),
   so proleptic Gregorian years <= 0 work."""
   civil = Date(year, month, day)
-  total_seconds = int(round(utc_offset_hours(timezone_name, civil, longitude) * 3600))
-  sign = "+" if total_seconds >= 0 else "-"
-  total_seconds = abs(total_seconds)
-  hours, remainder = divmod(total_seconds, 3600)
-  minutes = remainder // 60
-  offset_str = f"UTC{sign}{hours}" if minutes == 0 else f"UTC{sign}{hours}:{minutes:02d}"
+  offset_hours = utc_offset_hours(timezone_name, civil, longitude)
+  offset_str = fixed_offset_name(offset_hours)
   proxy = datetime(max(4, year), month, day, 12, tzinfo=tzinfo_for(timezone_name))
   abbr = proxy.strftime("%Z") or timezone_name
   return f"{offset_str} ({abbr})"
