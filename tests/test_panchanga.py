@@ -353,6 +353,23 @@ class SkipAtNextSunriseTests(PanchangaTestCase):
     self.assertLess(result[3], sunrise(jd + 1, ujjain))
 
 
+class CycleBoundaryTests(unittest.TestCase):
+  """Elongation of exactly 0.0 is the cycle end (tithi 30 / yoga 27), not the start."""
+
+  def test_zero_phase_resolves_to_cycle_end(self):
+    place = bangalore
+    jd = gregorian_to_jd(Date(2009, 7, 15))
+    with mock.patch.object(panchanga, "lunar_phase", return_value=0.0), \
+         mock.patch.object(panchanga, "sunrise", return_value=jd):
+      self.assertEqual(tithi(jd, place)[0], 30)
+    # Rising longitude: the sunrise value is 0.0; later samples advance linearly
+    # so the motion windows never degenerate.
+    with mock.patch.object(panchanga, "sunrise", return_value=jd), \
+         mock.patch.object(panchanga, "lunar_longitude", side_effect=lambda t: (t - jd) * 240.0), \
+         mock.patch.object(panchanga, "solar_longitude", side_effect=lambda t: (t - jd) * 240.0):
+      self.assertEqual(yoga(jd, place)[0], 27)
+
+
 class MasaTests(PanchangaTestCase):
   """Masa computation with amanta and purnimanta systems."""
 

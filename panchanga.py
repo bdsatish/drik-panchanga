@@ -633,7 +633,9 @@ def tithi(jd, place):
 
   # 2. Find tithi at this JDN
   moon_phase = lunar_phase(rise)
-  today = ceil(moon_phase / 12)
+  # An elongation of exactly 0.0 sits at the end of tithi 30, not the start of
+  # tithi 1: ``ceil`` alone would return 0 here.
+  today = ceil(moon_phase / 12) or 30
   degrees_left = today * 12 - moon_phase
 
   # 3. Compute longitudinal differences at intervals of 0.25 days from sunrise
@@ -652,7 +654,7 @@ def tithi(jd, place):
   # 5. Check for skipped tithi at the next sunrise, not ``rise + 1``: sunrise
   # drifts by minutes a day (hours near the polar circles).
   moon_phase_tmrw = lunar_phase(sunrise(jd + 1, place))
-  tomorrow = ceil(moon_phase_tmrw / 12)
+  tomorrow = ceil(moon_phase_tmrw / 12) or 30
   isSkipped = (tomorrow - today) % 30 > 1
   if isSkipped:
     # interpolate again with same (x,y)
@@ -710,8 +712,9 @@ def yoga(jd, place):
   lunar_long = lunar_longitude(rise)
   solar_long = solar_longitude(rise)
   total = (lunar_long + solar_long) % 360
-  # There are 27 Yogas spanning 360 degrees
-  yog = ceil(total * 27 / 360)
+  # There are 27 Yogas spanning 360 degrees; a total of exactly 0.0 is the
+  # end of yoga 27, not the start of yoga 1 (see ``tithi``).
+  yog = ceil(total * 27 / 360) or 27
 
   # 3. Find how many longitudes is there left to be swept
   degrees_left = yog * (360 / 27) - total
@@ -734,7 +737,7 @@ def yoga(jd, place):
   lunar_long_tmrw = lunar_longitude(next_rise)
   solar_long_tmrw = solar_longitude(next_rise)
   total_tmrw = (lunar_long_tmrw + solar_long_tmrw) % 360
-  tomorrow = ceil(total_tmrw * 27 / 360)
+  tomorrow = ceil(total_tmrw * 27 / 360) or 27
   isSkipped = (tomorrow - yog) % 27 > 1
   if isSkipped:
     # interpolate again with same (x,y)
