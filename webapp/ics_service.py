@@ -13,6 +13,7 @@ from generate_panchanga_calendar import (
 )
 from webapp.day_panchanga import (
   _compute_day_details_unlocked,
+  _interval_str,
   ayana_label,
   drik_ayana_label,
   format_masa_label,
@@ -64,10 +65,6 @@ def _escape_text(text):
 
 def _ics_date(civil):
   return f"{civil.year:04d}{civil.month:02d}{civil.day:02d}"
-
-
-def _fmt_interval(start, end, clock):
-  return f"{clock(start, show_seconds=True)}–{clock(end, show_seconds=True)}"
 
 
 def generate_ics(location, start_year, month_system="amanta", coordinate_selection="citra"):
@@ -123,12 +120,12 @@ def generate_ics(location, start_year, month_system="amanta", coordinate_selecti
 
         summary = _escape_text(tithi_name + " · " + nak_name + " · " + masa_name)
 
-        durmuhurta_parts = [_fmt_interval(start, end, clock) for start, end in details["durmuhurta"]]
+        durmuhurta_parts = [_interval_str(start, end, clock) for start, end in details["durmuhurta"]]
         durmuhurta_text = ", ".join(durmuhurta_parts) if durmuhurta_parts else "—"
 
         varjyam_parts = []
         for start, end in details["varjyam"]:
-          varjyam_parts.append(_fmt_interval(start, end, clock))
+          varjyam_parts.append(_interval_str(start, end, clock))
         varjyam_text = ", ".join(varjyam_parts) if varjyam_parts else "—"
 
         desc_lines = []
@@ -149,10 +146,10 @@ def generate_ics(location, start_year, month_system="amanta", coordinate_selecti
         desc_lines.append(moon_line)
         # Duration, not an instant: a DST lengthened day really is 25 h.
         desc_lines.append("Day duration: " + format_hms(details["day_dur"][1], show_seconds=True))
-        desc_lines.append("Rāhukāla: " + _fmt_interval(*details["rahu_kala"], clock))
+        desc_lines.append("Rāhukāla: " + _interval_str(*details["rahu_kala"], clock))
         desc_lines.append("Durmuhūrta: " + durmuhurta_text)
         desc_lines.append("Varjyam: " + varjyam_text)
-        desc_lines.append("Prātaḥ Sandhyā: " + _fmt_interval(*details["pratah_sandhya"], clock))
+        desc_lines.append("Prātaḥ Sandhyā: " + _interval_str(*details["pratah_sandhya"], clock))
         desc_lines.append("Kali Day: " + str(details["kali_day"]))
         desc_lines.append("Julian day: " + f"{details['jd']:.1f}")
         desc_lines.append("Sunrise JD (UT): " + f"{details['sunrise']:.6f}")

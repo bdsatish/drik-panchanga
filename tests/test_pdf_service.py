@@ -12,7 +12,7 @@ from webapp import cgi_handlers
 from webapp.app import app
 from webapp.day_panchanga import _interval, compute_day_panchanga
 from webapp.ics_service import generate_ics
-from webapp.ics_service import _fmt_interval
+from webapp.day_panchanga import _interval_str as _fmt_interval
 from webapp.pdf_service import generate_pdf
 from generate_panchanga_calendar import load_location
 import panchanga

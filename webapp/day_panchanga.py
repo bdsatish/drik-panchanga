@@ -101,6 +101,11 @@ def _interval(start, end, clock):
   return {"start": clock(start, show_seconds=True), "end": clock(end, show_seconds=True)}
 
 
+def _interval_str(start, end, clock):
+  """Same two instants as ``_interval``, joined as one ``start–end`` string."""
+  return f"{clock(start, show_seconds=True)}–{clock(end, show_seconds=True)}"
+
+
 def ayana_label(raasi_num):
   """Uttarāyaṇa from Makara–Mithuna (10–12, 1–3); else Dakṣiṇāyana."""
   label = "Uttarāyaṇa" if raasi_num >= 10 or raasi_num <= 3 else "Dakṣiṇāyana"
