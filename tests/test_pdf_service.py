@@ -9,7 +9,7 @@ from unittest import mock
 
 from datetime_helper import Date, format_hms, gregorian_to_jd
 from webapp import cgi_handlers
-from webapp.app import app
+from webapp.app import app, client_ip
 from webapp.day_panchanga import _interval, compute_day_panchanga
 from webapp.ics_service import generate_ics
 from webapp.day_panchanga import _interval_str as _fmt_interval
@@ -294,6 +294,28 @@ class IcsServiceTests(unittest.TestCase):
   def test_ics_flask_endpoint_rejects_bad_city(self):
     response = app.test_client().get("/api/panchanga.ics?city=NoSuchPlace&start=2026")
     self.assertEqual(response.status_code, 400)
+
+
+class ClientIpTrustTests(unittest.TestCase):
+  """The X-Forwarded-For trust model behind ``PANCHANGA_TRUSTED_PROXY_HOPS``."""
+
+  def test_default_ignores_forwarded_for(self):
+    # 0 trusted hops: the header is client-controlled, so only the peer counts.
+    self.assertEqual(client_ip("9.9.9.9, 8.8.8.8", "10.0.0.1"), "10.0.0.1")
+    self.assertEqual(client_ip("", "10.0.0.1"), "10.0.0.1")
+
+  def test_trusted_hops_count_from_the_right(self):
+    self.assertEqual(client_ip("9.9.9.9, 8.8.8.8", "10.0.0.1", trusted_hops=1), "8.8.8.8")
+    self.assertEqual(client_ip("9.9.9.9, 8.8.8.8", "10.0.0.1", trusted_hops=2), "9.9.9.9")
+
+  def test_short_header_falls_back_to_peer(self):
+    self.assertEqual(client_ip("9.9.9.9", "10.0.0.1", trusted_hops=3), "10.0.0.1")
+
+  def test_env_var_reaches_client_ip(self):
+    with mock.patch.dict(os.environ, {"PANCHANGA_TRUSTED_PROXY_HOPS": "1"}):
+      self.assertEqual(client_ip("9.9.9.9, 8.8.8.8", "10.0.0.1"), "8.8.8.8")
+    with mock.patch.dict(os.environ, {"PANCHANGA_TRUSTED_PROXY_HOPS": "bogus"}):
+      self.assertEqual(client_ip("9.9.9.9, 8.8.8.8", "10.0.0.1"), "10.0.0.1")
 
 
 if __name__ == "__main__":

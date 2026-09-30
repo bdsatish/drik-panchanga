@@ -5,10 +5,11 @@ import io
 import ipaddress
 import json
 import logging
+import os
 import sys
 from pathlib import Path
 from urllib.parse import quote
-from urllib.request import urlopen
+from urllib.request import Request, urlopen
 
 from flask import (
   Flask,
@@ -90,16 +91,22 @@ def city_search_limit(raw_limit):
 
 
 def suggest_city_for_ip(ip):
-  """Public IP → ip-api.com city → cities.json key, or None."""
+  """Public IP → ipwho.is city → cities.json key, or None.
+
+  ipwho.is is used over HTTPS; ip-api.com's free tier answers plain HTTP
+  only (its HTTPS endpoint returns 403), and an HTTP lookup would leak the
+  visitor's IP to anything on the path.
+  """
   try:
     if not ip or not ipaddress.ip_address(ip.strip()).is_global:
       return None
-    url = ("http://ip-api.com/json/" + quote(ip.strip()) + "?fields=status,city,countryCode")
-    with urlopen(url, timeout=1.5) as resp:
+    url = "https://ipwho.is/" + quote(ip.strip())
+    req = urlopen(Request(url, headers={"User-Agent": "drik-panchanga/2.0"}), timeout=1.5)
+    with req as resp:
       data = json.loads(resp.read().decode())
-    if data.get("status") != "success":
+    if not data.get("success"):
       return None
-    return load_location(f"{data['city']}, {data['countryCode']}").name
+    return load_location(f"{data['city']}, {data['country_code']}").name
   except (ValueError, KeyError, TypeError, OSError, TimeoutError, json.JSONDecodeError) as error:
     log.error("City suggestion failed for IP %r: %s", ip, error)
     return None
@@ -117,10 +124,40 @@ def api_cities():
   return jsonify({"cities": search_cities(query, limit=limit)})
 
 
-def client_ip(xff, remote):
-  """First X-Forwarded-For hop, else direct remote address."""
-  ip = xff.split(",")[0].strip() if xff else (remote or "").strip()
-  return ip
+def _trusted_proxy_hops():
+  """How many leading X-Forwarded-For hops to trust, from ``PANCHANGA_TRUSTED_PROXY_HOPS``.
+
+  0 (default) ignores X-Forwarded-For entirely and uses the socket peer
+  address: without a trusted reverse proxy, that header is client-controlled.
+  Deployments behind exactly N trusted proxies set N, and the client IP is
+  then taken N entries from the right of the X-Forwarded-For list (proxies
+  append, so the leftmost entries are the ones a client can spoof).
+  """
+  raw = os.environ.get("PANCHANGA_TRUSTED_PROXY_HOPS", "0")
+  try:
+    return max(0, int(raw))
+  except ValueError:
+    log.warning("Invalid PANCHANGA_TRUSTED_PROXY_HOPS %r, ignoring X-Forwarded-For", raw)
+    return 0
+
+
+def client_ip(xff, remote, trusted_hops=None):
+  """Client IP honoring the ``PANCHANGA_TRUSTED_PROXY_HOPS`` trust model.
+
+  With 0 trusted hops (the default) this is the socket peer address; with N
+  it is the entry N positions from the right of a comma-separated
+  X-Forwarded-For list, falling back to the peer address when the header is
+  missing or shorter than N.
+  """
+  remote = (remote or "").strip()
+  if trusted_hops is None:
+    trusted_hops = _trusted_proxy_hops()
+  if not trusted_hops or not xff:
+    return remote
+  hops = [hop.strip() for hop in xff.split(",")]
+  if len(hops) < trusted_hops:
+    return remote
+  return hops[-trusted_hops]
 
 
 @app.get("/api/suggest-city")
