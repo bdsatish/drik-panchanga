@@ -92,10 +92,7 @@ def city_search_limit(raw_limit):
 
 def suggest_city_for_ip(ip):
   """Public IP → ipwho.is city → cities.json key, or None.
-
-  ipwho.is is used over HTTPS; ip-api.com's free tier answers plain HTTP
-  only (its HTTPS endpoint returns 403), and an HTTP lookup would leak the
-  visitor's IP to anything on the path.
+  Non-https URL leaks user's IP address to any other provider on the path.
   """
   try:
     if not ip or not ipaddress.ip_address(ip.strip()).is_global:

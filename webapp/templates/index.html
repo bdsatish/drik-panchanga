@@ -579,7 +579,7 @@
         dateInput.value = `${d}/${m}/${now.getFullYear()}`;
       }
 
-      // IP → ip-api.com city → cities.json key; never overwrite a typed value,
+      // IP → ipwho.is city → cities.json key; never overwrite a typed value,
       // and never switch the user out of manual Lat/Lon mode.
       if (!cityInput.value.trim() && selectedMode() === "city") {
         fetch("/api/suggest-city")

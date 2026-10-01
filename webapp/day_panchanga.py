@@ -215,8 +215,9 @@ def compute_day_panchanga(city, date_text, month_system="amanta", coordinate_sel
   """Return named panchanga fields for ``city`` on ``date_text`` (DD/MM/YYYY).
 
     ``month_system`` is ``amanta`` (default) or ``purnimanta``; it affects the
-    displayed māsa name (and samvatsara / year counters derived from that name).
-    Vedic and Drik ṛtu always use the shared new-moon–bounded māsa identity.
+    displayed māsa name only. Vedic and Drik ṛtu, the samvatsara and the year
+    counters always use the shared new-moon–bounded amānta māsa identity, so
+    they are the same under either display system.
 
     ``coordinate_selection`` is a sidereal ayanāṃśa key (``citra`` default,
     ``revati``, ``rohini``, ``pushya``, ``mula``, ``krishnamurti``, ``raman``)
