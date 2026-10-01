@@ -187,6 +187,9 @@ def generate():
   try:
     pdf_bytes, filename = generate_pdf(request.form)
   except (OSError, ValueError, RuntimeError, ImportError) as error:
+    # ImportError covers the missing optional [pdf] extra (check_reportlab's
+    # message); accepted tradeoff: a genuinely missing module in the
+    # generation path also surfaces as 400 with its message, not a 500.
     abort(400, description=str(error))
   return send_file(io.BytesIO(pdf_bytes), mimetype="application/pdf", as_attachment=True, download_name=filename,
                    max_age=0)

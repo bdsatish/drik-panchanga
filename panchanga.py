@@ -871,8 +871,11 @@ def elapsed_year(jd, maasa_num):
 # New moon day: sun and moon have same longitude (0 degrees = 360 degrees difference)
 def new_moon(jd, tithi_, opt=-1):
   """Returns JDN, where
-     opt = -1:  JDN < jd such that lunar_phase(JDN) = 360 degrees
-     opt = +1:  JDN >= jd such that lunar_phase(JDN) = 360 degrees
+     opt = -1:  JDN < jd such that lunar_phase(JDN) = 0 degrees
+     opt = +1:  JDN >= jd such that lunar_phase(JDN) = 0 degrees
+
+     ``lunar_phase`` returns [0, 360), so the new moon reads 0 degrees; the
+     search in ``_phase_event_cached`` targets 360 on the unwrapped series.
   """
   if opt == -1: start = jd - tithi_  # previous new moon
   if opt == +1: start = jd + (30 - tithi_)  # next new moon
@@ -889,6 +892,11 @@ def _phase_event_cached(day, target_degrees):
   x = [-2 + offset / 4 for offset in range(17)]
   y = [lunar_phase(day + i) for i in x]
   y = unwrap_angles(y)
+  # unwrap_angles lifts the 360 -> 0 wrap so a new-moon crossing of 360 is
+  # interpolable. Accepted limit: if the wrap lands on the window's first
+  # sample, no later sample lifts and inverse_lagrange extrapolates a month
+  # out; that needs the event within minutes of the window edge, and the
+  # callers' day-bucketed start guess keeps it interior.
   y0 = inverse_lagrange(x, y, target_degrees)
   return day + y0
 

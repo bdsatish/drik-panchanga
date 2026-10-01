@@ -167,6 +167,9 @@ def handle_generate():
     form = _parse_urlencoded_post()
     pdf_bytes, filename = generate_pdf(form)
   except (OSError, ValueError, RuntimeError, ImportError) as error:
+    # ImportError covers the missing optional [pdf] extra (check_reportlab's
+    # message); accepted tradeoff: a genuinely missing module in the
+    # generation path also surfaces as 400 with its message, not a 500.
     write_error(str(error))
     return
   except Exception as error:  # catch-all so CGI still returns a response
