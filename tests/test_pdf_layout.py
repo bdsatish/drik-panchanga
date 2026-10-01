@@ -477,6 +477,60 @@ class SolarDateTests(unittest.TestCase):
       )
 
 
+class SolarDaySeedTests(unittest.TestCase):
+  """The first printed day must carry a real solar-day count, not a seeded 1.
+
+  ``solar_dates_by_date`` starts its count at 1 for the first record it sees,
+  so the printed number is only right because ``build_pdf`` feeds it the
+  pad-extended ``context_records``. Shrinking ``RECORD_PAD_DAYS_BEFORE`` below
+  a solar month would silently print an under-count with no test failing, so
+  the pad-seeded path is pinned here through the real record helpers.
+  """
+
+  # Each start month begins mid-solar-month, so the first day is never 1.
+  START_MONTHS = [(2026, 1), (2026, 3), (2026, 4), (1905, 4)]
+
+  def _solar_day_from_raasi(self, records, first):
+    """Count back from ``first`` while the rāśi holds: an independent day count."""
+    raasi_by_date = {record.civil_date: int(panchanga.raasi(record.sunrise_jd)) for record in records}
+    raasi = raasi_by_date[first]
+    solar_day = 0
+    day = first
+    while raasi_by_date.get(day) == raasi:
+      solar_day += 1
+      day = day - 1
+    return raasi, solar_day
+
+  def test_first_printed_day_is_not_seeded_to_one(self):
+    location = load_location("Ujjain")
+    for year, month in self.START_MONTHS:
+      months = [(year, month)]
+      first = Date(year, month, 1)
+      pad_start, pad_end = record_span(months)
+      records = daily_records_between(pad_start, pad_end, location)
+      raasi, solar_day, _is_sankranti = solar_dates_by_date(records)[first]
+      expected_raasi, expected_day = self._solar_day_from_raasi(records, first)
+      with self.subTest(year=year, month=month):
+        # Non-vacuous: a seeded count would be 1 and would contradict the count.
+        self.assertGreater(solar_day, 1)
+        self.assertEqual((raasi, solar_day), (expected_raasi, expected_day))
+
+  def test_a_truncated_pad_would_break_the_count(self):
+    """Shrinking the pad below one solar month must be caught, not pass quietly."""
+    location = load_location("Ujjain")
+    year, month = self.START_MONTHS[1]
+    first = Date(year, month, 1)
+    full_start, full_end = record_span([(year, month)])
+    padded = daily_records_between(full_start, full_end, location)
+    _raasi, padded_day, _sk = solar_dates_by_date(padded)[first]
+
+    # An unpadded read starts mid-solar-month, so the seed can only report 1.
+    unpadded = daily_records_between(first, Date(year, month, calendar.monthrange(year, month)[1]), location)
+    _raasi, unpadded_day, _sk = solar_dates_by_date(unpadded)[first]
+    self.assertNotEqual(padded_day, unpadded_day)
+    self.assertEqual(unpadded_day, 1)
+
+
 class SolarMarkerTests(unittest.TestCase):
 
   def test_solar_markers_are_right_aligned(self):
