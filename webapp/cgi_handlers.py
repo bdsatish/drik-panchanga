@@ -192,7 +192,6 @@ def handle_status():
     payload = {
       "ok": True,
       "cities": n_cities,
-      "project": str(PROJECT_ROOT),
     }
   except Exception as error:  # catch-all so CGI still returns a response
     log.error("CGI status failed: %s", error)
