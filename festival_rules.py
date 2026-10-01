@@ -834,6 +834,9 @@ def ekadashi_parana_for_upavasa(records_by_date, upavasa_date, geopos, timezone_
 
   * normal / kṣaya — anchor at the next civil day's sunrise
   * vṛddhi — anchor at the later of the next sunrise and Ekādaśī's end
+    (the end anchor needs ``geopos``/``timezone_name``; without them this
+    case falls back to the sunrise anchor, matching the normal case and the
+    other no-location selectors)
   * end — four ghaṭikās (96 minutes) after that anchor
 
   The fixed operational window intentionally does not wait for Dvādaśī's
@@ -852,7 +855,9 @@ def ekadashi_parana_for_upavasa(records_by_date, upavasa_date, geopos, timezone_
     return None
   case = classify_ekadashi_upavasa(records_by_date, upavasa_date)
   parana_jd = parana_record.sunrise_jd
-  if case == "vriddhi":
+  if case == "vriddhi" and geopos is not None and timezone_name is not None:
+    # Only the vṛddhi end-anchor needs a place; without one, keep the
+    # sunrise anchor instead of failing in _place_for_civil.
     place = _place_for_civil(upavasa_date, geopos, timezone_name)
     ekadashi_end_jd = _sunrise_tithi_end_jd_ut(upavasa_date, place)
     if ekadashi_end_jd > parana_jd:

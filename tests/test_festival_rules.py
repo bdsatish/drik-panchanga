@@ -1528,6 +1528,22 @@ class EkadashiParanaTests(unittest.TestCase):
     self.assertEqual(entry.parana_jd, 26.25)
     self.assertEqual(entry.parana_end_jd, 26.25 + 4 / 60.0)
 
+  def test_vriddhi_without_location_falls_back_to_sunrise(self):
+    # geopos=None is the documented no-location contract (as in
+    # select_pradosham_dates); only the vṛddhi end-anchor needs a place, so
+    # that branch must fall back to the sunrise anchor instead of crashing.
+    by_date, _records = self._by_date([
+      (25, "K11", 25.2),
+      (26, "K11", 26.25),
+      (27, "K12", 27.2),
+    ])
+    with mock.patch("festival_rules._sunrise_tithi_end_jd_ut",
+                    side_effect=AssertionError("end anchor must be skipped")):
+      entry = ekadashi_parana_for_upavasa(by_date, Date(2030, 6, 25), geopos=None, timezone_name=None)
+    self.assertEqual(entry.case, "vriddhi")
+    self.assertEqual(entry.parana_jd, 26.25)
+    self.assertEqual(entry.parana_end_jd, 26.25 + 4 / 60.0)
+
   def test_missing_next_day_returns_none(self):
     by_date, _records = self._by_date([(10, "S11", 10.2)])
     entry = ekadashi_parana_for_upavasa(by_date, Date(2030, 6, 10), geopos=(75.0, 23.0, 0.0),
