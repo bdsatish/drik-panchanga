@@ -168,8 +168,10 @@ class BceGoldenNumberTests(unittest.TestCase):
 
   GOLDENS = (
     # date, tithi, nakshatra, amānta māsa, adhika, samvatsara, vaara
-    (Date(-3299, 1, 3), 12, 9, 12, False, 6, 4),
-    (Date(-3101, 2, 1), 10, 9, 1, False, 27, 0),
+    # (samvatsara on the Kali <= 0 rows follows the floored kṣaya term, see
+    # test_barhaspatya_ksaya_rate_holds_at_negative_kali in test_panchanga.py)
+    (Date(-3299, 1, 3), 12, 9, 12, False, 5, 4),
+    (Date(-3101, 2, 1), 10, 9, 1, False, 26, 0),
     (Date(-2500, 5, 15), 4, 10, 4, False, 35, 2),
     (Date(-1499, 3, 5), 11, 11, 1, False, 27, 6),
     (Date(-1000, 10, 19), 27, 14, 8, False, 52, 0),

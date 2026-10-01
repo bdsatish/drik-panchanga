@@ -976,7 +976,7 @@ class CalendarUtilityTests(PanchangaTestCase):
     # Also a kṣaya divergence vs the old (vikrama + 10) % 60 shortcut (53).
     jd_modern = gregorian_to_jd(Date(2026, 8, 1))
     kali, _saka, vikrama = elapsed_year(jd_modern, 4)
-    expected_north = (kali + 27 + int((kali * 211 - 108) / 18000)) % 60
+    expected_north = (kali + 27 + (kali * 211 - 108) // 18000) % 60
     self.assertEqual(expected_north, 54)
     self.assertEqual(samvatsara_north(jd_modern, 4), expected_north)
     self.assertEqual(samvatsara(jd_modern, 4), 40)  # Parābhava
@@ -986,6 +986,20 @@ class CalendarUtilityTests(PanchangaTestCase):
     self.assertGreaterEqual(samvatsara_north(date2, 10), 0)
     self.assertLess(samvatsara_north(date2, 10), 60)
     self.assertNotEqual(samvatsara(date2, 10), samvatsara_north(date2, 10))
+
+  def test_barhaspatya_ksaya_rate_holds_at_negative_kali(self):
+    # Regression: int() truncation toward zero merged two kṣaya steps into one
+    # ~171-year gap across Kali 0 (only kali -85 and 86 stepped), contradicting
+    # the documented rate. floor keeps SS's 18000/211 ≈ 85.31 y and modern's
+    # 18000/209 ≈ 86.12 y spacing everywhere, including negative Kali.
+    # Consecutive Kali years advance the samvatsara index by 1, and by 2 at a
+    # kṣaya step.
+    for fn, max_gap in ((panchanga._barhaspatya_ss, 86), (panchanga._barhaspatya_modern, 87)):
+      with self.subTest(fn=fn.__name__):
+        steps = [k for k in range(-200, 200) if (fn(k + 1) - fn(k)) % 60 == 2]
+        self.assertTrue(steps, "no kṣaya steps found")
+        gaps = [b - a for a, b in zip(steps, steps[1:])]
+        self.assertLessEqual(max(gaps), max_gap)
 
   def test_samvatsara_north_modern(self):
     # Integer modern rate 209/18000 (SS uses 211/18000). CRC 1954 and 2026

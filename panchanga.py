@@ -932,8 +932,10 @@ def _barhaspatya_ss(kali):
   Remainder mod 60 with Prabhava = 1; remainder 0 is Akṣaya (#60).
   The integer term rises by 1 every 18000/211 ≈ 85.31 solar years (mean
   kṣaya spacing); −108 is only a phase offset and does not change that rate.
+  The quotient is floored (like ``elapsed_year``), not truncated toward
+  zero, so this rate also holds for negative Kali (before ~3102 BCE).
   """
-  return (kali + 27 + int((kali * 211 - 108) / 18000)) % 60
+  return (kali + 27 + floor((kali * 211 - 108) / 18000)) % 60
 
 
 # Modern mean Jupiter: excess Jovian-rāśi years per tropical solar year is
@@ -952,7 +954,7 @@ def _barhaspatya_modern(kali):
   Same Sewell layout as ``_barhaspatya_ss`` (+27, −108, /18000, mod 60), but
   replaces SS's 211 with 209 so mean kṣaya spacing matches observed P_♃.
   """
-  return (kali + 27 + int((kali * 209 - 108) / 18000)) % 60
+  return (kali + 27 + floor((kali * 209 - 108) / 18000)) % 60
 
 
 def samvatsara(jd, maasa_num):
