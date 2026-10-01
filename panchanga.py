@@ -201,7 +201,7 @@ def to_dms_prec(deg):
   d = int(deg)
   mins = (deg - d) * 60
   m = int(mins)
-  s = round((mins - m) * 60, 6)
+  s = min(round((mins - m) * 60, 6), 59.999999)  # keep 0 <= s < 60 (see to_dms)
   return [d, m, s]
 
 
@@ -212,7 +212,8 @@ def to_dms(deg):
   """
   d, m, s = to_dms_prec(deg)
   # Truncate, do not round: rounding can hit s == 60 and would then need a
-  # seconds -> minutes -> degrees carry cascade. Costs < 1s and keeps 0 <= s < 60.
+  # seconds -> minutes -> degrees carry cascade. Costs < 1s and keeps 0 <= s < 60
+  # (to_dms_prec caps its rounded seconds accordingly).
   return [d, m, int(s)]
 
 
@@ -404,8 +405,9 @@ def nakshatra_pada_equal_spacing(longitude):
 # This is more closer to observed phenomena than equal division
 def nakshatra_pada_unequal_system(longitude):
   """Gives nakshatra (1..27) and paada (1..4) which given longitude lies, according to Garga system"""
-  assert (longitude > 0)
-  assert (longitude < 360)
+  # norm360's codomain is [0, 360): 0.0 is Asvini pada 1, the same answer the
+  # equal system gives (see test_norm360_stays_below_360).
+  assert (0 <= longitude < 360)
 
   end_points = garga_end_points
   # Linear search
@@ -636,7 +638,10 @@ def tithi(jd, place):
   # An elongation of exactly 0.0 sits at the end of tithi 30, not the start of
   # tithi 1: ``ceil`` alone would return 0 here.
   today = ceil(moon_phase / 12) or 30
-  degrees_left = today * 12 - moon_phase
+  # norm360: at elongation exactly 0.0 the remaining sweep is 360 == 0 (the
+  # tithi ends now), not one synodic month out. The double modulo also folds
+  # a -epsilon residual into 0.0 instead of 360.0.
+  degrees_left = norm360(today * 12 - moon_phase)
 
   # 3. Compute longitudinal differences at intervals of 0.25 days from sunrise
   offsets = [0.25, 0.5, 0.75, 1.0]
@@ -717,7 +722,7 @@ def yoga(jd, place):
   yog = ceil(total * 27 / 360) or 27
 
   # 3. Find how many longitudes is there left to be swept
-  degrees_left = yog * (360 / 27) - total
+  degrees_left = norm360(yog * (360 / 27) - total)  # see ``tithi``: 360 == 0
 
   # 3. Compute longitudinal sums at intervals of 0.25 days from sunrise
   offsets = [0.25, 0.5, 0.75, 1.0]
@@ -766,7 +771,7 @@ def karana(jd, place):
   # An elongation of exactly 0.0 is the end of karana 60, not the start of
   # karana 1: ``ceil`` alone would return 0 here (see ``tithi``).
   today = ceil(moon_phase / 6) or 60
-  degrees_left = today * 6 - moon_phase
+  degrees_left = norm360(today * 6 - moon_phase)  # see ``tithi``: 360 == 0
 
   # 3. Compute longitudinal differences at intervals of 0.25 days from sunrise
   offsets = [0.25, 0.5, 0.75, 1.0]
@@ -909,14 +914,15 @@ def full_moon(jd, tithi_, opt=-1):
 
 def raasi(jd):
   """Zodiac of given jd. 1 = Mesha, ... 12 = Meena"""
-  # 12 rasis occupy 360 degrees, so each one is 30 degrees
-  return ceil(solar_longitude(jd) / 30.)
+  # 12 rasis occupy 360 degrees, so each one is 30 degrees. ``or 12``:
+  # longitude 0.0 is the end of Meena, matching tithi/yoga/karana's convention.
+  return ceil(solar_longitude(jd) / 30.) or 12
 
 
 def lunar_phase(jd):
   solar_long = solar_longitude(jd)
   lunar_long = lunar_longitude(jd)
-  moon_phase = (lunar_long - solar_long) % 360
+  moon_phase = norm360(lunar_long - solar_long)  # single % 360 can yield 360.0
   return moon_phase
 
 
@@ -1202,9 +1208,14 @@ def varjyam(jd, place):
     t += step
   longitudes = unwrap_angles(longitudes)
 
+  # Candidate nakshatras from every grid longitude, not 3 instants 0.5 d
+  # apart: under the Garga unequal system six nakshatras span only 6deg40'
+  # and the Moon's half-day motion reaches ~7.8deg, so a whole nakshatra (and
+  # its varjyam) could fall between samples. The grid step (0.40 d) cannot
+  # skip one. Values are unwrapped, so re-wrap before classifying.
   naks = set()
-  for t in [srise1, srise1 + 0.5, srise2]:
-    naks.add(nakshatra_pada(lunar_longitude(t))[0])
+  for lon in longitudes:
+    naks.add(nakshatra_pada(norm360(lon))[0])
 
   def moon_crossing(target_lon):
     """JD when Moon longitude hits ``target_lon``, via local 5-point Lagrange."""

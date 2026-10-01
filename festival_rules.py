@@ -613,13 +613,18 @@ def select_makara_sankranti_dates(records):
   return select_sankranti_dates(records, 10)
 
 
-def select_solstice_dates(records, solstice_longitude, timezone_name=None):
+def select_solstice_dates(records, solstice_longitude, timezone_name=None, longitude=None):
   """First civil sunrise after each tropical solstice moment.
 
     Swiss Ephemeris finds the tropical Sun longitude crossing at 90° (June
     solstice) or 270° (December solstice). The search is limited to a narrow
     local-date window around the event; sunrise JDs are UT, so comparing them
     directly with the UT event moment preserves the local sunrise rule.
+
+    ``longitude`` is the observer's longitude for the LMT-era civil-date
+    conversion (see ``jd_to_local_civil_date``); without it an observer east
+    of the timezone seat gets a date a day early and the sweep below can miss
+    the qualifying sunrise.
     """
   records_by_date = {}
   for record in records:
@@ -635,8 +640,8 @@ def select_solstice_dates(records, solstice_longitude, timezone_name=None):
     start_jd = gregorian_to_jd(Date(year, 1, 1))
     flags = panchanga.swe.FLG_SWIEPH | panchanga.swe.FLG_TROPICAL
     solstice_jd = panchanga.swe.solcross_ut(float(solstice_longitude), start_jd, flags)
-    solstice_date = jd_to_local_civil_date(solstice_jd, local_timezone)
-    for offset in range(-2, 2):
+    solstice_date = jd_to_local_civil_date(solstice_jd, local_timezone, longitude=longitude)
+    for offset in range(-2, 3):
       # Timezones can shift the displayed solstice date; the exact UT
       # comparison below determines which nearby sunrise qualifies.
       civil_date = solstice_date + offset
@@ -658,7 +663,8 @@ def select_uttarayana_dates(records, geopos=None, timezone_name=None):
     the December solstice at or north of the equator.
     """
   longitude = 90.0 if _is_southern_hemisphere(geopos) else 270.0
-  return select_solstice_dates(records, longitude, timezone_name=timezone_name)
+  return select_solstice_dates(records, longitude, timezone_name=timezone_name,
+                               longitude=None if geopos is None else float(geopos[0]))
 
 
 def select_dakshinayana_dates(records, geopos=None, timezone_name=None):
@@ -668,7 +674,8 @@ def select_dakshinayana_dates(records, geopos=None, timezone_name=None):
     and the June solstice at or north of the equator.
     """
   longitude = 270.0 if _is_southern_hemisphere(geopos) else 90.0
-  return select_solstice_dates(records, longitude, timezone_name=timezone_name)
+  return select_solstice_dates(records, longitude, timezone_name=timezone_name,
+                               longitude=None if geopos is None else float(geopos[0]))
 
 
 # Seasonal catalog and each entry's complete resolution policy.

@@ -192,6 +192,24 @@ class VarjyamTests(PanchangaTestCase):
     delhi = Place(28.6139, 77.2090, 5.5)
     self.assertEqual(varjyam(jd, delhi), [])
 
+  def test_varjyam_keeps_garga_nakshatra_crossed_between_sunrises(self):
+    # Regression: candidates came from 3 instants 0.5 d apart (sunrise, +0.5 d,
+    # next sunrise). The Moon at 15 deg/day then left Bharani (Garga span
+    # 6deg40') un-sampled and its varjyam was silently dropped, violating the
+    # "all varjyam periods" contract. The 0.40 d grid cannot skip one.
+    set_nakshatra_system('unequal')
+    self.addCleanup(set_nakshatra_system)
+    place = Place(12.972, 77.594, 5.5)
+    jd = 2461000.5
+    with mock.patch.object(panchanga, 'sunrise', side_effect=lambda j, p: j + 0.25), \
+         mock.patch.object(panchanga, 'lunar_longitude',
+                           side_effect=lambda t: 12.5 + 15.0 * (t - (jd + 0.25))):
+      periods = varjyam(jd, place)
+    # Bharani (crossed mid-day) and Krittika (overlapping next sunrise) qualify.
+    self.assertEqual(len(periods), 2)
+    self.assertAlmostEqual(periods[0][0], jd + 0.483333, places=6)
+    self.assertAlmostEqual(periods[0][1], jd + 0.512963, places=6)
+
   def test_varjyam_sorted_and_bounded(self):
     jd = gregorian_to_jd(Date(2026, 3, 21))
     reykjavik = Place(64.15, -21.94, 0.0)
@@ -274,6 +292,14 @@ class NakshatraTests(PanchangaTestCase):
     self.assertEqual(nakshatra_pada(from_dms(274, 0)), [21, 3])
     self.assertEqual(nakshatra_pada(from_dms(347, 0)), [27, 1])
     self.assertEqual(nakshatra_pada(from_dms(359, 59)), [27, 4])
+
+  def test_nakshatra_pada_unequal_accepts_zero_longitude(self):
+    # norm360 legally produces 0.0 ([0, 360) contract). The Garga classifier
+    # asserted longitude > 0 and crashed where the equal system answers [1, 1].
+    set_nakshatra_system('unequal')
+    self.addCleanup(set_nakshatra_system)
+    self.assertEqual(nakshatra_pada(0.0), [1, 1])
+    self.assertEqual(nakshatra_pada(norm360(-1e-14)), [1, 1])
 
   def test_equal_vs_unequal_contrast(self):
     set_nakshatra_system('unequal')
@@ -369,6 +395,33 @@ class CycleBoundaryTests(unittest.TestCase):
          mock.patch.object(panchanga, "solar_longitude", side_effect=lambda t: (t - jd) * 240.0):
       self.assertEqual(yoga(jd, place)[0], 27)
 
+  def test_zero_phase_end_time_is_now(self):
+    # Regression: with elongation exactly 0.0 the remaining sweep computed 360,
+    # so the returned end was one synodic month out (~29.5 d) instead of "now".
+    # The index half was fixed earlier; this pins the end-time half.
+    place = bangalore
+    jd = gregorian_to_jd(Date(2009, 7, 15))
+    with mock.patch.object(panchanga, "lunar_phase", return_value=0.0), \
+         mock.patch.object(panchanga, "sunrise", return_value=jd), \
+         mock.patch.object(panchanga, "lunar_longitude", side_effect=lambda t: 12.2 * (t - jd)), \
+         mock.patch.object(panchanga, "solar_longitude", side_effect=lambda t: 0.0):
+      result = tithi(jd, place)
+    self.assertEqual(result[0], 30)
+    self.assertAlmostEqual(result[1] - jd, 0.0, places=6)
+    with mock.patch.object(panchanga, "lunar_phase", return_value=0.0), \
+         mock.patch.object(panchanga, "sunrise", return_value=jd), \
+         mock.patch.object(panchanga, "lunar_longitude", side_effect=lambda t: 12.2 * (t - jd)), \
+         mock.patch.object(panchanga, "solar_longitude", side_effect=lambda t: 0.0):
+      result = karana(jd, place)
+    self.assertEqual(result[0], 60)
+    self.assertAlmostEqual(result[1] - jd, 0.0, places=6)
+    with mock.patch.object(panchanga, "sunrise", return_value=jd), \
+         mock.patch.object(panchanga, "lunar_longitude", side_effect=lambda t: (t - jd) * 240.0), \
+         mock.patch.object(panchanga, "solar_longitude", side_effect=lambda t: (t - jd) * 240.0):
+      result = yoga(jd, place)
+    self.assertEqual(result[0], 27)
+    self.assertAlmostEqual(result[1] - jd, 0.0, places=6)
+
   def test_zero_phase_resolves_to_karana_60(self):
     # Karana n spans phase [(n-1)*6, n*6), so phase 0.0 is the end of karana 60
     # rather than a karana 0. Only the phase and sunrise are stubbed: the real
@@ -379,6 +432,26 @@ class CycleBoundaryTests(unittest.TestCase):
     with mock.patch.object(panchanga, "lunar_phase", return_value=0.0), \
          mock.patch.object(panchanga, "sunrise", return_value=jd):
       self.assertEqual(karana(jd, place)[0], 60)
+
+  def test_lunar_phase_tiny_negative_wraps_to_zero(self):
+    # Regression: a single % 360 rounds a tiny negative elongation up to
+    # exactly 360.0, out of the [0, 360) contract, and festival_rules'
+    # ``int(phase // 12) + 1`` then produced a nonexistent tithi 31.
+    with mock.patch.object(panchanga, "lunar_longitude", return_value=10.0), \
+         mock.patch.object(panchanga, "solar_longitude", return_value=10.0 + 1e-14):
+      phase = lunar_phase(2460000.5)
+    self.assertEqual(phase, 0.0)
+    self.assertLess(phase, 360.0)
+    self.assertLessEqual(int(phase // 12) + 1, 30)
+
+  def test_raasi_zero_longitude_is_end_of_meena(self):
+    # Regression: ceil(0 / 30) = 0, outside the documented 1..12 range; the
+    # tithi/yoga/karana convention reads an exact boundary as the end of the
+    # previous limb, i.e. Meena here (longitude 30.0 still reads as Mesha).
+    with mock.patch.object(panchanga, "solar_longitude", return_value=0.0):
+      self.assertEqual(raasi(2460000.5), 12)
+    with mock.patch.object(panchanga, "solar_longitude", return_value=30.0):
+      self.assertEqual(raasi(2460000.5), 1)  # unchanged: start of Mesha
 
 
 class MasaTests(PanchangaTestCase):
@@ -557,6 +630,22 @@ class HelperMathTests(PanchangaTestCase):
     degrees, minutes, seconds = to_dms_prec(12.5)
     self.assertEqual([degrees, minutes], [12, 30])
     self.assertAlmostEqual(seconds, 0, places=5)
+
+  def test_to_dms_seconds_stay_below_60(self):
+    # Regression: to_dms_prec rounded seconds, mapping residuals >= 59.9999995
+    # to 60.0, so to_dms(23.9) emitted [23, 53, 60] despite the documented
+    # 0 <= s < 60 invariant (rendered verbatim as 23deg53'60" in the PDFs).
+    self.assertEqual(to_dms(23.9), [23, 53, 59])
+    self.assertLess(to_dms_prec(23.9)[2], 60)
+    # Near whole degrees and minutes the residual still stays in [0, 60).
+    cases = [k * 0.1 for k in range(1, 360)]
+    cases += [24.0 - 10.0**-k for k in range(1, 13)]
+    cases += [k + 59.9999999 / 60 for k in range(1, 12)]
+    for deg in cases:
+      with self.subTest(deg=deg):
+        _d, _m, s = to_dms_prec(deg)
+        self.assertTrue(0 <= s < 60, (deg, s))
+        self.assertTrue(0 <= to_dms(deg)[2] < 60, (deg, to_dms(deg)))
 
   def test_to_hms_rounds_with_carry(self):
     # Times use round-to-nearest second; angles keep truncating via to_dms.

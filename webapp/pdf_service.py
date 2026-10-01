@@ -7,6 +7,7 @@ from generate_monthly_calendar import build_monthly_pdf, default_monthly_output_
 from generate_panchanga_calendar import (
   DEFAULT_FESTIVALS_PATH,
   build_pdf as build_one_page_pdf,
+  check_reportlab,
   default_output_path as default_one_page_path,
   lunar_year_months,
   require_coordinate_selection,
@@ -26,6 +27,7 @@ def build_pdf(location, months, output_path, **kwargs):
 
 def generate_pdf(fields):
   """Validate shared form fields and generate the requested PDF."""
+  check_reportlab()
   layout = (fields.get("layout") or "one-page").strip().casefold()
   if layout not in ("one-page", "monthly"):
     raise ValueError("Layout must be 'one-page' or 'monthly'.")

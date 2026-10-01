@@ -186,7 +186,7 @@ def api_panchanga():
 def generate():
   try:
     pdf_bytes, filename = generate_pdf(request.form)
-  except (OSError, ValueError, RuntimeError) as error:
+  except (OSError, ValueError, RuntimeError, ImportError) as error:
     abort(400, description=str(error))
   return send_file(io.BytesIO(pdf_bytes), mimetype="application/pdf", as_attachment=True, download_name=filename,
                    max_age=0)

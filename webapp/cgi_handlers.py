@@ -166,7 +166,7 @@ def handle_generate():
   try:
     form = _parse_urlencoded_post()
     pdf_bytes, filename = generate_pdf(form)
-  except (OSError, ValueError, RuntimeError) as error:
+  except (OSError, ValueError, RuntimeError, ImportError) as error:
     write_error(str(error))
     return
   except Exception as error:  # catch-all so CGI still returns a response

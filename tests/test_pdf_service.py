@@ -64,6 +64,24 @@ class FlaskGenerationTests(unittest.TestCase):
     self.assertEqual(response.status_code, 400)
     self.assertIn(b"Invalid request", response.data)
 
+  def test_missing_reportlab_is_a_client_error(self):
+    # Without reportlab the flow raised ImportError, which the adapters did not
+    # catch, so POST /generate answered 500 instead of check_reportlab()'s
+    # actionable message as a 400. ``canvas = None`` reproduces the missing
+    # dependency without uninstalling it.
+    with mock.patch("generate_panchanga_calendar.canvas", None):
+      response = app.test_client().post("/generate", data={"city": "Helsinki", "start": "2026"})
+    self.assertEqual(response.status_code, 400)
+    self.assertIn(b"drik-panchanga[pdf]", response.data)
+
+  def test_adapter_keeps_import_errors_as_bad_requests(self):
+    with mock.patch("webapp.app.generate_pdf", side_effect=ImportError("No module named 'reportlab'")):
+      response = app.test_client().post("/generate")
+    self.assertEqual(response.status_code, 400)
+    # The error page HTML-escapes quotes, so match fragments without them.
+    self.assertIn(b"No module named", response.data)
+    self.assertIn(b"reportlab", response.data)
+
   def test_form_error_answers_html_to_a_browser(self):
     # A browser's ``*/*;q=0.8`` also matches JSON; the failed form must still
     # render the page with its error, and only a JSON-preferring client or an
@@ -131,6 +149,24 @@ class CgiGenerationTests(unittest.TestCase):
     output = stdout.buffer.getvalue()
     self.assertEqual(output.count(b"Content-Type:"), 0)
     self.assertNotIn(b"Status:", output)
+
+  def test_missing_reportlab_is_a_client_error(self):
+    # Same contract as the Flask adapter: the actionable message, not "Internal
+    # error" with a 500.
+    stdout = mock.Mock(buffer=io.BytesIO())
+    with mock.patch.dict(os.environ, {"REQUEST_METHOD": "POST"}, clear=True), \
+            mock.patch.object(
+                cgi_handlers, "_parse_urlencoded_post",
+                return_value={"city": "Helsinki", "start": "2026"}), \
+            mock.patch("generate_panchanga_calendar.canvas", None), \
+            mock.patch.object(sys, "stdout", stdout):
+      cgi_handlers.handle_generate()
+
+    output = stdout.buffer.getvalue()
+    self.assertEqual(output.count(b"Status:"), 1)
+    self.assertIn(b"400 Bad Request", output)
+    self.assertIn(b"drik-panchanga[pdf]", output)
+    self.assertNotIn(b"Internal error", output)
 
   def test_error_response_carries_a_single_header_block(self):
     stdout = mock.Mock(buffer=io.BytesIO())

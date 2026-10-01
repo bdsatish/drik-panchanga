@@ -1237,6 +1237,29 @@ class SolsticeTests(unittest.TestCase):
       self.assertEqual(select_uttarayana_dates(records, geopos=south, timezone_name="UTC"), [Date(2030, 6, 22)])
       self.assertEqual(select_dakshinayana_dates(records, geopos=south, timezone_name="UTC"), [Date(2030, 12, 22)])
 
+  def test_solstice_sweep_keeps_qualifying_sunrise_in_lmt_era(self):
+    # Regression: select_solstice_dates dropped the observer longitude that
+    # jd_to_local_civil_date needs for the LMT era. East of the timezone seat
+    # the civil date came out a day early and the narrow sweep could miss the
+    # qualifying sunrise entirely (Uttarayana/Dakshinayana silently None).
+    # 1900 Asia/Vladivostok is LMT (+8:47:31 at the seat); lon 158.0 gives
+    # longitude/15 = +10:32, so a 14:30 UT solstice is 23:17 seat-local on
+    # Jun 21 but 01:02 observer-local on Jun 22.
+    solstice = gregorian_to_jd(Date(1900, 6, 21)) + 14.5 / 24
+    records = [
+      festival_record(Date(1900, 6, 20), "S1", masa="3", sunrise_jd=solstice - 1.0),
+      festival_record(Date(1900, 6, 21), "S2", masa="3", sunrise_jd=solstice - 0.5),
+      # Polar-early sunrise: already past before the solstice instant, so the
+      # qualifying sunrise lands two days after the buggy computed date.
+      festival_record(Date(1900, 6, 22), "S3", masa="3", sunrise_jd=solstice - 0.01),
+      festival_record(Date(1900, 6, 23), "S4", masa="3", sunrise_jd=solstice + 0.9),
+    ]
+    expected = min(r.civil_date for r in records if r.sunrise_jd > solstice)
+    with mock.patch("festival_rules.panchanga.swe.solcross_ut", return_value=solstice):
+      selected = select_dakshinayana_dates(records, geopos=(158.0, 45.0, 0.0), timezone_name="Asia/Vladivostok")
+    self.assertEqual(selected, [expected])
+    self.assertEqual(expected, Date(1900, 6, 23))
+
 
 class AllSankrantiTests(unittest.TestCase):
 
