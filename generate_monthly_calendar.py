@@ -80,8 +80,6 @@ from generate_panchanga_calendar import (
 from datetime_helper import (Date, dst_transitions, format_local_hm, format_utc_offset, gregorian_to_jd,
                              hindu_day_civil, jd_to_local_civil_date)
 
-MONTHLY_LAYOUT_VERSION = "Wall-Grid-1.0"
-
 PAGE_W = PAGE_H = None
 MARGIN = 34
 HEADER_H = 58
@@ -320,7 +318,7 @@ def draw_header(pdf, location, year, month, amanta, coordinate_selection, year_l
   pdf.setFont(PDF_FONT, 7)
   pdf.drawRightString(
     PAGE_W - MARGIN, top - 42, f"{month_system_label(amanta)}, {coordinate_selection_label(coordinate_selection)}, "
-    f"Ruleset {RULESET_VERSION}, layout {MONTHLY_LAYOUT_VERSION}")
+    f"Ruleset {RULESET_VERSION}")
   # Attribution stamp below ruleset line (dynamic year)
   current_year = datetime.now().year
   stamp_text = f"Drik Panchanga · Copyright © Satish BD {current_year} · AGPL-3.0"

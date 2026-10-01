@@ -106,7 +106,7 @@ Each day shows:
   dark ink in italics is Krsna
 * `N`: nakshatra number (01-27)
 * `Y`: yoga number (01-27)
-* lunar-month start: green T-cell with an upper-left māsa badge (amānta or
+* lunar-month start: green T-cell with an upper-right māsa badge (amānta or
   pūrṇimānta, per `--month`); an adhika māsa badge carries an `A` prefix in
   addition to the gold cell fill
 * solar-month start (saṅkrānti): peach N-cell with rāśi number 1–12 top-right;
@@ -121,8 +121,8 @@ with a locally visible eclipse. Numbered red superscripts refer to the
 festival key below the calendar. The footer also lists locally visible
 partial, total, and annular eclipses for the printed month range, each with
 its local maximum time and that date's sunrise (`None` when none qualify).
-Ruleset and layout versions are printed at the top right and embedded in the
-PDF metadata so a generated calendar can be reproduced or compared after rule
+The ruleset version is printed at the top right and embedded in the PDF
+metadata so a generated calendar can be reproduced or compared after rule
 changes.
 
 Festivals

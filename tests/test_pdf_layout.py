@@ -1,5 +1,6 @@
 """Regression tests for the generated one-page calendar layout."""
 
+import calendar
 from io import BytesIO
 from pathlib import Path
 import re
@@ -9,6 +10,7 @@ from unittest import mock
 
 from reportlab.pdfgen.canvas import Canvas
 
+import panchanga
 from datetime_helper import Date, dst_transitions, format_utc_offset
 from festival_rules import DayRecord
 from generate_panchanga_calendar import (
@@ -18,7 +20,6 @@ from generate_panchanga_calendar import (
   EKADASHI_MARK,
   FOOTER_FESTIVAL_SLOTS,
   KRSNA_INK,
-  LAYOUT_VERSION,
   MASA_START_INK,
   PDF_FONT_BOLD,
   PDF_FONT_BOLD_ITALIC,
@@ -104,7 +105,6 @@ class PdfLayoutTests(unittest.TestCase):
     page_objects = re.findall(rb"/Type\s*/Page\b", document)
     self.assertEqual(len(page_objects), 1)
     self.assertIn(RULESET_VERSION.encode("ascii"), document)
-    self.assertIn(LAYOUT_VERSION.encode("ascii"), document)
     self.assertEqual(footer.call_count, 1)
     self.assertIn("Eclipses:", footer.call_args.kwargs["eclipse_line"])
     self.assertNotIn(b"/BaseFont /Helvetica", document)

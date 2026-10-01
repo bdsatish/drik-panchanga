@@ -50,7 +50,6 @@ log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
 FOOTER_KEY_TOP = 48.0  # baseline of first muted key line below festivals
 RULESET_VERSION = "Udaya-Vyapini-1.1"
-LAYOUT_VERSION = "A4-1.21"
 PDF_AUTHOR = "Satish BD"
 PDF_AUTHOR_EMAIL = "bdsatish@gmail.com"
 PDF_COPYRIGHT = ("Copyright © Satish BD. Licensed under the GNU Affero GPL "
@@ -168,7 +167,7 @@ def tithi_key_line(recurring="specials"):
 
 def masa_key_line():
   names = ", ".join(_numbered_iast_names(sanskrit_names()["masas"]))
-  return ("Māsa: green T-cell with upper-left badge marks its first visible tithi; "
+  return ("Māsa: green T-cell with upper-right badge marks its first visible tithi; "
           f"gold fill denotes adhika. {names}. "
           "Display māsa follows amānta or pūrṇimānta; festival dates internally use amānta rules.")
 
@@ -223,7 +222,7 @@ def embed_pdf_metadata(pdf, title, subject, ruleset_version, coordinate_selectio
   pdf.setAuthor(PDF_AUTHOR)
   pdf.setSubject(subject)
   pdf.setCreator(PDF_SOURCE_URL)
-  pdf.setKeywords(f"ruleset={ruleset_version}; layout={LAYOUT_VERSION}; "
+  pdf.setKeywords(f"ruleset={ruleset_version}; "
                   f"ayanamsa={coord_label}; sweph={panchanga.sweph_version()}; "
                   f"author-email={PDF_AUTHOR_EMAIL}; "
                   f"copyright={PDF_COPYRIGHT}; url={PDF_SOURCE_URL}")
@@ -1091,7 +1090,7 @@ def draw_page_header(pdf, location, months, ruleset_version, amanta=True, coordi
   pdf.drawString(18, page_height - 31, subtitle)
   pdf.setFont(PDF_FONT, 4.7)
   pdf.drawRightString(page_width - 18, page_height - 19,
-                      f"SwEph {panchanga.sweph_version()} | Ruleset: {ruleset_version} | Layout: {LAYOUT_VERSION}")
+                      f"SwEph {panchanga.sweph_version()} | Ruleset: {ruleset_version}")
   # Attribution stamp in the top-right corner, mirroring the monthly calendar:
   # "Satish BD 2026" doubles as the clickable link to the GitHub repo.
   stamp_text = "Copyright © "
