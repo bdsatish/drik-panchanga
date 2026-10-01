@@ -763,7 +763,9 @@ def karana(jd, place):
 
   # 2. Find karana at this JDN
   moon_phase = lunar_phase(rise)
-  today = ceil(moon_phase / 6)
+  # An elongation of exactly 0.0 is the end of karana 60, not the start of
+  # karana 1: ``ceil`` alone would return 0 here (see ``tithi``).
+  today = ceil(moon_phase / 6) or 60
   degrees_left = today * 6 - moon_phase
 
   # 3. Compute longitudinal differences at intervals of 0.25 days from sunrise

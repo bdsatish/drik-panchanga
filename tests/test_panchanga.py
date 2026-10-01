@@ -354,7 +354,7 @@ class SkipAtNextSunriseTests(PanchangaTestCase):
 
 
 class CycleBoundaryTests(unittest.TestCase):
-  """Elongation of exactly 0.0 is the cycle end (tithi 30 / yoga 27), not the start."""
+  """Elongation of exactly 0.0 is the cycle end (tithi 30 / yoga 27 / karana 60), not the start."""
 
   def test_zero_phase_resolves_to_cycle_end(self):
     place = bangalore
@@ -368,6 +368,17 @@ class CycleBoundaryTests(unittest.TestCase):
          mock.patch.object(panchanga, "lunar_longitude", side_effect=lambda t: (t - jd) * 240.0), \
          mock.patch.object(panchanga, "solar_longitude", side_effect=lambda t: (t - jd) * 240.0):
       self.assertEqual(yoga(jd, place)[0], 27)
+
+  def test_zero_phase_resolves_to_karana_60(self):
+    # Karana n spans phase [(n-1)*6, n*6), so phase 0.0 is the end of karana 60
+    # rather than a karana 0. Only the phase and sunrise are stubbed: the real
+    # longitudes keep the relative-motion window non-degenerate. The end time is
+    # interpolated ~360 degrees out, so this pins the index only.
+    place = bangalore
+    jd = gregorian_to_jd(Date(2009, 7, 15))
+    with mock.patch.object(panchanga, "lunar_phase", return_value=0.0), \
+         mock.patch.object(panchanga, "sunrise", return_value=jd):
+      self.assertEqual(karana(jd, place)[0], 60)
 
 
 class MasaTests(PanchangaTestCase):
