@@ -217,6 +217,16 @@ class IcsServiceTests(unittest.TestCase):
       empty = unfold_ics(generate_ics(load_location("Tirupati"), 2026))
     self.assertIn("Varjyam: —", empty)
 
+  def test_moon_times_run_chronologically(self):
+    # On midnight-crossing days the Hindu day's moonset precedes its moonrise;
+    # DESCRIPTION must read set – rise rather than "34:18:00 – 22:18:00".
+    # Tirupati is fixed +5.5 with no DST: every day renders the same pair.
+    with mock.patch.object(panchanga, "moonrise", side_effect=lambda jd, place: jd + 1.2), \
+         mock.patch.object(panchanga, "moonset", side_effect=lambda jd, place: jd + 0.7):
+      ics = unfold_ics(generate_ics(load_location("Tirupati"), 2026))
+    self.assertIn("Moon*: 22:18:00 – 34:18:00", ics)
+    self.assertNotIn("Moon*: 34:18:00", ics)
+
   def test_generates_valid_ics_structure(self):
     ics = generate_ics(load_location("Helsinki"), 2026)
     self.assertTrue(ics.startswith("BEGIN:VCALENDAR\r\n"))

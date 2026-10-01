@@ -93,7 +93,7 @@ class MoonEventGapTests(unittest.TestCase):
     place = place_for_date(location, civil)
     jd = gregorian_to_jd(civil)
     clock = partial(format_local_hm, timezone_name=location.timezone_name, anchor_civil=civil)
-    time, status = probe_moon_event(jd, place, civil, clock, rise=True)
+    time, status, _event_jd = probe_moon_event(jd, place, civil, clock, rise=True)
     self.assertEqual(status, "ok")
     self.assertRegex(time, r"^\d{2}:\d{2}:\d{2}$")
     hour = int(time.split(":")[0])

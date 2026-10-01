@@ -73,14 +73,14 @@ def format_masa_label(names, masa_num, is_adhika):
 
 
 def probe_moon_event(jd, place, civil, clock, rise=True):
-  """Moonrise/moonset on the Hindu day: ``(HH:MM:SS or None, status)``.
+  """Moonrise/moonset on the Hindu day: ``(HH:MM:SS or None, status, UT JD or None)``.
 
   Status is ``ok``, ``none_today``, ``always_below``, ``always_above``, or
   ``unavailable``. ``clock`` formats a UT JD (``datetime_helper.format_local_hm``).
   """
   event = panchanga.moonrise(jd, place) if rise else panchanga.moonset(jd, place)
   if event is not None:
-    return clock(event, show_seconds=True), "ok"
+    return clock(event, show_seconds=True), "ok", event
   # No event in the Hindu-day window: distinguish circumpolar vs none today.
   swe = panchanga.swe
   t0 = jd - place.timezone / 24.0
@@ -90,11 +90,11 @@ def probe_moon_event(jd, place, civil, clock, rise=True):
   if rc != 0:
     altitude = body_altitude_at_local_noon(swe.MOON, civil.year, civil.month, civil.day, place)
     if altitude > 0.5:
-      return None, "always_above"
+      return None, "always_above", None
     if altitude < -0.5:
-      return None, "always_below"
-    return None, "unavailable"
-  return None, "none_today"
+      return None, "always_below", None
+    return None, "unavailable", None
+  return None, "none_today", None
 
 
 def _interval(start, end, clock):
@@ -165,8 +165,8 @@ def _compute_day_details_unlocked(location, civil, amanta=None, coordinate_selec
     finally:
       panchanga.reset_ayanamsa_mode()
   sun_raasi = int(panchanga.raasi(sunrise))
-  moonrise, moonrise_status = probe_moon_event(jd, place, civil, clock, rise=True)
-  moonset, moonset_status = probe_moon_event(jd, place, civil, clock, rise=False)
+  moonrise, moonrise_status, moonrise_at = probe_moon_event(jd, place, civil, clock, rise=True)
+  moonset, moonset_status, moonset_at = probe_moon_event(jd, place, civil, clock, rise=False)
   rahu_kala = panchanga.rahu_kalam(jd, place)
   durmuhurta = panchanga.durmuhurtam(jd, place)
   varjyam = panchanga.varjyam(jd, place)
@@ -202,8 +202,10 @@ def _compute_day_details_unlocked(location, civil, amanta=None, coordinate_selec
     "sun_raasi": sun_raasi,
     "moonrise": moonrise,
     "moonrise_status": moonrise_status,
+    "moonrise_jd": moonrise_at,
     "moonset": moonset,
     "moonset_status": moonset_status,
+    "moonset_jd": moonset_at,
     "rahu_kala": rahu_kala,
     "durmuhurta": durmuhurta,
     "varjyam": varjyam,

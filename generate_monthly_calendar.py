@@ -240,12 +240,14 @@ def sun_moon_lines(location, civil):
   # sits in the band, so the start needs no check of its own.
   ps_start, _ps_end = panchanga.pratah_sandhya(jd, place)
   lines.append(f"Sun: ({clock(ps_start)} –) {rise_text} – {set_text}")
-  parts = []
+  events = []
   for event in (panchanga.moonrise(jd, place), panchanga.moonset(jd, place)):
     if event is not None and jd - 1 <= event <= jd + 2:
-      parts.append(clock(event))
-  if parts:
-    lines.append("Moon: " + " – ".join(parts))
+      events.append((event, clock(event)))
+  if events:
+    # Chronological like the Sun line: on midnight-crossing days this Hindu
+    # day's moonset precedes its moonrise, and "28:03 – 16:22" reads backwards.
+    lines.append("Moon: " + " – ".join(text for _event, text in sorted(events)))
   return lines
 
 

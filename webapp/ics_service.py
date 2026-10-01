@@ -114,7 +114,15 @@ def generate_ics(location, start_year, month_system="amanta", coordinate_selecti
 
         moon_rise_text = details["moonrise"] if details["moonrise"] else "—"
         moon_set_text = details["moonset"] if details["moonset"] else "—"
-        moon_line = "Moon*: " + moon_rise_text + " – " + moon_set_text
+        # Times run chronologically like Sun*: on midnight-crossing days this
+        # Hindu day's moonset precedes its moonrise. Keep rise-first order when
+        # either event is missing so the status pair below still reads
+        # rise / set.
+        moon_texts = (moon_rise_text, moon_set_text)
+        rise_at, set_at = details.get("moonrise_jd"), details.get("moonset_jd")
+        if rise_at is not None and set_at is not None and set_at < rise_at:
+          moon_texts = (moon_set_text, moon_rise_text)
+        moon_line = "Moon*: " + moon_texts[0] + " – " + moon_texts[1]
         if details["moonrise_status"] != "ok" or details["moonset_status"] != "ok":
           moon_line = moon_line + " (" + details["moonrise_status"] + " / " + details["moonset_status"] + ")"
 

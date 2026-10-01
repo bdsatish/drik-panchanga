@@ -11,6 +11,7 @@ from generate_monthly_calendar import (
   RULESET_VERSION,
   argument_parser,
   build_monthly_pdf,
+  cell_clock,
   collect_context,
   day_details,
   default_monthly_output_path,
@@ -178,6 +179,19 @@ class SunMoonTests(unittest.TestCase):
     self.assertTrue(lines[1].startswith("Moon:"))
     self.assertIn(" – ", lines[0])
     self.assertIn(" – ", lines[1])
+
+  def test_moon_line_runs_chronologically_when_set_precedes_rise(self):
+    # On midnight-crossing (waning) days the Hindu day's moonset happens
+    # before its moonrise; the line must read set – rise, not "28:03 – 16:22".
+    location = load_location("Ujjain")
+    civil = Date(2026, 6, 1)
+    jd = gregorian_to_jd(civil)
+    with mock.patch("generate_monthly_calendar.panchanga.moonrise", return_value=jd + 1.2), \
+         mock.patch("generate_monthly_calendar.panchanga.moonset", return_value=jd + 0.7):
+      lines = sun_moon_lines(location, civil)
+    clock = cell_clock(location, civil)
+    self.assertEqual([line for line in lines
+                      if line.startswith("Moon:")][0], "Moon: " + clock(jd + 0.7) + " – " + clock(jd + 1.2))
 
   def test_sun_moon_lines_render_transit_anchors_at_polar_days(self):
     # Regression (old contract): the Sun line used to be omitted entirely at
