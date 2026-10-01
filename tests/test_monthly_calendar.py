@@ -4,8 +4,10 @@ from pathlib import Path
 import re
 from tempfile import TemporaryDirectory
 import unittest
+from threading import Event, Lock, Thread
 from unittest import mock
 
+import panchanga
 from datetime_helper import Date, gregorian_to_jd
 from generate_monthly_calendar import (
   RULESET_VERSION,
@@ -262,6 +264,56 @@ class DstClockTests(unittest.TestCase):
     moon_line = [line for line in lines if line.startswith("Moon:")][0]
     # Was 31:05 with the stale +3; after the change the clock reads 30:05.
     self.assertTrue(moon_line.endswith("– 30:05"))
+
+
+class MonthlyBuildLockTests(unittest.TestCase):
+  """The monthly builder holds the coordinate lock across its mode work."""
+
+  def test_build_monthly_pdf_holds_the_coordinate_lock(self):
+    # Clone of tests/test_day_panchanga.py's lock test for the builder entry
+    # point: while one build is inside the locked section (blocked at
+    # set_coordinate_selection), a second build must not reach its own
+    # set_coordinate_selection.
+    first_selected, second_started, release_first = Event(), Event(), Event()
+    calls, errors = [], []
+    calls_lock = Lock()
+    original_set_selection = panchanga.set_coordinate_selection
+
+    def blocking_set_selection(selection):
+      with calls_lock:
+        calls.append(selection)
+        first_call = len(calls) == 1
+      if first_call:
+        first_selected.set()
+        if not release_first.wait(5):
+          raise AssertionError("timed out waiting for the first build")
+      return original_set_selection(selection)
+
+    def run(selection, started=None):
+      if started is not None:
+        started.set()
+      try:
+        with TemporaryDirectory() as directory:
+          build_monthly_pdf(load_location("Helsinki"), [(2026, 3)],
+                            Path(directory) / f"{selection}.pdf", coordinate_selection=selection)
+      except BaseException as error:  # pragma: no cover - assertion below reports it
+        errors.append(error)
+
+    with mock.patch.object(panchanga, "set_coordinate_selection", side_effect=blocking_set_selection):
+      first = Thread(target=run, args=("tropical", ))
+      second = Thread(target=run, args=("citra", second_started))
+      first.start()
+      self.assertTrue(first_selected.wait(5))
+      second.start()
+      self.assertTrue(second_started.wait(5))
+      self.assertEqual(calls, ["tropical"])
+      release_first.set()
+      first.join(30)
+      second.join(30)
+
+    self.assertFalse(first.is_alive() or second.is_alive())
+    self.assertEqual(errors, [])
+    self.assertEqual(calls, ["tropical", "citra"])
 
 
 class CellDrawTests(unittest.TestCase):

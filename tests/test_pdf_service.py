@@ -3,8 +3,10 @@
 import io
 import os
 from pathlib import Path
+import re
 import sys
 import unittest
+from threading import Event, Lock, Thread
 from unittest import mock
 
 from datetime_helper import Date, format_hms, gregorian_to_jd
@@ -253,6 +255,73 @@ class IcsServiceTests(unittest.TestCase):
     self.assertIn(" · ", skipped)
     # Contrast: an ordinary day keeps the single segment.
     self.assertEqual(tithi_segment("20260301").count("(ends "), 1)
+
+  def test_all_day_events_end_on_the_next_civil_day(self):
+    # RFC 5545 DTEND is exclusive: every all-day event must end on the next
+    # civil date, including month and year rollovers (a regression here makes
+    # zero-length events at every boundary while the suite stays green).
+    ics = unfold_ics(generate_ics(load_location("Tirupati"), 2026))
+    pairs = []
+    for block in ics.split("BEGIN:VEVENT")[1:]:
+      start = re.search(r"DTSTART;VALUE=DATE:(\d{8})", block).group(1)
+      end = re.search(r"DTEND;VALUE=DATE:(\d{8})", block).group(1)
+      pairs.append((start, end))
+    self.assertTrue(pairs)
+    for start, end in pairs:
+      civil = Date(int(start[:4]), int(start[4:6]), int(start[6:]))
+      nxt = civil + 1
+      self.assertEqual(end, f"{nxt.year:04d}{nxt.month:02d}{nxt.day:02d}", start)
+    self.assertIn(("20260331", "20260401"), pairs)  # month rollover
+    self.assertIn(("20261231", "20270101"), pairs)  # year rollover
+
+  def test_generate_ics_holds_the_coordinate_lock(self):
+    # Clone of tests/test_day_panchanga.py's lock test for the ICS entry
+    # point: while one export is inside the locked section (blocked at
+    # set_coordinate_selection), a second export must not reach its own
+    # set_coordinate_selection. lunar_year_months is stubbed to one month to
+    # keep the clone fast; everything below it is real.
+    first_selected, second_started, release_first = Event(), Event(), Event()
+    calls, errors = [], []
+    calls_lock = Lock()
+    original_set_selection = panchanga.set_coordinate_selection
+
+    def blocking_set_selection(selection):
+      with calls_lock:
+        calls.append(selection)
+        first_call = len(calls) == 1
+      if first_call:
+        first_selected.set()
+        if not release_first.wait(5):
+          raise AssertionError("timed out waiting for the first export")
+      return original_set_selection(selection)
+
+    def run(selection, started=None):
+      if started is not None:
+        started.set()
+      try:
+        generate_ics(load_location("Tirupati"), 2026, coordinate_selection=selection)
+      except BaseException as error:  # pragma: no cover - assertion below reports it
+        errors.append(error)
+
+    with mock.patch("webapp.ics_service.lunar_year_months", return_value=[(2026, 3)]), \
+         mock.patch.object(panchanga, "set_coordinate_selection", side_effect=blocking_set_selection):
+      first = Thread(target=run, args=("tropical", ))
+      second = Thread(target=run, args=("citra", second_started))
+      first.start()
+      self.assertTrue(first_selected.wait(5))
+      second.start()
+      self.assertTrue(second_started.wait(5))
+      self.assertEqual(calls, ["tropical"])
+      release_first.set()
+      first.join(30)
+      second.join(30)
+
+    self.assertFalse(first.is_alive() or second.is_alive())
+    self.assertEqual(errors, [])
+    # Each export sets the selection once per day (the stubbed month is the
+    # 31 days of March 2026) and the lock serializes the exports whole:
+    # every "tropical" call precedes every "citra" call.
+    self.assertEqual(calls, ["tropical"] * 31 + ["citra"] * 31)
 
   def test_generates_valid_ics_structure(self):
     ics = generate_ics(load_location("Helsinki"), 2026)
