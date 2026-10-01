@@ -11,7 +11,7 @@ from datetime_helper import Date, format_hms, gregorian_to_jd
 from webapp import cgi_handlers
 from webapp.app import app, client_ip
 from webapp.day_panchanga import _interval, compute_day_panchanga
-from webapp.ics_service import generate_ics
+from webapp.ics_service import _named_end_line, generate_ics
 from webapp.day_panchanga import _interval_str as _fmt_interval
 from webapp.pdf_service import generate_pdf
 from generate_panchanga_calendar import load_location
@@ -226,6 +226,33 @@ class IcsServiceTests(unittest.TestCase):
       ics = unfold_ics(generate_ics(load_location("Tirupati"), 2026))
     self.assertIn("Moon*: 22:18:00 – 34:18:00", ics)
     self.assertNotIn("Moon*: 34:18:00", ics)
+
+  def test_named_end_line_appends_the_skipped_segment(self):
+
+    def clock(jd, show_seconds=False):
+      return f"{jd:.1f}"
+
+    names = {"1": "Eka", "2": "Dvi"}
+    self.assertEqual(_named_end_line("Tithi", names, [1, 100.0], clock), "Tithi: Eka (ends 100.0)")
+    self.assertEqual(_named_end_line("Tithi", names, [1, 100.0, 2, 200.0], clock),
+                     "Tithi: Eka (ends 100.0) · Dvi (ends 200.0)")
+
+  def test_skipped_tithi_day_prints_both_segments(self):
+    # 2026-03-19 (Tirupati) skips a tithi: number 30 at the civil-midnight
+    # evaluation and number 1 ends later the same Hindu day. The day view and
+    # monthly grid print both segments; the ICS DESCRIPTION must too.
+    ics = unfold_ics(generate_ics(load_location("Tirupati"), 2026))
+
+    def tithi_segment(stamp):
+      block = [b for b in ics.split("BEGIN:VEVENT") if f"DTSTART;VALUE=DATE:{stamp}" in b][0]
+      description = [line for line in block.split("\r\n") if line.startswith("DESCRIPTION:")][0]
+      return [part for part in description.split("\\n") if part.startswith("Tithi: ")][0]
+
+    skipped = tithi_segment("20260319")
+    self.assertEqual(skipped.count("(ends "), 2)
+    self.assertIn(" · ", skipped)
+    # Contrast: an ordinary day keeps the single segment.
+    self.assertEqual(tithi_segment("20260301").count("(ends "), 1)
 
   def test_generates_valid_ics_structure(self):
     ics = generate_ics(load_location("Helsinki"), 2026)

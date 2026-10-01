@@ -67,6 +67,20 @@ def _ics_date(civil):
   return f"{civil.year:04d}{civil.month:02d}{civil.day:02d}"
 
 
+def _named_end_line(label, lookup, values, clock):
+  """``Tithi: <name> (ends …)`` plus the skipped-limb segment on kṣaya days.
+
+  ``values`` is ``[index, end]`` or the skipped-limb
+  ``[index, end, next_index, next_end]`` (UT JDs) that ``panchanga.tithi``
+  and friends produce — the same shape ``_named_segments`` renders in the
+  day view and ``day_details`` in the monthly grid.
+  """
+  line = f"{label}: {lookup[str(values[0])]} (ends {clock(values[1], show_seconds=True)})"
+  if len(values) == 4:
+    line += f" · {lookup[str(values[2])]} (ends {clock(values[3], show_seconds=True)})"
+  return line
+
+
 def generate_ics(location, start_year, month_system="amanta", coordinate_selection="citra"):
   """Generate the lunar year of Ugadi in ``start_year`` while holding coordinate state.
 
@@ -103,7 +117,6 @@ def generate_ics(location, start_year, month_system="amanta", coordinate_selecti
         clock = details["clock"]
         tithi_name = names["tithis"][str(details["ti"][0])]
         nak_name = names["nakshatras"][str(details["nak"][0])]
-        yoga_name = names["yogas"][str(details["yog"][0])]
         masa_name = format_masa_name(names, details["masa_num"], details["is_adhika"])
         masa_label = format_masa_label(names, details["masa_num"], details["is_adhika"])
         vara_name = names["varas"][str(details["vara_num"])]
@@ -143,10 +156,10 @@ def generate_ics(location, start_year, month_system="amanta", coordinate_selecti
         desc_lines.append("Ayana: " + drik_ayana + " (drik) · " + ayana + " (siddhantic)")
         desc_lines.append("Ṛtu: " + drik_rtu_label + " (drik) · " + rtu_label + " (siddhantic)")
         desc_lines.append("Māsa: " + masa_label)
-        desc_lines.append("Tithi: " + tithi_name + " (ends " + clock(details["ti"][1], show_seconds=True) + ")")
-        desc_lines.append("Nakṣatra: " + nak_name + " (ends " + clock(details["nak"][1], show_seconds=True) + ")")
+        desc_lines.append(_named_end_line("Tithi", names["tithis"], details["ti"], clock))
+        desc_lines.append(_named_end_line("Nakṣatra", names["nakshatras"], details["nak"], clock))
         desc_lines.append("Vāra: " + vara_name)
-        desc_lines.append("Yoga: " + yoga_name + " (ends " + clock(details["yog"][1], show_seconds=True) + ")")
+        desc_lines.append(_named_end_line("Yoga", names["yogas"], details["yog"], clock))
         desc_lines.append("Karaṇa: " + names["karanas"][str(details["kar"][0])] + " (ends " +
                           clock(details["kar"][1], show_seconds=True) + ")")
         desc_lines.append("Sun*: " + clock(details["sunrise"], show_seconds=True) + " – " +
