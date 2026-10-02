@@ -118,5 +118,3 @@ TODO
 
 * Amritakala
 * gettext translations
-* Harmonize all functions to use UT aka UT1 instead of UTC or ET
-  (`swe.jdut1_to_utc() <==> swe.utc_to_jd()[1]`, `swe.utc_time_zone()`, etc.)
