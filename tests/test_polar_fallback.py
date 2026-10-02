@@ -19,7 +19,7 @@ import swisseph as swe
 
 import panchanga
 from datetime_helper import Date, gregorian_to_jd
-from panchanga import Place, sunrise, sunset, day_duration, tithi
+from panchanga import Place, night_duration, sunrise, sunset, day_duration, tithi
 from tests import local_hms
 
 
@@ -150,6 +150,46 @@ class EdgeContinuityTests(unittest.TestCase):
     self.assertFalse(_is_real_rise(virtual_jd, tro))
     gap = (sunrise(virtual_jd, tro) - sunrise(real_jd, tro)) * 24
     self.assertTrue(23.0 < gap < 25.0, f"edge jump {gap:.2f} h")
+
+
+class ShoulderInvariantTests(unittest.TestCase):
+  """Day and night lengths never go negative or wrap a day."""
+
+  def check_lengths(self, jd, place):
+    sunrise.cache_clear()
+    sunset.cache_clear()
+    day, _ = day_duration(jd, place)
+    night, _ = night_duration(jd, place)
+    window = (sunrise(jd + 1, place) - sunrise(jd, place)) * 24
+    self.assertGreaterEqual(day, 0.0)
+    self.assertLessEqual(day, 24.005)
+    self.assertGreaterEqual(night, 0.0)
+    self.assertAlmostEqual(day + night, window, delta=0.01)
+
+  def test_polar_night_shoulder_has_no_day(self):
+    # Apatity 2024-01-06 is the last sunless day: the day after (Jan 7)
+    # owns the year's first set, so this record is day 0, night ~24 h
+    # rather than the unguarded 24.11 h day and -0.20 h night.
+    self.check_lengths(gregorian_to_jd(Date(2024, 1, 6)), Place(67.58267, 33.39649, 3.0))
+    self.assertAlmostEqual(night_duration(gregorian_to_jd(Date(2024, 1, 6)),
+                                           Place(67.58267, 33.39649, 3.0))[0], 24.0, delta=0.1)
+
+  def test_midnight_sun_shoulder_has_no_negative_night(self):
+    # Vorkuta 2023-07-14 has a real 21.66 h day; its real set used to sit
+    # past the next (transit) sunrise anchor, making the night -21.6 h and
+    # inverting durmuhurtam. The midnight-sun set stays; the split is finite.
+    vorkuta = Place(67.50867, 64.05216, 3.0)
+    self.check_lengths(gregorian_to_jd(Date(2023, 7, 14)), vorkuta)
+    self.assertAlmostEqual(day_duration(gregorian_to_jd(Date(2023, 7, 14)), vorkuta)[0], 21.66, delta=0.1)
+
+  def test_durmuhurtam_never_inverts_at_polar_fallback(self):
+    # Tuesday 2026-07-14 is the case whose -21.6 h night used to invert the
+    # second interval ([35:30, 36:57) printed as start > end).
+    vorkuta = Place(67.50867, 64.05216, 3.0)
+    jd = gregorian_to_jd(Date(2026, 7, 14))
+    self.assertEqual(panchanga.vaara(jd), 2)
+    for start, end in panchanga.durmuhurtam(jd, vorkuta):
+      self.assertLessEqual(start, end)
 
 
 class MoonWindowTests(unittest.TestCase):

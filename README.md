@@ -32,7 +32,7 @@ The core module works standalone — no Flask, no ReportLab:
 import panchanga
 from datetime_helper import Date, format_hms, format_hms_from_jd, format_local_hm, gregorian_to_jd
 
-panchanga.set_chosen_ayanamsa("citra")
+panchanga.set_coordinate_selection("citra")  # ayanāṃśa key + sidereal mode; `set_chosen_ayanamsa` sets the key only and leaves any tropical mode in place
 place = panchanga.Place(12.972, 77.594, +5.5)  # lat, lon, UTC offset hours that day
 day = Date(2026, 1, 15)
 jd = gregorian_to_jd(day)

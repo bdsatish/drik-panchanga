@@ -129,49 +129,65 @@ def _compute_day_details_unlocked(location, civil, amanta=None, coordinate_selec
     matching meridian transit (solar noon in polar night, solar midnight in
     midnight sun) via the core sunrise()/sunset() fallback.
     """
-  panchanga.set_coordinate_selection(coordinate_selection)
-  place = place_for_date(location, civil)
-  jd = gregorian_to_jd(civil)
-  # UT JD -> this day's 24:00+ clock, at the UTC offset in force at each instant.
-  clock = partial(format_local_hm, timezone_name=location.timezone_name, anchor_civil=civil,
-                  longitude=location.longitude)
+  # ``set_coordinate_selection`` mutates the module globals ``chosen_ayanamsa``
+  # and ``coordinate_flag``. This helper is shared by the JSON day API and the
+  # ICS generator, and both are reached from long-lived web workers, so a call
+  # that asks for ``tropical`` must not leave sayana longitudes behind for the
+  # next request that only sets the ayanamsa name (e.g. the documented
+  # ``set_chosen_ayanamsa('citra')``) or nothing at all.
+  previous_ayanamsa = panchanga.chosen_ayanamsa
+  previous_coordinate_flag = panchanga.coordinate_flag
+  restore_coordinate_mode = previous_coordinate_flag == panchanga.swe.FLG_TROPICAL
+  try:
+    panchanga.set_coordinate_selection(coordinate_selection)
+    place = place_for_date(location, civil)
+    jd = gregorian_to_jd(civil)
+    # UT JD -> this day's 24:00+ clock, at the UTC offset in force at each instant.
+    clock = partial(format_local_hm, timezone_name=location.timezone_name, anchor_civil=civil,
+                    longitude=location.longitude)
 
-  sunrise = panchanga.sunrise(jd, place)
-  sunset = panchanga.sunset(jd, place)
-  day_dur = panchanga.day_duration(jd, place)
+    sunrise = panchanga.sunrise(jd, place)
+    sunset = panchanga.sunset(jd, place)
+    day_dur = panchanga.day_duration(jd, place)
 
-  names = sanskrit_names()
-  ti = panchanga.tithi(jd, place)
-  nak = panchanga.nakshatra(jd, place)
-  yog = panchanga.yoga(jd, place)
-  kar = panchanga.karana(jd, place)
-  ti_num, last_nm, lunar_num, is_adhika = panchanga.lunar_masa(jd, place, tithi_number=ti[0])
-  # Display māsa follows amānta/pūrṇimānta; ṛtus use lunar_num only.
-  masa_num = panchanga.display_masa_number(lunar_num, is_adhika, ti_num, amanta)
-  rtu_num = panchanga.ritu(lunar_num)
-  prev_was_adhika = panchanga.previous_masa_was_adhika(last_nm, is_adhika)
-  drik_rtu_num = panchanga.drik_ritu(lunar_num, is_adhika, ti_num, prev_was_adhika)
-  samvat_num = panchanga.samvatsara(jd, lunar_num)
-  samvat_north_num = panchanga.samvatsara_north_modern(jd, lunar_num)
-  vara_num = panchanga.vaara(jd)
-  kali_year, saka_year, vikrama_year = panchanga.elapsed_year(jd, lunar_num)
-  kali_day = math.floor(panchanga.ahargana(jd))
-  if coordinate_selection == "tropical":
-    ayanamsa_degrees = None
-  else:
-    panchanga.set_ayanamsa_mode()
-    try:
-      ayanamsa_degrees = float(panchanga.swe.get_ayanamsa_ut(sunrise))
-    finally:
-      panchanga.reset_ayanamsa_mode()
-  sun_raasi = int(panchanga.raasi(sunrise))
-  moonrise, moonrise_status, moonrise_at = probe_moon_event(jd, place, civil, clock, rise=True)
-  moonset, moonset_status, moonset_at = probe_moon_event(jd, place, civil, clock, rise=False)
-  rahu_kala = panchanga.rahu_kalam(jd, place)
-  durmuhurta = panchanga.durmuhurtam(jd, place)
-  varjyam = panchanga.varjyam(jd, place)
-  pratah_sandhya = panchanga.pratah_sandhya(jd, place)
-
+    names = sanskrit_names()
+    ti = panchanga.tithi(jd, place)
+    nak = panchanga.nakshatra(jd, place)
+    yog = panchanga.yoga(jd, place)
+    kar = panchanga.karana(jd, place)
+    ti_num, last_nm, lunar_num, is_adhika = panchanga.lunar_masa(jd, place, tithi_number=ti[0])
+    # Display māsa follows amānta/pūrṇimānta; ṛtus use lunar_num only.
+    masa_num = panchanga.display_masa_number(lunar_num, is_adhika, ti_num, amanta)
+    rtu_num = panchanga.ritu(lunar_num)
+    prev_was_adhika = panchanga.previous_masa_was_adhika(last_nm, is_adhika)
+    drik_rtu_num = panchanga.drik_ritu(lunar_num, is_adhika, ti_num, prev_was_adhika)
+    samvat_num = panchanga.samvatsara(jd, lunar_num)
+    samvat_north_num = panchanga.samvatsara_north_modern(jd, lunar_num)
+    vara_num = panchanga.vaara(jd)
+    kali_year, saka_year, vikrama_year = panchanga.elapsed_year(jd, lunar_num)
+    kali_day = math.floor(panchanga.ahargana(jd))
+    if coordinate_selection == "tropical":
+      ayanamsa_degrees = None
+    else:
+      panchanga.set_ayanamsa_mode()
+      try:
+        ayanamsa_degrees = float(panchanga.swe.get_ayanamsa_ut(sunrise))
+      finally:
+        panchanga.reset_ayanamsa_mode()
+    sun_raasi = int(panchanga.raasi(sunrise))
+    moonrise, moonrise_status, moonrise_at = probe_moon_event(jd, place, civil, clock, rise=True)
+    moonset, moonset_status, moonset_at = probe_moon_event(jd, place, civil, clock, rise=False)
+    rahu_kala = panchanga.rahu_kalam(jd, place)
+    durmuhurta = panchanga.durmuhurtam(jd, place)
+    varjyam = panchanga.varjyam(jd, place)
+    pratah_sandhya = panchanga.pratah_sandhya(jd, place)
+  finally:
+    # Restore the caller's coordinate mode even when the computation raises:
+    # the selection above is scoped to this one computation, not to the
+    # whole process. `set_coordinate_mode` knows the sidereal/tropical
+    # pairing, so branch on the saved flag rather than re-deriving it.
+    panchanga.set_chosen_ayanamsa(previous_ayanamsa)
+    panchanga.set_coordinate_mode('tropical' if restore_coordinate_mode else 'sidereal')
   return {
     "civil": civil,
     "place": place,

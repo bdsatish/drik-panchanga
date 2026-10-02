@@ -521,7 +521,10 @@ def sunrise(jd, place):
   lat, lon, tz = place
   result = swe.rise_trans(jd - tz / 24, swe.SUN, geopos=(lon, lat, 0), rsmi=_rise_flags + swe.CALC_RISE)
   rise = result[1][0]  # julian-day number (UT)
-  if result[0] != 0 or not jd <= rise + tz / 24. < jd + 1.0:
+  # The +1.005 bound mirrors sunset(): a real rise a few minutes past the
+  # civil-day edge (Vorkuta, far off its zone meridian) still belongs to
+  # this day's record; the search start keeps it from being claimed twice.
+  if result[0] != 0 or not jd <= rise + tz / 24. < jd + 1.005:
     rise = (_transit_jd(jd, place, lower=True) if _is_midnight_sun(jd, place) else _transit_jd(jd, place))
   return rise
 
@@ -547,8 +550,11 @@ def sunset(jd, place):
   # A real set always falls within 24 h of its sunrise; the virtual
   # midnight-sun set (next day's lower transit) lands ~24 h + seconds
   # after it. Anything beyond — e.g. the next day's set on a sunless
-  # day — belongs to another day's record.
-  if result[0] != 0 or not srise_ut < setting < srise_ut + 1.005:
+  # day — belongs to another day's record. (On a midnight-sun day
+  # `_is_midnight_sun` protects the virtual set, which lands on the next
+  # sunrise anchor, from this spill-set branch.)
+  if (result[0] != 0 or not srise_ut < setting < srise_ut + 1.005
+      or (not _is_midnight_sun(jd, place) and setting >= sunrise(jd + 1, place))):
     setting = _transit_jd(jd + 1, place, lower=True) if _is_midnight_sun(jd, place) else _transit_jd(jd, place)
   return setting
 
