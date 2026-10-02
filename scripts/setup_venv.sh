@@ -142,6 +142,28 @@ EOF
 
 configure_se_ephe_path
 
+configure_pip_constraints() {
+  local pip_conf="$VENV_DIR/pip.conf"
+  local constraints="$ROOT/scripts/constraints.txt"
+
+  if [[ ! -f "$constraints" ]]; then
+    echo "error: missing constraints file: $constraints" >&2
+    exit 1
+  fi
+
+  # pip reads <venv>/pip.conf as its "site" config even when the venv is not
+  # activated, so the constraint applies to every pip run against this venv.
+  # Absolute path: pip resolves the value relative to cwd, not to the venv.
+  cat > "$pip_conf" <<EOF
+[global]
+constraint = $constraints
+EOF
+
+  echo "Configured pip constraint ($constraints) in $pip_conf"
+}
+
+configure_pip_constraints
+
 # shellcheck source=/dev/null
 source "$VENV_DIR/bin/activate"
 

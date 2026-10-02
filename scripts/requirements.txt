@@ -3,4 +3,3 @@ reportlab
 flask
 gunicorn
 yapf
-pytest === 0 # use builtin unittest

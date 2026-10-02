@@ -1,0 +1,12 @@
+# pip constraints enforced inside .venv via .venv/pip.conf.
+#
+# `pytest===0` is an arbitrary-equality specifier that no release can satisfy,
+# so pip's resolver rejects any install that pulls pytest in -- whether it is
+# requested directly or dragged in as a transitive dependency.
+#
+# The project's test files run on stdlib unittest:
+#   python -m unittest discover -s tests -t . -p 'test_*.py'
+#
+# Constraints are only applied during resolution of an explicitly requested
+# package, which is what we want here.
+pytest===0
