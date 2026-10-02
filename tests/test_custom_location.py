@@ -1,7 +1,9 @@
 """Manual ``LAT,LON,TZ`` place across the CLI and web stack."""
 
+import io
 import sys
 import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import mock
@@ -177,7 +179,11 @@ class BceStartYearTests(unittest.TestCase):
     import generate_panchanga_calendar as annual
     with TemporaryDirectory() as directory:
       output = Path(directory) / "bce.pdf"
-      with mock.patch.object(sys, "stdout", mock.Mock()):
+      # main() builds an ArgumentParser at call time. Since Python 3.14,
+      # argparse eagerly probes stdout color support at construction, so a
+      # bare stdout Mock trips `os.isatty(file.fileno())`. A StringIO keeps
+      # the path capture without stdout's fileno semantics.
+      with redirect_stdout(io.StringIO()):
         annual.main(["--city", "Ujjain", "--start=-500", "--output", str(output)])
       self.assertTrue(output.stat().st_size > 0)
 
@@ -286,7 +292,7 @@ class MainIntegrationTests(unittest.TestCase):
       with mock.patch.object(monthly, "build_monthly_pdf", side_effect=fake_build), \
            mock.patch.object(monthly, "lunar_year_months", return_value=[(2026, 3)] * 14), \
            mock.patch.object(monthly, "default_monthly_output_path", return_value=output), \
-           mock.patch.object(sys, "stdout", mock.Mock()):
+           redirect_stdout(io.StringIO()):
         self.assertEqual(monthly.main(["--place", "-13.4,70,5.5", "--start", "2026"]), 0)
     location = captured["location"]
     self.assertIsInstance(location, Location)
@@ -317,7 +323,7 @@ class MainIntegrationTests(unittest.TestCase):
       with mock.patch.object(annual, "load_custom_location", side_effect=spy_load), \
            mock.patch.object(annual, "lunar_year_months", return_value=[(2026, 3)] * 14), \
            mock.patch.object(annual, "build_pdf", side_effect=fake_build), \
-           mock.patch.object(sys, "stdout", mock.Mock()):
+           redirect_stdout(io.StringIO()):
         annual.main(["--place", "-13.4,70,5.5", "--start", "2026"])
     location = location_holder["location"]
     self.assertEqual((location.latitude, location.longitude, location.timezone_name), (-13.4, 70.0, "UTC+5:30"))
