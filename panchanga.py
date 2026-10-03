@@ -1417,7 +1417,7 @@ def saptarshi_nakshatra_traditional(jd):
     At Kali Yuga 0 (3102 BCE), they were at Magha (10).
     """
   kali_yrs = ahargana(jd) / sidereal_year
-  offset_from_magha = int(kali_yrs / 100) % 27
+  offset_from_magha = floor(kali_yrs / 100) % 27
   nak = (10 - offset_from_magha) % 27
   if nak == 0: nak = 27
   return nak

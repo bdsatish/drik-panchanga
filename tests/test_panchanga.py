@@ -1269,6 +1269,13 @@ class PlanetaryPositionTests(PanchangaTestCase):
     self.assertGreaterEqual(nak, 1)
     self.assertLessEqual(nak, 27)
 
+  def test_saptarshi_traditional_century_before_kali_is_purva_phalguni(self):
+    # int() truncated toward zero, so Magha spanned Kali -99..99 (199 years).
+    kali_epoch = 588465.5
+    century = 100 * 365.256360417
+    self.assertEqual(saptarshi_nakshatra_traditional(kali_epoch + century / 2), 10)
+    self.assertEqual(saptarshi_nakshatra_traditional(kali_epoch - century / 2), 11)
+
 
 if __name__ == "__main__":
   unittest.main()
