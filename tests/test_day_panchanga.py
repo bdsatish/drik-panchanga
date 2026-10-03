@@ -110,6 +110,22 @@ class DayPanchangaMasaRituTests(unittest.TestCase):
     self.assertEqual(errors, [])
     self.assertEqual(calls, ["tropical", "citra"])
 
+  def test_day_details_restores_exact_coordinate_state(self):
+    # The shared helper must restore the (ayanamsa, flag) tuple exactly:
+    # a tropical-mode caller that only set the ayanamsa key (the README's
+    # documented ``set_chosen_ayanamsa`` pattern) must still be tropical
+    # afterwards, and a sidereal caller must stay sidereal after tropical.
+    panchanga.set_coordinate_selection("tropical")
+    panchanga.set_chosen_ayanamsa("citra")
+    compute_day_panchanga("Bengaluru", "21/04/2023", coordinate_selection="citra")
+    self.assertEqual(panchanga.chosen_ayanamsa, "citra")
+    self.assertEqual(panchanga.coordinate_flag, panchanga.swe.FLG_TROPICAL)
+
+    panchanga.set_coordinate_selection("citra")
+    compute_day_panchanga("Bengaluru", "21/04/2023", coordinate_selection="tropical")
+    self.assertEqual(panchanga.chosen_ayanamsa, "citra")
+    self.assertEqual(panchanga.coordinate_flag, panchanga.swe.FLG_SIDEREAL)
+
   def test_purnimanta_renames_ordinary_krishna_masa(self):
     amanta = compute_day_panchanga("Bengaluru", "10/02/2023", month_system="amanta")
     purni = compute_day_panchanga("Bengaluru", "10/02/2023", month_system="purnimanta")

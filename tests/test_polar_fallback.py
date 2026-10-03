@@ -160,10 +160,13 @@ class ShoulderInvariantTests(unittest.TestCase):
     sunset.cache_clear()
     day, _ = day_duration(jd, place)
     night, _ = night_duration(jd, place)
+    # The anchor series can hold the same transit instant twice with
+    # last-bit differences; snaps elsewhere keep consumers exact, so the
+    # invariant allows that epsilon here.
     window = (sunrise(jd + 1, place) - sunrise(jd, place)) * 24
-    self.assertGreaterEqual(day, 0.0)
+    self.assertGreaterEqual(day, -1e-6)
     self.assertLessEqual(day, 24.005)
-    self.assertGreaterEqual(night, 0.0)
+    self.assertGreaterEqual(night, -1e-6)
     self.assertAlmostEqual(day + night, window, delta=0.01)
 
   def test_polar_night_shoulder_has_no_day(self):
@@ -181,6 +184,18 @@ class ShoulderInvariantTests(unittest.TestCase):
     vorkuta = Place(67.50867, 64.05216, 3.0)
     self.check_lengths(gregorian_to_jd(Date(2023, 7, 14)), vorkuta)
     self.assertAlmostEqual(day_duration(gregorian_to_jd(Date(2023, 7, 14)), vorkuta)[0], 21.66, delta=0.1)
+
+  def test_midnight_sun_shoulder_set_past_next_anchor_falls_back(self):
+    # Vorkuta 2026-07-15: the real horizon set (21:43 UT) sits past the
+    # next day's sunrise anchor (21:04 UT, a lower-transit twin of this
+    # sunrise), so keeping it made the anchors non-monotonic and the night
+    # -21.4 h. The set falls back to the day's own sunset anchor: day 0 h
+    # and a night within float noise of 0 (the twin anchors differ in the
+    # last bit), with day + night == window.
+    vorkuta = Place(67.50867, 64.05216, 3.0)
+    jd = gregorian_to_jd(Date(2026, 7, 15))
+    self.check_lengths(jd, vorkuta)
+    self.assertAlmostEqual(sunset(jd, vorkuta), sunrise(jd, vorkuta), delta=1e-6)
 
   def test_durmuhurtam_never_inverts_at_polar_fallback(self):
     # Tuesday 2026-07-14 is the case whose -21.6 h night used to invert the

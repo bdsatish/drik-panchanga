@@ -553,9 +553,35 @@ def sunset(jd, place):
   # day — belongs to another day's record. (On a midnight-sun day
   # `_is_midnight_sun` protects the virtual set, which lands on the next
   # sunrise anchor, from this spill-set branch.)
+  # The anchor series itself can hold one transit instant as two
+  # last-bit-different floats (Vorkuta 2026-07-15): snap a fallback set
+  # that lands exactly on a sunrise anchor to the float the day's own
+  # consumers already hold, so day/night arithmetic stays exact instead
+  # of reading -4e-08 h. ``==`` on floats is deliberate — the values are
+  # only equal when swe returned the same transit instant twice.
+  next_anchor = sunrise(jd + 1, place)
+  if setting == next_anchor:
+    setting = next_anchor
+  elif setting == srise_ut:
+    setting = srise_ut
+  # A real horizon set past the next anchor on a midnight-sun shoulder
+  # day (Vorkuta 2026-07-15; 66-78N off-meridian cases) belongs to the
+  # next day's record: keeping it makes the anchors non-monotonic and
+  # the night -21 h. The fallback is then the day's own sunrise anchor
+  # (day 0 h) — except a genuine ~24 h midnight-sun day, where the set
+  # is the next anchor itself. The twin-anchor shoulders (next anchor at
+  # or before this sunrise) need no span guard: any set past such an
+  # anchor inverts the arithmetic.
+  is_midnight_sun = _is_midnight_sun(jd, place)
+  shoulder_spill = (is_midnight_sun and setting > next_anchor
+                     and (next_anchor <= srise_ut or next_anchor - srise_ut < 0.995))
   if (result[0] != 0 or not srise_ut < setting < srise_ut + 1.005
-      or (not _is_midnight_sun(jd, place) and setting >= sunrise(jd + 1, place))):
-    setting = _transit_jd(jd + 1, place, lower=True) if _is_midnight_sun(jd, place) else _transit_jd(jd, place)
+      or (not is_midnight_sun and setting >= next_anchor) or shoulder_spill):
+    if is_midnight_sun:
+      setting = _transit_jd(jd + 1, place, lower=True)
+    else:
+      setting = _transit_jd(jd, place)
+    setting = max(setting, srise_ut)
   return setting
 
 

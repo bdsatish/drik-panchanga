@@ -132,12 +132,13 @@ def _compute_day_details_unlocked(location, civil, amanta=None, coordinate_selec
   # ``set_coordinate_selection`` mutates the module globals ``chosen_ayanamsa``
   # and ``coordinate_flag``. This helper is shared by the JSON day API and the
   # ICS generator, and both are reached from long-lived web workers, so a call
-  # that asks for ``tropical`` must not leave sayana longitudes behind for the
-  # next request that only sets the ayanamsa name (e.g. the documented
-  # ``set_chosen_ayanamsa('citra')``) or nothing at all.
+  # must not leak its mode into the next request. Restoring the tuple
+  # ``(chosen_ayanamsa, coordinate_flag)`` exactly matters: the README's
+  # documented ``set_chosen_ayanamsa('citra')`` pattern sets the ayanamsa key
+  # only and leaves any tropical mode in place, and re-deriving the mode
+  # from sidereal-vs-tropical would silently flip such a caller to sidereal.
   previous_ayanamsa = panchanga.chosen_ayanamsa
   previous_coordinate_flag = panchanga.coordinate_flag
-  restore_coordinate_mode = previous_coordinate_flag == panchanga.swe.FLG_TROPICAL
   try:
     panchanga.set_coordinate_selection(coordinate_selection)
     place = place_for_date(location, civil)
@@ -182,12 +183,12 @@ def _compute_day_details_unlocked(location, civil, amanta=None, coordinate_selec
     varjyam = panchanga.varjyam(jd, place)
     pratah_sandhya = panchanga.pratah_sandhya(jd, place)
   finally:
-    # Restore the caller's coordinate mode even when the computation raises:
-    # the selection above is scoped to this one computation, not to the
-    # whole process. `set_coordinate_mode` knows the sidereal/tropical
-    # pairing, so branch on the saved flag rather than re-deriving it.
-    panchanga.set_chosen_ayanamsa(previous_ayanamsa)
-    panchanga.set_coordinate_mode('tropical' if restore_coordinate_mode else 'sidereal')
+    # Restore the caller's exact coordinate state even when the computation
+    # raises: the selection above is scoped to this one computation, not to
+    # the whole process. Set both the ayanamsa key and the flag directly —
+    # the pairing helpers cannot reproduce a tropical-flag/citra-key state.
+    panchanga.chosen_ayanamsa = previous_ayanamsa
+    panchanga.coordinate_flag = previous_coordinate_flag
   return {
     "civil": civil,
     "place": place,

@@ -225,11 +225,13 @@ class SunMoonTests(unittest.TestCase):
 
   def test_sun_moon_lines_render_the_out_of_band_sunset(self):
     # Live case at extreme latitude (82.5N, 62.3W, UTC-5): the sun first dips
-    # below the horizon late on 3 Sep 1500, so that day's sunset sits past the
-    # band check and prints --.
+    # below the horizon late on 3 Sep 1500. The day's sunset is its own
+    # midnight-sun lower transit (24:00), not the next evening's horizon
+    # set — keeping that would make the night -21.9 h (see the Vorkuta
+    # shoulder pin in test_polar_fallback.py).
     from generate_panchanga_calendar import resolve_location
     lines = sun_moon_lines(resolve_location(place="82.5,-62.3,-5"), Date(1500, 9, 3))
-    self.assertEqual([line for line in lines if line.startswith("Sun:")], ["Sun: (21:49 –) 23:22 – --"])
+    self.assertEqual([line for line in lines if line.startswith("Sun:")], ["Sun: (21:49 –) 23:22 – 24:00"])
 
   def test_sun_moon_lines_always_render_a_sun_line(self):
     # sunrise() and sunset() always return an anchor (the transit fallback),
