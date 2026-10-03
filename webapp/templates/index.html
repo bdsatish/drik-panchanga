@@ -703,6 +703,12 @@
                 : ""));
         const timeOrDash = (value) => (value ? escapeHtml(value) : "—");
         const riseSet = (rise, set) => `${rise} – ${set}`;
+        const moonRise = moonEventHtml(data.moonrise, data.moonrise_status);
+        const moonSet = moonEventHtml(data.moonset, data.moonset_status);
+        // Chronological like Sun* and the PDF/ICS: on midnight-crossing days
+        // this Hindu day's moonset precedes its moonrise.
+        const moonSetFirst = (data.moonrise_jd != null && data.moonset_jd != null
+          && data.moonset_jd < data.moonrise_jd);
         const samvatLine = (
           `${escapeHtml(data.samvatsara)} ${escapeHtml(String(data.saka_year))}`
           + `, ${escapeHtml(data.samvatsara_north || "—")}`
@@ -726,10 +732,7 @@
           ["Yoga", segmentsHtml(data.yoga)],
           ["Karaṇa", segmentsHtml(data.karana)],
           ["Sun*", riseSet(timeOrDash(data.sunrise), timeOrDash(data.sunset))],
-          ["Moon*", riseSet(
-            moonEventHtml(data.moonrise, data.moonrise_status),
-            moonEventHtml(data.moonset, data.moonset_status),
-          )],
+          ["Moon*", moonSetFirst ? riseSet(moonSet, moonRise) : riseSet(moonRise, moonSet)],
           ["Day duration", timeOrDash(data.day_duration)],
           ["Rāhukāla", intervalHtml(data.rahu_kala)],
           ["Durmuhūrta", intervalsHtml(data.durmuhurta)],
