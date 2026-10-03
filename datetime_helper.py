@@ -249,13 +249,18 @@ def format_local_hm(jd, timezone_name, anchor_civil=None, show_seconds=False, lo
                             show_seconds=show_seconds)
 
 
-def hindu_day_civil(jd, timezone_name, sunrise_jd=None, longitude=None):
+def hindu_day_civil(jd, timezone_name, sunrise_jd=None, longitude=None, next_sunrise_jd=None):
   """Civil date whose midnight is the 24:00+ origin for ``jd``.
 
-  If ``sunrise_jd`` is given and ``jd`` is before it, return the previous
-  civil date (``00:05`` formats as ``24:05``). Else the event's own civil date.
+  ``sunrise_jd`` and ``next_sunrise_jd`` are the sunrises of the event's own
+  civil date and the next one. Before the first, return the previous civil
+  date (``00:05`` formats as ``24:05``); at or after the second (a polar
+  sunrise just before civil midnight), the next one (``23:30`` formats as
+  ``-00:30``). Else the event's own civil date.
   """
   civil = jd_to_local_civil_date(jd, timezone_name, longitude)
   if sunrise_jd is not None and jd < sunrise_jd:
     return civil - 1
+  if next_sunrise_jd is not None and jd >= next_sunrise_jd:
+    return civil + 1
   return civil

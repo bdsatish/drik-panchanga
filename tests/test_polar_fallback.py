@@ -160,13 +160,10 @@ class ShoulderInvariantTests(unittest.TestCase):
     sunset.cache_clear()
     day, _ = day_duration(jd, place)
     night, _ = night_duration(jd, place)
-    # The anchor series can hold the same transit instant twice with
-    # last-bit differences; snaps elsewhere keep consumers exact, so the
-    # invariant allows that epsilon here.
     window = (sunrise(jd + 1, place) - sunrise(jd, place)) * 24
-    self.assertGreaterEqual(day, -1e-6)
+    self.assertGreaterEqual(day, 0.0)
     self.assertLessEqual(day, 24.005)
-    self.assertGreaterEqual(night, -1e-6)
+    self.assertGreaterEqual(night, 0.0)
     self.assertAlmostEqual(day + night, window, delta=0.01)
 
   def test_polar_night_shoulder_has_no_day(self):
@@ -174,28 +171,39 @@ class ShoulderInvariantTests(unittest.TestCase):
     # owns the year's first set, so this record is day 0, night ~24 h
     # rather than the unguarded 24.11 h day and -0.20 h night.
     self.check_lengths(gregorian_to_jd(Date(2024, 1, 6)), Place(67.58267, 33.39649, 3.0))
-    self.assertAlmostEqual(night_duration(gregorian_to_jd(Date(2024, 1, 6)),
-                                           Place(67.58267, 33.39649, 3.0))[0], 24.0, delta=0.1)
+    self.assertAlmostEqual(
+      night_duration(gregorian_to_jd(Date(2024, 1, 6)), Place(67.58267, 33.39649, 3.0))[0], 24.0, delta=0.1)
 
   def test_midnight_sun_shoulder_has_no_negative_night(self):
-    # Vorkuta 2023-07-14 has a real 21.66 h day; its real set used to sit
-    # past the next (transit) sunrise anchor, making the night -21.6 h and
-    # inverting durmuhurtam. The midnight-sun set stays; the split is finite.
+    # Vorkuta 2023-07-14: its real set used to sit past the next (transit)
+    # sunrise anchor, making the night -21.6 h and inverting durmuhurtam.
+    # The day's rise is the one just after solar midnight (23:51 on the
+    # 13th), so the day is a real 21.86 h.
     vorkuta = Place(67.50867, 64.05216, 3.0)
     self.check_lengths(gregorian_to_jd(Date(2023, 7, 14)), vorkuta)
-    self.assertAlmostEqual(day_duration(gregorian_to_jd(Date(2023, 7, 14)), vorkuta)[0], 21.66, delta=0.1)
+    self.assertAlmostEqual(day_duration(gregorian_to_jd(Date(2023, 7, 14)), vorkuta)[0], 21.86, delta=0.05)
 
-  def test_midnight_sun_shoulder_set_past_next_anchor_falls_back(self):
-    # Vorkuta 2026-07-15: the real horizon set (21:43 UT) sits past the
-    # next day's sunrise anchor (21:04 UT, a lower-transit twin of this
-    # sunrise), so keeping it made the anchors non-monotonic and the night
-    # -21.4 h. The set falls back to the day's own sunset anchor: day 0 h
-    # and a night within float noise of 0 (the twin anchors differ in the
-    # last bit), with day + night == window.
+  def test_shoulder_rise_before_civil_midnight_is_not_shared(self):
+    # Vorkuta 2026-07-15: solar midnight is ~22:44, so the day's rise comes
+    # at 23:59 on the 14th. Searching from civil midnight used to hand that
+    # rise to the 16th too, leaving the 15th a 0 h ghost day with the 16th's
+    # tithi.
     vorkuta = Place(67.50867, 64.05216, 3.0)
     jd = gregorian_to_jd(Date(2026, 7, 15))
     self.check_lengths(jd, vorkuta)
-    self.assertAlmostEqual(sunset(jd, vorkuta), sunrise(jd, vorkuta), delta=1e-6)
+    self.assertLess(sunrise(jd, vorkuta), jd - vorkuta.timezone / 24)
+    self.assertAlmostEqual(day_duration(jd, vorkuta)[0], 21.61, delta=0.05)
+    self.assertEqual([tithi(jd, vorkuta)[0], tithi(jd + 1, vorkuta)[0]], [1, 2])
+
+  def test_shoulder_year_anchors_increase_and_bracket_the_set(self):
+    # A full Vorkuta year crosses both midnight-sun edges: anchors stay
+    # ~24 h apart (no 47 h or 0 h days) and every set lies in its own day.
+    vorkuta = Place(67.50867, 64.05216, 3.0)
+    jd0 = gregorian_to_jd(Date(2026, 1, 1))
+    rises = [sunrise(jd0 + i, vorkuta) for i in range(367)]
+    for i in range(366):
+      self.assertTrue(23.0 < (rises[i + 1] - rises[i]) * 24 < 25.0, i)
+      self.assertTrue(rises[i] <= sunset(jd0 + i, vorkuta) <= rises[i + 1], i)
 
   def test_durmuhurtam_never_inverts_at_polar_fallback(self):
     # Tuesday 2026-07-14 is the case whose -21.6 h night used to invert the

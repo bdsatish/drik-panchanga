@@ -458,14 +458,27 @@ def _sun_altitude(jd_ut, latitude, longitude):
   return true_altitude
 
 
-def _is_midnight_sun(jd, place):
-  """True when the Sun culminates above the horizon on ``jd``'s civil date.
+def _transit_in_window(window_start, window_end, place, rsmi):
+  """UT Julian day of the one Sun transit of kind ``rsmi`` in a 24 h UT window."""
+  lat, lon, _tz = place
+  result = swe.rise_trans(window_start, swe.SUN, geopos=(lon, lat, 0), rsmi=rsmi)
+  transit = result[1][0]
+  if not window_start < transit < window_end:
+    # Exactly one transit falls in the window; re-search from its midpoint.
+    result = swe.rise_trans((window_start + window_end) / 2, swe.SUN, geopos=(lon, lat, 0), rsmi=rsmi)
+    transit = result[1][0]
+  return transit
 
-  Only consulted when the Sun is circumpolar (no local rise/set), where the
-  sign of the noon altitude splits polar night from midnight sun.
+
+@lru_cache(maxsize=4096)
+def _solar_midnight(jd, place):
+  """UT Julian day of the lower transit between the local noons bracketing civil day ``jd``.
+
+  Not clamped: east of the zone meridian it falls before civil midnight
+  (Vorkuta: ~22:44 the previous evening).
   """
-  lat, lon, tz = place
-  return _sun_altitude(jd - tz / 24. + 0.5, lat, lon) > 0.0
+  tz = place.timezone
+  return _transit_in_window(jd - tz / 24. - 0.5, jd - tz / 24. + 0.5, place, swe.CALC_ITRANSIT)
 
 
 def _transit_jd(jd, place, lower=False):
@@ -477,55 +490,44 @@ def _transit_jd(jd, place, lower=False):
   transit of each kind exists in its window, so the result is well-defined
   wherever the transit falls on the clock, at any latitude.
 
-  The lower transit is clamped at the civil midnight that opens the day:
-  every consumer (rise/set anchors, pāraṇā windows, eclipse lines,
-  day-length arithmetic) then stays inside the civil day, and day/night
-  lengths stay 24 h / 0 h under the midnight sun. The anchor may sit up to
-  ~8 min after true solar midnight.
+  The lower transit is clamped at the civil midnight that opens the day, so
+  a midnight-sun day reads 00:00 – 24:00. The anchor may sit up to ~8 min
+  after true solar midnight.
   """
-  lat, lon, tz = place
+  tz = place.timezone
   if lower:
-    window_start = jd - tz / 24. - 0.5
-    window_end = jd - tz / 24. + 0.5
-    rsmi = swe.CALC_ITRANSIT
-  else:
-    window_start = jd - tz / 24.
-    window_end = jd - tz / 24. + 1.0
-    rsmi = swe.CALC_MTRANSIT
-  result = swe.rise_trans(window_start, swe.SUN, geopos=(lon, lat, 0), rsmi=rsmi)
-  transit = result[1][0]
-  if not window_start < transit < window_end:
-    # Exactly one transit falls in the window; re-search from its midpoint.
-    result = swe.rise_trans((window_start + window_end) / 2, swe.SUN, geopos=(lon, lat, 0), rsmi=rsmi)
-    transit = result[1][0]
-  return max(transit, jd - tz / 24.) if lower else transit
+    return max(_solar_midnight(jd, place), jd - tz / 24.)
+  return _transit_in_window(jd - tz / 24., jd - tz / 24. + 1.0, place, swe.CALC_MTRANSIT)
 
 
 @lru_cache(maxsize=4096)  # memoize expensive Swiss Ephemeris rise lookup
 def sunrise(jd, place):
   """Sunrise when centre of disc is at horizon for given date and place.
 
-  Above the polar circles, where the Sun can go days without rising, the
+  The day's sunrise is the first rise between the solar midnight that opens
+  civil day ``jd`` and the next one. These windows never overlap, so each
+  rise belongs to exactly one day even where solar midnight is far from
+  civil midnight: at Vorkuta (solar midnight ~22:44) a shoulder-day rise
+  at 23:05 the previous evening is this day's sunrise and prints as -00:55.
+
+  Above the polar circles, where the window can hold no rise at all, the
   day anchors at the matching meridian transit instead:
 
   * polar night: the upper transit (the noon glow);
-  * midnight sun: the lower transit (solar midnight).
+  * midnight sun: the lower transit (solar midnight), clamped at civil
+    midnight.
 
-  Both sit within ~30 min of the real sunrises on the days just outside
-  the polar period, so the anchor series stays continuous across the
-  edges.
+  Both sit within the same window, so anchors strictly increase and stay
+  ~24 h apart across the edges of the polar period.
 
-  Returns the UT Julian day. ``place.timezone`` only locates the local
-  midnight that opens the civil day ``jd``.
+  Returns the UT Julian day.
   """
-  lat, lon, tz = place
-  result = swe.rise_trans(jd - tz / 24, swe.SUN, geopos=(lon, lat, 0), rsmi=_rise_flags + swe.CALC_RISE)
+  lat, lon, _tz = place
+  result = swe.rise_trans(_solar_midnight(jd, place), swe.SUN, geopos=(lon, lat, 0), rsmi=_rise_flags + swe.CALC_RISE)
   rise = result[1][0]  # julian-day number (UT)
-  # The +1.005 bound mirrors sunset(): a real rise a few minutes past the
-  # civil-day edge (Vorkuta, far off its zone meridian) still belongs to
-  # this day's record; the search start keeps it from being claimed twice.
-  if result[0] != 0 or not jd <= rise + tz / 24. < jd + 1.005:
-    rise = (_transit_jd(jd, place, lower=True) if _is_midnight_sun(jd, place) else _transit_jd(jd, place))
+  if result[0] != 0 or not rise < _solar_midnight(jd + 1, place):
+    noon = _transit_jd(jd, place)
+    rise = _transit_jd(jd, place, lower=True) if _sun_altitude(noon, lat, lon) > 0.0 else noon
   return rise
 
 
@@ -533,55 +535,23 @@ def sunrise(jd, place):
 def sunset(jd, place):
   """Sunset when centre of disc is at horizon for given date and place.
 
-  The search starts at the day's sunrise anchor, not local midnight, so the
-  result is the first set of the day by construction. Above the polar
-  circles the same transit fallback applies:
+  The first set after the day's sunrise, if it comes before the next
+  sunrise. Otherwise the Sun neither sets nor rises in between, and stays
+  up or down all day:
 
-  * polar night: the day's upper transit, the same instant as the fallback
-    sunrise — day 0 h, night 24 h;
-  * midnight sun: the next day's lower transit — day 24 h, night 0 h.
+  * up (midnight sun, or a real rise into it): the next sunrise — night 0 h;
+  * down (polar night): this sunrise — day 0 h, night 24 h.
 
+  So ``sunrise(jd) <= sunset(jd) <= sunrise(jd + 1)`` always holds.
   Returns the UT Julian day.
   """
   lat, lon, _tz = place
   srise_ut = sunrise(jd, place)
+  next_rise = sunrise(jd + 1, place)
   result = swe.rise_trans(srise_ut, swe.SUN, geopos=(lon, lat, 0), rsmi=_rise_flags + swe.CALC_SET)
   setting = result[1][0]
-  # A real set always falls within 24 h of its sunrise; the virtual
-  # midnight-sun set (next day's lower transit) lands ~24 h + seconds
-  # after it. Anything beyond — e.g. the next day's set on a sunless
-  # day — belongs to another day's record. (On a midnight-sun day
-  # `_is_midnight_sun` protects the virtual set, which lands on the next
-  # sunrise anchor, from this spill-set branch.)
-  # The anchor series itself can hold one transit instant as two
-  # last-bit-different floats (Vorkuta 2026-07-15): snap a fallback set
-  # that lands exactly on a sunrise anchor to the float the day's own
-  # consumers already hold, so day/night arithmetic stays exact instead
-  # of reading -4e-08 h. ``==`` on floats is deliberate — the values are
-  # only equal when swe returned the same transit instant twice.
-  next_anchor = sunrise(jd + 1, place)
-  if setting == next_anchor:
-    setting = next_anchor
-  elif setting == srise_ut:
-    setting = srise_ut
-  # A real horizon set past the next anchor on a midnight-sun shoulder
-  # day (Vorkuta 2026-07-15; 66-78N off-meridian cases) belongs to the
-  # next day's record: keeping it makes the anchors non-monotonic and
-  # the night -21 h. The fallback is then the day's own sunrise anchor
-  # (day 0 h) — except a genuine ~24 h midnight-sun day, where the set
-  # is the next anchor itself. The twin-anchor shoulders (next anchor at
-  # or before this sunrise) need no span guard: any set past such an
-  # anchor inverts the arithmetic.
-  is_midnight_sun = _is_midnight_sun(jd, place)
-  shoulder_spill = (is_midnight_sun and setting > next_anchor
-                    and (next_anchor <= srise_ut or next_anchor - srise_ut < 0.995))
-  if (result[0] != 0 or not srise_ut < setting < srise_ut + 1.005 or (not is_midnight_sun and setting >= next_anchor)
-      or shoulder_spill):
-    if is_midnight_sun:
-      setting = _transit_jd(jd + 1, place, lower=True)
-    else:
-      setting = _transit_jd(jd, place)
-    setting = max(setting, srise_ut)
+  if result[0] != 0 or not srise_ut < setting <= next_rise:
+    setting = next_rise if _sun_altitude((srise_ut + next_rise) / 2, lat, lon) > 0.0 else srise_ut
   return setting
 
 
@@ -1198,21 +1168,13 @@ def pratah_sandhya(jd, place):
   Smṛti-muktāphalam: morning sandhyā is two ghaṭīs before udaya. One night
   muhūrta = night/15 = two ghaṭīs, using the night that *ends* at today's
   sunrise (yesterday sunset → today sunrise = ``night_duration(jd - 1)``).
-
-  At high latitudes the sunset search can return the early-morning set that
-  belongs to the *previous* evening (it lands just after local midnight),
-  inflating the night beyond 24 h and pushing the start negative — so the
-  night here is anchored at the latest real sunset strictly before today's
-  sunrise, and the start is clamped at civil midnight.
+  Under the midnight sun that night is 0 h and the sandhyā is empty.
 
   Returns ``[start, end]`` as UT JDs; end is sunrise.
   """
   srise = sunrise(jd, place)
-  prev_sunset = max((c for c in (sunset(jd - 1, place), sunset(jd, place)) if c < srise), default=srise)
-  night_hours = max((srise - prev_sunset) * 24, 0.0)
-  start = srise - (night_hours / 15.0) / 24.0
-  start = max(start, jd - place.timezone / 24.)
-  return [start, srise]
+  night_hours = night_duration(jd - 1, place)[0]
+  return [srise - (night_hours / 15.0) / 24.0, srise]
 
 
 def varjyam(jd, place):

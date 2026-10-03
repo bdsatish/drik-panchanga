@@ -17,7 +17,8 @@ the month containing the last day of Phālguna — 12 to 14 pages, set by
 Timings use hours past civil midnight on the Hindu day (sunrise to
 sunrise). Values at or after 24:00 are past midnight; ``00:xx`` appears
 only when that day's sunrise anchor itself sits after midnight (polar
-midnight sun), not as a wrap of 24:00.
+midnight sun), not as a wrap of 24:00. ``-00:xx`` is the evening before: a
+polar sunrise that comes just before civil midnight.
 """
 
 import calendar
@@ -215,11 +216,11 @@ def day_details(location, civil):
 
 
 def sun_moon_lines(location, civil):
-  """``Sun: rise–set`` and ``Moon: rise–set`` lines for one civil day.
+  """``Sun: rise–set`` and ``Moon:`` lines for one civil day.
 
   ``sunrise()`` and ``sunset()`` always return an anchor: above the polar
-  circles they fall back to the meridian transit. A sunset can still land
-  outside the day's band at extreme latitude, and prints as ``--`` then.
+  circles they fall back to the meridian transit. The Moon line lists the
+  day's moonrise and moonset in time order, unlabelled.
 
   The Sun line prefixes the pratah sandhya start in brackets —
   ``Sun: (05:12 –) 06:07 – 18:29`` — sandhya runs from that moment to the
@@ -230,16 +231,9 @@ def sun_moon_lines(location, civil):
   jd = gregorian_to_jd(civil)
   clock = cell_clock(location, civil)
   lines = []
-  # The band check rejects a sunset outside this day's horizon (see the
-  # varjyam guard in panchanga); the sunrise anchor is always in band.
-  rise = panchanga.sunrise(jd, place)
-  set_ = panchanga.sunset(jd, place)
-  rise_text = clock(rise)
-  set_text = clock(set_) if jd - 1 <= set_ <= jd + 2 else "--"
-  # Sandhya starts within two ghaṭis before this day's sunrise, which always
-  # sits in the band, so the start needs no check of its own.
   ps_start, _ps_end = panchanga.pratah_sandhya(jd, place)
-  lines.append(f"Sun: ({clock(ps_start)} –) {rise_text} – {set_text}")
+  lines.append(f"Sun: ({clock(ps_start)} –) {clock(panchanga.sunrise(jd, place))} – "
+               f"{clock(panchanga.sunset(jd, place))}")
   events = []
   for event in (panchanga.moonrise(jd, place), panchanga.moonset(jd, place)):
     if event is not None and jd - 1 <= event <= jd + 2:
@@ -612,7 +606,7 @@ def collect_context(months, location, festivals_path, amanta=True):
   for kind, phase, max_jd in eclipses:
     event_civil = jd_to_local_civil_date(max_jd, location.timezone_name, longitude=location.longitude)
     civil = hindu_day_civil(max_jd, location.timezone_name, sunrise_by_date.get(event_civil),
-                            longitude=location.longitude)
+                            longitude=location.longitude, next_sunrise_jd=sunrise_by_date.get(event_civil + 1))
     eclipse_details_by_date.setdefault(civil, []).append((kind, phase, max_jd))
   eclipse_dates = set(eclipse_details_by_date)
   return {

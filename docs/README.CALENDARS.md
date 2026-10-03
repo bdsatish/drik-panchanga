@@ -80,8 +80,16 @@ on every day:
 
 - **Polar night** — sunrise and sunset both anchor at the upper transit (the
   noon glow): day length 0, night 24 h, as observed.
-- **Midnight sun** — sunrise anchors at the lower transit (solar midnight) and
-  sunset at the next day's lower transit: day length 24 h, night 0 h.
+- **Midnight sun** — sunrise anchors at the lower transit (solar midnight,
+  clamped at civil midnight) and sunset at the next day's sunrise: day length
+  ~24 h, night 0 h.
+
+A day's sunrise is the first rise between the solar midnight that opens it
+and the next one, so every rise belongs to exactly one day. East of the zone
+meridian solar midnight comes before civil midnight (Vorkuta: ~22:44), and
+near the midnight-sun edges a real sunrise can fall just before 00:00. It
+then prints as `-00:55` on its own day's row. A sunset is the first set
+before the next sunrise, so day and night lengths never go negative.
 
 Both transits sit within ~30 minutes of the real sunrises on the days just
 outside the polar period, so tithi, nakshatra, yoga, karaṇa and the derived

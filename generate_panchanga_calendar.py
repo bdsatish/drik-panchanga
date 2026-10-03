@@ -154,7 +154,7 @@ def timing_key_line():
   """Footer key for the 24:00+ clock (shared by T/N/Y end times)."""
   return ("Times: hours past civil midnight on the Hindu day (sunrise–sunrise). "
           "After 24:00 = past midnight; 00:xx only if that day's sunrise anchor "
-          "is after midnight (polar), never a wrap of 24:00.")
+          "is after midnight, -00:xx before it (polar); never a wrap.")
 
 
 def tithi_key_line(recurring="specials"):
@@ -668,7 +668,8 @@ def format_eclipse_line(eclipses, timezone_name, sunrise_by_date=None, longitude
     for kind, phase, maximum_jd in eclipses:
       event_civil = jd_to_local_civil_date(maximum_jd, timezone_name, longitude)
       sunrise_jd = sunrise_by_date.get(event_civil)
-      civil = hindu_day_civil(maximum_jd, timezone_name, sunrise_jd, longitude=longitude)
+      civil = hindu_day_civil(maximum_jd, timezone_name, sunrise_jd, longitude=longitude,
+                              next_sunrise_jd=sunrise_by_date.get(event_civil + 1))
       month_name = calendar.month_abbr[civil.month]
       day = f"{civil.day:02d}"
       maximum_hm = format_local_hm(maximum_jd, timezone_name, anchor_civil=civil, longitude=longitude)
@@ -687,7 +688,9 @@ def format_eclipse_line(eclipses, timezone_name, sunrise_by_date=None, longitude
 def eclipse_hindu_date(maximum_jd, timezone_name, sunrise_by_date=None, longitude=None):
   """Local civil date of an eclipse maximum (Hindu-day when that morning's sunrise is given)."""
   event_civil = jd_to_local_civil_date(maximum_jd, timezone_name, longitude)
-  return hindu_day_civil(maximum_jd, timezone_name, (sunrise_by_date or {}).get(event_civil), longitude=longitude)
+  sunrise_by_date = sunrise_by_date or {}
+  return hindu_day_civil(maximum_jd, timezone_name, sunrise_by_date.get(event_civil), longitude=longitude,
+                         next_sunrise_jd=sunrise_by_date.get(event_civil + 1))
 
 
 def eclipse_civil_dates(eclipses, timezone_name, sunrise_by_date=None, longitude=None):

@@ -157,6 +157,14 @@ class FormatLocalHmTests(unittest.TestCase):
     self.assertEqual(hindu_day_civil(sunrise, self.TZ, sunrise), Date(2026, 3, 4))
     self.assertEqual(format_local_hm(jd, self.TZ, anchor_civil=hindu_day_civil(jd, self.TZ, sunrise)), "24:05")
 
+  def test_hindu_day_civil_rolls_forward_past_a_pre_midnight_sunrise(self):
+    # Polar shoulder: the 4th's sunrise is 23:05 on the 3rd, so 23:30 belongs to the 4th.
+    jd = self._jd(23, 30, day=3)
+    next_sunrise = self._jd(23, 5, day=3)
+    civil = hindu_day_civil(jd, self.TZ, self._jd(0, 2, day=3), next_sunrise_jd=next_sunrise)
+    self.assertEqual(civil, Date(2026, 3, 4))
+    self.assertEqual(format_local_hm(jd, self.TZ, anchor_civil=civil), "-00:30")
+
   def test_rounds_up_to_24_00_not_00_00(self):
     # Regression: a modulo by 24h used to wrap 23:59:30+ back to 00:00, which
     # contradicted the documented hours-past-midnight convention and read as
