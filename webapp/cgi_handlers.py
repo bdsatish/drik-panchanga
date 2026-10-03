@@ -5,7 +5,6 @@ import json
 import logging
 import os
 import sys
-import traceback
 from pathlib import Path
 from urllib.parse import parse_qs
 
@@ -22,12 +21,13 @@ from webapp.app import (
   suggest_city_for_ip,
 )
 from webapp.day_panchanga import compute_day_panchanga
-from webapp.pdf_service import generate_pdf
+from webapp.pdf_service import PDF_UNAVAILABLE, generate_pdf
 from generate_panchanga_calendar import require_coordinate_selection
 
-PROJECT_ROOT = _REPO_ROOT
 log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
+# Error text and tracebacks carry server paths; clients get this, the log the detail.
+INTERNAL_ERROR = "Internal error; see the server log."
 
 
 def _query_params():
@@ -108,9 +108,9 @@ def handle_cities():
     query = (params.get("q") or [""])[0]
     limit = city_search_limit((params.get("limit") or ["20"])[0])
     payload = {"cities": search_cities(query, limit=limit)}
-  except Exception as error:  # catch-all so CGI still returns a response
-    log.error("CGI cities failed: %s", error)
-    write_error(str(error) or traceback.format_exc(), status="500 Internal Server Error", as_json=True)
+  except Exception:  # catch-all so CGI still returns a response
+    log.exception("CGI cities failed")
+    write_error(INTERNAL_ERROR, status="500 Internal Server Error", as_json=True)
     return
   write_json(payload)
 
@@ -120,9 +120,9 @@ def handle_suggest_city():
   try:
     ip = client_ip(os.environ.get("HTTP_X_FORWARDED_FOR", ""), os.environ.get("REMOTE_ADDR"))
     payload = {"city": suggest_city_for_ip(ip)}
-  except Exception as error:  # catch-all so CGI still returns a response
-    log.error("CGI suggest_city failed: %s", error)
-    write_error(str(error) or traceback.format_exc(), status="500 Internal Server Error", as_json=True)
+  except Exception:  # catch-all so CGI still returns a response
+    log.exception("CGI suggest_city failed")
+    write_error(INTERNAL_ERROR, status="500 Internal Server Error", as_json=True)
     return
   write_json(payload)
 
@@ -146,9 +146,9 @@ def handle_panchanga():
   except ValueError as error:
     write_error(str(error), as_json=True)
     return
-  except Exception as error:  # catch-all so CGI still returns a response
-    log.error("CGI panchanga failed: %s", error)
-    write_error(str(error) or traceback.format_exc(), status="500 Internal Server Error", as_json=True)
+  except Exception:  # catch-all so CGI still returns a response
+    log.exception("CGI panchanga failed")
+    write_error(INTERNAL_ERROR, status="500 Internal Server Error", as_json=True)
     return
   write_json(payload)
 
@@ -166,15 +166,21 @@ def handle_generate():
   try:
     form = _parse_urlencoded_post()
     pdf_bytes, filename = generate_pdf(form)
-  except (OSError, ValueError, RuntimeError, ImportError) as error:
-    # ImportError covers the missing optional [pdf] extra (check_reportlab's
-    # message); accepted tradeoff: a genuinely missing module in the
-    # generation path also surfaces as 400 with its message, not a 500.
+  except (ValueError, RuntimeError) as error:
     write_error(str(error))
     return
-  except Exception as error:  # catch-all so CGI still returns a response
+  except ImportError as error:
+    # A missing module (check_reportlab's [pdf] extra hint) is the server's fault.
+    write_error(str(error), status="503 Service Unavailable")
+    return
+  except OSError as error:
+    # Missing fonts or data files; the message carries server paths.
     log.error("CGI generate failed: %s", error)
-    write_error(f"Internal error: {error}", status="500 Internal Server Error")
+    write_error(PDF_UNAVAILABLE, status="503 Service Unavailable")
+    return
+  except Exception:  # catch-all so CGI still returns a response
+    log.exception("CGI generate failed")
+    write_error(INTERNAL_ERROR, status="500 Internal Server Error")
     return
 
   _emit([
@@ -193,8 +199,8 @@ def handle_status():
       "ok": True,
       "cities": n_cities,
     }
-  except Exception as error:  # catch-all so CGI still returns a response
-    log.error("CGI status failed: %s", error)
-    write_error(str(error), status="500 Internal Server Error", as_json=True)
+  except Exception:  # catch-all so CGI still returns a response
+    log.exception("CGI status failed")
+    write_error(INTERNAL_ERROR, status="500 Internal Server Error", as_json=True)
     return
   write_json(payload)

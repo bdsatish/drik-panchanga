@@ -38,7 +38,7 @@ from generate_panchanga_calendar import (
 )
 from panchanga import sweph_version
 from webapp.day_panchanga import compute_day_panchanga
-from webapp.pdf_service import generate_pdf
+from webapp.pdf_service import PDF_UNAVAILABLE, generate_pdf
 from webapp.ics_service import generate_ics
 
 app = Flask(__name__)
@@ -186,11 +186,15 @@ def api_panchanga():
 def generate():
   try:
     pdf_bytes, filename = generate_pdf(request.form)
-  except (OSError, ValueError, RuntimeError, ImportError) as error:
-    # ImportError covers the missing optional [pdf] extra (check_reportlab's
-    # message); accepted tradeoff: a genuinely missing module in the
-    # generation path also surfaces as 400 with its message, not a 500.
+  except (ValueError, RuntimeError) as error:
     abort(400, description=str(error))
+  except ImportError as error:
+    # A missing module (check_reportlab's [pdf] extra hint) is the server's fault.
+    abort(503, description=str(error))
+  except OSError as error:
+    # Missing fonts or data files; the message carries server paths.
+    log.error("PDF generation failed: %s", error)
+    abort(503, description=PDF_UNAVAILABLE)
   return send_file(io.BytesIO(pdf_bytes), mimetype="application/pdf", as_attachment=True, download_name=filename,
                    max_age=0)
 
@@ -218,14 +222,15 @@ def ics_calendar():
 
 
 @app.errorhandler(400)
+@app.errorhandler(503)
 def bad_request(error):
   message = getattr(error, "description", None) or "Bad request"
   # Browsers also send ``*/*``, which matches JSON; a failed PDF form must still
   # show the page with its error, so JSON only when preferred over HTML.
   wants_json = request.accept_mimetypes.best_match(["text/html", "application/json"]) == "application/json"
   if wants_json or request.path.startswith("/api/"):
-    return jsonify({"error": message}), 400
-  return render_template("index.html", error=message), 400
+    return jsonify({"error": message}), error.code
+  return render_template("index.html", error=message), error.code
 
 
 def main():

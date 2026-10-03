@@ -16,6 +16,8 @@ from generate_panchanga_calendar import (
   resolve_location,
 )
 
+PDF_UNAVAILABLE = "PDF generation is unavailable on this server; see the server log."
+
 
 def build_pdf(location, months, output_path, **kwargs):
   """Dispatch to the appropriate builder; mockable for tests."""
