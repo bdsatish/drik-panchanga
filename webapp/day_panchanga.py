@@ -129,18 +129,7 @@ def _compute_day_details_unlocked(location, civil, amanta=None, coordinate_selec
     matching meridian transit (solar noon in polar night, solar midnight in
     midnight sun) via the core sunrise()/sunset() fallback.
     """
-  # ``set_coordinate_selection`` mutates the module globals ``chosen_ayanamsa``
-  # and ``coordinate_flag``. This helper is shared by the JSON day API and the
-  # ICS generator, and both are reached from long-lived web workers, so a call
-  # must not leak its mode into the next request. Restoring the tuple
-  # ``(chosen_ayanamsa, coordinate_flag)`` exactly matters: the README's
-  # documented ``set_chosen_ayanamsa('citra')`` pattern sets the ayanamsa key
-  # only and leaves any tropical mode in place, and re-deriving the mode
-  # from sidereal-vs-tropical would silently flip such a caller to sidereal.
-  previous_ayanamsa = panchanga.chosen_ayanamsa
-  previous_coordinate_flag = panchanga.coordinate_flag
-  try:
-    panchanga.set_coordinate_selection(coordinate_selection)
+  with panchanga.using_coordinate_selection(coordinate_selection):
     place = place_for_date(location, civil)
     jd = gregorian_to_jd(civil)
     # UT JD -> this day's 24:00+ clock, at the UTC offset in force at each instant.
@@ -182,13 +171,6 @@ def _compute_day_details_unlocked(location, civil, amanta=None, coordinate_selec
     durmuhurta = panchanga.durmuhurtam(jd, place)
     varjyam = panchanga.varjyam(jd, place)
     pratah_sandhya = panchanga.pratah_sandhya(jd, place)
-  finally:
-    # Restore the caller's exact coordinate state even when the computation
-    # raises: the selection above is scoped to this one computation, not to
-    # the whole process. Set both the ayanamsa key and the flag directly —
-    # the pairing helpers cannot reproduce a tropical-flag/citra-key state.
-    panchanga.chosen_ayanamsa = previous_ayanamsa
-    panchanga.coordinate_flag = previous_coordinate_flag
   return {
     "civil": civil,
     "place": place,

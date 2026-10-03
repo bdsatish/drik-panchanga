@@ -27,6 +27,7 @@ Use Swiss ephemeris to calculate tithi, nakshatra, etc.
 
 from math import ceil, floor
 from collections import namedtuple as struct
+from contextlib import contextmanager
 from functools import lru_cache
 import os
 import sys
@@ -41,9 +42,9 @@ coordinate_flag = swe.FLG_SIDEREAL
 nakshatra_system = 'equal'
 chosen_ayanamsa = 'citra'
 # Mutable ayanāṃśa / coordinate globals above are not thread-safe alone.
-# Web and PDF code hold this lock around any calculation that calls
-# set_coordinate_selection / set_chosen_ayanamsa so concurrent requests
-# do not mix modes.
+# Web and PDF code run mode-sensitive calculations inside
+# using_coordinate_selection, which holds this lock, so concurrent requests
+# do not mix modes and none leaks its mode to the next.
 coordinate_calculation_lock = RLock()
 # ---------
 
@@ -154,6 +155,26 @@ def set_coordinate_selection(selection):
     raise ValueError('Unknown coordinate selection: {}'.format(selection))
   set_chosen_ayanamsa(selection)
   set_coordinate_mode('sidereal')
+
+
+@contextmanager
+def using_coordinate_selection(selection):
+  """Hold ``coordinate_calculation_lock`` with ``selection`` applied.
+
+  On exit the exact ``(chosen_ayanamsa, coordinate_flag)`` pair comes back,
+  so no caller leaks its mode into the next one. Restoring the pair rather
+  than re-deriving a selection matters: the README's
+  ``set_chosen_ayanamsa('citra')`` pattern sets the key only, and a tropical
+  caller using it must stay tropical.
+  """
+  global chosen_ayanamsa, coordinate_flag
+  with coordinate_calculation_lock:
+    previous = chosen_ayanamsa, coordinate_flag
+    try:
+      set_coordinate_selection(selection)
+      yield
+    finally:
+      chosen_ayanamsa, coordinate_flag = previous
 
 
 def set_ayanamsa_mode():

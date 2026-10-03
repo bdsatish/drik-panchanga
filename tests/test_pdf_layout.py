@@ -161,6 +161,16 @@ class PdfLayoutTests(unittest.TestCase):
     self.assertTrue(path.name.startswith("helsinki-fi_panchanga_"))
     self.assertTrue(path.name.endswith("_tropical.pdf"))
 
+  def test_tropical_resolver_restores_the_caller_mode(self):
+    # The ICS feed and both PDF builders resolve the lunar year first; a
+    # tropical request must not leave a sidereal process tropical.
+    panchanga.set_coordinate_selection("raman")
+    try:
+      lunar_year_months(2026, load_location("Helsinki"), "tropical")
+      self.assertEqual((panchanga.chosen_ayanamsa, panchanga.coordinate_flag), ("raman", panchanga.swe.FLG_SIDEREAL))
+    finally:
+      panchanga.set_coordinate_selection("citra")
+
   def test_cli_accepts_month_system(self):
     parser = argument_parser()
     arguments = parser.parse_args(["--city", "Helsinki", "--start", "2026", "--month", "purnimanta"])

@@ -635,7 +635,7 @@ def collect_context(months, location, festivals_path, amanta=True):
 
 def build_monthly_pdf(location, months, output_path, festivals_path=None, month_system="amanta",
                       coordinate_selection="citra"):
-  with panchanga.coordinate_calculation_lock:
+  with panchanga.using_coordinate_selection(coordinate_selection):
     return _build_monthly_pdf_unlocked(location, months, output_path, festivals_path=festivals_path,
                                        month_system=month_system, coordinate_selection=coordinate_selection)
 
@@ -646,7 +646,6 @@ def _build_monthly_pdf_unlocked(location, months, output_path, festivals_path=No
   amanta = require_month_system(month_system)
   if festivals_path is None:
     festivals_path = DEFAULT_FESTIVALS_PATH
-  panchanga.set_coordinate_selection(coordinate_selection)
 
   context = collect_context(months, location, Path(festivals_path), amanta=amanta)
 

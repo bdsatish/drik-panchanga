@@ -304,8 +304,7 @@ def lunar_year_boundaries(start_year, location, coordinate_selection="citra"):
   year fails the single-Ugadi rule depends on the mode, so every error names
   the ayanāṃśa as well as the place.
   """
-  with panchanga.coordinate_calculation_lock:
-    panchanga.set_coordinate_selection(coordinate_selection)
+  with panchanga.using_coordinate_selection(coordinate_selection):
     where = f"{location.name} ({coordinate_selection_label(coordinate_selection)})"
     ugadis = ugadi_dates(_month_sequence(start_year - 1, 11, LUNAR_YEAR_MAX_MONTHS), location, start_year)
     if not ugadis:
@@ -1167,11 +1166,10 @@ def build_pdf(location, months, output_path, festivals_path=None, month_system="
   printed months plus ``record_span``'s day pad, so the solar day count and
   tithis that run past a sunrise are right on the first and last pages.
   """
-  with panchanga.coordinate_calculation_lock:
+  with panchanga.using_coordinate_selection(coordinate_selection):
     ensure_pdf_fonts()
     amanta = require_month_system(month_system)
     recurring = require_recurring(recurring)
-    panchanga.set_coordinate_selection(coordinate_selection)
     pad_start, pad_end = record_span(months)
     start_year, start_month = months[0]
     end_year, end_month = months[-1]
