@@ -574,9 +574,9 @@ def sunset(jd, place):
   # anchor inverts the arithmetic.
   is_midnight_sun = _is_midnight_sun(jd, place)
   shoulder_spill = (is_midnight_sun and setting > next_anchor
-                     and (next_anchor <= srise_ut or next_anchor - srise_ut < 0.995))
-  if (result[0] != 0 or not srise_ut < setting < srise_ut + 1.005
-      or (not is_midnight_sun and setting >= next_anchor) or shoulder_spill):
+                    and (next_anchor <= srise_ut or next_anchor - srise_ut < 0.995))
+  if (result[0] != 0 or not srise_ut < setting < srise_ut + 1.005 or (not is_midnight_sun and setting >= next_anchor)
+      or shoulder_spill):
     if is_midnight_sun:
       setting = _transit_jd(jd + 1, place, lower=True)
     else:
