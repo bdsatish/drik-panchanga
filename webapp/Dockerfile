@@ -33,6 +33,11 @@ RUN bash /tmp/ensure_ephe.sh && rm /tmp/ensure_ephe.sh
 ENV PORT=8080
 EXPOSE 8080
 
+# Behind Railway's edge proxy the socket peer is the proxy itself, so the
+# deployment must trust one X-Forwarded-For hop for /api/suggest-city to
+# geoIP-suggest the visitor's city.
+ENV PANCHANGA_TRUSTED_PROXY_HOPS=1
+
 # One worker: Swiss Ephemeris is process-global. Timeout stays generous for
 # cold starts and high-latitude edge cases even though a typical PDF is ~0.4s.
 # Entrypoint expands $PORT and disables gunicorn's control socket (fails on
