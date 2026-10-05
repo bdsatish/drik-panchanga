@@ -596,6 +596,7 @@ def moonset_jd(jd, place):
   return _moon_jd_after_midnight(jd, place, False)
 
 
+@lru_cache(maxsize=4096)
 def _next_moon_event_jd(after_ut, place, rise=True):
   """UT Julian day of the first moon rise/set after ``after_ut``, or ``None``."""
   lat, lon, _tz = place

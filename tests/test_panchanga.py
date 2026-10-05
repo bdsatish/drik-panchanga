@@ -1003,6 +1003,7 @@ class EphemerisCacheTests(PanchangaTestCase):
     sunset.cache_clear()
     moonrise_jd.cache_clear()
     moonset_jd.cache_clear()
+    panchanga._next_moon_event_jd.cache_clear()
 
   def test_planet_longitude_cache_is_ayanamsa_aware(self):
     jd = gregorian_to_jd(Date(2023, 7, 25))
@@ -1035,6 +1036,13 @@ class EphemerisCacheTests(PanchangaTestCase):
     hits = moonset_jd.cache_info().hits
     self.assertEqual(moonset_jd(date2, bangalore), first)
     self.assertEqual(moonset_jd.cache_info().hits, hits + 1)
+
+  def test_next_moon_event_cache_hit_on_repeat(self):
+    after = sunrise(date2, bangalore)
+    first = panchanga._next_moon_event_jd(after, bangalore)
+    hits = panchanga._next_moon_event_jd.cache_info().hits
+    self.assertEqual(panchanga._next_moon_event_jd(after, bangalore), first)
+    self.assertEqual(panchanga._next_moon_event_jd.cache_info().hits, hits + 1)
 
   def test_new_moon_day_bucket_shared_across_adjacent_days(self):
     """Nearest-day search centres must collide within one synodic span."""
