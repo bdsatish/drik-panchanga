@@ -99,7 +99,7 @@ class PdfLayoutTests(unittest.TestCase):
       with mock.patch("generate_panchanga_calendar.find_local_eclipses", return_value=[
         ("Lunar", "Partial", 2461103.0419131187),
       ]), mock.patch("generate_panchanga_calendar.draw_page_footer", wraps=calendar_module.draw_page_footer) as footer:
-        build_pdf(load_location("Helsinki"), _month_sequence(2026, 6, 14), output)
+        build_pdf(load_location("Helsinki"), _month_sequence(2026, 6, 3), output)
       document = output.read_bytes()
 
     page_objects = re.findall(rb"/Type\s*/Page\b", document)
