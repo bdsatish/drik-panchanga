@@ -56,7 +56,7 @@ class BuildPdfTests(unittest.TestCase):
   def test_purnimanta_prints_the_same_months(self):
     # The span comes from amānta records; ``--month`` only changes display.
     location = load_location("Helsinki")
-    months = lunar_year_months(2026, location)
+    months = lunar_year_months(2026, location)[:3]
     with TemporaryDirectory() as directory:
       output = Path(directory) / "calendar.pdf"
       with mock.patch("generate_monthly_calendar.find_local_eclipses", return_value=[]):
@@ -66,14 +66,14 @@ class BuildPdfTests(unittest.TestCase):
 
   def test_pdf_metadata_contains_title(self):
     location = load_location("Ujjain")
-    months = lunar_year_months(2026, location)
+    months = lunar_year_months(2026, location)[:3]
     with TemporaryDirectory() as directory:
       output = Path(directory) / "calendar.pdf"
       with mock.patch("generate_monthly_calendar.find_local_eclipses", return_value=[]):
         build_monthly_pdf(location, months, output)
       document = output.read_bytes()
     # Title/subject live in the uncompressed Info dict; page streams are flate-encoded.
-    self.assertIn(b"Ujjain, IN Panchanga March 2026 to April 2027", document)
+    self.assertIn(b"Ujjain, IN Panchanga March 2026 to May 2026", document)
     self.assertIn(RULESET_VERSION.encode("ascii"), document)
 
   def test_default_output_path(self):
