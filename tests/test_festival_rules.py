@@ -1754,6 +1754,18 @@ class PradoshamRealLocationTests(unittest.TestCase):
     # January 2026 has 2-3 Pradoshams depending on lunar cycle alignment
     self.assertIn(len(jan_dates), [2, 3])
 
+  def test_pradosham_helsinki_sorted_within_span(self):
+    """Pradosham handles high-latitude locations where some days have no sunset."""
+    location = load_location("Helsinki")
+    panchanga.set_chosen_ayanamsa("citra")
+    months = _month_sequence(2026, 6, 14)
+    records = daily_records(months, location)
+    geopos = (location.longitude, location.latitude, 0.0)
+
+    dates = select_pradosham_dates(records, geopos=geopos, timezone_name=location.timezone_name)
+    self.assertEqual(dates, sorted(dates))
+    self.assertTrue(all(2026 <= d.year <= 2027 for d in dates), msg=str(dates))
+
   def test_pradosham_year_boundary(self):
     """Pradosham should handle December to January transition."""
     location = load_location("Ujjain")
@@ -1788,6 +1800,18 @@ class SankashtiChaturthiRealLocationTests(unittest.TestCase):
     self.assertEqual(len(jan_dates), 1)
     # Tight monthly cadence: every Gregorian month in the 14-month span has
     # 1-2 Sankashtis (a second one when the lunar cycle straddles a boundary).
+
+  def test_sankashti_helsinki_sorted_within_span(self):
+    """Sankashti handles high-latitude locations where some days have no moonrise."""
+    location = load_location("Helsinki")
+    panchanga.set_chosen_ayanamsa("citra")
+    months = _month_sequence(2026, 6, 14)
+    records = daily_records(months, location)
+    geopos = (location.longitude, location.latitude, 0.0)
+
+    dates = select_sankashti_chaturthi_dates(records, geopos=geopos, timezone_name=location.timezone_name)
+    self.assertEqual(dates, sorted(dates))
+    self.assertTrue(all(2026 <= d.year <= 2027 for d in dates), msg=str(dates))
 
   def test_sankashti_us_timezone(self):
     """Sankashti Chaturthi should work with US timezones."""
