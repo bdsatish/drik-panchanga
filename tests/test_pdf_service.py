@@ -1,5 +1,6 @@
 """Shared Flask/CGI PDF generation tests."""
 
+import functools
 import io
 import os
 from pathlib import Path
@@ -221,10 +222,20 @@ def unfold_ics(text):
   return text.replace("\r\n ", "")
 
 
+@functools.lru_cache(maxsize=None)
+def _ics(city, year, selection="citra", month_system="amanta"):
+  """Raw ``generate_ics`` text, built once per distinct calendar.
+
+  Only tests that mock nothing may use this: a cached string must not stand in
+  for a run whose internals or coordinate mode a test switches.
+  """
+  return generate_ics(load_location(city), year, coordinate_selection=selection, month_system=month_system)
+
+
 class IcsServiceTests(unittest.TestCase):
 
   def test_describes_varjyam_for_every_day(self):
-    ics = unfold_ics(generate_ics(load_location("Tirupati"), 2026))
+    ics = unfold_ics(_ics("Tirupati", 2026))
     self.assertEqual(ics.count("Varjyam:"), ics.count("BEGIN:VEVENT"))
     # 01:02:03 and 04:05:06 IST on 1 March 2026, the first printed row
     # (the lunar year starts in Ugadi's month).
@@ -261,7 +272,7 @@ class IcsServiceTests(unittest.TestCase):
     # 2026-03-19 (Tirupati) skips a tithi: number 30 at the civil-midnight
     # evaluation and number 1 ends later the same Hindu day. The day view and
     # monthly grid print both segments; the ICS DESCRIPTION must too.
-    ics = unfold_ics(generate_ics(load_location("Tirupati"), 2026))
+    ics = unfold_ics(_ics("Tirupati", 2026))
 
     def tithi_segment(stamp):
       block = [b for b in ics.split("BEGIN:VEVENT") if f"DTSTART;VALUE=DATE:{stamp}" in b][0]
@@ -278,7 +289,7 @@ class IcsServiceTests(unittest.TestCase):
     # RFC 5545 DTEND is exclusive: every all-day event must end on the next
     # civil date, including month and year rollovers (a regression here makes
     # zero-length events at every boundary while the suite stays green).
-    ics = unfold_ics(generate_ics(load_location("Tirupati"), 2026))
+    ics = unfold_ics(_ics("Tirupati", 2026))
     pairs = []
     for block in ics.split("BEGIN:VEVENT")[1:]:
       start = re.search(r"DTSTART;VALUE=DATE:(\d{8})", block).group(1)
@@ -362,9 +373,8 @@ class IcsServiceTests(unittest.TestCase):
     self.assertTrue(all(len(line.encode("utf-8")) <= 75 for line in physical_lines))
 
   def test_ics_respects_tropical_mode(self):
-    loc = load_location("Tirupati")
-    sid = generate_ics(loc, 2026, coordinate_selection="citra")
-    trop = generate_ics(loc, 2026, coordinate_selection="tropical")
+    sid = _ics("Tirupati", 2026, "citra")
+    trop = _ics("Tirupati", 2026, "tropical")
     # Sidereal Ugadi 2026 sits in March and the next one in April: 14 months,
     # 426 days. Tropical Ugadi stays in March and the next falls in March
     # too: 13 months, 396 days.
@@ -388,22 +398,20 @@ class IcsServiceTests(unittest.TestCase):
     self.assertNotEqual(first_description(sid), first_description(trop))
 
   def test_ics_event_count_matches_month_span(self):
-    ics = generate_ics(load_location("Tirupati"), 2026)
+    ics = _ics("Tirupati", 2026)
     self.assertGreater(ics.count("BEGIN:VEVENT"), 400)
     self.assertLessEqual(ics.count("BEGIN:VEVENT"), 426)
 
   def test_ics_metadata_is_selection_aware(self):
-    loc = load_location("Tirupati")
-    sid = generate_ics(loc, 2026, coordinate_selection="citra")
-    trop = generate_ics(loc, 2026, coordinate_selection="tropical")
+    sid = _ics("Tirupati", 2026, "citra")
+    trop = _ics("Tirupati", 2026, "tropical")
     self.assertIn("X-WR-CALDESC:Chitra-paksha · Amānta", sid)
     self.assertIn("X-WR-CALDESC:Tropical (Sāyana) · Amānta", trop)
 
   def test_ics_uid_differs_by_selection_and_month_system(self):
-    loc = load_location("Tirupati")
-    sid = generate_ics(loc, 2026, coordinate_selection="citra")
-    trop = generate_ics(loc, 2026, coordinate_selection="tropical")
-    purni = generate_ics(loc, 2026, coordinate_selection="citra", month_system="purnimanta")
+    sid = _ics("Tirupati", 2026, "citra")
+    trop = _ics("Tirupati", 2026, "tropical")
+    purni = _ics("Tirupati", 2026, "citra", "purnimanta")
 
     def first_uid(text):
       return next(line for line in text.split("\r\n") if line.startswith("UID:"))
@@ -412,7 +420,8 @@ class IcsServiceTests(unittest.TestCase):
     self.assertNotEqual(first_uid(sid), first_uid(purni))
 
   def test_ics_flask_filename_is_selection_aware(self):
-    response = app.test_client().get("/api/panchanga.ics?city=Helsinki&start=2026&ayanamsa=tropical")
+    with mock.patch("webapp.app.generate_ics", return_value="BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n"):
+      response = app.test_client().get("/api/panchanga.ics?city=Helsinki&start=2026&ayanamsa=tropical")
     self.assertEqual(response.status_code, 200)
     disposition = response.headers["Content-Disposition"]
     self.assertIn("tropical", disposition)
@@ -426,14 +435,15 @@ class IcsServiceTests(unittest.TestCase):
     client = app.test_client()
     spellings = ["Helsinki", "Helsinki, FI", "helsinki,fi", " Helsinki , fi "]
     names = set()
-    for spelling in spellings:
-      with self.subTest(city=spelling):
-        response = client.get(f"/api/panchanga.ics?city={spelling}&start=2026")
-        self.assertEqual(response.status_code, 200)
-        disposition = response.headers["Content-Disposition"]
-        self.assertIn("panchanga-helsinki-fi-citra-amanta-2026.ics", disposition)
-        self.assertNotIn(",", disposition.split("filename=")[-1])  # no raw comma
-        names.add(disposition)
+    with mock.patch("webapp.app.generate_ics", return_value="BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n"):
+      for spelling in spellings:
+        with self.subTest(city=spelling):
+          response = client.get(f"/api/panchanga.ics?city={spelling}&start=2026")
+          self.assertEqual(response.status_code, 200)
+          disposition = response.headers["Content-Disposition"]
+          self.assertIn("panchanga-helsinki-fi-citra-amanta-2026.ics", disposition)
+          self.assertNotIn(",", disposition.split("filename=")[-1])  # no raw comma
+          names.add(disposition)
     self.assertEqual(len(names), 1)
 
   def test_ics_flask_filename_matches_the_uid_slug(self):
