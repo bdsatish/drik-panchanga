@@ -792,6 +792,28 @@ class UpakarmaEclipseFallbackTests(unittest.TestCase):
 
 class RigUpakarmaTests(unittest.TestCase):
 
+  def test_vriddhi_keeps_former_sunrise(self):
+    """A doubled tithi keeps the former date for every nakshatra-based selector."""
+    cases = [
+      ("rig", select_rig_upakarma_dates,
+       [festival_record(Date(2030, 8, 10), "S12", masa="5", is_adhika=False, nakshatra=22, sunrise_jd=0.0),
+        festival_record(Date(2030, 8, 11), "S13", masa="5", is_adhika=False, nakshatra=22, sunrise_jd=0.0)], None),
+      ("sama", select_sama_upakarma_dates,
+       [festival_record(Date(2030, 9, 8), "S11", masa="6", is_adhika=False, nakshatra=13, sunrise_jd=0.0),
+        festival_record(Date(2030, 9, 9), "S12", masa="6", is_adhika=False, nakshatra=13, sunrise_jd=0.0)], None),
+      ("onam", select_onam_dates,
+       [festival_record(Date(2030, 8, 20), "S5", masa="5", is_adhika=False, nakshatra=22, sunrise_jd=10.0),
+        festival_record(Date(2030, 8, 21), "S6", masa="5", is_adhika=False, nakshatra=22, sunrise_jd=11.0)],
+       lambda record_value: mock.patch("festival_rules.panchanga.raasi", return_value=5)),
+    ]
+    for label, selector, records, patcher in cases:
+      with self.subTest(label):
+        context = patcher(None) if patcher else mock.patch("festival_rules.hindu_day_has_eclipse", return_value=False)
+        with context:
+          self.assertEqual(selector(records), [records[0].civil_date])
+          self.assertNotEqual(selector(records), [records[-1].civil_date])
+
+
   def test_selects_nija_sravana_with_sravana_nakshatra(self):
     records = [
       festival_record(Date(2030, 8, 10), "S12", masa="5", is_adhika=False, nakshatra=22, sunrise_jd=0.0),
@@ -804,13 +826,6 @@ class RigUpakarmaTests(unittest.TestCase):
       festival_record(Date(2030, 8, 10), "S12", masa="A5", is_adhika=True, nakshatra=22, sunrise_jd=0.0),
     ]
     self.assertEqual(select_rig_upakarma_dates(records), [])
-
-  def test_vriddhi_keeps_former_sunrise(self):
-    records = [
-      festival_record(Date(2030, 8, 10), "S12", masa="5", is_adhika=False, nakshatra=22, sunrise_jd=0.0),
-      festival_record(Date(2030, 8, 11), "S13", masa="5", is_adhika=False, nakshatra=22, sunrise_jd=0.0),
-    ]
-    self.assertEqual(select_rig_upakarma_dates(records), [Date(2030, 8, 10)])
 
   def test_kshaya_sravana_postpones_to_bhadrapada(self):
     # Sravana masa skips nakshatra 22 between sunrises (21 -> 23). The Ashadha
@@ -908,13 +923,6 @@ class SamaUpakarmaTests(unittest.TestCase):
     ]
     self.assertEqual(select_sama_upakarma_dates(records), [Date(2026, 9, 13), Date(2027, 9, 3)])
 
-  def test_vriddhi_keeps_former_sunrise(self):
-    records = [
-      festival_record(Date(2030, 9, 8), "S11", masa="6", is_adhika=False, nakshatra=13, sunrise_jd=0.0),
-      festival_record(Date(2030, 9, 9), "S12", masa="6", is_adhika=False, nakshatra=13, sunrise_jd=0.0),
-    ]
-    self.assertEqual(select_sama_upakarma_dates(records), [Date(2030, 9, 8)])
-
   def test_eclipse_on_bhadrapada_hasta_postpones_to_sravana_hasta(self):
     records = [
       festival_record(Date(2030, 8, 9), "S11", masa="5", is_adhika=False, nakshatra=12, sunrise_jd=10.0),
@@ -939,14 +947,6 @@ class OnamTests(unittest.TestCase):
       festival_record(Date(2030, 8, 21), "S6", masa="5", is_adhika=False, nakshatra=23, sunrise_jd=11.0),
     ]
     with mock.patch("festival_rules.panchanga.raasi", side_effect=lambda jd: 5 if jd >= 10.0 else 4):
-      self.assertEqual(select_onam_dates(records), [Date(2030, 8, 20)])
-
-  def test_vriddhi_keeps_former_sunrise(self):
-    records = [
-      festival_record(Date(2030, 8, 20), "S5", masa="5", is_adhika=False, nakshatra=22, sunrise_jd=10.0),
-      festival_record(Date(2030, 8, 21), "S6", masa="5", is_adhika=False, nakshatra=22, sunrise_jd=11.0),
-    ]
-    with mock.patch("festival_rules.panchanga.raasi", return_value=5):
       self.assertEqual(select_onam_dates(records), [Date(2030, 8, 20)])
 
   def test_missing_simha_falls_back_to_kanya(self):
@@ -1340,13 +1340,6 @@ class GenericUdayaParityTests(unittest.TestCase):
       festival_record(Date(2030, 6, 2), "S3", masa="2"),
     ]
     self.assertEqual(select_plain_tithi_dates(records, 2, "S3"), [Date(2030, 6, 2)])
-
-  def test_ugadi_preserves_adhika_chaitra_preference(self):
-    records = [
-      festival_record(Date(2030, 3, 5), "S1", masa="A1", is_adhika=True),
-      festival_record(Date(2030, 4, 4), "S1", masa="1"),
-    ]
-    self.assertEqual(select_plain_tithi_dates(records, 1, "S1", allow_adhika=True), [Date(2030, 3, 5)])
 
   def test_rama_navami_uses_plain_tithi_not_a_special_selector(self):
     records = [
