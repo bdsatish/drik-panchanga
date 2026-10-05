@@ -547,14 +547,22 @@ class ContextTests(unittest.TestCase):
 class MonthlyHeaderTimezoneTests(unittest.TestCase):
   """Monthly header must show UTC offset next to the place name."""
 
-  def test_header_includes_timezone(self):
-    location = load_location("Ujjain")
-    pdf = mock.Mock()
-    pdf.stringWidth = lambda text, font, size: len(text) * size * 0.5
-    draw_header(pdf, location, 2026, 3, True, "citra", None)
-    place_calls = [c for c in pdf.drawString.call_args_list if "Ujjain" in str(c.args[2])]
-    self.assertEqual(len(place_calls), 1)
-    self.assertIn("UTC+5:30 (IST)", place_calls[0].args[2])
+  HEADER_CASES = [
+    ("no dst", "Ujjain", 3, "UTC+5:30 (IST)"),
+    ("helsinki summer dst", "Helsinki", 6, "UTC+3 (EEST)"),
+    ("helsinki winter no dst", "Helsinki", 12, "UTC+2 (EET)"),
+  ]
+
+  def test_header_timezone(self):
+    for label, city, month, expected in self.HEADER_CASES:
+      with self.subTest(label):
+        location = load_location(city)
+        pdf = mock.Mock()
+        pdf.stringWidth = lambda text, font, size: len(text) * size * 0.5
+        draw_header(pdf, location, 2026, month, True, "citra", None)
+        place_calls = [c for c in pdf.drawString.call_args_list if city in str(c.args[2])]
+        self.assertEqual(len(place_calls), 1)
+        self.assertIn(expected, place_calls[0].args[2])
 
 
 class DstLabelInjectionTests(unittest.TestCase):
