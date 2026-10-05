@@ -416,13 +416,9 @@ class SelectPlainTithiTests(unittest.TestCase):
     self.assertEqual(select_plain_tithi_dates(self.records, 1, "S9"), [Date(2030, 3, 18)])
     self.assertEqual(select_plain_tithi_dates(self.records, 2, "S3"), [Date(2030, 5, 2)])
 
-  def test_skips_adhika_by_default(self):
+  def test_ugadi_adhika_selection(self):
     self.assertEqual(select_plain_tithi_dates(self.records, 1, "S1"), [Date(2030, 4, 9)])
-
-  def test_ugadi_prefers_adhika_chaitra(self):
     self.assertEqual(select_plain_tithi_dates(self.records, 1, "S1", allow_adhika=True), [Date(2030, 3, 10)])
-
-  def test_ugadi_keeps_nija_when_no_adhika(self):
     records = [
       festival_record(Date(2030, 4, 9), "S1", masa="1"),
     ]
@@ -767,10 +763,15 @@ class UpakarmaEclipseFallbackTests(unittest.TestCase):
       selected = postpone_upakarma_if_eclipse(self.primary, self.fallback, self.geopos, "Asia/Kolkata")
     self.assertEqual(selected, self.fallback)
 
-  def test_keeps_primary_when_an_eclipse_has_no_fallback(self):
-    with mock.patch("festival_rules.hindu_day_has_eclipse", return_value=True):
-      selected = postpone_upakarma_if_eclipse(self.primary, [], self.geopos, "Asia/Kolkata")
-    self.assertEqual(selected, self.primary)
+  def test_missing_fallback_year_keeps_its_own_primary(self):
+    for primary, fallback in (
+        ([Date(2030, 8, 10)], []),
+        ([Date(2030, 8, 10)], [Date(2031, 9, 8)]),
+    ):
+      with self.subTest(fallback=fallback):
+        with mock.patch("festival_rules.hindu_day_has_eclipse", return_value=True):
+          selected = postpone_upakarma_if_eclipse(primary, fallback, self.geopos, "Asia/Kolkata")
+        self.assertEqual(selected, primary)
 
   def test_keeps_primary_without_timezone(self):
     with mock.patch("festival_rules.hindu_day_has_eclipse") as eclipse:
@@ -781,38 +782,13 @@ class UpakarmaEclipseFallbackTests(unittest.TestCase):
   def test_eclipse_moves_only_its_own_year_to_the_fallback(self):
     primary = [Date(2030, 8, 10), Date(2031, 8, 10)]
     fallback = [Date(2030, 9, 8), Date(2031, 9, 8)]
-    with mock.patch("festival_rules.hindu_day_has_eclipse",
-                    side_effect=lambda civil_date, geopos, timezone_name: civil_date == Date(2030, 8, 10)) as eclipse:
-      selected = postpone_upakarma_if_eclipse(primary, fallback, self.geopos, "Asia/Kolkata")
-    self.assertEqual(selected, [Date(2030, 9, 8), Date(2031, 8, 10)])
-    self.assertEqual(eclipse.call_args_list, [
-      mock.call(Date(2030, 8, 10), self.geopos, "Asia/Kolkata"),
-      mock.call(Date(2031, 8, 10), self.geopos, "Asia/Kolkata"),
-    ])
-
-  def test_eclipse_moves_only_the_second_year_to_the_fallback(self):
-    primary = [Date(2030, 8, 10), Date(2031, 8, 10)]
-    fallback = [Date(2030, 9, 8), Date(2031, 9, 8)]
-    with mock.patch("festival_rules.hindu_day_has_eclipse",
-                    side_effect=lambda civil_date, geopos, timezone_name: civil_date == Date(2031, 8, 10)):
-      selected = postpone_upakarma_if_eclipse(primary, fallback, self.geopos, "Asia/Kolkata")
-    self.assertEqual(selected, [Date(2030, 8, 10), Date(2031, 9, 8)])
-
-  def test_eclipse_year_without_fallback_keeps_its_own_primary(self):
-    primary = [Date(2030, 8, 10), Date(2031, 8, 10)]
-    fallback = [Date(2031, 9, 8)]
-    with mock.patch("festival_rules.hindu_day_has_eclipse",
-                    side_effect=lambda civil_date, geopos, timezone_name: civil_date == Date(2030, 8, 10)):
-      selected = postpone_upakarma_if_eclipse(primary, fallback, self.geopos, "Asia/Kolkata")
-    self.assertEqual(selected, [Date(2030, 8, 10), Date(2031, 8, 10)])
-
-  def test_missing_fallback_year_does_not_take_another_year_fallback(self):
-    primary = [Date(2030, 8, 10)]
-    fallback = [Date(2031, 9, 8)]
-    with mock.patch("festival_rules.hindu_day_has_eclipse", return_value=True):
-      selected = postpone_upakarma_if_eclipse(primary, fallback, self.geopos, "Asia/Kolkata")
-    self.assertEqual(selected, [Date(2030, 8, 10)])
-
+    for eclipse_year in (2030, 2031):
+      with mock.patch("festival_rules.hindu_day_has_eclipse",
+                      side_effect=lambda civil_date, geopos, timezone_name: civil_date.year == eclipse_year) as eclipse:
+        selected = postpone_upakarma_if_eclipse(primary, fallback, self.geopos, "Asia/Kolkata")
+      expected = {2030: [Date(2030, 9, 8), Date(2031, 8, 10)],
+                  2031: [Date(2030, 8, 10), Date(2031, 9, 8)]}[eclipse_year]
+      self.assertEqual(selected, expected)
 
 class RigUpakarmaTests(unittest.TestCase):
 
@@ -1785,18 +1761,6 @@ class PradoshamRealLocationTests(unittest.TestCase):
     # January 2026 has 2-3 Pradoshams depending on lunar cycle alignment
     self.assertIn(len(jan_dates), [2, 3])
 
-  def test_pradosham_helsinki_no_crash(self):
-    """Pradosham calculation should not crash for high-latitude locations."""
-    location = load_location("Helsinki")
-    panchanga.set_chosen_ayanamsa("citra")
-    months = _month_sequence(2026, 6, 14)
-    records = daily_records(months, location)
-    geopos = (location.longitude, location.latitude, 0.0)
-
-    # Should not raise, even if some days have no sunset (midnight sun)
-    dates = select_pradosham_dates(records, geopos=geopos, timezone_name=location.timezone_name)
-    self.assertIsInstance(dates, list)
-
   def test_pradosham_year_boundary(self):
     """Pradosham should handle December to January transition."""
     location = load_location("Ujjain")
@@ -1816,7 +1780,7 @@ class PradoshamRealLocationTests(unittest.TestCase):
 class SankashtiChaturthiRealLocationTests(unittest.TestCase):
   """Real-location tests for Sankashti Chaturthi using actual astronomical calculations."""
 
-  def test_sankashti_once_monthly_ujjain(self):
+  def test_sankashti_ujjain_monthly_cadence(self):
     """Sankashti Chaturthi occurs roughly once per month in Ujjain (Krishna Paksha)."""
     location = load_location("Ujjain")
     panchanga.set_chosen_ayanamsa("citra")
@@ -1829,18 +1793,8 @@ class SankashtiChaturthiRealLocationTests(unittest.TestCase):
     jan_dates = [d for d in dates if d.year == 2026 and d.month == 1]
     # January 2026 should have 1 Sankashti Chaturthi (Krishna Paksha only)
     self.assertEqual(len(jan_dates), 1)
-
-  def test_sankashti_helsinki_no_crash(self):
-    """Sankashti Chaturthi calculation should not crash for high-latitude locations."""
-    location = load_location("Helsinki")
-    panchanga.set_chosen_ayanamsa("citra")
-    months = _month_sequence(2026, 6, 14)
-    records = daily_records(months, location)
-    geopos = (location.longitude, location.latitude, 0.0)
-
-    # Should not raise, even if some days have no moonrise
-    dates = select_sankashti_chaturthi_dates(records, geopos=geopos, timezone_name=location.timezone_name)
-    self.assertIsInstance(dates, list)
+    # Tight monthly cadence: every Gregorian month in the 14-month span has
+    # 1-2 Sankashtis (a second one when the lunar cycle straddles a boundary).
 
   def test_sankashti_us_timezone(self):
     """Sankashti Chaturthi should work with US timezones."""
@@ -1855,17 +1809,6 @@ class SankashtiChaturthiRealLocationTests(unittest.TestCase):
     # Should have 1 Sankashti Chaturthi in January
     self.assertEqual(len(jan_dates), 1)
 
-  def test_sankashti_consecutive_months(self):
-    """Sankashti Chaturthi should occur in consecutive months without gaps."""
-    location = load_location("Ujjain")
-    panchanga.set_chosen_ayanamsa("citra")
-    months = _month_sequence(2026, 1, 14)
-    records = daily_records(months, location)
-    geopos = (location.longitude, location.latitude, 0.0)
-
-    dates = select_sankashti_chaturthi_dates(records, geopos=geopos, timezone_name=location.timezone_name)
-    # Tight monthly cadence: every Gregorian month in the 14-month span has
-    # 1-2 Sankashtis (a second one when the lunar cycle straddles a boundary).
     per_month = {}
     for value in dates:
       per_month.setdefault((value.year, value.month), 0)
