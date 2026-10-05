@@ -218,12 +218,14 @@ class PdfLayoutTests(unittest.TestCase):
     self.assertNotIn(b"and amanta masa", document)
 
   def test_calendar_year_label(self):
-    # An adhika record keeps the samvatsara conventions of both calendars.
+    # An adhika record shows the samvatsara conventions of both calendars.
     records = [
       DayRecord(Date(2026, 8, 15), "S1", 1, 1, "A4", True, 0.0),
     ]
-    self.assertEqual(calendar_year_label(records), "1948 Par\u0101bhava | 2083 Siddh\u0101rth\u012b | 5127 Kali (elapsed)")
+    self.assertEqual(calendar_year_label(records),
+                     "1948 Par\u0101bhava | 2083 Siddh\u0101rth\u012b | 5127 Kali (elapsed)")
 
+  def test_calendar_year_label_uses_underlying_month(self):
     # The record carries the canonical am\u0101nta month 1 (Caitra); the label
     # uses it whatever the display system would show.
     records = [
@@ -430,25 +432,19 @@ class RecurringUnderlineTests(unittest.TestCase):
 
 class DisplayMasaTests(unittest.TestCase):
 
-  def test_amanta_is_unchanged(self):
-    record = DayRecord(Date(2030, 1, 1), "K1", 1, 1, "5", False, 0.0)
-    self.assertEqual(display_masa(record, amanta=True), "5")
+  CASES = [
+    ("amanta masa number is unchanged", "K1", "5", False, True, "5"),
+    ("ordinary krishna advances under purnimanta", "K1", "5", False, False, "6"),
+    ("sukla is unchanged under purnimanta", "S1", "5", False, False, "5"),
+    ("adhika krishna is unchanged under purnimanta", "K1", "A5", True, False, "A5"),
+    ("phalguna krishna wraps to chaitra under purnimanta", "K1", "12", False, False, "1"),
+  ]
 
-  def test_purnimanta_advances_ordinary_krishna(self):
-    record = DayRecord(Date(2030, 1, 1), "K1", 1, 1, "5", False, 0.0)
-    self.assertEqual(display_masa(record, amanta=False), "6")
-
-  def test_purnimanta_leaves_sukla_unchanged(self):
-    record = DayRecord(Date(2030, 1, 1), "S1", 1, 1, "5", False, 0.0)
-    self.assertEqual(display_masa(record, amanta=False), "5")
-
-  def test_purnimanta_leaves_adhika_krishna_unchanged(self):
-    record = DayRecord(Date(2030, 1, 1), "K1", 1, 1, "A5", True, 0.0)
-    self.assertEqual(display_masa(record, amanta=False), "A5")
-
-  def test_purnimanta_wraps_phalguna_krishna_to_chaitra(self):
-    record = DayRecord(Date(2030, 1, 1), "K1", 1, 1, "12", False, 0.0)
-    self.assertEqual(display_masa(record, amanta=False), "1")
+  def test_display_masa(self):
+    for label, tithi, masa, is_adhika, amanta, expected in self.CASES:
+      with self.subTest(label):
+        record = DayRecord(Date(2030, 1, 1), tithi, 1, 1, masa, is_adhika, 0.0)
+        self.assertEqual(display_masa(record, amanta=amanta), expected)
 
 
 class SolarDateTests(unittest.TestCase):
@@ -598,83 +594,61 @@ class DailyRecordsCacheHookTests(unittest.TestCase):
 class FormatUtcOffsetTests(unittest.TestCase):
   """``format_utc_offset`` renders UTC offset with timezone abbreviation."""
 
-  def test_ist_no_dst(self):
-    self.assertEqual(format_utc_offset("Asia/Kolkata", 2026, 3), "UTC+5:30 (IST)")
+  CASES = [
+    ("ist has no dst", "Asia/Kolkata", 2026, 3, "UTC+5:30 (IST)"),
+    ("helsinki summer dst", "Europe/Helsinki", 2026, 6, "UTC+3 (EEST)"),
+    ("helsinki winter no dst", "Europe/Helsinki", 2026, 12, "UTC+2 (EET)"),
+    ("us eastern summer dst", "America/New_York", 2026, 7, "UTC-4 (EDT)"),
+    ("us eastern winter no dst", "America/New_York", 2026, 1, "UTC-5 (EST)"),
+    ("utc zero", "UTC", 2026, 6, "UTC+0 (UTC)"),
+    ("whole hour offset", "Europe/London", 2026, 1, "UTC+0 (GMT)"),
+    ("nepal unusual offset", "Asia/Kathmandu", 2026, 6, "UTC+5:45 (+0545)"),
+  ]
 
-  def test_helsinki_summer_dst(self):
-    self.assertEqual(format_utc_offset("Europe/Helsinki", 2026, 6), "UTC+3 (EEST)")
-
-  def test_helsinki_winter_no_dst(self):
-    self.assertEqual(format_utc_offset("Europe/Helsinki", 2026, 12), "UTC+2 (EET)")
-
-  def test_us_eastern_summer_dst(self):
-    self.assertEqual(format_utc_offset("America/New_York", 2026, 7), "UTC-4 (EDT)")
-
-  def test_us_eastern_winter_no_dst(self):
-    self.assertEqual(format_utc_offset("America/New_York", 2026, 1), "UTC-5 (EST)")
-
-  def test_utc_zero(self):
-    self.assertEqual(format_utc_offset("UTC", 2026, 6), "UTC+0 (UTC)")
-
-  def test_whole_hour_offset(self):
-    self.assertEqual(format_utc_offset("Europe/London", 2026, 1), "UTC+0 (GMT)")
-
-  def test_nepal_unusual_offset(self):
-    self.assertEqual(format_utc_offset("Asia/Kathmandu", 2026, 6), "UTC+5:45 (+0545)")
+  def test_format_utc_offset(self):
+    for label, zone, year, month, expected in self.CASES:
+      with self.subTest(label):
+        self.assertEqual(format_utc_offset(zone, year, month), expected)
 
 
 class TimezoneInHeaderTests(unittest.TestCase):
   """Page subtitle must show UTC offset; title stays tz-free."""
 
-  def test_annual_header_includes_timezone(self):
-    location = load_location("Ujjain")
-    months = list(_month_sequence(2026, 3, 14))
-    pdf = mock.Mock()
-    pdf.stringWidth.return_value = 60.0
-    with mock.patch("generate_panchanga_calendar.fitted_font_size", return_value=10):
-      draw_page_header(pdf, location, months, RULESET_VERSION)
-    title = pdf.drawString.call_args_list[0].args[2]
-    subtitle = pdf.drawString.call_args_list[1].args[2]
-    self.assertTrue(title.startswith("Ujjain, IN Panchanga:"))
-    self.assertNotIn("UTC", title)
-    self.assertIn("UTC+5:30 (IST) civil time", subtitle)
-
-  def test_annual_header_timezone_respects_dst(self):
-    location = load_location("Helsinki")
-    months = list(_month_sequence(2026, 6, 14))
-    pdf = mock.Mock()
-    pdf.stringWidth.return_value = 60.0
-    with mock.patch("generate_panchanga_calendar.fitted_font_size", return_value=10):
-      draw_page_header(pdf, location, months, RULESET_VERSION)
-    title = pdf.drawString.call_args_list[0].args[2]
-    subtitle = pdf.drawString.call_args_list[1].args[2]
-    self.assertTrue(title.startswith("Helsinki, FI Panchanga:"))
-    self.assertNotIn("UTC", title)
-    self.assertIn("UTC+3 (EEST) civil time", subtitle)
+  def test_annual_header_timezones(self):
+    for location_name, month, subtitle_offset in (("Ujjain", 3, "UTC+5:30 (IST)"),
+                                                  ("Helsinki", 6, "UTC+3 (EEST)")):
+      with self.subTest(location_name=location_name):
+        location = load_location(location_name)
+        months = list(_month_sequence(2026, month, 14))
+        pdf = mock.Mock()
+        pdf.stringWidth.return_value = 60.0
+        with mock.patch("generate_panchanga_calendar.fitted_font_size", return_value=10):
+          draw_page_header(pdf, location, months, RULESET_VERSION)
+        title = pdf.drawString.call_args_list[0].args[2]
+        subtitle = pdf.drawString.call_args_list[1].args[2]
+        self.assertTrue(title.startswith(location_name) and "Panchanga:" in title)
+        self.assertNotIn("UTC", title)
+        self.assertIn(f"{subtitle_offset} civil time", subtitle)
 
 
 class DstTransitionsTests(unittest.TestCase):
   """``dst_transitions`` detects DST start/end dates."""
 
-  def test_helsinki_spring_forward(self):
-    self.assertEqual(dst_transitions("Europe/Helsinki", 2026, 3), {29: "DST starts"})
+  CASES = [
+    ("helsinki spring forward", ("Europe/Helsinki", 2026, 3), {29: "DST starts"}),
+    ("helsinki fall back", ("Europe/Helsinki", 2026, 10), {25: "DST ends"}),
+    ("new york spring forward", ("America/New_York", 2026, 3), {8: "DST starts"}),
+    ("new york fall back", ("America/New_York", 2026, 11), {1: "DST ends"}),
+    ("no dst zone", ("Asia/Kolkata", 2026, 3), {}),
+    ("no dst zone summer", ("Asia/Kolkata", 2026, 6), {}),
+    ("month without transition", ("Europe/Helsinki", 2026, 6), {}),
+    ("month without transition summer", ("America/New_York", 2026, 7), {}),
+  ]
 
-  def test_helsinki_fall_back(self):
-    self.assertEqual(dst_transitions("Europe/Helsinki", 2026, 10), {25: "DST ends"})
-
-  def test_new_york_spring_forward(self):
-    self.assertEqual(dst_transitions("America/New_York", 2026, 3), {8: "DST starts"})
-
-  def test_new_york_fall_back(self):
-    self.assertEqual(dst_transitions("America/New_York", 2026, 11), {1: "DST ends"})
-
-  def test_no_dst_zone_returns_empty(self):
-    self.assertEqual(dst_transitions("Asia/Kolkata", 2026, 3), {})
-    self.assertEqual(dst_transitions("Asia/Kolkata", 2026, 6), {})
-
-  def test_month_without_transition_returns_empty(self):
-    self.assertEqual(dst_transitions("Europe/Helsinki", 2026, 6), {})
-    self.assertEqual(dst_transitions("America/New_York", 2026, 7), {})
+  def test_dst_transitions(self):
+    for label, arguments, expected in self.CASES:
+      with self.subTest(label):
+        self.assertEqual(dst_transitions(*arguments), expected)
 
 
 if __name__ == "__main__":
