@@ -52,13 +52,29 @@ class SuggestCityEndpointTests(unittest.TestCase):
   PROXY_PRIVATE_IP = "172.17.0.1"
 
   def test_one_trusted_hop_restores_city_suggestion(self):
-    """Railway/container deployments: peer is the edge proxy, XFF holds the client."""
+    """Generic one-proxy deployment: peer is the proxy, XFF holds the client."""
     with mock.patch.dict("os.environ", {"PANCHANGA_TRUSTED_PROXY_HOPS": "1"}), \
          mock.patch("webapp.app.urlopen", return_value=_fake_response(self._success_body())):
       response = app.test_client().get(
         "/api/suggest-city",
         headers={"X-Forwarded-For": self.CLIENT_PUBLIC_IP},
         environ_base={"REMOTE_ADDR": self.PROXY_PRIVATE_IP},
+      )
+    self.assertEqual(response.status_code, 200)
+    self.assertEqual(response.json, {"city": "Moscow, RU"})
+
+  def test_railway_two_hop_chain_yields_client_not_edge(self):
+    """Railway's observed chain: edge sets XFF='<client>, <edgeIP>' and an
+    internal 100.0.0.0/8 hop connects to the container, so the rightmost
+    entry geolocates to the edge region. Two hops from the right must give
+    the client."""
+    edge_public_ip = "141.98.119.175"  # observed edge-region egress, Paris/Amsterdam
+    with mock.patch.dict("os.environ", {"PANCHANGA_TRUSTED_PROXY_HOPS": "2"}), \
+         mock.patch("webapp.app.urlopen", return_value=_fake_response(self._success_body())):
+      response = app.test_client().get(
+        "/api/suggest-city",
+        headers={"X-Forwarded-For": f"{self.CLIENT_PUBLIC_IP}, {edge_public_ip}"},
+        environ_base={"REMOTE_ADDR": "100.64.0.7"},
       )
     self.assertEqual(response.status_code, 200)
     self.assertEqual(response.json, {"city": "Moscow, RU"})

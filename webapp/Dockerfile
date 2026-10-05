@@ -33,10 +33,14 @@ RUN bash /tmp/ensure_ephe.sh && rm /tmp/ensure_ephe.sh
 ENV PORT=8080
 EXPOSE 8080
 
-# Behind Railway's edge proxy the socket peer is the proxy itself, so the
-# deployment must trust one X-Forwarded-For hop for /api/suggest-city to
-# geoIP-suggest the visitor's city.
-ENV PANCHANGA_TRUSTED_PROXY_HOPS=1
+# Railway's edge strips client-supplied X-Forwarded-For and sets the real
+# client IP as its first (leftmost) entry, but one more internal hop (peer
+# in 100.0.0.0/8) forwards the request to the container and appends the
+# edge's public IP, so the rightmost entry is the edge itself. Two hops
+# from the right is therefore the connecting client. Verify against the
+# live app when touching this: /api/suggest-city must return the caller's
+# city, never a Railway edge region (e.g. Paris/Amsterdam).
+ENV PANCHANGA_TRUSTED_PROXY_HOPS=2
 
 # One worker: Swiss Ephemeris is process-global. Timeout stays generous for
 # cold starts and high-latitude edge cases even though a typical PDF is ~0.4s.
