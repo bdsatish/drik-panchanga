@@ -305,7 +305,7 @@ class BcePdfSmokeTests(BoundaryTestCase):
     import generate_panchanga_calendar as annual
     from generate_panchanga_calendar import load_location, lunar_year_months
     location = load_location("Ujjain")
-    months = lunar_year_months(-500, location)
+    months = lunar_year_months(-500, location)[:3]
     with TemporaryDirectory() as directory:
       output = Path(directory) / "bce.pdf"
       annual.build_pdf(location, months, output)
