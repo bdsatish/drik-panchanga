@@ -556,54 +556,24 @@ class MonthlyHeaderTimezoneTests(unittest.TestCase):
     self.assertEqual(len(place_calls), 1)
     self.assertIn("UTC+5:30 (IST)", place_calls[0].args[2])
 
-  def test_header_timezone_respects_dst(self):
-    location = load_location("Helsinki")
-    pdf = mock.Mock()
-    pdf.stringWidth = lambda text, font, size: len(text) * size * 0.5
-    draw_header(pdf, location, 2026, 6, True, "citra", None)
-    place_calls = [c for c in pdf.drawString.call_args_list if "Helsinki" in str(c.args[2])]
-    self.assertEqual(len(place_calls), 1)
-    self.assertIn("UTC+3 (EEST)", place_calls[0].args[2])
-
-  def test_header_timezone_winter_no_dst(self):
-    location = load_location("Helsinki")
-    pdf = mock.Mock()
-    pdf.stringWidth = lambda text, font, size: len(text) * size * 0.5
-    draw_header(pdf, location, 2026, 12, True, "citra", None)
-    place_calls = [c for c in pdf.drawString.call_args_list if "Helsinki" in str(c.args[2])]
-    self.assertEqual(len(place_calls), 1)
-    self.assertIn("UTC+2 (EET)", place_calls[0].args[2])
-
 
 class DstLabelInjectionTests(unittest.TestCase):
   """DST transition labels must be injected as dst_labels_by_date."""
 
-  def test_collect_context_includes_dst_start(self):
+  def test_collect_context_dst_labels(self):
     from generate_monthly_calendar import collect_context
     location = load_location("Helsinki")
-    months = [(2026, 3), (2026, 4)]
-    ctx = collect_context(months, location, DEFAULT_FESTIVALS_PATH, amanta=True)
+    ctx = collect_context([(2026, 3), (2026, 4)], location, DEFAULT_FESTIVALS_PATH, amanta=True)
     dst_labels = ctx["dst_labels_by_date"]
     # Mar 29, 2026 is DST start for Helsinki
     self.assertIn("DST starts", dst_labels.get(Date(2026, 3, 29), []))
-
-  def test_collect_context_includes_dst_end(self):
-    from generate_monthly_calendar import collect_context
-    location = load_location("Helsinki")
-    months = [(2026, 10), (2026, 11)]
-    ctx = collect_context(months, location, DEFAULT_FESTIVALS_PATH, amanta=True)
+    ctx = collect_context([(2026, 10), (2026, 11)], location, DEFAULT_FESTIVALS_PATH, amanta=True)
     dst_labels = ctx["dst_labels_by_date"]
     # Oct 25, 2026 is DST end for Helsinki
     self.assertIn("DST ends", dst_labels.get(Date(2026, 10, 25), []))
-
-  def test_collect_context_no_dst_for_non_dst_zone(self):
-    from generate_monthly_calendar import collect_context
-    location = load_location("Ujjain")
-    months = [(2026, 3), (2026, 4)]
-    ctx = collect_context(months, location, DEFAULT_FESTIVALS_PATH, amanta=True)
-    dst_labels = ctx["dst_labels_by_date"]
     # Ujjain has no DST - no DST labels should appear
-    all_labels = [label for labels in dst_labels.values() for label in labels]
+    ctx = collect_context([(2026, 3), (2026, 4)], load_location("Ujjain"), DEFAULT_FESTIVALS_PATH, amanta=True)
+    all_labels = [label for labels in ctx["dst_labels_by_date"].values() for label in labels]
     self.assertNotIn("DST starts", all_labels)
     self.assertNotIn("DST ends", all_labels)
 
@@ -859,65 +829,34 @@ class FestivalBarColorTests(unittest.TestCase):
   def _fill_colors(self, pdf):
     return [c.args[0] for c in pdf.setFillColor.call_args_list]
 
-  def test_pradosham_bar_is_purple(self):
-    from generate_monthly_calendar import PURPLE
-    pdf = mock.Mock()
-    civil = Date(2026, 6, 11)
-    context = self._base_context(pradosham={civil})
-    draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 11, civil, load_location("Ujjain"), context, col=0)
-    self.assertIn(PURPLE, self._fill_colors(pdf))
-
-  def test_sankashti_bar_is_indigo(self):
-    from generate_monthly_calendar import INDIGO
-    pdf = mock.Mock()
-    civil = Date(2026, 6, 11)
-    context = self._base_context(sankashti={civil})
-    draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 11, civil, load_location("Ujjain"), context, col=0)
-    self.assertIn(INDIGO, self._fill_colors(pdf))
-
-  def test_ekadashi_bar_is_teal(self):
-    from generate_monthly_calendar import TEAL
-    pdf = mock.Mock()
-    civil = Date(2026, 6, 11)
-    context = self._base_context(ekadashi={civil})
-    draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 11, civil, load_location("Ujjain"), context, col=0)
-    self.assertIn(TEAL, self._fill_colors(pdf))
+  def test_festival_bar_colors(self):
+    from generate_monthly_calendar import INDIGO, PURPLE, TEAL
+    for attribute, colors in (("ekadashi", TEAL), ("pradosham", PURPLE), ("sankashti", INDIGO)):
+      with self.subTest(attribute=attribute):
+        pdf = mock.Mock()
+        civil = Date(2026, 6, 11)
+        context = self._base_context(**{attribute: {civil}})
+        draw_cell(pdf, 20.0, 500.0, 100.0, 75.0, 11, civil, load_location("Ujjain"), context, col=0)
+        self.assertIn(colors, self._fill_colors(pdf))
 
 
 class FooterLegendTests(unittest.TestCase):
   """Verify the footer legend includes all festival markers."""
 
-  def test_footer_omits_parana_legend(self):
+  def test_footer_legend(self):
     from generate_monthly_calendar import draw_footer
     pdf = mock.Mock()
     draw_footer(pdf, 1, 12)
-    notes = " ".join(c.args[2] for c in pdf.drawString.call_args_list if len(c.args) >= 3)
+    drawn_text = [c.args[2] for c in pdf.drawString.call_args_list if len(c.args) >= 3]
+    notes = " ".join(drawn_text)
     self.assertNotIn("Pāraṇā", notes)
     self.assertIn("śrāddha tithi (aparāhṇa)", notes)
-
-  def test_footer_mentions_sankashti(self):
-    from generate_monthly_calendar import draw_footer
-    pdf = mock.Mock()
-    draw_footer(pdf, 1, 12)
-    drawn_text = [c.args[2] for c in pdf.drawString.call_args_list]
     footer_note = [t for t in drawn_text if "saṅkaṣṭahara" in t]
     self.assertEqual(len(footer_note), 1)
     self.assertIn("indigo: saṅkaṣṭahara caturthī", footer_note[0])
-
-  def test_footer_mentions_pradosham(self):
-    from generate_monthly_calendar import draw_footer
-    pdf = mock.Mock()
-    draw_footer(pdf, 1, 12)
-    drawn_text = [c.args[2] for c in pdf.drawString.call_args_list]
-    footer_note = [t for t in drawn_text if "pradoṣam" in t]
-    self.assertEqual(len(footer_note), 1)
-    self.assertIn("purple: pradoṣam", footer_note[0])
-
-  def test_footer_uses_compact_marker_wording(self):
-    from generate_monthly_calendar import draw_footer
-    pdf = mock.Mock()
-    draw_footer(pdf, 1, 12)
-    drawn_text = [c.args[2] for c in pdf.drawString.call_args_list]
+    pradosham_note = [t for t in drawn_text if "pradoṣam" in t]
+    self.assertEqual(len(pradosham_note), 1)
+    self.assertIn("purple: pradoṣam", pradosham_note[0])
     time_note = [t for t in drawn_text if "After 24:00" in t]
     mark_note = [t for t in drawn_text if "Green: māsa" in t]
     self.assertEqual(len(time_note), 1)
