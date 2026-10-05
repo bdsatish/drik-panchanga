@@ -104,30 +104,28 @@ class CustomLocationWebTests(unittest.TestCase):
 class AttachOptionValuesTests(unittest.TestCase):
   """A value that starts with a minus must survive argparse."""
 
-  def test_glues_negative_value_to_flag(self):
-    self.assertEqual(attach_option_values(["--place", "-13.4,70,5.5", "--start", "2026"]),
-                     ["--place=-13.4,70,5.5", "--start", "2026"])
+  GLUE_CASES = [
+    ("glues a negative place value", ["--place", "-13.4,70,5.5", "--start", "2026"],
+     ["--place=-13.4,70,5.5", "--start", "2026"]),
+    ("glues a negative bce start year", ["--city", "Ujjain", "--start", "-500"],
+     ["--city", "Ujjain", "--start=-500"]),
+  ]
 
-  def test_leaves_positive_values_alone(self):
+  def test_glues_negative_values_to_flags(self):
+    for label, argv, expected in self.GLUE_CASES:
+      with self.subTest(label):
+        self.assertEqual(attach_option_values(argv), expected)
+
+  def test_leaves_happy_argvs_alone(self):
     # A value that does not start with '-' needs no glue: argparse is happy
-    # with a split flag and value, so argv is left byte-identical.
-    argv = ["--place", "12.97,77.59,5.5", "--start", "2026"]
-    self.assertEqual(attach_option_values(argv), argv)
-
-  def test_no_place_flag(self):
-    argv = ["--city", "Helsinki", "--start", "2026"]
-    self.assertEqual(attach_option_values(argv), argv)
-
-  def test_glues_a_bce_start_year(self):
-    # argparse would read the leading '-' of -500 as another option.
-    self.assertEqual(attach_option_values(["--city", "Ujjain", "--start", "-500"]),
-                     ["--city", "Ujjain", "--start=-500"])
-
-  def test_leaves_a_flag_after_a_flag_alone(self):
-    # --start with no value must error as a missing value, not as
-    # "--start=--city" plus "unrecognized arguments: Ujjain".
-    argv = ["--start", "--city", "Ujjain"]
-    self.assertEqual(attach_option_values(argv), argv)
+    # with a split flag and value, so argv is left byte-identical. --start
+    # with no value must stay split too: it should error as a missing value,
+    # not as "--start=--city" plus "unrecognized arguments: Ujjain".
+    for argv in (["--place", "12.97,77.59,5.5", "--start", "2026"],
+                 ["--city", "Helsinki", "--start", "2026"],
+                 ["--start", "--city", "Ujjain"]):
+      with self.subTest(argv=argv):
+        self.assertEqual(attach_option_values(argv), argv)
 
 
 class BceStartYearTests(unittest.TestCase):
@@ -209,30 +207,22 @@ class BceStartYearTests(unittest.TestCase):
 class PlaceSpecFormsTests(unittest.TestCase):
   """LAT,LON,TZ accept every float() spelling: integers, x.0, +sign, zero."""
 
-  def test_three_floats(self):
-    location = resolve_location(place="-13.4,70,5.5")
-    self.assertEqual((location.latitude, location.longitude, location.timezone_name), (-13.4, 70.0, "UTC+5:30"))
-    self.assertEqual(location.name, "13.40S, 70.00E (UTC+5:30)")
+  SPEC_CASES = [
+    ("three floats", "-13.4,70,5.5", (-13.4, 70.0, "UTC+5:30"), "13.40S, 70.00E (UTC+5:30)"),
+    ("negative longitude is west", "40.71,-74.0,-5", (40.71, -74.0, "UTC-5"), None),
+    ("pure integers", "13,77,5", (13.0, 77.0, "UTC+5"), None),
+    ("explicit plus sign", "+13.4,+70,+5.5", (13.4, 70.0, "UTC+5:30"), None),
+    ("zeroes", "0,0,0", (0.0, 0.0, "UTC+0"), None),
+    ("mixed forms in one spec", "-33.87,+151.2,10", (-33.87, 151.2, "UTC+10"), None),
+  ]
 
-  def test_negative_longitude_west(self):
-    location = resolve_location(place="40.71,-74.0,-5")
-    self.assertEqual((location.latitude, location.longitude, location.timezone_name), (40.71, -74.0, "UTC-5"))
-
-  def test_pure_integers(self):
-    location = resolve_location(place="13,77,5")
-    self.assertEqual((location.latitude, location.longitude, location.timezone_name), (13.0, 77.0, "UTC+5"))
-
-  def test_explicit_plus_sign(self):
-    location = resolve_location(place="+13.4,+70,+5.5")
-    self.assertEqual((location.latitude, location.longitude, location.timezone_name), (13.4, 70.0, "UTC+5:30"))
-
-  def test_zeroes(self):
-    location = resolve_location(place="0,0,0")
-    self.assertEqual((location.latitude, location.longitude, location.timezone_name), (0.0, 0.0, "UTC+0"))
-
-  def test_mixed_forms_in_one_spec(self):
-    location = resolve_location(place="-33.87,+151.2,10")
-    self.assertEqual((location.latitude, location.longitude, location.timezone_name), (-33.87, 151.2, "UTC+10"))
+  def test_loc_spec_forms(self):
+    for label, place, expected, name in self.SPEC_CASES:
+      with self.subTest(label):
+        location = resolve_location(place=place)
+        self.assertEqual((location.latitude, location.longitude, location.timezone_name), expected)
+        if name is not None:
+          self.assertEqual(location.name, name)
 
   def test_integer_spec_resolves_like_float_spec(self):
     self.assertEqual(resolve_location(place="13,77,-5"), resolve_location(place="13.0,77.0,-5.0"))
@@ -251,29 +241,15 @@ class PlaceSpecFormsTests(unittest.TestCase):
 class PlaceCliTests(unittest.TestCase):
   """Both PDF CLIs accept --place instead of --city."""
 
-  def test_annual_place_and_start_parse(self):
-    parser = annual_argument_parser()
-    arguments = parser.parse_args(attach_option_values(["--place", "-13.4,70,5.5", "--start", "2026"]))
-    self.assertEqual(arguments.place, "-13.4,70,5.5")
-    self.assertIsNone(arguments.city)
-
-  def test_annual_city_remains_accepted_without_place(self):
-    parser = annual_argument_parser()
-    arguments = parser.parse_args(["--city", "Helsinki", "--start", "2026"])
-    self.assertEqual(arguments.city, "Helsinki")
-    self.assertIsNone(arguments.place)
-
-  def test_monthly_place_and_start_parse(self):
-    parser = monthly_argument_parser()
-    arguments = parser.parse_args(attach_option_values(["--place", "-13.4,70,5.5", "--start", "2026"]))
-    self.assertEqual(arguments.place, "-13.4,70,5.5")
-    self.assertIsNone(arguments.city)
-
-  def test_monthly_city_remains_accepted_without_place(self):
-    parser = monthly_argument_parser()
-    arguments = parser.parse_args(["--city", "Helsinki", "--start", "2026"])
-    self.assertEqual(arguments.city, "Helsinki")
-    self.assertIsNone(arguments.place)
+  def test_place_and_city_argv_parse(self):
+    for parser_for in (annual_argument_parser, monthly_argument_parser):
+      with self.subTest(parser=parser_for.__name__):
+        arguments = parser_for().parse_args(attach_option_values(["--place", "-13.4,70,5.5", "--start", "2026"]))
+        self.assertEqual(arguments.place, "-13.4,70,5.5")
+        self.assertIsNone(arguments.city)
+        arguments = parser_for().parse_args(["--city", "Helsinki", "--start", "2026"])
+        self.assertEqual(arguments.city, "Helsinki")
+        self.assertIsNone(arguments.place)
 
 
 class MainIntegrationTests(unittest.TestCase):
@@ -298,10 +274,13 @@ class MainIntegrationTests(unittest.TestCase):
     self.assertIsInstance(location, Location)
     self.assertEqual((location.latitude, location.longitude, location.timezone_name), (-13.4, 70.0, "UTC+5:30"))
 
-  def test_monthly_main_errors_without_city_or_place(self):
-    import generate_monthly_calendar as monthly
-    with mock.patch.object(sys, "stderr", mock.Mock()), self.assertRaises(SystemExit):
-      monthly.main(["--start", "2026"])
+  def test_main_errors_without_city_or_place(self):
+    import importlib
+    for module_name in ("generate_monthly_calendar", "generate_panchanga_calendar"):
+      with self.subTest(module=module_name):
+        module = importlib.import_module(module_name)
+        with mock.patch.object(sys, "stderr", mock.Mock()), self.assertRaises(SystemExit):
+          module.main(["--start", "2026"])
 
   def test_annual_main_uses_place(self):
     import generate_panchanga_calendar as annual
@@ -328,11 +307,6 @@ class MainIntegrationTests(unittest.TestCase):
     location = location_holder["location"]
     self.assertEqual((location.latitude, location.longitude, location.timezone_name), (-13.4, 70.0, "UTC+5:30"))
     self.assertIs(location_holder.get("built"), location)
-
-  def test_annual_main_errors_without_city_or_place(self):
-    import generate_panchanga_calendar as annual
-    with mock.patch.object(sys, "stderr", mock.Mock()), self.assertRaises(SystemExit):
-      annual.main(["--start", "2026"])
 
 
 if __name__ == "__main__":
