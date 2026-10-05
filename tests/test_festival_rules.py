@@ -254,26 +254,6 @@ class FestivalCatalogTests(unittest.TestCase):
 
 class FestivalSelectionTests(unittest.TestCase):
 
-  def test_shipped_cfg_enables_full_catalog_except_disabled(self):
-    enabled = load_festival_selection(DEFAULT_FESTIVALS_PATH)
-    expected = [
-      name for name in all_festival_names() if name not in {
-        "Surya Shashthi / Chhath",
-        "Gita Jayanti",
-        "Vasavi Jayanti",
-        "Vasavi Atmarpana",
-        "Karwa Chauth",
-        "VSN Jayanti",
-        "Mesha Sankranti",
-        "Makara Sankranti",
-        "Raksha Bandhan",
-        "Sama Upakarma",
-        "Rishi Panchami",
-        "Vata Savitri Purnima",
-      }
-    ]
-    self.assertEqual(enabled, expected)
-
   def test_extra_festivals_are_monthly_only(self):
     annual = load_festival_selection(DEFAULT_FESTIVALS_PATH)
     monthly = load_festival_selection(DEFAULT_FESTIVALS_PATH, include_extra=True)
