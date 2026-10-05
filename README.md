@@ -168,6 +168,14 @@ From a repository checkout:
 ```
 ./scripts/setup_venv.sh
 source .venv/bin/activate
+python scripts/run_tests.py
+```
+
+The runner starts one process per `tests/test_*.py` module and so finishes in
+about the time of the slowest module. Use `-j N` to set the worker count. The
+serial fallback is:
+
+```
 python -m unittest discover -s tests -t . -p 'test_*.py'
 ```
 

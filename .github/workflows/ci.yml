@@ -47,11 +47,12 @@ jobs:
 
       - name: Run unit tests
         run: |
-          # No -v: 442 "ok" lines bury the failures. Record the log so the
-          # annotation step below can name the failing tests, and keep tee's
-          # status so a failing run still fails the step.
+          # One process per test module. No -v: 442 "ok" lines bury the
+          # failures. Record the log so the annotation step below can name the
+          # failing tests, and keep tee's status so a failing run still fails
+          # the step.
           set -o pipefail
-          python -m unittest discover -s tests -t . -p 'test_*.py' 2>&1 | tee /tmp/unit-tests.log
+          python scripts/run_tests.py 2>&1 | tee /tmp/unit-tests.log
 
       - name: Annotate test failures
         # Always run: on success this writes the pass summary, and on failure it
