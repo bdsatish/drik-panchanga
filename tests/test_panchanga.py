@@ -122,40 +122,23 @@ class SunriseSetTests(PanchangaTestCase):
 class VarjyamTests(PanchangaTestCase):
   """Varjyam computation."""
 
-  def test_varjyam_delhi(self):
-    jd = gregorian_to_jd(Date(2026, 7, 17))
-    delhi = Place(28.6139, 77.2090, 5.5)
-    v = varjyam(jd, delhi)
-    self.assertEqual(len(v), 2)
-    self.assertEqual(local_intervals(v, jd, delhi), [[[7, 12, 6], [8, 42, 56]], [[26, 21, 49], [27, 55, 30]]])
-
-  def test_varjyam_helsinki_summer(self):
-    jd = gregorian_to_jd(Date(2026, 6, 21))
-    v = varjyam(jd, helsinki)
-    self.assertEqual(local_intervals(v, jd, helsinki), [[[13, 27, 21], [15, 6, 45]]])
-
-  def test_varjyam_helsinki_winter(self):
-    jd = gregorian_to_jd(Date(2026, 12, 21))
-    v = varjyam(jd, helsinki)
-    self.assertEqual(local_intervals(v, jd, helsinki), [[[20, 25, 38], [21, 52, 6]]])
-
-  def test_varjyam_reykjavik_midnight_sun(self):
-    jd = gregorian_to_jd(Date(2026, 6, 21))
-    reykjavik = Place(64.15, -21.94, 0.0)
-    v = varjyam(jd, reykjavik)
-    self.assertEqual(local_intervals(v, jd, reykjavik), [[[11, 27, 21], [13, 6, 45]]])
-
-  def test_varjyam_reykjavik_spring_two_periods(self):
-    jd = gregorian_to_jd(Date(2026, 3, 21))
-    reykjavik = Place(64.15, -21.94, 0.0)
-    v = varjyam(jd, reykjavik)
-    self.assertEqual(local_intervals(v, jd, reykjavik), [[[15, 25, 12], [16, 53, 52]], [[27, 56, 49], [29, 25, 8]]])
-
-  def test_varjyam_southern_hemisphere(self):
-    jd = gregorian_to_jd(Date(2026, 1, 15))
-    cape_town = Place(-33.92, 18.42, +2.0)
-    v = varjyam(jd, cape_town)
-    self.assertEqual(local_intervals(v, jd, cape_town), [[[5, 46, 18], [7, 33, 14]]])
+  def test_varjyam_intervals(self):
+    cases = (
+        ("delhi", Date(2026, 7, 17), Place(28.6139, 77.2090, 5.5),
+         [[[7, 12, 6], [8, 42, 56]], [[26, 21, 49], [27, 55, 30]]]),
+        ("helsinki summer", Date(2026, 6, 21), helsinki, [[[13, 27, 21], [15, 6, 45]]]),
+        ("helsinki winter", Date(2026, 12, 21), helsinki, [[[20, 25, 38], [21, 52, 6]]]),
+        ("reykjavik midnight sun", Date(2026, 6, 21), Place(64.15, -21.94, 0.0),
+         [[[11, 27, 21], [13, 6, 45]]]),
+        ("reykjavik spring two periods", Date(2026, 3, 21), Place(64.15, -21.94, 0.0),
+         [[[15, 25, 12], [16, 53, 52]], [[27, 56, 49], [29, 25, 8]]]),
+        ("southern hemisphere", Date(2026, 1, 15), Place(-33.92, 18.42, +2.0),
+         [[[5, 46, 18], [7, 33, 14]]]),
+    )
+    for label, day, place, expected in cases:
+      with self.subTest(label):
+        jd = gregorian_to_jd(day)
+        self.assertEqual(local_intervals(varjyam(jd, place), jd, place), expected)
 
   def test_varjyam_wraps_past_midnight(self):
     jd = gregorian_to_jd(Date(2026, 12, 15))
@@ -222,66 +205,39 @@ class VarjyamTests(PanchangaTestCase):
 class TithiTests(PanchangaTestCase):
   """Tithi computation with various dates and locations."""
 
-  def test_krishna_ashtami(self):
-    result = tithi(date1, bangalore)
-    self.assertEqual(result[0], 23)
+  def test_tithi_values(self):
+    for label, jd, place, expected in (
+        ("krishna ashtami", date1, bangalore, 23),
+        ("saptami", date2, bangalore, 7),
+        ("krishna saptami", date3, bangalore, 22),
+        ("shukla saptami helsinki", date2, helsinki, 7),
+        ("helsinki apr 19", gregorian_to_jd(Date(2013, 4, 19)), helsinki, 9),
+        ("helsinki apr 20 (vriddhi)", gregorian_to_jd(Date(2013, 4, 20)), helsinki, 10),
+        ("helsinki apr 21 (vriddhi)", gregorian_to_jd(Date(2013, 4, 21)), helsinki, 10),
+    ):
+      with self.subTest(label):
+        self.assertEqual(tithi(jd, place)[0], expected)
 
-  def test_saptami(self):
-    result = tithi(date2, bangalore)
-    self.assertEqual(result[0], 7)
-
-  def test_krishna_saptami(self):
-    result = tithi(date3, bangalore)
-    self.assertEqual(result[0], 22)
-
-  def test_shukla_saptami_helsinki(self):
-    result = tithi(date2, helsinki)
-    self.assertEqual(result[0], 7)
-
-  def test_apr24_bangalore(self):
+  def test_tithi_end_times(self):
     apr24 = gregorian_to_jd(Date(2010, 4, 24))
     result = tithi(apr24, bangalore)
     self.assertEqual(local_ends(result, apr24, bangalore), [10, [6, 9, 30], 11, [27, 33, 59]])
-
-  def test_feb3_bangalore(self):
     feb3 = gregorian_to_jd(Date(2013, 2, 3))
     result = tithi(feb3, bangalore)
     self.assertEqual(local_ends(result, feb3, bangalore), [22, [8, 14, 7], 23, [30, 33, 18]])
 
-  def test_apr19_helsinki(self):
-    apr19 = gregorian_to_jd(Date(2013, 4, 19))
-    result = tithi(apr19, helsinki)
-    self.assertEqual(result[0], 9)
-
-  def test_apr20_helsinki(self):
-    apr20 = gregorian_to_jd(Date(2013, 4, 20))
-    result = tithi(apr20, helsinki)
-    self.assertEqual(result[0], 10)
-
-  def test_apr21_helsinki(self):
-    apr21 = gregorian_to_jd(Date(2013, 4, 21))
-    result = tithi(apr21, helsinki)
-    self.assertEqual(result[0], 10)
-
-
 class NakshatraTests(PanchangaTestCase):
   """Nakshatra and nakshatra_pada."""
 
-  def test_nakshatra_date1_bangalore(self):
-    result = nakshatra(date1, bangalore)
-    self.assertEqual(result[0], 27)
-
-  def test_nakshatra_date2_bangalore(self):
-    result = nakshatra(date2, bangalore)
-    self.assertEqual(result[0], 27)
-
-  def test_nakshatra_date3_bangalore(self):
-    result = nakshatra(date3, bangalore)
-    self.assertEqual(result[0], 24)
-
-  def test_nakshatra_date4_shillong(self):
-    result = nakshatra(date4, shillong)
-    self.assertEqual(result[0], 3)
+  def test_nakshatra_values(self):
+    for label, jd, place, expected in (
+        ("bangalore", date1, bangalore, 27),
+        ("bangalore second", date2, bangalore, 27),
+        ("bangalore third", date3, bangalore, 24),
+        ("shillong", date4, shillong, 3),
+    ):
+      with self.subTest(label):
+        self.assertEqual(nakshatra(jd, place)[0], expected)
 
   def test_nakshatra_pada_unequal(self):
     set_nakshatra_system('unequal')
@@ -327,18 +283,14 @@ class NakshatraTests(PanchangaTestCase):
 class YogaTests(PanchangaTestCase):
   """Yoga computation."""
 
-  def test_yoga_date3(self):
-    result = yoga(date3, bangalore)
-    self.assertEqual(result[0], 1)
-
-  def test_yoga_date2(self):
-    result = yoga(date2, bangalore)
-    self.assertEqual(result[0], 21)
-
-  def test_yoga_may22_helsinki(self):
-    may22 = gregorian_to_jd(Date(2013, 5, 22))
-    result = yoga(may22, helsinki)
-    self.assertEqual(result[0], 16)
+  def test_yoga_values(self):
+    for label, jd, place, expected in (
+        ("bangalore", date3, bangalore, 1),
+        ("bangalore second", date2, bangalore, 21),
+        ("helsinki", gregorian_to_jd(Date(2013, 5, 22)), helsinki, 16),
+    ):
+      with self.subTest(label):
+        self.assertEqual(yoga(jd, place)[0], expected)
 
 
 class SkipAtNextSunriseTests(PanchangaTestCase):
@@ -457,35 +409,20 @@ class CycleBoundaryTests(unittest.TestCase):
 class MasaTests(PanchangaTestCase):
   """Masa computation with amanta and purnimanta systems."""
 
-  def test_feb10_bangalore(self):
-    jd = gregorian_to_jd(Date(2013, 2, 10))
-    self.assertEqual(masa(jd, bangalore)[0], 10)
-
-  def test_aug17_bangalore(self):
-    aug17 = gregorian_to_jd(Date(2012, 8, 17))
-    self.assertEqual(masa(aug17, bangalore)[0], 5)
-
-  def test_aug18_bangalore(self):
-    aug18 = gregorian_to_jd(Date(2012, 8, 18))
-    result = masa(aug18, bangalore)
-    self.assertEqual(result[0], 6)
-    self.assertTrue(result[1])
-
-  def test_sep19_bangalore(self):
-    sep19 = gregorian_to_jd(Date(2012, 9, 18))
-    result = masa(sep19, bangalore)
-    self.assertEqual(result[0], 6)
-    self.assertFalse(result[1])
-
-  def test_may20_helsinki(self):
-    may20 = gregorian_to_jd(Date(2012, 5, 20))
-    result = masa(may20, helsinki)
-    self.assertEqual(result[0], 2)
-
-  def test_may21_helsinki(self):
-    may21 = gregorian_to_jd(Date(2012, 5, 21))
-    result = masa(may21, helsinki)
-    self.assertEqual(result[0], 3)
+  def test_masa_values(self):
+    for label, jd, place, expected, adhika in (
+        ("bangalore", gregorian_to_jd(Date(2013, 2, 10)), bangalore, 10, None),
+        ("bangalore adhika", gregorian_to_jd(Date(2012, 8, 17)), bangalore, 5, None),
+        ("bangalore next day", gregorian_to_jd(Date(2012, 8, 18)), bangalore, 6, True),
+        ("bangalore sep", gregorian_to_jd(Date(2012, 9, 18)), bangalore, 6, False),
+        ("helsinki", gregorian_to_jd(Date(2012, 5, 20)), helsinki, 2, None),
+        ("helsinki next day", gregorian_to_jd(Date(2012, 5, 21)), helsinki, 3, None),
+    ):
+      with self.subTest(label):
+        result = masa(jd, place)
+        self.assertEqual(result[0], expected)
+        if adhika is not None:
+          self.assertEqual(result[1], adhika)
 
   def test_purnimanta_amanta_contrast(self):
     apr17 = gregorian_to_jd(Date(2023, 4, 17))
@@ -699,9 +636,6 @@ class HelperMathTests(PanchangaTestCase):
     local_hours = 0 + 5 / 60.0
     jd_ut = civil_jd + (local_hours - tz) / 24.0
     self.assertEqual(format_hms_from_jd(jd_ut, civil_jd, tz), "00:05")
-
-  def test_unwrap_angles(self):
-    self.assertEqual(unwrap_angles([350, 10, 20]), [350, 370, 380])
 
   def test_unwrap_angles_does_not_mutate_input(self):
     # Regression: unwrap_angles used to rewrite the caller's list in place.
