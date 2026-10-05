@@ -52,13 +52,9 @@ class BoundaryTestCase(unittest.TestCase):
 class JulianDayContinuityTests(BoundaryTestCase):
   """The JD sequence has no gap or overlap at year 0 / year 1."""
 
-  def test_midnight_steps_exactly_one_day(self):
+  def test_julian_day_boundaries(self):
     self.assertEqual(gregorian_to_jd(Date(0, 12, 31)) + 1.0, gregorian_to_jd(Date(1, 1, 1)))
-
-  def test_revjul_roundtrips_year_zero(self):
     self.assertEqual(swe.revjul(gregorian_to_jd(Date(0, 6, 15)), swe.GREG_CAL), (0, 6, 15, 0.0))
-
-  def test_year_zero_is_a_leap_year(self):
     # Proleptic Gregorian leap rule: 0 divisible by 400 -> 366 days;
     # year -1 (2 BCE) is a common year.
     self.assertEqual(gregorian_to_jd(Date(1, 1, 1)) - gregorian_to_jd(Date(0, 1, 1)), 366.0)
@@ -118,12 +114,9 @@ class Se1GoldenTests(BoundaryTestCase):
   # gregorian_to_jd(Date(1, 1, 1), 12 - 5.5): noon IST as a JD(UT).
   NOON_JD = 1721425.7708333333
 
-  def test_solar_longitude(self):
+  def test_longitudes(self):
     require_swieph(self.NOON_JD)
     self.assertAlmostEqual(solar_longitude(self.NOON_JD), 285.6243, delta=GOLDEN_TOLERANCE_DEG)
-
-  def test_lunar_longitude(self):
-    require_swieph(self.NOON_JD)
     self.assertAlmostEqual(lunar_longitude(self.NOON_JD), 169.8393, delta=GOLDEN_TOLERANCE_DEG)
 
   def test_golden_jd_matches_constructor(self):
