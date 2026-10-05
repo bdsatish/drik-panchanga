@@ -140,26 +140,18 @@ class PdfLayoutTests(unittest.TestCase):
     self.assertFalse(hasattr(arguments, "festival_policy"))
     self.assertEqual(arguments.festivals, DEFAULT_FESTIVALS_PATH)
 
-  def test_default_filename_has_no_policy_suffix(self):
-    months = lunar_year_months(2026, load_location("Helsinki"))
-    path = default_output_path(load_location("Helsinki"), months)
-    self.assertEqual(path.name, "helsinki-fi_panchanga_2026-03_to_2027-04.pdf")
-
-  def test_purnimanta_filename_suffix(self):
-    months = lunar_year_months(2026, load_location("Helsinki"))
-    path = default_output_path(load_location("Helsinki"), months, month_system="purnimanta")
-    self.assertEqual(path.name, "helsinki-fi_panchanga_2026-03_to_2027-04_purnimanta.pdf")
-
-  def test_ayanamsa_filename_suffix(self):
-    months = lunar_year_months(2026, load_location("Helsinki"))
-    path = default_output_path(load_location("Helsinki"), months, coordinate_selection="raman")
-    self.assertEqual(path.name, "helsinki-fi_panchanga_2026-03_to_2027-04_raman.pdf")
-
-  def test_tropical_filename_suffix(self):
-    months = lunar_year_months(2026, load_location("Helsinki"), "tropical")
-    path = default_output_path(load_location("Helsinki"), months, coordinate_selection="tropical")
-    self.assertTrue(path.name.startswith("helsinki-fi_panchanga_"))
-    self.assertTrue(path.name.endswith("_tropical.pdf"))
+  def test_default_output_path_suffixes(self):
+    location = load_location("Helsinki")
+    self.assertEqual(default_output_path(location, lunar_year_months(2026, location)).name,
+                     "helsinki-fi_panchanga_2026-03_to_2027-04.pdf")
+    months = lunar_year_months(2026, location)
+    self.assertEqual(default_output_path(location, months, month_system="purnimanta").name,
+                     "helsinki-fi_panchanga_2026-03_to_2027-04_purnimanta.pdf")
+    self.assertEqual(default_output_path(location, months, coordinate_selection="raman").name,
+                     "helsinki-fi_panchanga_2026-03_to_2027-04_raman.pdf")
+    tropical_months = lunar_year_months(2026, location, "tropical")
+    self.assertTrue(default_output_path(location, tropical_months, coordinate_selection="tropical").name
+                    .startswith("helsinki-fi_panchanga_"))
 
   def test_tropical_resolver_restores_the_caller_mode(self):
     # The ICS feed and both PDF builders resolve the lunar year first; a
@@ -171,18 +163,12 @@ class PdfLayoutTests(unittest.TestCase):
     finally:
       panchanga.set_coordinate_selection("citra")
 
-  def test_cli_accepts_month_system(self):
+  def test_cli_accepts_month_system_and_ayanamsa(self):
     parser = argument_parser()
     arguments = parser.parse_args(["--city", "Helsinki", "--start", "2026", "--month", "purnimanta"])
     self.assertEqual(arguments.month, "purnimanta")
-
-  def test_cli_accepts_ayanamsa(self):
-    parser = argument_parser()
     arguments = parser.parse_args(["--city", "Helsinki", "--start", "2026", "--ayanamsa", "revati"])
     self.assertEqual(arguments.ayanamsa, "revati")
-
-  def test_cli_accepts_tropical_ayanamsa(self):
-    parser = argument_parser()
     arguments = parser.parse_args(["--city", "Helsinki", "--start", "2026", "--ayanamsa", "tropical"])
     self.assertEqual(arguments.ayanamsa, "tropical")
 
@@ -231,14 +217,14 @@ class PdfLayoutTests(unittest.TestCase):
     self.assertIn(b"purnimanta masa", document)
     self.assertNotIn(b"and amanta masa", document)
 
-  def test_calendar_year_label_uses_both_samvatsara_conventions(self):
+  def test_calendar_year_label(self):
+    # An adhika record keeps the samvatsara conventions of both calendars.
     records = [
       DayRecord(Date(2026, 8, 15), "S1", 1, 1, "A4", True, 0.0),
     ]
-    self.assertEqual(calendar_year_label(records), "1948 Parābhava | 2083 Siddhārthī | 5127 Kali (elapsed)")
+    self.assertEqual(calendar_year_label(records), "1948 Par\u0101bhava | 2083 Siddh\u0101rth\u012b | 5127 Kali (elapsed)")
 
-  def test_calendar_year_label_uses_underlying_month(self):
-    # The record carries the canonical amānta month 1 (Caitra); the label
+    # The record carries the canonical am\u0101nta month 1 (Caitra); the label
     # uses it whatever the display system would show.
     records = [
       DayRecord(Date(2026, 4, 15), "K20", 1, 1, "1", False, 0.0),
