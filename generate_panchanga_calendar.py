@@ -1323,16 +1323,14 @@ def common_argument_parser(description):
   """The options shared by both PDF generator CLIs; callers add their own."""
   parser = argparse.ArgumentParser(description=description)
   parser.add_argument(
-    "--city", metavar="NAME|LAT,LON,TZ",
-    help=(f"city as listed in {DEFAULT_CITIES_PATH.name} (e.g. 'Helsinki, FI'), "
-          "or three floats LAT,LON,TZ instead: latitude (negative = south), "
-          "longitude (east = positive), timezone as UTC offset hours "
-          "(5.5 = UTC+5:30), e.g. --city=-13.4,70,5.5"))
+    "--city", metavar="NAME|LAT,LON,TZ", help=(f"city as listed in {DEFAULT_CITIES_PATH.name} (e.g. 'Helsinki, FI'), "
+                                               "or three floats LAT,LON,TZ instead: latitude (negative = south), "
+                                               "longitude (east = positive), timezone as UTC offset hours "
+                                               "(5.5 = UTC+5:30), e.g. --city=-13.4,70,5.5"))
   parser.add_argument(
-    "--year", required=True, metavar="YYYY",
-    help=(f"Gregorian year of the Ugadi that opens the lunar year, e.g. 2026; "
-          f"astronomical year: 0000 = 1 BCE, -0500 = 501 BCE; "
-          f"{_format_year(PDF_YEAR_MIN)} to {_format_year(PDF_YEAR_MAX)}"))
+    "--year", required=True, metavar="YYYY", help=(f"Gregorian year of the Ugadi that opens the lunar year, e.g. 2026; "
+                                                   f"astronomical year: 0000 = 1 BCE, -0500 = 501 BCE; "
+                                                   f"{_format_year(PDF_YEAR_MIN)} to {_format_year(PDF_YEAR_MAX)}"))
   parser.add_argument("-o", "--output", type=Path, help="output PDF path (default: generated from city and range)")
   parser.add_argument("--month", choices=("amanta", "purnimanta"), default="amanta",
                       help="lunar month reckoning for display: amanta (default) or purnimanta")
