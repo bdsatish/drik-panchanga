@@ -699,7 +699,7 @@ def main(argv=None):
   _check_reportlab()
   try:
     start_year = require_start_year(args.start)
-    location = resolve_location(args.city, args.place)
+    location = resolve_location(args.city)
     coordinate_selection = require_coordinate_selection(args.ayanamsa)
     months = lunar_year_months(start_year, location, coordinate_selection)
     output_path = args.output or default_monthly_output_path(location, months, month_system=args.month,

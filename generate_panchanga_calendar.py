@@ -597,6 +597,25 @@ def _parse_float(text, kind, low, high):
   return value
 
 
+def _is_place_spec(text):
+  """True iff ``text`` is a ``LAT,LON,TZ`` triple of three float() numbers.
+
+  ``cities.json`` keys are always ``AsciiName, CC`` (one comma, and a
+  non-numeric country code after it), so a 3-part all-numeric value can
+  never collide with a city name.
+  """
+  parts = (text or "").split(",")
+  return len(parts) == 3 and all(_parseable_float(part) for part in parts)
+
+
+def _parseable_float(text):
+  try:
+    float(text.strip())
+    return True
+  except ValueError:
+    return False
+
+
 def load_custom_location(latitude, longitude, timezone):
   """``Location`` from signed floats: lat/lon degrees + UTC offset hours."""
   latitude = _parse_float(latitude, "latitude", -90, 90)
@@ -617,24 +636,28 @@ def load_location(city):
 
 
 def resolve_location(city=None, place=None):
-  """``place`` as ``LAT,LON,TZ`` when given (wins over city), else the catalog city.
+  """``city`` may be a ``cities.json`` name or a ``LAT,LON,TZ`` triple.
 
-  Latitude is negative for south, longitude positive for east, and the
-  timezone is a fixed UTC offset in hours (5.5 = UTC+5:30, no DST).
-  Shared by ``--place`` and the web ``place`` field.
+  An explicit ``place`` as ``LAT,LON,TZ`` (the web ``place`` field) still
+  wins when given; otherwise a ``city`` that itself looks like three floats
+  becomes a manual location, and any other ``city`` is looked up in the
+  catalog. Latitude is negative for south, longitude positive for east, and
+  the timezone is a fixed UTC offset in hours (5.5 = UTC+5:30, no DST).
   """
   if place and place.strip():
     parts = place.split(",")
     if len(parts) != 3:
       raise ValueError("Place must be three comma-separated numbers: LAT,LON,TZ")
     return load_custom_location(*parts)
+  if not place and _is_place_spec(city):
+    return load_custom_location(*(part.strip() for part in city.split(",")))
   if not city:
     raise ValueError("City is required (or a place as LAT,LON,TZ).")
   return load_location(city)
 
 
 # Options whose value may start with a minus (a south latitude, a BCE year).
-NEGATIVE_LEADING_OPTIONS = ("--place", "--start")
+NEGATIVE_LEADING_OPTIONS = ("--city", "--start")
 
 
 def attach_option_values(argv, options=NEGATIVE_LEADING_OPTIONS):
@@ -1299,13 +1322,12 @@ def default_output_path(location, months, month_system="amanta", coordinate_sele
 def common_argument_parser(description):
   """The options shared by both PDF generator CLIs; callers add their own."""
   parser = argparse.ArgumentParser(description=description)
-  parser.add_argument("--city", help=(f"city as listed in {DEFAULT_CITIES_PATH.name} "
-                                      f'(e.g. "Helsinki, FI" or Helsinki,FI)'))
   parser.add_argument(
-    "--place", metavar="LAT,LON,TZ",
-    help=("location as three floats instead of --city: latitude (negative = south), "
-          "longitude (east = positive), timezone as UTC offset hours (5.5 = UTC+5:30), "
-          "e.g. --place -13.4,70,5.5"))
+    "--city", metavar="NAME|LAT,LON,TZ",
+    help=(f"city as listed in {DEFAULT_CITIES_PATH.name} (e.g. 'Helsinki, FI'), "
+          "or three floats LAT,LON,TZ instead: latitude (negative = south), "
+          "longitude (east = positive), timezone as UTC offset hours "
+          "(5.5 = UTC+5:30), e.g. --city=-13.4,70,5.5"))
   parser.add_argument(
     "--start", required=True, metavar="YYYY",
     help=(f"Gregorian year of the Ugadi that opens the lunar year, e.g. 2026; "
@@ -1351,7 +1373,7 @@ def main(argv=None):
   _check_reportlab()
   try:
     start_year = require_start_year(arguments.start)
-    location = resolve_location(arguments.city, arguments.place)
+    location = resolve_location(arguments.city)
     month_system = arguments.month
     coordinate_selection = require_coordinate_selection(arguments.ayanamsa)
     months = lunar_year_months(start_year, location, coordinate_selection)

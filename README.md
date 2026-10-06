@@ -129,10 +129,10 @@ Both accept `--month amanta|purnimanta`, `--ayanamsa` (citra, revati, rohini,
 pushya, mula, krishnamurti, raman, tropical), `--festivals FILE.cfg`, and
 `--output`. Cities come from `data/cities.json` as `AsciiName, CC`
 (e.g. `Bengaluru, IN`). For places missing from the catalog, pass
-`--place LAT,LON,TZ` with three decimal numbers instead: latitude (negative =
-south), longitude (east = positive), and the timezone as a UTC offset in hours,
-e.g. `--place -13.4,70,5.5` (UTC+5:30, no DST). Full details, including the
-PDF legend and festival configuration:
+`--city LAT,LON,TZ` — three decimal numbers instead of a name: latitude
+(negative = south), longitude (east = positive), and the timezone as a UTC
+offset in hours, e.g. `--city=-13.4,70,5.5` (UTC+5:30, no DST). Full details,
+including the PDF legend and festival configuration:
 [docs/README.CALENDARS.md](docs/README.CALENDARS.md) and
 [docs/README.FESTIVALS.md](docs/README.FESTIVALS.md).
 
@@ -152,7 +152,7 @@ export the lunar year as iCal (.ics). Alternatively switch to
 Coordinates and enter decimal latitude/longitude plus a UTC offset in hours
 (e.g. `5.5`, no DST) — useful for places missing from `data/cities.json`.
 The app sends them as one `place=LAT,LON,TZ` field, parsed the same way as
-`--place`.
+the `--city LAT,LON,TZ` form of the command-line tools.
 When the City field is left blank, the app suggests a city from the
 visitor's IP via a third-party GeoIP service (ipwho.is, over HTTPS).
 When the app runs behind a trusted reverse proxy, set

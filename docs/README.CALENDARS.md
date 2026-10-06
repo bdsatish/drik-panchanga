@@ -23,7 +23,7 @@ Common options
 
 ```
 --city "Ujjain, IN"      # data/cities.json; country code disambiguates
---place -13.4,70,5.5     # instead of --city: LAT,LON,TZ (see below)
+--city -13.4,70,5.5      # or LAT,LON,TZ (see below)
 --start 2026             # Gregorian year holding the lunar year's Ugadi
 --start=-0500            # BCE: prefix the astronomical year with '-'
 --month amanta|purnimanta
@@ -41,11 +41,13 @@ first month also shows the previous year's Phālguna and the last month the next
 year's Chaitra, with their festivals; consecutive years share one month.
 `--month purnimanta` changes only the māsa labels and badges, not the span.
 
-`--place` takes three comma-separated decimal numbers instead of a city name:
-latitude (negative = south), longitude (east = positive), and the timezone as a
-UTC offset in hours (5.5 = UTC+5:30; no DST is applied). The header names the
-place by its coordinates, e.g. `13.40S, 70.00E (UTC+5:30)`. Either `--city` or
-`--place` must be given; when both are, `--place` wins.
+`--city` also takes three comma-separated decimal numbers instead of a city
+name: latitude (negative = south), longitude (east = positive), and the
+timezone as a UTC offset in hours (5.5 = UTC+5:30; no DST is applied). The
+header names the place by its coordinates, e.g. `13.40S, 70.00E (UTC+5:30)`.
+City names always carry a single comma before a non-numeric country code, so
+three comma-separated numbers are never mistaken for a name. Either form of
+`--city` must be given.
 
 `--ayanamsa tropical` uses the equinox-referenced ecliptic instead of a
 fixed-star (nirayana) reference. The PDF subtitle shows *Tropical (Sāyana)*

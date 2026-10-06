@@ -70,9 +70,9 @@ class CustomLocationTests(unittest.TestCase):
       resolve_location(None)
 
   def test_cli_accepts_negative_latitude(self):
-    argv = attach_option_values(["--place", "-13.4,70,5.5", "--start", "2026"])
+    argv = attach_option_values(["--city", "-13.4,70,5.5", "--start", "2026"])
     arguments = annual_argument_parser().parse_args(argv)
-    self.assertEqual(resolve_location(arguments.city, arguments.place).name, "13.40S, 70.00E (UTC+5:30)")
+    self.assertEqual(resolve_location(arguments.city).name, "13.40S, 70.00E (UTC+5:30)")
 
 
 class CustomLocationWebTests(unittest.TestCase):
@@ -105,8 +105,8 @@ class AttachOptionValuesTests(unittest.TestCase):
   """A value that starts with a minus must survive argparse."""
 
   GLUE_CASES = [
-    ("glues a negative place value", ["--place", "-13.4,70,5.5", "--start", "2026"],
-     ["--place=-13.4,70,5.5", "--start", "2026"]),
+    ("glues a negative city spec", ["--city", "-13.4,70,5.5", "--start", "2026"],
+     ["--city=-13.4,70,5.5", "--start", "2026"]),
     ("glues a negative bce start year", ["--city", "Ujjain", "--start", "-500"],
      ["--city", "Ujjain", "--start=-500"]),
   ]
@@ -121,7 +121,7 @@ class AttachOptionValuesTests(unittest.TestCase):
     # with a split flag and value, so argv is left byte-identical. --start
     # with no value must stay split too: it should error as a missing value,
     # not as "--start=--city" plus "unrecognized arguments: Ujjain".
-    for argv in (["--place", "12.97,77.59,5.5", "--start", "2026"],
+    for argv in (["--city", "12.97,77.59,5.5", "--start", "2026"],
                  ["--city", "Helsinki", "--start", "2026"],
                  ["--start", "--city", "Ujjain"]):
       with self.subTest(argv=argv):
@@ -238,24 +238,24 @@ class PlaceSpecFormsTests(unittest.TestCase):
       self.assertEqual(int(tzinfo_for(name).utcoffset(None).total_seconds()) // 3600, hours)
 
 
-class PlaceCliTests(unittest.TestCase):
-  """Both PDF CLIs accept --place instead of --city."""
+class CityCliTests(unittest.TestCase):
+  """Both PDF CLIs take the LAT,LON,TZ spec through --city itself."""
 
-  def test_place_and_city_argv_parse(self):
+  def test_city_accepts_spec_and_name_without_place(self):
     for parser_for in (annual_argument_parser, monthly_argument_parser):
       with self.subTest(parser=parser_for.__name__):
-        arguments = parser_for().parse_args(attach_option_values(["--place", "-13.4,70,5.5", "--start", "2026"]))
-        self.assertEqual(arguments.place, "-13.4,70,5.5")
-        self.assertIsNone(arguments.city)
+        arguments = parser_for().parse_args(attach_option_values(["--city", "-13.4,70,5.5", "--start", "2026"]))
+        self.assertEqual(arguments.city, "-13.4,70,5.5")
+        self.assertFalse(hasattr(arguments, "place"))
         arguments = parser_for().parse_args(["--city", "Helsinki", "--start", "2026"])
         self.assertEqual(arguments.city, "Helsinki")
-        self.assertIsNone(arguments.place)
+        self.assertFalse(hasattr(arguments, "place"))
 
 
 class MainIntegrationTests(unittest.TestCase):
-  """main() must resolve --place into the Location used for PDF generation."""
+  """main() must resolve --city as a LAT,LON,TZ spec into the PDF Location."""
 
-  def test_monthly_main_uses_place(self):
+  def test_monthly_main_uses_city_spec(self):
     import generate_monthly_calendar as monthly
     captured = {}
     with TemporaryDirectory() as directory:
@@ -269,7 +269,7 @@ class MainIntegrationTests(unittest.TestCase):
            mock.patch.object(monthly, "lunar_year_months", return_value=[(2026, 3)] * 14), \
            mock.patch.object(monthly, "default_monthly_output_path", return_value=output), \
            redirect_stdout(io.StringIO()):
-        self.assertEqual(monthly.main(["--place", "-13.4,70,5.5", "--start", "2026"]), 0)
+        self.assertEqual(monthly.main(["--city", "-13.4,70,5.5", "--start", "2026"]), 0)
     location = captured["location"]
     self.assertIsInstance(location, Location)
     self.assertEqual((location.latitude, location.longitude, location.timezone_name), (-13.4, 70.0, "UTC+5:30"))
@@ -282,7 +282,7 @@ class MainIntegrationTests(unittest.TestCase):
         with mock.patch.object(sys, "stderr", mock.Mock()), self.assertRaises(SystemExit):
           module.main(["--start", "2026"])
 
-  def test_annual_main_uses_place(self):
+  def test_annual_main_uses_city_spec(self):
     import generate_panchanga_calendar as annual
     location_holder = {}
     real_load = annual.load_custom_location
@@ -303,7 +303,7 @@ class MainIntegrationTests(unittest.TestCase):
            mock.patch.object(annual, "lunar_year_months", return_value=[(2026, 3)] * 14), \
            mock.patch.object(annual, "build_pdf", side_effect=fake_build), \
            redirect_stdout(io.StringIO()):
-        annual.main(["--place", "-13.4,70,5.5", "--start", "2026"])
+        annual.main(["--city", "-13.4,70,5.5", "--start", "2026"])
     location = location_holder["location"]
     self.assertEqual((location.latitude, location.longitude, location.timezone_name), (-13.4, 70.0, "UTC+5:30"))
     self.assertIs(location_holder.get("built"), location)

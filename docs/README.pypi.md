@@ -21,12 +21,12 @@ With the `[pdf]` extra, two console commands are available:
 `--start YYYY` prints the cāndramāna year whose Ugadi falls in Gregorian year
 `YYYY`, from the month containing Ugadi through the month containing the last
 Phālguna day (12–14 months; years `-3300 ... 3300`). BCE years take a leading
-minus on the flag value (`--start=-0500`). Use `--place LAT,LON,TZ` when the
+minus on the flag value (`--start=-0500`). Use `--city LAT,LON,TZ` when the
 city is missing from the catalog.
 
 ```bash
 drik-panchanga-short --city "Bengaluru, IN" --start 2026
-drik-panchanga-short --place -13.4,70,5.5 --start 2026  # lat, lon, UTC offset hours
+drik-panchanga-short --city=-13.4,70,5.5 --start 2026  # lat, lon, UTC offset hours
 drik-panchanga-long  --city Ujjain --start=-500
 ```
 
@@ -46,7 +46,7 @@ Breaking relative to 1.0.0:
   sidereal mode together. `set_chosen_ayanamsa` only sets the key and leaves a
   prior tropical mode in place.
 
-Also new: `--place LAT,LON,TZ`, Hindu-day `moonrise` / `moonset`, polar
+Also new: `--city LAT,LON,TZ`, Hindu-day `moonrise` / `moonset`, polar
 transit fallbacks, and BCE years through about 5000 BCE.
 
 ## Ephemeris data

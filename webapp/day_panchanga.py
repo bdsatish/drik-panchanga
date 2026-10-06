@@ -224,8 +224,9 @@ def compute_day_panchanga(city, date_text, month_system="amanta", coordinate_sel
     ``revati``, ``rohini``, ``pushya``, ``mula``, ``krishnamurti``, ``raman``)
     or ``"tropical"`` for tropical (sāyana) longitudes.
 
-    ``place`` (``LAT,LON,TZ``, as ``--place``) selects a manual location with
-    a fixed UTC offset (no DST); when set it wins over ``city``.
+    ``place`` (``LAT,LON,TZ``, as the ``--city LAT,LON,TZ`` form of the CLI)
+    selects a manual location with a fixed UTC offset (no DST); when set it
+    wins over ``city``.
     """
   with panchanga.coordinate_calculation_lock:
     location = resolve_location(city, place)
