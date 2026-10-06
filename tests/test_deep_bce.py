@@ -1,7 +1,7 @@
 """Deep-BCE regression locks, back to 3302 BCE (astronomical year -3301).
 
 Years are astronomical, as in ``Date``: year 0 is 1 BCE and -3299 is 3300 BCE.
-The PDF products run to ``--start -3300`` and their resolver reads back to
+The PDF products run to ``--year -3300`` and their resolver reads back to
 1 Nov -3301, so ``DEEPEST`` sits there: every day a PDF can read is inside a
 tested range.
 
@@ -22,7 +22,7 @@ from generate_panchanga_calendar import load_location, place_for_date
 from tests import require_swieph
 from webapp.day_panchanga import compute_day_panchanga, parse_civil_date
 
-DEEPEST = Date(-3301, 11, 1)  # the earliest day a --start -3300 PDF reads
+DEEPEST = Date(-3301, 11, 1)  # the earliest day a --year -3300 PDF reads
 CITIES = ("Ujjain", "Helsinki", "New York City", "Sydney, AU", "Murmansk, RU")
 TIME = re.compile(r"^-?\d{2,}:\d{2}:\d{2}$")
 

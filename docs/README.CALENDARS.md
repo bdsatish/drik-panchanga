@@ -10,7 +10,7 @@ Two PDF layouts share the same computation, colours, and markers:
   year, with wider rows suited for reading a full month at a glance.
 
 Both layouts print the same span, and its length is never fixed. The
-amānta cāndramāna year that `--start YYYY` names runs from the month
+amānta cāndramāna year that `--year YYYY` names runs from the month
 containing that year's **Ugadi** (Chaitra S1; adhika Chaitra when present)
 through the month containing the **last day of Phālguna** — 12, 13 or 14
 whole Gregorian months.
@@ -24,15 +24,15 @@ Common options
 ```
 --city "Ujjain, IN"      # data/cities.json; country code disambiguates
 --city -13.4,70,5.5      # or LAT,LON,TZ (see below)
---start 2026             # Gregorian year holding the lunar year's Ugadi
---start=-0500            # BCE: prefix the astronomical year with '-'
+--year 2026             # Gregorian year holding the lunar year's Ugadi
+--year=-0500            # BCE: prefix the astronomical year with '-'
 --month amanta|purnimanta
 --ayanamsa citra|revati|rohini|pushya|mula|krishnamurti|raman|tropical
 --festivals FILE.cfg
 -o, --output FILE.pdf      # short: -o FILE.pdf
 ```
 
-`--start` takes an astronomical year (year `0000` is 1 BCE) and the lunar year
+`--year` takes an astronomical year (year `0000` is 1 BCE) and the lunar year
 in it; the month is never asked for. PDF and iCal years run `-3300 ... 3300`
 for every ayanāṃśa — in sidereal modes Ugadi drifts about a day later every
 70–80 years, so a few years before about -2950 hold two Ugadis (or none) and
@@ -150,7 +150,7 @@ both display modes.
 Example: Ujjain, lunar year 2026 (March 2026 – April 2027)
 ---------------------------------------------------------
 
-`--start 2026` resolves to Ugadi 20 Mar 2026 through 6 Apr 2027, so the
+`--year 2026` resolves to Ugadi 20 Mar 2026 through 6 Apr 2027, so the
 fourteen printed months are March 2026 to April 2027:
 
 ![Ujjain Panchanga, March 2026 through April 2027](../samples/ujjain_panchanga_mar2026_apr2027.png)

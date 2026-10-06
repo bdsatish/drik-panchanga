@@ -267,7 +267,7 @@ def _month_sequence(start_year, start_month, count):
 
 
 def _format_month(year, month):
-  """``-0500-03`` for a ``(year, month)`` pair, in the ``--start`` grammar."""
+  """``-0500-03`` for a ``(year, month)`` pair, in the ``--year`` grammar."""
   return (f"-{abs(year):04d}-{month:02d}" if year < 0 else f"{year:04d}-{month:02d}")
 
 
@@ -276,7 +276,7 @@ def _format_year(year):
 
 
 def _format_date(civil):
-  """``-0500-03-15`` for a ``Date``, in the ``--start`` grammar."""
+  """``-0500-03-15`` for a ``Date``, in the ``--year`` grammar."""
   return f"{_format_year(civil.year)}-{civil.month:02d}-{civil.day:02d}"
 
 
@@ -446,14 +446,14 @@ def special_weekday_dates(pradosham_dates, sankashti_dates):
 
 
 def require_start_year(text):
-  """Parse the ``--start`` lunar year (astronomical: ``0000`` = 1 BCE) or raise ``ValueError``.
+  """Parse the ``--year`` lunar year (astronomical: ``0000`` = 1 BCE) or raise ``ValueError``.
 
   Positive years keep four digits, so ``26`` cannot be 26 CE or 2026. Only
   ``PDF_YEAR_MIN ... PDF_YEAR_MAX`` is accepted for the PDF and ICS products.
   """
   if re.fullmatch(r"(-\d{1,4}|\d{4})-\d{2}", text or ""):
     raise ValueError("start year must use YYYY format, not YYYY-MM: the first month comes from "
-                     "Ugadi, so pass the year alone (e.g. --start 2026)")
+                     "Ugadi, so pass the year alone (e.g. --year 2026)")
   match = re.fullmatch(r"(-\d{1,4}|\d{4})", text or "")
   if not match:
     raise ValueError(f"start year must be YYYY or -YYYY, e.g. 2026 or {_format_year(-500)} for 501 BCE")
@@ -657,16 +657,16 @@ def resolve_location(city=None, place=None):
 
 
 # Options whose value may start with a minus (a south latitude, a BCE year).
-NEGATIVE_LEADING_OPTIONS = ("--city", "--start")
+NEGATIVE_LEADING_OPTIONS = ("--city", "--year")
 
 
 def attach_option_values(argv, options=NEGATIVE_LEADING_OPTIONS):
   """Glue a value to its flag when the value starts with a single minus.
 
-  ``--start -0500`` becomes ``--start=-0500``: argparse would otherwise
+  ``--year -0500`` becomes ``--year=-0500``: argparse would otherwise
   read the leading ``-`` of a BCE year or a south latitude as the start of
   another option. Values that do not start with ``-`` are left untouched, as
-  are values starting with ``--``: ``--start --city`` must stay split so
+  are values starting with ``--``: ``--year --city`` must stay split so
   argparse reports the missing value instead of ``unrecognized arguments``.
   """
   argv = list(argv)
@@ -1329,7 +1329,7 @@ def common_argument_parser(description):
           "longitude (east = positive), timezone as UTC offset hours "
           "(5.5 = UTC+5:30), e.g. --city=-13.4,70,5.5"))
   parser.add_argument(
-    "--start", required=True, metavar="YYYY",
+    "--year", required=True, metavar="YYYY",
     help=(f"Gregorian year of the Ugadi that opens the lunar year, e.g. 2026; "
           f"astronomical year: 0000 = 1 BCE, -0500 = 501 BCE; "
           f"{_format_year(PDF_YEAR_MIN)} to {_format_year(PDF_YEAR_MAX)}"))
@@ -1347,7 +1347,7 @@ def common_argument_parser(description):
 
 def argument_parser():
   parser = common_argument_parser(
-    description=("Generate a one-page A4 panchanga for one lunar year: the Ugadi in --start "
+    description=("Generate a one-page A4 panchanga for one lunar year: the Ugadi in --year "
                  "through the end of Phalguna, as 12 to 14 Gregorian months."))
   parser.add_argument(
     "--recurring", default="specials", metavar="MODE", help=(
@@ -1372,7 +1372,7 @@ def main(argv=None):
   arguments = parser.parse_args(attach_option_values(sys.argv[1:] if argv is None else argv))
   _check_reportlab()
   try:
-    start_year = require_start_year(arguments.start)
+    start_year = require_start_year(arguments.year)
     location = resolve_location(arguments.city)
     month_system = arguments.month
     coordinate_selection = require_coordinate_selection(arguments.ayanamsa)

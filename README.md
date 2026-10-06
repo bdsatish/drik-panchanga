@@ -106,12 +106,12 @@ Two layouts, usable either from a repository checkout
 (`python generate_*.py ...`) or after `pip install "drik-panchanga[pdf]"`:
 
 ```
-drik-panchanga-short --city Ujjain --start 2026    # one-page A4, one lunar year
-drik-panchanga-long  --city Ujjain --start 2026    # wall calendar, one page per month
-drik-panchanga-short --city Ujjain --start=-500    # BCE: '-' prefixes the year
+drik-panchanga-short --city Ujjain --year 2026    # one-page A4, one lunar year
+drik-panchanga-long  --city Ujjain --year 2026    # wall calendar, one page per month
+drik-panchanga-short --city Ujjain --year=-500    # BCE: '-' prefixes the year
 ```
 
-`--start YYYY` picks the lunar (cāndramāna) year whose **Ugadi** falls in the
+`--year YYYY` picks the lunar (cāndramāna) year whose **Ugadi** falls in the
 Gregorian year `YYYY`: printing runs from the month containing that Ugadi
 (Chaitra S1; adhika Chaitra when the year has one) through the month containing
 the last day of Phālguna — 12, 13 or 14 whole Gregorian months, never a fixed

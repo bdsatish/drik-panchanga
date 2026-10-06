@@ -18,16 +18,16 @@ With the `[pdf]` extra, two console commands are available:
 - `drik-panchanga-long` — A4 portrait wall calendar, one page per month of the
   lunar year
 
-`--start YYYY` prints the cāndramāna year whose Ugadi falls in Gregorian year
+`--year YYYY` prints the cāndramāna year whose Ugadi falls in Gregorian year
 `YYYY`, from the month containing Ugadi through the month containing the last
 Phālguna day (12–14 months; years `-3300 ... 3300`). BCE years take a leading
-minus on the flag value (`--start=-0500`). Use `--city LAT,LON,TZ` when the
+minus on the flag value (`--year=-0500`). Use `--city LAT,LON,TZ` when the
 city is missing from the catalog.
 
 ```bash
-drik-panchanga-short --city "Bengaluru, IN" --start 2026
-drik-panchanga-short --city=-13.4,70,5.5 --start 2026  # lat, lon, UTC offset hours
-drik-panchanga-long  --city Ujjain --start=-500
+drik-panchanga-short --city "Bengaluru, IN" --year 2026
+drik-panchanga-short --city=-13.4,70,5.5 --year 2026  # lat, lon, UTC offset hours
+drik-panchanga-long  --city Ujjain --year=-500
 ```
 
 ## Changes in 2.0.0
@@ -40,7 +40,7 @@ Breaking relative to 1.0.0:
   `format_local_hm` (IANA zone, DST-aware) or `format_hms_from_jd` (fixed
   offset). Do not treat the second element of `tithi` / `nakshatra` as a local
   clock triple.
-- CLI `--start` is an astronomical year `YYYY` (the lunar year of that year's
+- CLI `--year` is an astronomical year `YYYY` (the lunar year of that year's
   Ugadi), not `YYYY-MM`.
 - Prefer `set_coordinate_selection("citra")` to set the ayanāṃśa **and**
   sidereal mode together. `set_chosen_ayanamsa` only sets the key and leaves a

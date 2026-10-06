@@ -12,7 +12,7 @@ and maximum time.
 The span is one cāndramāna year: the Gregorian months from the month
 containing Ugadi (amānta Chaitra S1, adhika Chaitra when present) through
 the month containing the last day of Phālguna — 12 to 14 pages, set by
-``--start YYYY``.
+``--year YYYY``.
 
 Timings use hours past civil midnight on the Hindu day (sunrise to
 sunrise). Values at or after 24:00 are past midnight; ``00:xx`` appears
@@ -698,7 +698,7 @@ def main(argv=None):
   args = parser.parse_args(attach_option_values(sys.argv[1:] if argv is None else argv))
   _check_reportlab()
   try:
-    start_year = require_start_year(args.start)
+    start_year = require_start_year(args.year)
     location = resolve_location(args.city)
     coordinate_selection = require_coordinate_selection(args.ayanamsa)
     months = lunar_year_months(start_year, location, coordinate_selection)

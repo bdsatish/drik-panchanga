@@ -108,18 +108,18 @@ class CliTests(unittest.TestCase):
 
   def test_cli_defaults(self):
     parser = argument_parser()
-    arguments = parser.parse_args(["--city", "Helsinki", "--start", "2026"])
+    arguments = parser.parse_args(["--city", "Helsinki", "--year", "2026"])
     self.assertEqual(arguments.month, "amanta")
     self.assertEqual(arguments.ayanamsa, "citra")
 
   def test_cli_accepts_purnimanta(self):
     parser = argument_parser()
-    arguments = parser.parse_args(["--city", "Helsinki", "--start", "2026", "--month", "purnimanta"])
+    arguments = parser.parse_args(["--city", "Helsinki", "--year", "2026", "--month", "purnimanta"])
     self.assertEqual(arguments.month, "purnimanta")
 
   def test_cli_accepts_ayanamsa(self):
     parser = argument_parser()
-    arguments = parser.parse_args(["--city", "Helsinki", "--start", "2026", "--ayanamsa", "revati"])
+    arguments = parser.parse_args(["--city", "Helsinki", "--year", "2026", "--ayanamsa", "revati"])
     self.assertEqual(arguments.ayanamsa, "revati")
 
 

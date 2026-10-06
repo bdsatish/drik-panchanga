@@ -136,7 +136,7 @@ class PdfLayoutTests(unittest.TestCase):
 
   def test_cli_defaults_festivals_path(self):
     parser = argument_parser()
-    arguments = parser.parse_args(["--city", "Helsinki", "--start", "2026"])
+    arguments = parser.parse_args(["--city", "Helsinki", "--year", "2026"])
     self.assertFalse(hasattr(arguments, "festival_policy"))
     self.assertEqual(arguments.festivals, DEFAULT_FESTIVALS_PATH)
 
@@ -165,11 +165,11 @@ class PdfLayoutTests(unittest.TestCase):
 
   def test_cli_accepts_month_system_and_ayanamsa(self):
     parser = argument_parser()
-    arguments = parser.parse_args(["--city", "Helsinki", "--start", "2026", "--month", "purnimanta"])
+    arguments = parser.parse_args(["--city", "Helsinki", "--year", "2026", "--month", "purnimanta"])
     self.assertEqual(arguments.month, "purnimanta")
-    arguments = parser.parse_args(["--city", "Helsinki", "--start", "2026", "--ayanamsa", "revati"])
+    arguments = parser.parse_args(["--city", "Helsinki", "--year", "2026", "--ayanamsa", "revati"])
     self.assertEqual(arguments.ayanamsa, "revati")
-    arguments = parser.parse_args(["--city", "Helsinki", "--start", "2026", "--ayanamsa", "tropical"])
+    arguments = parser.parse_args(["--city", "Helsinki", "--year", "2026", "--ayanamsa", "tropical"])
     self.assertEqual(arguments.ayanamsa, "tropical")
 
   def test_cli_rejects_a_start_month(self):
@@ -177,7 +177,7 @@ class PdfLayoutTests(unittest.TestCase):
     import sys
     from generate_panchanga_calendar import main
     with mock.patch.object(sys, "stderr", mock.Mock()), self.assertRaises(SystemExit):
-      main(["--city", "Helsinki", "--start", "2026-03"])
+      main(["--city", "Helsinki", "--year", "2026-03"])
 
   def test_parse_coordinate_selection_accepts_sidereal_and_tropical_modes(self):
     from generate_panchanga_calendar import (

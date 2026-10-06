@@ -2,7 +2,7 @@
 
 The rules under test (docs/PLAN.LUNAR-YEAR-CALENDARS.md):
 
-* ``--start YYYY`` names the Gregorian year holding the year's Ugadi; the
+* ``--year YYYY`` names the Gregorian year holding the year's Ugadi; the
   span runs from Ugadi's month through the month holding the last Phālguna
   day (12–14 whole months).
 * PDFs and ICS accept years ``-3300 ... 3300``; a year with zero or two
@@ -42,7 +42,7 @@ FIXTURES = {
 
 
 class StartYearParserTests(unittest.TestCase):
-  """Grammar cases for ``--start YYYY``."""
+  """Grammar cases for ``--year YYYY``."""
 
   def test_accepts_plain_and_bce_years(self):
     for text, expected in (("2026", 2026), ("0000", 0), ("0500", 500), ("-0500", -500), ("-500", -500),
@@ -203,7 +203,7 @@ class FooterFestivalTests(unittest.TestCase):
 
 
 class BceFilenameTests(unittest.TestCase):
-  """Plan §3.4: a BCE span pads its years, like --start does."""
+  """Plan §3.4: a BCE span pads its years, like --year does."""
 
   def test_padded_month_years_and_a_round_trip(self):
     location = load_location(UJJAIN)

@@ -171,8 +171,8 @@ jobs:
           cd "$(mktemp -d)"
           drik-panchanga-short --help
           drik-panchanga-long --help
-          drik-panchanga-short --city Ujjain --start 2026
-          drik-panchanga-long --city Ujjain --start 2026
+          drik-panchanga-short --city Ujjain --year 2026
+          drik-panchanga-long --city Ujjain --year 2026
           test -s ujjain-in_panchanga_2026-03_to_2027-04.pdf
           test -s ujjain-in_panchanga_wall_2026-03_to_2027-04.pdf
 
