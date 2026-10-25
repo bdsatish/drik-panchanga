@@ -73,10 +73,14 @@ def load_festival_selection(path, include_extra=False):
   """
   parser = configparser.ConfigParser(strict=True)
   parser.optionxform = str  # preserve festival name case
-  parser.read_string(Path(path).read_text(encoding="utf-8"))
+  try:
+    parser.read_string(Path(path).read_text(encoding="utf-8"))
+    base_items = list(parser.items("festivals"))
+  except configparser.Error as error:
+    # Callers catch ValueError; configparser.Error would escape as a traceback.
+    raise ValueError(f"Bad festival selection in {path} ({error})") from None
   catalog = all_festival_names()
   catalog_set = set(catalog)
-  base_items = list(parser.items("festivals"))
   base_names = [name for name, _raw in base_items]
   unknown = [name for name in base_names if name not in catalog_set]
 
