@@ -70,6 +70,11 @@ def tropical_long_fixed_stars(jd, longi):
     if longi > boundary:
       nak = candidate
       break
+  else:
+    # Below every boundary: the wrap-around nakshatra (starts at the highest
+    # boundary, ends at the lowest). A virtual break *below* the last entry
+    # makes the index-1 lookup below pick that lowest boundary as the end.
+    index = len(boundaries)
   # Previous descending boundary is this nakshatra's end, wrapping at index 0.
   nak_end = boundaries[index - 1][1]
   return nak, nak_end
@@ -167,12 +172,19 @@ def tropical_nakshatra(jd, place, equal=True):
   answer = [int(nak), rise + approx_end]
 
   # 4. Check for skipped nakshatra
-  nak_tmrw, nak_tmrw_end = tropical_long_fixed_stars(jd, longitudes[-1])
-  if nak_tmrw_end < longitudes[-1]: nak_tmrw_end += 360  # wraparound
+  nak_tmrw, _ = tropical_long_fixed_stars(jd, longitudes[-1])
   isSkipped = (nak_tmrw - nak) % 27 > 1
   if isSkipped:
     leap_nak = nak + 1
-    approx_end = inverse_lagrange(offsets, longitudes, nak_tmrw_end)
+    # The skipped nakshatra ends where the next one begins. Boundaries hold
+    # each nakshatra's start, so look up the successor (28 wraps to 1).
+    starts = dict(_tropical_nakshatra_boundaries(jd))
+    nak_end = starts[leap_nak % 27 + 1]
+    # Interpolate against the unwrapped window (as above), lifting the
+    # target into that frame when it wrapped below today's longitude.
+    while nak_end <= y[0]:
+      nak_end += 360
+    approx_end = inverse_lagrange(offsets, y, nak_end)
     leap_nak = 1 if nak == 27 else leap_nak
     answer += [int(leap_nak), rise + approx_end]
 
