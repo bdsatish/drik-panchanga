@@ -426,9 +426,11 @@ def nakshatra_pada_equal_spacing(longitude):
 # This is more closer to observed phenomena than equal division
 def nakshatra_pada_unequal_system(longitude):
   """Gives nakshatra (1..27) and paada (1..4) which given longitude lies, according to Garga system"""
-  # norm360's codomain is [0, 360): 0.0 is Asvini pada 1, the same answer the
-  # equal system gives (see test_norm360_stays_below_360).
-  assert (0 <= longitude < 360)
+  # Accept any longitude: raw Swiss-Ephemeris output can sit at 360.0 or dip
+  # to a tiny negative. norm360's codomain is [0, 360), where 0.0 is Asvini
+  # pada 1, the same answer the equal system gives (see
+  # test_norm360_stays_below_360).
+  longitude = norm360(longitude)
 
   end_points = garga_end_points
   # Linear search

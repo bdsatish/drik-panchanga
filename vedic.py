@@ -171,8 +171,11 @@ def tropical_nakshatra(jd, place, equal=True):
   approx_end = inverse_lagrange(x, y, long_end)
   answer = [int(nak), rise + approx_end]
 
-  # 4. Check for skipped nakshatra
-  nak_tmrw, _ = tropical_long_fixed_stars(jd, longitudes[-1])
+  # 4. Check for skipped nakshatra at the next sunrise, not ``rise + 1``:
+  # sunrise drifts by minutes a day (hours near the polar circles), so a
+  # nakshatra crossed between them can be missed. See ``nakshatra`` in
+  # panchanga.py.
+  nak_tmrw, _ = tropical_long_fixed_stars(jd, tropical_lunar_longitude(sunrise(jd + 1, place)))
   isSkipped = (nak_tmrw - nak) % 27 > 1
   if isSkipped:
     leap_nak = nak + 1
