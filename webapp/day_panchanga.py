@@ -119,7 +119,7 @@ def drik_ayana_label(ritu_num):
   return label
 
 
-def _compute_day_details_unlocked(location, civil, amanta=True, coordinate_selection=None):
+def _compute_day_details_unlocked(location, civil, amanta=True, coordinate_selection="citra"):
   """Compute all mode-sensitive panchanga fields for one civil day.
 
     Shared by the JSON day API and the ICS generator so both consume the
