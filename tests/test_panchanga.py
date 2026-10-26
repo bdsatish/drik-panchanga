@@ -257,6 +257,25 @@ class NakshatraTests(PanchangaTestCase):
     self.assertEqual(nakshatra_pada(0.0), [1, 1])
     self.assertEqual(nakshatra_pada(norm360(-1e-14)), [1, 1])
 
+  def test_nakshatra_pada_normalizes_raw_longitudes_in_both_systems(self):
+    self.addCleanup(set_nakshatra_system)
+    for system in ('equal', 'unequal'):
+      set_nakshatra_system(system)
+      with self.subTest(system):
+        self.assertEqual(nakshatra_pada(360.0), [1, 1])
+        self.assertEqual(nakshatra_pada(-1e-14), [1, 1])
+        self.assertEqual(nakshatra_pada(365.5), nakshatra_pada(5.5))
+        self.assertEqual(nakshatra_pada(-5.0), nakshatra_pada(355.0))
+
+  def test_nakshatra_pada_rejects_non_finite_longitude(self):
+    self.addCleanup(set_nakshatra_system)
+    for system in ('equal', 'unequal'):
+      set_nakshatra_system(system)
+      for bad in (float('nan'), float('inf'), float('-inf')):
+        with self.subTest(system=system, value=bad):
+          with self.assertRaises(ValueError):
+            nakshatra_pada(bad)
+
   def test_equal_vs_unequal_contrast(self):
     set_nakshatra_system('unequal')
     self.addCleanup(set_nakshatra_system)

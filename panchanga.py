@@ -25,7 +25,7 @@
 Use Swiss ephemeris to calculate tithi, nakshatra, etc.
 """
 
-from math import ceil, floor
+from math import ceil, floor, isfinite
 from collections import namedtuple as struct
 from contextlib import contextmanager
 from functools import lru_cache
@@ -405,6 +405,13 @@ def nakshatra_end_point(nakshatra_number):
 
 def nakshatra_pada(longitude):
   """Gives nakshatra (1..27) and paada (1..4) in which given longitude lies"""
+  # Accept any finite longitude: raw Swiss-Ephemeris output can sit at 360.0 or
+  # dip to a tiny negative. norm360's codomain is [0, 360), where 0.0 is Asvini
+  # pada 1 (see test_norm360_stays_below_360). NaN/inf would otherwise fall
+  # through the classifiers as a plausible Revati pada 4, so reject them.
+  if not isfinite(longitude):
+    raise ValueError(f"Longitude must be finite, got {longitude}")
+  longitude = norm360(longitude)
   pada = (nakshatra_pada_unequal_system(longitude)
           if nakshatra_system == 'unequal' else nakshatra_pada_equal_spacing(longitude))
   return pada
@@ -426,12 +433,6 @@ def nakshatra_pada_equal_spacing(longitude):
 # This is more closer to observed phenomena than equal division
 def nakshatra_pada_unequal_system(longitude):
   """Gives nakshatra (1..27) and paada (1..4) which given longitude lies, according to Garga system"""
-  # Accept any longitude: raw Swiss-Ephemeris output can sit at 360.0 or dip
-  # to a tiny negative. norm360's codomain is [0, 360), where 0.0 is Asvini
-  # pada 1, the same answer the equal system gives (see
-  # test_norm360_stays_below_360).
-  longitude = norm360(longitude)
-
   end_points = garga_end_points
   # Linear search
   for nak in range(len(end_points)):
