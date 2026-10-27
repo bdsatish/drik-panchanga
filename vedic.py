@@ -84,26 +84,27 @@ def tropical_long_fixed_stars(jd, longi):
 ritu_names = ['Vasanta', 'Grīṣma', 'Varṣā', 'Śarad', 'Hemanta', 'Śiśira']
 
 
+# Ending longitudes of 27 nakshatras. Normally it is 13°20'
+# Following Garga system is from Sewell and Dikshit. It starts with Ashvini nak as 0°0'
+# However, as observed today in sky, vernal equinox (Mar 21) starts when Sun is
+# at U.Bhadra every year, so:
+# 1. Ravi Prakrash Arya starts offset from U.Bhadra with equal spacing https://www.youtube.com/Hnj2ttPLQNQ?t=5244
+# 2. SMKAP starts from U.Bhadra with some part of it (unequal tropical spacing) pg 35 of smkap.pdf
+_GARGA_END_POINTS = (
+  13 + 20 / 60, 20, 33 + 20 / 60, 53 + 20 / 60, 66 + 40 / 60, 73 + 20 / 60, 93 + 20 / 60, 106 + 40 / 60, 113 +
+  20 / 60, 126 + 40 / 60, 140, 160, 173 + 20 / 60, 186 + 40 / 60, 193 + 20 / 60, 213 + 20 / 60, 226 + 40 / 60, 233 +
+  20 / 60, 246 + 40 / 60, 260, 280, 293 + 20 / 60, 306 + 40 / 60, 313 + 20 / 60, 326 + 40 / 60, 346 + 40 / 60, 360)
+
+
 def find_nakshatra_garga(longi):
   """Given longitude of any celestial object, determine which lunar mansion
     it falls under, as per Garga system (unequal nakshatra division)
     1 = Asvini,..., 27 = Revati"""
-  # ending longitudes of 27 nakshatras. Normally it is 13°20'
-  # Following Garga system is from Sewell and Dikshit. It starts with Ashvini nak as 0°0'
-  # However, as observed today in sky, vernal equinox (Mar 21) starts when Sun is
-  # at U.Bhadra every year, so:
-  # 1. Ravi Prakrash Arya starts offset from U.Bhadra with equal spacing https://www.youtube.com/Hnj2ttPLQNQ?t=5244
-  # 2. SMKAP starts from U.Bhadra with some part of it (unequal tropical spacing) pg 35 of smkap.pdf
-  spacing = [
-    13 + 20 / 60, 20, 33 + 20 / 60, 53 + 20 / 60, 66 + 40 / 60, 73 + 20 / 60, 93 + 20 / 60, 106 + 40 / 60, 113 +
-    20 / 60, 126 + 40 / 60, 140, 160, 173 + 20 / 60, 186 + 40 / 60, 193 + 20 / 60, 213 + 20 / 60, 226 + 40 / 60, 233 +
-    20 / 60, 246 + 40 / 60, 260, 280, 293 + 20 / 60, 306 + 40 / 60, 313 + 20 / 60, 326 + 40 / 60, 346 + 40 / 60, 360
-  ]
   longi = norm360(longi)
-  for i in range(0, len(spacing)):
-    if longi < spacing[i]:
-      return i + 1, spacing[i]
-  return 27, spacing[-1]  # longi == 360 cannot happen after norm360, kept as a guard
+  for i, end in enumerate(_GARGA_END_POINTS):
+    if longi < end:
+      return i + 1, end
+  return 27, _GARGA_END_POINTS[-1]  # longi == 360 cannot happen after norm360, kept as a guard
 
 
 def tropical_lunar_longitude(jd):
@@ -154,42 +155,50 @@ def tropical_nakshatra(jd, place, equal=True):
      1 = Asvini, 2 = Bharani, ..., 27 = Revati
      `equal = False' uses Garga's unequal nakshatra spacing.
   """
-  # 1. Find time of sunrise
+  # Equal: 27 slices of 13°20' anchored to Spica. Unequal: Garga's fixed table.
+  if equal:
+    starts = dict(_tropical_nakshatra_boundaries(jd))
+    classify = lambda longi: tropical_long_fixed_stars(jd, longi)
+    # Boundaries hold each nakshatra's start, so a nakshatra ends where its successor starts.
+    end_of = lambda nak: starts[nak % 27 + 1]
+  else:
+    classify = find_nakshatra_garga
+    end_of = lambda nak: _GARGA_END_POINTS[nak - 1]
+
+  # 1. Find time of sunrise, and the next one: sunrise drifts by minutes a
+  # day (hours near the polar circles), so sample sunrise to sunrise rather
+  # than ``rise + 1`` to keep every end time inside the interpolation window.
   rise = sunrise(jd, place)
+  next_rise = sunrise(jd + 1, place)
+  span = next_rise - rise
 
   offsets = [0.0, 0.25, 0.5, 0.75, 1.0]
-  longitudes = [tropical_lunar_longitude(rise + t) for t in offsets]
+  longitudes = [tropical_lunar_longitude(rise + t * span) for t in offsets]
 
   # 2. Today's nakshatra is when offset = 0
   # There are 27 Nakshatras spanning 360 degrees
-  nak, long_end = tropical_long_fixed_stars(jd, longitudes[0])
+  nak, long_end = classify(longitudes[0])
   if long_end < longitudes[0]: long_end += 360  # wraparound
 
   # 3. Find end time by 5-point inverse Lagrange interpolation
   y = unwrap_angles(longitudes)
   x = offsets
   approx_end = inverse_lagrange(x, y, long_end)
-  answer = [int(nak), rise + approx_end]
+  answer = [int(nak), rise + approx_end * span]
 
-  # 4. Check for skipped nakshatra at the next sunrise, not ``rise + 1``:
-  # sunrise drifts by minutes a day (hours near the polar circles), so a
-  # nakshatra crossed between them can be missed. See ``nakshatra`` in
+  # 4. Check for skipped nakshatra at the next sunrise. See ``nakshatra`` in
   # panchanga.py.
-  nak_tmrw, _ = tropical_long_fixed_stars(jd, tropical_lunar_longitude(sunrise(jd + 1, place)))
+  nak_tmrw, _ = classify(longitudes[-1])
   isSkipped = (nak_tmrw - nak) % 27 > 1
   if isSkipped:
-    leap_nak = nak + 1
-    # The skipped nakshatra ends where the next one begins. Boundaries hold
-    # each nakshatra's start, so look up the successor (28 wraps to 1).
-    starts = dict(_tropical_nakshatra_boundaries(jd))
-    nak_end = starts[leap_nak % 27 + 1]
+    leap_nak = nak % 27 + 1
     # Interpolate against the unwrapped window (as above), lifting the
     # target into that frame when it wrapped below today's longitude.
-    while nak_end <= y[0]:
-      nak_end += 360
-    approx_end = inverse_lagrange(offsets, y, nak_end)
-    leap_nak = 1 if nak == 27 else leap_nak
-    answer += [int(leap_nak), rise + approx_end]
+    leap_end = end_of(leap_nak)
+    while leap_end <= y[0]:
+      leap_end += 360
+    approx_end = inverse_lagrange(offsets, y, leap_end)
+    answer += [int(leap_nak), rise + approx_end * span]
 
   return answer
 
